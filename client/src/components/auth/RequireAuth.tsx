@@ -1,17 +1,18 @@
-import { useEffect } from 'react';
-import { useLocation, Navigate, Outlet } from 'react-router-dom';
+import { ReactNode } from 'react';
+import { useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 
 interface RequireAuthProps {
   allowedRoles?: string[];
+  children: ReactNode;
 }
 
-export function RequireAuth({ allowedRoles = [] }: RequireAuthProps) {
-  const { user, isLoading } = useAuth();
+export function RequireAuth({ allowedRoles = [], children }: RequireAuthProps) {
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   // If still loading auth state, don't render anything yet
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" aria-label="Loading"/>
@@ -30,6 +31,6 @@ export function RequireAuth({ allowedRoles = [] }: RequireAuthProps) {
     return <Navigate to={`/dashboard/${user.role}`} replace />;
   }
 
-  // If user is authenticated and authorized, render the route
-  return <Outlet />;
+  // If user is authenticated and authorized, render the children
+  return <>{children}</>;
 }
