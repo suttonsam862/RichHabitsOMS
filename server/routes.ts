@@ -1,0 +1,887 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { configureAuth } from "./auth";
+import { setupWebSocketServer, sendNotification } from "./messaging";
+import { sendEmail, getOrderStatusChangeEmailTemplate, getPaymentReceiptEmailTemplate, getDesignApprovalEmailTemplate } from "./email";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import Stripe from "stripe";
+import { loginSchema, registerSchema } from "@shared/schema";
+import { z } from "zod";
+import { ZodError } from "zod";
+import { fromZodError } from "zod-validation-error";
+
+// Setup Stripe
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+}) : undefined;
+
+// Configure file uploads
+const storage_dir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(storage_dir)) {
+  fs.mkdirSync(storage_dir, { recursive: true });
+}
+
+const fileStorage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, storage_dir);
+  },
+  filename: function(req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: fileStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only specific file types
+    const allowedFileTypes = [
+      '.pdf', '.ai', '.psd', '.eps', '.svg', '.png', '.jpg', '.jpeg'
+    ];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedFileTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only design files are allowed.') as any);
+    }
+  } 
+});
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Create HTTP server
+  const httpServer = createServer(app);
+  
+  // Setup WebSocket server
+  setupWebSocketServer(httpServer);
+  
+  // Configure authentication
+  const { isAuthenticated, hasRole } = configureAuth(app);
+  
+  // Error handling for validation
+  const validateRequest = (schema: z.ZodType<any, any>) => (req: any, res: any, next: any) => {
+    try {
+      schema.parse(req.body);
+      next();
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      next(error);
+    }
+  };
+  
+  // Auth routes
+  app.post("/api/auth/login", validateRequest(loginSchema), (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ message: info.message });
+      }
+      req.logIn(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+        });
+      });
+    })(req, res, next);
+  });
+  
+  app.post("/api/auth/register", validateRequest(registerSchema), async (req, res, next) => {
+    try {
+      const { confirmPassword, ...userData } = req.body;
+      
+      // Check if user already exists
+      const existingUserByEmail = await storage.getUserByEmail(userData.email);
+      if (existingUserByEmail) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      
+      const existingUserByUsername = await storage.getUserByUsername(userData.username);
+      if (existingUserByUsername) {
+        return res.status(400).json({ message: "Username already in use" });
+      }
+      
+      // Create user
+      const user = await storage.createUser(userData);
+      
+      // Create customer record if role is customer
+      if (user.role === 'customer') {
+        await storage.createCustomer({
+          userId: user.id,
+          address: '',
+          city: '',
+          state: '',
+          zip: '',
+          country: '',
+        });
+      }
+      
+      // Log in the user
+      req.logIn(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.status(201).json({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+        });
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Error logging out" });
+      }
+      res.status(200).json({ message: "Logged out successfully" });
+    });
+  });
+  
+  app.get("/api/auth/me", isAuthenticated, (req, res) => {
+    const user = req.user;
+    res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    });
+  });
+  
+  // User routes
+  app.get("/api/users", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+    try {
+      const role = req.query.role as string;
+      let users;
+      
+      if (role) {
+        users = await storage.getUsersByRole(role);
+      } else {
+        // Would need to implement a method to get all users with pagination
+        users = [];
+      }
+      
+      res.json(users.map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      })));
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Order routes
+  app.get("/api/orders", isAuthenticated, async (req, res, next) => {
+    try {
+      const user = req.user;
+      let orders;
+      
+      if (user.role === 'admin') {
+        const status = req.query.status as string;
+        if (status) {
+          orders = await storage.getOrdersByStatus(status);
+        } else {
+          orders = await storage.getRecentOrders(50);
+        }
+      } else if (user.role === 'salesperson') {
+        orders = await storage.getOrdersBySalespersonId(user.id);
+      } else if (user.role === 'customer') {
+        const customer = await storage.getCustomerByUserId(user.id);
+        if (customer) {
+          orders = await storage.getOrdersByCustomerId(customer.id);
+        } else {
+          orders = [];
+        }
+      } else if (user.role === 'designer' || user.role === 'manufacturer') {
+        // Implement logic to get orders assigned to this designer/manufacturer
+        orders = [];
+      }
+      
+      res.json(orders || []);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get("/api/orders/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const order = await storage.getOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Get order items
+      const items = await storage.getOrderItemsByOrderId(orderId);
+      
+      // Get design tasks
+      const designTasks = await storage.getDesignTasksByOrderId(orderId);
+      
+      // Get production tasks
+      const productionTasks = await storage.getProductionTasksByOrderId(orderId);
+      
+      res.json({
+        ...order,
+        items,
+        designTasks,
+        productionTasks,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/orders", isAuthenticated, hasRole(["admin", "salesperson"]), async (req, res, next) => {
+    try {
+      const { items, ...orderData } = req.body;
+      
+      // Create order
+      const order = await storage.createOrder({
+        ...orderData,
+        salespersonId: req.user.id,
+      });
+      
+      // Create order items
+      const createdItems = [];
+      for (const item of items) {
+        const orderItem = await storage.createOrderItem({
+          ...item,
+          orderId: order.id,
+        });
+        createdItems.push(orderItem);
+      }
+      
+      // Recalculate order total
+      let totalAmount = 0;
+      for (const item of createdItems) {
+        totalAmount += parseFloat(item.totalPrice.toString());
+      }
+      
+      const tax = totalAmount * 0.08; // 8% tax
+      
+      // Update order with total
+      const updatedOrder = await storage.updateOrder(order.id, {
+        totalAmount: totalAmount.toString(),
+        tax: tax.toString(),
+      });
+      
+      res.status(201).json({
+        ...updatedOrder,
+        items: createdItems,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.put("/api/orders/:id", isAuthenticated, hasRole(["admin", "salesperson"]), async (req, res, next) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { items, ...orderData } = req.body;
+      
+      // Update order
+      const order = await storage.updateOrder(orderId, orderData);
+      
+      // Handle items if provided
+      if (items) {
+        // Get existing items
+        const existingItems = await storage.getOrderItemsByOrderId(orderId);
+        
+        // Process items
+        for (const item of items) {
+          if (item.id) {
+            // Update existing item
+            await storage.updateOrderItem(item.id, item);
+          } else {
+            // Create new item
+            await storage.createOrderItem({
+              ...item,
+              orderId,
+            });
+          }
+        }
+        
+        // Remove items not in the new list
+        for (const existingItem of existingItems) {
+          if (!items.some(i => i.id === existingItem.id)) {
+            await storage.deleteOrderItem(existingItem.id);
+          }
+        }
+        
+        // Recalculate total
+        const updatedItems = await storage.getOrderItemsByOrderId(orderId);
+        let totalAmount = 0;
+        for (const item of updatedItems) {
+          totalAmount += parseFloat(item.totalPrice.toString());
+        }
+        
+        const tax = totalAmount * 0.08; // 8% tax
+        
+        // Update order with total
+        await storage.updateOrder(orderId, {
+          totalAmount: totalAmount.toString(),
+          tax: tax.toString(),
+        });
+      }
+      
+      // Get updated order with items
+      const updatedOrder = await storage.getOrder(orderId);
+      const updatedItems = await storage.getOrderItemsByOrderId(orderId);
+      
+      res.json({
+        ...updatedOrder,
+        items: updatedItems,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Design task routes
+  app.get("/api/design-tasks", isAuthenticated, async (req, res, next) => {
+    try {
+      const user = req.user;
+      let tasks;
+      
+      if (user.role === 'admin') {
+        // Would need an implementation to get all tasks with pagination
+        tasks = [];
+      } else if (user.role === 'designer') {
+        tasks = await storage.getDesignTasksByDesignerId(user.id);
+      } else {
+        tasks = [];
+      }
+      
+      res.json(tasks);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/design-tasks", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+    try {
+      const taskData = req.body;
+      
+      // Create design task
+      const task = await storage.createDesignTask(taskData);
+      
+      // Notify designer if assigned
+      if (task.designerId) {
+        sendNotification(task.designerId, {
+          type: 'new_design_task',
+          task,
+        });
+      }
+      
+      res.status(201).json(task);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.put("/api/design-tasks/:id", isAuthenticated, hasRole(["admin", "designer"]), async (req, res, next) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const taskData = req.body;
+      
+      // Only admins can assign designer
+      if (req.user.role !== 'admin') {
+        delete taskData.designerId;
+      }
+      
+      // Update task
+      const task = await storage.updateDesignTask(taskId, taskData);
+      
+      // Handle status changes and notifications
+      if (taskData.status === 'completed') {
+        // Notify admin
+        const admins = await storage.getUsersByRole('admin');
+        for (const admin of admins) {
+          sendNotification(admin.id, {
+            type: 'design_task_completed',
+            task,
+          });
+        }
+        
+        // Notify salesperson assigned to the order
+        const order = await storage.getOrder(task.orderId);
+        if (order && order.salespersonId) {
+          sendNotification(order.salespersonId, {
+            type: 'design_task_completed',
+            task,
+          });
+        }
+      }
+      
+      res.json(task);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Design file routes
+  app.post("/api/design-files", isAuthenticated, hasRole(["admin", "designer"]), upload.single('file'), async (req, res, next) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const { designTaskId } = req.body;
+      
+      // Create design file record
+      const designFile = await storage.createDesignFile({
+        designTaskId: parseInt(designTaskId),
+        filename: req.file.originalname,
+        fileType: path.extname(req.file.originalname).substring(1),
+        filePath: req.file.path,
+        uploadedBy: req.user.id,
+      });
+      
+      // Get the associated design task
+      const designTask = await storage.getDesignTask(designFile.designTaskId);
+      
+      // Notify relevant parties
+      if (designTask) {
+        // Get the order
+        const order = await storage.getOrder(designTask.orderId);
+        
+        if (order) {
+          // Notify salesperson
+          if (order.salespersonId) {
+            sendNotification(order.salespersonId, {
+              type: 'new_design_file',
+              designFile,
+              designTask,
+              order,
+            });
+          }
+          
+          // Notify customer
+          const customer = await storage.getCustomer(order.customerId);
+          if (customer) {
+            const customerUser = await storage.getUser(customer.userId);
+            if (customerUser) {
+              sendNotification(customerUser.id, {
+                type: 'new_design_file',
+                designFile,
+                designTask,
+                order,
+              });
+            }
+          }
+        }
+      }
+      
+      res.status(201).json(designFile);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get("/api/design-files/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const fileId = parseInt(req.params.id);
+      const file = await storage.getDesignFile(fileId);
+      
+      if (!file) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      
+      // Check permissions
+      // TODO: Implement proper permission checks based on role and relation to the file
+      
+      res.sendFile(file.filePath);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Production task routes
+  app.get("/api/production-tasks", isAuthenticated, async (req, res, next) => {
+    try {
+      const user = req.user;
+      let tasks;
+      
+      if (user.role === 'admin') {
+        // Would need an implementation to get all tasks with pagination
+        tasks = [];
+      } else if (user.role === 'manufacturer') {
+        tasks = await storage.getProductionTasksByManufacturerId(user.id);
+      } else {
+        tasks = [];
+      }
+      
+      res.json(tasks);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/production-tasks", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+    try {
+      const taskData = req.body;
+      
+      // Create production task
+      const task = await storage.createProductionTask(taskData);
+      
+      // Notify manufacturer if assigned
+      if (task.manufacturerId) {
+        sendNotification(task.manufacturerId, {
+          type: 'new_production_task',
+          task,
+        });
+      }
+      
+      res.status(201).json(task);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.put("/api/production-tasks/:id", isAuthenticated, hasRole(["admin", "manufacturer"]), async (req, res, next) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const taskData = req.body;
+      
+      // Only admins can assign manufacturer
+      if (req.user.role !== 'admin') {
+        delete taskData.manufacturerId;
+      }
+      
+      // Update task
+      const task = await storage.updateProductionTask(taskId, taskData);
+      
+      // Handle status changes and notifications
+      if (taskData.status === 'completed') {
+        // Update order status
+        const order = await storage.getOrder(task.orderId);
+        if (order) {
+          await storage.updateOrder(order.id, {
+            status: 'completed',
+          });
+          
+          // Notify customer
+          const customer = await storage.getCustomer(order.customerId);
+          if (customer) {
+            const customerUser = await storage.getUser(customer.userId);
+            if (customerUser) {
+              // Send notification via WebSocket
+              sendNotification(customerUser.id, {
+                type: 'order_completed',
+                order,
+              });
+              
+              // Send email
+              const emailTemplate = getOrderStatusChangeEmailTemplate(
+                order.orderNumber,
+                'completed',
+                customerUser.firstName || customerUser.username
+              );
+              await sendEmail({
+                ...emailTemplate,
+                to: customerUser.email,
+              });
+            }
+          }
+        }
+      }
+      
+      res.json(task);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Messages routes
+  app.get("/api/messages", isAuthenticated, async (req, res, next) => {
+    try {
+      const user = req.user;
+      
+      // Get messages where user is sender or receiver
+      const sentMessages = await storage.getMessagesBySenderId(user.id);
+      const receivedMessages = await storage.getMessagesByReceiverId(user.id);
+      
+      // Combine and sort by date
+      const messages = [...sentMessages, ...receivedMessages].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      res.json(messages);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post("/api/messages", isAuthenticated, async (req, res, next) => {
+    try {
+      const messageData = req.body;
+      
+      // Create message
+      const message = await storage.createMessage({
+        ...messageData,
+        senderId: req.user.id,
+      });
+      
+      // Attempt to deliver message via WebSocket
+      // This is handled by the messaging system in the websocket
+      
+      res.status(201).json(message);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.put("/api/messages/:id/read", isAuthenticated, async (req, res, next) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      const message = await storage.getMessage(messageId);
+      
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      // Only the receiver can mark as read
+      if (message.receiverId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      // Mark as read
+      const updatedMessage = await storage.markMessageAsRead(messageId);
+      
+      res.json(updatedMessage);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Payment routes (Stripe)
+  if (stripe) {
+    app.post("/api/create-payment-intent", isAuthenticated, async (req, res, next) => {
+      try {
+        const { orderId, amount } = req.body;
+        
+        // Validate order exists
+        const order = await storage.getOrder(parseInt(orderId));
+        if (!order) {
+          return res.status(404).json({ message: "Order not found" });
+        }
+        
+        // Create payment intent
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(parseFloat(amount) * 100), // Convert to cents
+          currency: "usd",
+          metadata: {
+            orderId: orderId.toString(),
+          },
+        });
+        
+        // Create payment record
+        const payment = await storage.createPayment({
+          orderId: parseInt(orderId),
+          amount: amount.toString(),
+          status: 'pending',
+          stripePaymentId: paymentIntent.id,
+          stripeClientSecret: paymentIntent.client_secret!,
+        });
+        
+        res.json({
+          clientSecret: paymentIntent.client_secret,
+          paymentId: payment.id,
+        });
+      } catch (error) {
+        next(error);
+      }
+    });
+    
+    app.post("/api/webhook", async (req, res, next) => {
+      const sig = req.headers['stripe-signature'] as string;
+      
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        return res.status(400).json({ message: "Webhook secret not configured" });
+      }
+      
+      let event;
+      
+      try {
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          sig,
+          process.env.STRIPE_WEBHOOK_SECRET
+        );
+      } catch (err) {
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+      
+      // Handle the event
+      switch (event.type) {
+        case 'payment_intent.succeeded': {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          
+          // Update payment status
+          const payments = await storage.getPaymentsByOrderId(
+            parseInt(paymentIntent.metadata.orderId || '0')
+          );
+          
+          const payment = payments.find(p => p.stripePaymentId === paymentIntent.id);
+          
+          if (payment) {
+            await storage.updatePayment(payment.id, {
+              status: 'completed',
+            });
+            
+            // Update order status
+            const order = await storage.getOrder(payment.orderId);
+            if (order) {
+              await storage.updateOrder(order.id, {
+                status: 'pending_design',
+              });
+              
+              // Create design task if not already created
+              const existingTasks = await storage.getDesignTasksByOrderId(order.id);
+              if (existingTasks.length === 0) {
+                await storage.createDesignTask({
+                  orderId: order.id,
+                  status: 'pending',
+                  description: `Design task for order ${order.orderNumber}`,
+                  dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+                });
+              }
+              
+              // Notify admin
+              const admins = await storage.getUsersByRole('admin');
+              for (const admin of admins) {
+                sendNotification(admin.id, {
+                  type: 'payment_completed',
+                  order,
+                  payment,
+                });
+              }
+              
+              // Notify salesperson
+              if (order.salespersonId) {
+                sendNotification(order.salespersonId, {
+                  type: 'payment_completed',
+                  order,
+                  payment,
+                });
+              }
+              
+              // Send receipt to customer
+              const customer = await storage.getCustomer(order.customerId);
+              if (customer) {
+                const customerUser = await storage.getUser(customer.userId);
+                if (customerUser) {
+                  const emailTemplate = getPaymentReceiptEmailTemplate(
+                    order.orderNumber,
+                    `$${parseFloat(payment.amount.toString()).toFixed(2)}`,
+                    customerUser.firstName || customerUser.username
+                  );
+                  await sendEmail({
+                    ...emailTemplate,
+                    to: customerUser.email,
+                  });
+                }
+              }
+            }
+          }
+          
+          break;
+        }
+        case 'payment_intent.payment_failed': {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          
+          // Update payment status
+          const payments = await storage.getPaymentsByOrderId(
+            parseInt(paymentIntent.metadata.orderId || '0')
+          );
+          
+          const payment = payments.find(p => p.stripePaymentId === paymentIntent.id);
+          
+          if (payment) {
+            await storage.updatePayment(payment.id, {
+              status: 'failed',
+            });
+          }
+          
+          break;
+        }
+        default:
+          console.log(`Unhandled event type ${event.type}`);
+      }
+      
+      res.json({ received: true });
+    });
+  }
+  
+  // Dashboard data routes
+  app.get("/api/dashboard/stats", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+    try {
+      // Get order statistics
+      const orderStats = await storage.getOrderStatistics();
+      
+      // Get recent orders
+      const recentOrders = await storage.getRecentOrders(5);
+      
+      // Get counts of users by role
+      const adminCount = (await storage.getUsersByRole("admin")).length;
+      const salespersonCount = (await storage.getUsersByRole("salesperson")).length;
+      const designerCount = (await storage.getUsersByRole("designer")).length;
+      const manufacturerCount = (await storage.getUsersByRole("manufacturer")).length;
+      const customerCount = (await storage.getUsersByRole("customer")).length;
+      
+      res.json({
+        orderStats,
+        recentOrders,
+        userCounts: {
+          admin: adminCount,
+          salesperson: salespersonCount,
+          designer: designerCount,
+          manufacturer: manufacturerCount,
+          customer: customerCount,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get("/api/dashboard/inventory", isAuthenticated, hasRole(["admin", "manufacturer"]), async (req, res, next) => {
+    try {
+      const inventoryItems = await storage.getInventoryItems();
+      res.json(inventoryItems);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  return httpServer;
+}
