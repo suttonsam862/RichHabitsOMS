@@ -51,6 +51,7 @@ export interface IStorage {
   getDesignTask(id: number): Promise<DesignTask | undefined>;
   getDesignTasksByOrderId(orderId: number): Promise<DesignTask[]>;
   getDesignTasksByDesignerId(designerId: number): Promise<DesignTask[]>;
+  getAllDesignTasks(): Promise<DesignTask[]>;
   createDesignTask(designTask: InsertDesignTask): Promise<DesignTask>;
   updateDesignTask(id: number, data: Partial<InsertDesignTask>): Promise<DesignTask>;
   

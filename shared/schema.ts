@@ -18,6 +18,9 @@ export const orderStatusEnum = pgEnum('order_status', [
 export const taskStatusEnum = pgEnum('task_status', [
   'pending', 
   'in_progress', 
+  'submitted',
+  'approved',
+  'rejected',
   'completed', 
   'cancelled'
 ]);

@@ -394,21 +394,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Design task routes
-  app.get("/api/design-tasks", isAuthenticated, async (req, res, next) => {
+  app.get("/api/design-tasks", isAuthenticated, hasRole(["admin", "designer"]), async (req, res, next) => {
     try {
-      const user = req.user;
-      let tasks;
+      const userId = req.user.id;
+      const role = req.user.role;
+      let tasks = [];
       
-      if (user.role === 'admin') {
-        // Would need an implementation to get all tasks with pagination
-        tasks = [];
-      } else if (user.role === 'designer') {
-        tasks = await storage.getDesignTasksByDesignerId(user.id);
-      } else {
-        tasks = [];
+      if (role === 'admin') {
+        // Admin can see all design tasks
+        const allTasks = await storage.getAllDesignTasks();
+        tasks = allTasks;
+      } else if (role === 'designer') {
+        // Designer only sees their tasks
+        const designerTasks = await storage.getDesignTasksByDesignerId(userId);
+        tasks = designerTasks;
       }
       
-      res.json(tasks);
+      // Enrich with order data and files
+      const enrichedTasks = await Promise.all(tasks.map(async (task) => {
+        const order = await storage.getOrder(task.orderId);
+        const files = await storage.getDesignFilesByTaskId(task.id);
+        
+        return {
+          ...task,
+          order: order ? {
+            id: order.id,
+            orderNumber: order.orderNumber,
+            status: order.status
+          } : null,
+          files: files || []
+        };
+      }));
+      
+      res.json(enrichedTasks);
     } catch (error) {
       next(error);
     }
@@ -435,47 +453,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put("/api/design-tasks/:id", isAuthenticated, hasRole(["admin", "designer"]), async (req, res, next) => {
+  app.put("/api/design-tasks/:id", isAuthenticated, hasRole(["admin", "designer", "customer"]), async (req, res, next) => {
     try {
       const taskId = parseInt(req.params.id);
       const taskData = req.body;
+      const userId = req.user.id;
+      const role = req.user.role;
+      
+      // Get existing task
+      const task = await storage.getDesignTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Design task not found" });
+      }
+      
+      // Validate permissions based on role and status change
+      if (role === 'designer') {
+        // Designers can only update their own tasks
+        if (task.designerId !== userId) {
+          return res.status(403).json({ message: "You can only update your own design tasks" });
+        }
+        
+        // Designers can only change status to submitted
+        if (taskData.status && taskData.status !== 'submitted') {
+          return res.status(403).json({ message: "Designers can only submit designs, not approve or reject them" });
+        }
+      } else if (role === 'customer') {
+        // Customers can only approve or reject designs of their own orders
+        const order = await storage.getOrder(task.orderId);
+        if (!order) {
+          return res.status(404).json({ message: "Order not found" });
+        }
+        
+        const customer = await storage.getCustomerByUserId(userId);
+        if (!customer || order.customerId !== customer.id) {
+          return res.status(403).json({ message: "You can only update design tasks for your own orders" });
+        }
+        
+        // Customers can only approve or reject submitted designs
+        if (task.status !== 'submitted') {
+          return res.status(400).json({ message: "You can only approve or reject submitted designs" });
+        }
+        
+        if (taskData.status !== 'approved' && taskData.status !== 'rejected') {
+          return res.status(400).json({ message: "Customers can only approve or reject designs" });
+        }
+      } else if (role !== 'admin') {
+        return res.status(403).json({ message: "You don't have permission to update this task" });
+      }
       
       // Only admins can assign designer
-      if (req.user.role !== 'admin') {
+      if (role !== 'admin') {
         delete taskData.designerId;
       }
       
       // Update task
-      const task = await storage.updateDesignTask(taskId, taskData);
+      const updatedTask = await storage.updateDesignTask(taskId, taskData);
       
       // Handle status changes and notifications
-      if (taskData.status === 'completed') {
-        // Notify admin
-        const admins = await storage.getUsersByRole('admin');
-        for (const admin of admins) {
-          sendNotification(admin.id, {
-            type: 'design_task_completed',
-            task,
-          });
-        }
-        
-        // Notify salesperson assigned to the order
+      if (taskData.status) {
+        // Get the order
         const order = await storage.getOrder(task.orderId);
-        if (order && order.salespersonId) {
-          sendNotification(order.salespersonId, {
-            type: 'design_task_completed',
-            task,
-          });
+        
+        if (taskData.status === 'submitted') {
+          // Notify admin and customer
+          const admins = await storage.getUsersByRole('admin');
+          for (const admin of admins) {
+            sendNotification(admin.id, {
+              type: 'design_submitted',
+              task: updatedTask,
+              order: order ? {
+                id: order.id,
+                orderNumber: order.orderNumber
+              } : null
+            });
+          }
+          
+          // Notify salesperson
+          if (order && order.salespersonId) {
+            sendNotification(order.salespersonId, {
+              type: 'design_submitted',
+              task: updatedTask,
+              order: {
+                id: order.id,
+                orderNumber: order.orderNumber
+              }
+            });
+          }
+          
+          // Notify customer
+          if (order) {
+            const customer = await storage.getCustomer(order.customerId);
+            if (customer) {
+              sendNotification(customer.userId, {
+                type: 'design_submitted',
+                task: updatedTask,
+                order: {
+                  id: order.id,
+                  orderNumber: order.orderNumber
+                },
+                message: 'A new design is ready for your review'
+              });
+            }
+          }
+        } else if (taskData.status === 'approved') {
+          // Notify the designer
+          if (task.designerId) {
+            sendNotification(task.designerId, {
+              type: 'design_approved',
+              task: updatedTask,
+              message: 'Your design has been approved!'
+            });
+          }
+          
+          // Update order status if needed
+          if (order && order.status === 'design_review') {
+            await storage.updateOrder(order.id, {
+              status: 'design_approved'
+            });
+          }
+        } else if (taskData.status === 'rejected') {
+          // Notify the designer
+          if (task.designerId) {
+            sendNotification(task.designerId, {
+              type: 'design_rejected',
+              task: updatedTask,
+              notes: taskData.notes,
+              message: 'Your design needs revisions'
+            });
+          }
         }
       }
       
-      res.json(task);
+      // Fetch updated task with all details
+      const enrichedTask = {
+        ...updatedTask,
+        files: await storage.getDesignFilesByTaskId(taskId),
+        order: null
+      };
+      
+      // Get order details
+      const order = await storage.getOrder(task.orderId);
+      if (order) {
+        enrichedTask.order = {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status
+        };
+      }
+      
+      res.json(enrichedTask);
     } catch (error) {
       next(error);
     }
   });
   
   // Design file routes
+  app.post("/api/design-tasks/:taskId/upload", isAuthenticated, hasRole(["admin", "designer"]), upload.single('file'), async (req, res, next) => {
+    try {
+      const { uploadDesignFile } = require('./design');
+      const taskId = parseInt(req.params.taskId);
+      const userId = req.user.id;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      // Check if task exists and designer is authorized
+      const task = await storage.getDesignTask(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Design task not found" });
+      }
+      
+      // Verify permissions (only assigned designer or admin)
+      if (req.user.role !== 'admin' && task.designerId !== userId) {
+        return res.status(403).json({ message: "You are not authorized to upload files for this task" });
+      }
+      
+      // Process uploaded file
+      const filename = req.file.originalname;
+      const fileType = req.file.mimetype;
+      const filePath = `/uploads/${req.file.filename}`;
+      const notes = req.body.notes;
+      
+      // Upload file and update task status
+      const result = await uploadDesignFile(taskId, userId, filename, fileType, filePath, notes);
+      
+      res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Design file routes (legacy endpoint maintained for backwards compatibility)
   app.post("/api/design-files", isAuthenticated, hasRole(["admin", "designer"]), upload.single('file'), async (req, res, next) => {
     try {
       if (!req.file) {
