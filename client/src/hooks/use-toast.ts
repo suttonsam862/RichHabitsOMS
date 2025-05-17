@@ -13,6 +13,8 @@ export type ToastActionProps = React.ComponentPropsWithoutRef<typeof ToastAction
 
 type ToastOptions = Omit<ToastProps, "id"> & {
   action?: ToastActionProps;
+  title?: string;
+  description?: string;
 }
 
 export function useToast() {

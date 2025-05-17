@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { z } from 'zod';
 import {
   Card,
   CardContent,
@@ -36,32 +35,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Trash } from 'lucide-react';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
-// Import directly from the shared schema
-import { insertOrderSchema, insertOrderItemSchema } from '../../shared/schema';
-
-// Extend the Zod schema to create a form schema
-const orderItemSchema = z.object({
-  id: z.number().optional(),
-  productName: z.string().min(1, 'Product name is required'),
-  description: z.string().optional(),
-  size: z.string().optional(),
-  color: z.string().optional(),
-  quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
-  unitPrice: z.coerce.number().min(0.01, 'Unit price must be greater than 0'),
-  totalPrice: z.number().optional(),
-});
-
-const orderFormSchema = z.object({
-  orderNumber: z.string().min(1, 'Order number is required'),
-  customerId: z.coerce.number({
-    required_error: 'Customer is required',
-  }),
-  status: z.string().default('draft'),
-  notes: z.string().optional(),
-  items: z.array(orderItemSchema).min(1, 'At least one item is required'),
-});
-
-type OrderFormValues = z.infer<typeof orderFormSchema>;
+import { orderFormSchema, orderItemSchema, OrderFormValues, Customer, Order } from '@/types';
 
 export default function OrderEditor() {
   const { id } = useParams();
@@ -71,13 +45,13 @@ export default function OrderEditor() {
   const isEditing = !!id && id !== 'new';
 
   // Fetch customers for dropdown
-  const { data: customers = [] } = useQuery({
+  const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
     queryFn: getQueryFn({ on401: 'throw' }),
   });
 
   // Fetch order data if editing
-  const { data: order, isLoading: isLoadingOrder } = useQuery({
+  const { data: order, isLoading: isLoadingOrder } = useQuery<Order>({
     queryKey: [`/api/orders/${id}`],
     queryFn: getQueryFn({ on401: 'throw' }),
     enabled: isEditing,
@@ -114,15 +88,15 @@ export default function OrderEditor() {
   // Update form when order data is loaded
   useEffect(() => {
     if (order && isEditing) {
-      const formattedItems = order.items.map((item: any) => ({
+      const formattedItems = order.items.map(item => ({
         id: item.id,
         productName: item.productName,
         description: item.description || '',
         size: item.size || '',
         color: item.color || '',
         quantity: item.quantity,
-        unitPrice: parseFloat(item.unitPrice),
-        totalPrice: parseFloat(item.totalPrice),
+        unitPrice: typeof item.unitPrice === 'string' ? parseFloat(item.unitPrice) : item.unitPrice,
+        totalPrice: typeof item.totalPrice === 'string' ? parseFloat(item.totalPrice) : item.totalPrice,
       }));
 
       form.reset({
