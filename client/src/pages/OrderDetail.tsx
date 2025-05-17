@@ -303,7 +303,10 @@ export default function OrderDetail() {
                           <tr className="bg-gray-50">
                             <td colSpan={6} className="px-6 py-3 text-right text-sm font-medium text-gray-900">Total:</td>
                             <td className="px-6 py-3 text-right text-sm font-bold text-gray-900">
-                              {formatCurrency(parseFloat(order.totalAmount) + parseFloat(order.tax))}
+                              {formatCurrency(
+                                (typeof order.totalAmount === 'string' ? parseFloat(order.totalAmount) : order.totalAmount) +
+                                (typeof order.tax === 'string' ? parseFloat(order.tax) : order.tax)
+                              )}
                             </td>
                           </tr>
                         </tfoot>
@@ -636,7 +639,10 @@ export default function OrderDetail() {
                               </Badge>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                              {formatCurrency(parseFloat(order.totalAmount) + parseFloat(order.tax))}
+                              {formatCurrency(
+                                (typeof order.totalAmount === 'string' ? parseFloat(order.totalAmount) : order.totalAmount) +
+                                (typeof order.tax === 'string' ? parseFloat(order.tax) : order.tax)
+                              )}
                             </td>
                           </tr>
                         </tbody>
@@ -701,7 +707,10 @@ export default function OrderDetail() {
                           </div>
                           <div className="flex justify-between py-2 font-bold border-t border-gray-200 mt-2 pt-2">
                             <span>Total:</span>
-                            <span>{formatCurrency(parseFloat(order.totalAmount) + parseFloat(order.tax))}</span>
+                            <span>{formatCurrency(
+                              (typeof order.totalAmount === 'string' ? parseFloat(order.totalAmount) : order.totalAmount) +
+                              (typeof order.tax === 'string' ? parseFloat(order.tax) : order.tax)
+                            )}</span>
                           </div>
                         </div>
                       </div>
@@ -729,7 +738,7 @@ export default function OrderDetail() {
           <SheetHeader className="mb-4">
             <SheetTitle>Messages</SheetTitle>
           </SheetHeader>
-          <MessageCenter orderId={parseInt(id)} />
+          <MessageCenter orderId={id ? parseInt(id) : 0} />
         </SheetContent>
       </Sheet>
 
