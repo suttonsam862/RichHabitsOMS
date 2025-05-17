@@ -57,6 +57,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Stripe payment endpoint for orders
   app.post("/api/orders/:orderId/checkout", async (req, res, next) => {
+    // First check if user is authenticated
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // Continue with checkout processing
     try {
       const orderId = parseInt(req.params.orderId);
       const order = await storage.getOrder(orderId);

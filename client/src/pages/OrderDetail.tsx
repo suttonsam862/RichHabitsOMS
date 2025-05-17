@@ -39,6 +39,8 @@ interface OrderDetail {
   createdAt: string;
   updatedAt: string;
   status: string;
+  isPaid: boolean;
+  paymentDate: string | null;
   totalAmount: string | number;
   tax: string | number;
   notes?: string;
