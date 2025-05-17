@@ -1631,6 +1631,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin action routes
+  // Assign manufacturer to order
+  app.patch("/api/orders/:orderId/assign-manufacturer", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const { manufacturerId } = req.body;
+      
+      if (!manufacturerId) {
+        return res.status(400).json({ message: "Manufacturer ID is required" });
+      }
+      
+      const updatedOrder = await storage.assignManufacturerToOrder(orderId, parseInt(manufacturerId));
+      
+      // Create a production task if it doesn't exist yet
+      const existingTasks = await storage.getProductionTasksByOrderId(orderId);
+      if (existingTasks.length === 0) {
+        await storage.createProductionTask({
+          orderId,
+          status: 'pending',
+          notes: 'Assigned by administrator',
+          createdAt: new Date()
+        });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Approve design task
+  app.patch("/api/design-tasks/:taskId/approve", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      
+      const updatedTask = await storage.approveDesignTask(taskId);
+      
+      res.json(updatedTask);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Mark order as paid
+  app.patch("/api/orders/:orderId/mark-paid", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      
+      const updatedOrder = await storage.markOrderAsPaid(orderId);
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   app.get("/api/dashboard/inventory", isAuthenticated, hasRole(["admin", "manufacturer"]), async (req, res, next) => {
     try {
       const inventoryItems = await storage.getInventoryItems();

@@ -91,6 +91,13 @@ export function AppLayout() {
       roles: ['admin'],
     },
     {
+      name: 'Admin Oversight',
+      href: '/admin/oversight',
+      icon: BarChart,
+      current: location.pathname === '/admin/oversight',
+      roles: ['admin'],
+    },
+    {
       name: 'Analytics',
       href: '/analytics',
       icon: BarChart,

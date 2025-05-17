@@ -28,6 +28,7 @@ import Payments from "@/pages/Payments";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
 import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
+import AdminOversightDashboard from "@/pages/AdminOversightDashboard";
 
 function App() {
   return (
@@ -166,6 +167,15 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin']}>
                       <AdminManufacturerAssignment />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/oversight" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <AdminOversightDashboard />
                     </RequireAuth>
                   } 
                 />
