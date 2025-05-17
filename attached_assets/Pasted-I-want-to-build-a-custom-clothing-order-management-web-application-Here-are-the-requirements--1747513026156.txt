@@ -1,0 +1,18 @@
+I want to build a **custom clothing order management web application**. Here are the requirements:
+
+- **User Roles & Dashboards:** Implement user authentication with five roles – Admin, Salesperson, Designer, Manufacturer, Customer – each with a dedicated dashboard and appropriate permissions.
+- **Order Entry & Editing:** Allow Salespeople to create and edit customer orders in a spreadsheet-like interface (multiple line items, editable fields) with role-based visibility.
+- **Design Task Management:** Enable Designers to track design tasks for orders and upload design files; Designers should see orders assigned to them and update task status.
+- **Messaging System:** Provide an in-app messaging system for communication between users (e.g. Salesperson <> Designer, Admin <> Manufacturer). If a user is offline or misses a message, send a notification email as a fallback.
+- **Production Routing:** Once an order design is approved, route the production order to a Manufacturer user, who should get notified and see it in their dashboard.
+- **Payments & Accounting:** Integrate Stripe for processing payments on orders, and integrate QuickBooks for accounting (e.g., syncing order invoices or payments to QuickBooks).
+- **Admin Oversight:** An Admin dashboard should give an overview of all orders and tasks, with reporting features. Admins can assign tasks (e.g., designate which Designer or Manufacturer is responsible for an order) and approve completed designs or orders.
+- **UI/UX:** The UI should be clean and modern with smooth transitions. Each user should only see navigation and data relevant to their role. Ensure a responsive design that works on various screen sizes.
+
+Please **propose a detailed project plan** for the MVP. Outline the system architecture and data models, define success criteria for the MVP, and select the tech stack best suited for this project. The stack should align with Replit’s supported options (e.g. a Full-Stack React/Express app for a complex web application). Explain why the chosen stack is appropriate. Include the following in the plan:
+- MVP features and success criteria.
+- Architecture overview (frontend, backend, database design, how components interact).
+- Chosen technology stack (from Replit’s available options) and reasoning.
+- Key development milestones or phases to build these features.
+- Any future feature suggestions beyond this MVP.
+- A one-line summary of the project at the end.
