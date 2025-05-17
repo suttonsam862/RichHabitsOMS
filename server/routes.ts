@@ -1423,11 +1423,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           break;
         }
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          
+          // Get the order by the stripe session ID
+          const orders = await storage.getOrdersByStripeSessionId(session.id);
+          
+          if (orders.length > 0) {
+            const order = orders[0];
+            
+            // Update order as paid
+            await storage.updateOrder(order.id, {
+              isPaid: true,
+              paymentDate: new Date(),
+              status: 'pending_design'
+            });
+            
+            // Create payment record if it doesn't exist
+            const existingPayments = await storage.getPaymentsByOrderId(order.id);
+            if (!existingPayments.some(p => p.status === 'completed')) {
+              await storage.createPayment({
+                orderId: order.id,
+                amount: order.totalAmount.toString(),
+                status: 'completed',
+                method: 'stripe',
+                transactionId: session.payment_intent as string
+              });
+            }
+            
+            // Create design task if payment is completed and no task exists
+            const existingTasks = await storage.getDesignTasksByOrderId(order.id);
+            if (existingTasks.length === 0) {
+              await storage.createDesignTask({
+                orderId: order.id,
+                status: 'pending',
+                description: `Design task for order ${order.orderNumber}`,
+                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+              });
+            }
+            
+            // Notify relevant personnel
+            const admins = await storage.getUsersByRole('admin');
+            for (const admin of admins) {
+              await sendNotification(admin.id, {
+                type: 'payment_completed',
+                order,
+              });
+            }
+            
+            // Get customer and send receipt email
+            const customer = await storage.getCustomerByUserId(order.customerId);
+            const customerUser = await storage.getUser(order.customerId);
+            
+            if (customer && customerUser && customerUser.email) {
+              try {
+                const emailTemplate = getPaymentReceiptEmailTemplate(
+                  order.orderNumber,
+                  `$${parseFloat(order.totalAmount.toString()).toFixed(2)}`,
+                  customerUser.firstName || customerUser.username
+                );
+                
+                await sendEmail({
+                  ...emailTemplate,
+                  to: customerUser.email
+                });
+              } catch (emailError) {
+                console.error('Failed to send receipt email:', emailError);
+              }
+            }
+          }
+          
+          break;
+        }
         default:
           console.log(`Unhandled event type ${event.type}`);
       }
       
       res.json({ received: true });
+    });
+    
+    // Payment verification endpoint - used by success page to verify payment was completed
+    app.get("/api/payment-verify", async (req, res, next) => {
+      try {
+        const sessionId = req.query.session_id as string;
+        
+        if (!sessionId) {
+          return res.status(400).json({ message: "Missing session ID" });
+        }
+        
+        if (!stripe) {
+          return res.status(500).json({ message: "Stripe is not configured" });
+        }
+        
+        // Retrieve session from Stripe
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        
+        if (!session) {
+          return res.status(404).json({ message: "Session not found" });
+        }
+        
+        // Get order by session ID
+        const orders = await storage.getOrdersByStripeSessionId(sessionId);
+        
+        if (orders.length === 0) {
+          return res.status(404).json({ message: "No order found for this session" });
+        }
+        
+        const order = orders[0];
+        
+        // Return relevant information about the order
+        res.json({
+          orderNumber: order.orderNumber,
+          orderId: order.id,
+          status: order.status,
+          isPaid: order.isPaid,
+          totalAmount: order.totalAmount
+        });
+      } catch (error) {
+        next(error);
+      }
     });
   }
   
