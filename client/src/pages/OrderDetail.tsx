@@ -10,6 +10,33 @@ import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from "@/li
 import MessageCenter from "@/components/messaging/MessageCenter";
 import { FileUpload } from "@/components/design/FileUpload";
 import { CheckoutForm } from "@/components/payments/CheckoutForm";
+import { DesignTask, ProductionTask } from "@/lib/types";
+
+interface OrderItem {
+  id: number;
+  productName: string;
+  description: string;
+  size: string;
+  color: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+interface OrderDetail {
+  id: number;
+  orderNumber: string;
+  createdAt: string;
+  updatedAt: string;
+  status: string;
+  totalAmount: string | number;
+  tax: string | number;
+  notes?: string;
+  items: OrderItem[];
+  designTasks: DesignTask[];
+  productionTasks: ProductionTask[];
+  pendingTasks: any[];
+}
 
 import { 
   Card, 
@@ -66,7 +93,7 @@ export default function OrderDetail() {
   }, [isAuthenticated, loading, requireAuth]);
 
   // Fetch order details
-  const { data: order, isLoading: orderLoading } = useQuery({
+  const { data: order = {} as OrderDetail, isLoading: orderLoading } = useQuery<OrderDetail>({
     queryKey: [`/api/orders/${id}`],
     enabled: isAuthenticated && !!id,
   });
@@ -242,7 +269,7 @@ export default function OrderDetail() {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {order.items && order.items.map((item: any) => (
+                          {order.items && order.items.map((item: OrderItem) => (
                             <tr key={item.id}>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.productName}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.description}</td>

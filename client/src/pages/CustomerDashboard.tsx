@@ -36,7 +36,7 @@ export default function CustomerDashboard() {
   }, [requireAuth]);
 
   // Fetch customer's orders and data
-  const { data, isLoading } = useQuery({
+  const { data = {} as CustomerDashboardData, isLoading } = useQuery<CustomerDashboardData>({
     queryKey: ['/api/customer/dashboard'],
     enabled: !!user && user.role === 'customer',
   });
@@ -113,7 +113,7 @@ export default function CustomerDashboard() {
                 <div className="py-4 text-center text-gray-500">Loading orders...</div>
               ) : data?.activeOrders?.length ? (
                 <div className="space-y-4">
-                  {data.activeOrders.map((order: any) => (
+                  {data.activeOrders.map((order: OrderSummary) => (
                     <Card key={order.id} className="bg-white border hover:border-blue-200 transition-colors">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -191,7 +191,7 @@ export default function CustomerDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.orderHistory.map((order: any) => (
+                      {data.orderHistory.map((order: OrderSummary) => (
                         <tr key={order.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4">{order.orderNumber}</td>
                           <td className="py-3 px-4">{formatDate(order.createdAt)}</td>
@@ -239,7 +239,7 @@ export default function CustomerDashboard() {
                 <div className="py-4 text-center text-gray-500">Loading messages...</div>
               ) : data?.recentMessages?.length ? (
                 <div className="space-y-4">
-                  {data.recentMessages.map((message: any) => (
+                  {data.recentMessages.map((message: MessageSummary) => (
                     <div key={message.id} className="flex items-start space-x-4 p-4 border-b last:border-0">
                       <div className="bg-primary text-primary-foreground h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0">
                         {message.senderName ? message.senderName.charAt(0).toUpperCase() : 'U'}
