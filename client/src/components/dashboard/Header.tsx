@@ -24,18 +24,19 @@ const roleHeaderColors = {
 };
 
 interface HeaderProps {
-  onOpenMessages: () => void;
-  onOpenNotifications: () => void;
+  onOpenMessages?: () => void;
+  onOpenNotifications?: () => void;
+  title?: string;
 }
 
-export function Header({ onOpenMessages, onOpenNotifications }: HeaderProps) {
+export function Header({ onOpenMessages = () => {}, onOpenNotifications = () => {}, title }: HeaderProps) {
   const { user, role, logout } = useAuth();
   const { notifications } = useWebSocket(user?.id || null);
   const [isOpen, setIsOpen] = useState(false);
 
   if (!user) return null;
 
-  const roleColor = roleHeaderColors[role] || "bg-gray-800";
+  const roleColor = role && roleHeaderColors[role as keyof typeof roleHeaderColors] || "bg-gray-800";
   const unreadNotifications = notifications.length;
   const unreadMessages = notifications.filter(n => n.type === "new_message").length;
 

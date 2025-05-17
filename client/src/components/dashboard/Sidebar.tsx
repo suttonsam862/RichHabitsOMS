@@ -65,11 +65,11 @@ const roleColors = {
 };
 
 interface SidebarProps {
-  mobileOpen: boolean;
-  setMobileOpen: (open: boolean) => void;
+  mobileOpen?: boolean;
+  setMobileOpen?: (open: boolean) => void;
 }
 
-export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
+export function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }: SidebarProps) {
   const { user, role } = useAuth();
   const [location] = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -82,8 +82,8 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
   if (!user) return null;
 
   // Get navigation items for the current role
-  const items = navigationItems[role] || [];
-  const roleColor = roleColors[role] || roleColors.customer;
+  const items = role && navigationItems[role as keyof typeof navigationItems] || [];
+  const roleColor = role && roleColors[role as keyof typeof roleColors] || roleColors.customer;
 
   return (
     <>
@@ -121,7 +121,11 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
           </div>
 
           <nav className="space-y-1">
-            {items.map((item) => (
+            {items.map((item: { 
+              name: string; 
+              href: string; 
+              icon: React.ComponentType<{ className?: string }> 
+            }) => (
               <Link href={item.href} key={item.name}>
                 <a 
                   className={cn(
