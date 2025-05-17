@@ -1,0 +1,301 @@
+openapi: 3.0.3
+info:
+  title: Custom Clothing Order Management API
+  description: API for the Custom Clothing Order Management System
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+    OrderStats:
+      type: object
+      properties:
+        status:
+          type: string
+        count:
+          type: number
+    UserCounts:
+      type: object
+      properties:
+        role:
+          type: string
+        count:
+          type: number
+    DashboardStats:
+      type: object
+      properties:
+        orderStats:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderStats'
+        userCounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserCounts'
+        recentOrders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+    Order:
+      type: object
+      properties:
+        id:
+          type: number
+        orderNumber:
+          type: string
+        status:
+          type: string
+          enum: [draft, pending_design, design_in_progress, design_review, design_approved, pending_production, in_production, completed, cancelled]
+        customerId:
+          type: number
+        salespersonId:
+          type: number
+        manufacturerId:
+          type: number
+        totalAmount:
+          type: number
+        isPaid:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DesignTask:
+      type: object
+      properties:
+        id:
+          type: number
+        orderId:
+          type: number
+        designerId:
+          type: number
+        status:
+          type: string
+          enum: [pending, in_progress, submitted, approved, rejected, completed, cancelled]
+        notes:
+          type: string
+        description:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AssignManufacturerRequest:
+      type: object
+      properties:
+        manufacturerId:
+          type: number
+      required:
+        - manufacturerId
+  responses:
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Unauthorized
+    ForbiddenError:
+      description: User does not have permission to access the resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Forbidden: Admin access required
+security:
+  - cookieAuth: []
+paths:
+  /api/dashboard/stats:
+    get:
+      summary: Get dashboard statistics
+      description: Returns statistics for the admin dashboard including order statistics, user counts, and recent orders
+      tags:
+        - Admin
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+              example:
+                orderStats:
+                  - status: draft
+                    count: 5
+                  - status: pending_design
+                    count: 3
+                  - status: completed
+                    count: 10
+                userCounts:
+                  - role: customer
+                    count: 15
+                  - role: designer
+                    count: 5
+                  - role: manufacturer
+                    count: 3
+                recentOrders:
+                  - id: 1
+                    orderNumber: 'ORD-001'
+                    status: 'pending_design'
+                    createdAt: '2023-05-01T12:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/orders/{orderId}/assign-manufacturer:
+    patch:
+      summary: Assign manufacturer to order
+      description: Assigns a manufacturer to an order and updates the order status to pending_production
+      tags:
+        - Admin
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the order to assign manufacturer to
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignManufacturerRequest'
+            example:
+              manufacturerId: 2
+      responses:
+        '200':
+          description: Manufacturer assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 1
+                orderNumber: 'ORD-001'
+                status: 'pending_production'
+                manufacturerId: 2
+                customerId: 5
+                salespersonId: 3
+                isPaid: false
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Order not found
+
+  /api/design-tasks/{taskId}/approve:
+    patch:
+      summary: Approve a design task
+      description: Approves a design task and updates the associated order status to design_approved
+      tags:
+        - Admin
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the design task to approve
+      responses:
+        '200':
+          description: Design task approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignTask'
+              example:
+                id: 1
+                orderId: 1
+                designerId: 3
+                status: 'approved'
+                notes: 'Design approved by admin'
+                description: 'Create logo design for t-shirt'
+                createdAt: '2023-05-01T12:00:00Z'
+                updatedAt: '2023-05-02T10:30:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Design task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Design task not found
+
+  /api/orders/{orderId}/mark-paid:
+    patch:
+      summary: Mark order as paid
+      description: Updates an order to mark it as paid
+      tags:
+        - Admin
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the order to mark as paid
+      responses:
+        '200':
+          description: Order marked as paid successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 1
+                orderNumber: 'ORD-001'
+                status: 'pending_design'
+                manufacturerId: null
+                customerId: 5
+                salespersonId: 3
+                isPaid: true
+                totalAmount: 599.99
+                createdAt: '2023-05-01T12:00:00Z'
+                updatedAt: '2023-05-03T14:20:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Order not found
