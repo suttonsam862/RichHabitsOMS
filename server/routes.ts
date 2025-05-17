@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { configureAuth } from "./auth";
 import { setupWebSocketServer, sendNotification } from "./messaging";
 import { sendEmail, getOrderStatusChangeEmailTemplate, getPaymentReceiptEmailTemplate, getDesignApprovalEmailTemplate } from "./email";
+import { requireAdmin } from "./middleware/adminAuth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -1546,7 +1547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // Dashboard data routes
-  app.get("/api/dashboard/stats", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+  app.get("/api/dashboard/stats", isAuthenticated, requireAdmin, async (req, res, next) => {
     try {
       // Get order statistics
       const orderStats = await storage.getOrderStatistics();
@@ -1633,7 +1634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Admin action routes
   // Assign manufacturer to order
-  app.patch("/api/orders/:orderId/assign-manufacturer", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+  app.patch("/api/orders/:orderId/assign-manufacturer", isAuthenticated, requireAdmin, async (req, res, next) => {
     try {
       const orderId = parseInt(req.params.orderId);
       const { manufacturerId } = req.body;
@@ -1662,7 +1663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Approve design task
-  app.patch("/api/design-tasks/:taskId/approve", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+  app.patch("/api/design-tasks/:taskId/approve", isAuthenticated, requireAdmin, async (req, res, next) => {
     try {
       const taskId = parseInt(req.params.taskId);
       
@@ -1675,7 +1676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Mark order as paid
-  app.patch("/api/orders/:orderId/mark-paid", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+  app.patch("/api/orders/:orderId/mark-paid", isAuthenticated, requireAdmin, async (req, res, next) => {
     try {
       const orderId = parseInt(req.params.orderId);
       
