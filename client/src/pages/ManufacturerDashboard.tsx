@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
@@ -24,6 +24,7 @@ import {
   CalendarClock,
   TruckIcon
 } from "lucide-react";
+import { ManufacturerDashboardData, ProductionTask } from "@/lib/types";
 
 export default function ManufacturerDashboard() {
   const { requireAuth, user } = useAuth();
@@ -35,7 +36,7 @@ export default function ManufacturerDashboard() {
   }, [requireAuth]);
 
   // Fetch manufacturer's assigned production tasks
-  const { data, isLoading } = useQuery({
+  const { data = {} as ManufacturerDashboardData, isLoading } = useQuery<ManufacturerDashboardData>({
     queryKey: ['/api/manufacturer/dashboard'],
     enabled: !!user && user.role === 'manufacturer',
   });
@@ -120,7 +121,7 @@ export default function ManufacturerDashboard() {
                 <div className="py-4 text-center text-gray-500">Loading production tasks...</div>
               ) : data?.activeTasks?.length ? (
                 <div className="space-y-4">
-                  {data.activeTasks.map((task: any) => (
+                  {data.activeTasks.map((task: ProductionTask) => (
                     <Card key={task.id} className="bg-white border hover:border-purple-200 transition-colors">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -189,7 +190,7 @@ export default function ManufacturerDashboard() {
                 <div className="py-4 text-center text-gray-500">Loading queue...</div>
               ) : data?.pendingTasks?.length ? (
                 <div className="space-y-4">
-                  {data.pendingTasks.map((task: any) => (
+                  {data.pendingTasks.map((task: ProductionTask) => (
                     <div key={task.id} className="flex items-start justify-between p-4 border-b last:border-0">
                       <div>
                         <div className="flex items-center space-x-2">

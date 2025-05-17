@@ -35,7 +35,7 @@ export default function DesignerDashboard() {
   }, [requireAuth]);
 
   // Fetch designer's assigned tasks
-  const { data, isLoading } = useQuery({
+  const { data = {} as DesignerDashboardData, isLoading } = useQuery<DesignerDashboardData>({
     queryKey: ['/api/designer/dashboard'],
     enabled: !!user && user.role === 'designer',
   });
@@ -120,7 +120,7 @@ export default function DesignerDashboard() {
                 <div className="py-4 text-center text-gray-500">Loading tasks...</div>
               ) : data?.activeTasks?.length ? (
                 <div className="space-y-4">
-                  {data.activeTasks.map((task: any) => (
+                  {data.activeTasks.map((task: DesignTask) => (
                     <Card key={task.id} className="bg-white border hover:border-blue-200 transition-colors">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -185,7 +185,7 @@ export default function DesignerDashboard() {
                 <div className="py-4 text-center text-gray-500">Loading...</div>
               ) : data?.completedTasks?.length ? (
                 <div className="space-y-4">
-                  {data.completedTasks.map((task: any) => (
+                  {data.completedTasks.map((task: DesignTask) => (
                     <div key={task.id} className="flex items-start justify-between p-4 border-b last:border-0">
                       <div>
                         <div className="flex items-center space-x-2">

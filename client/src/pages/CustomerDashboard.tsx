@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
@@ -24,6 +24,7 @@ import {
   Plus,
   MessageSquare
 } from "lucide-react";
+import { CustomerDashboardData, OrderSummary, MessageSummary } from "@/lib/types";
 
 export default function CustomerDashboard() {
   const { requireAuth, user } = useAuth();
