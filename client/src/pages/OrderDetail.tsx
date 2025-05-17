@@ -10,7 +10,16 @@ import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from "@/li
 import MessageCenter from "@/components/messaging/MessageCenter";
 import { FileUpload } from "@/components/design/FileUpload";
 import { CheckoutForm } from "@/components/payments/CheckoutForm";
-import { DesignTask, ProductionTask } from "@/lib/types";
+import { DesignTask as BaseDesignTask, ProductionTask as BaseProductionTask } from "@/lib/types";
+
+// Extend the base types with additional properties for the OrderDetail component
+interface DesignTask extends BaseDesignTask {
+  notes?: string;
+}
+
+interface ProductionTask extends BaseProductionTask {
+  notes?: string;
+}
 
 interface OrderItem {
   id: number;
@@ -204,7 +213,8 @@ export default function OrderDetail() {
                     </DialogHeader>
                     <CheckoutForm 
                       orderId={order.id} 
-                      amount={parseFloat(order.totalAmount) + parseFloat(order.tax)} 
+                      amount={(typeof order.totalAmount === 'string' ? parseFloat(order.totalAmount) : order.totalAmount) +
+                             (typeof order.tax === 'string' ? parseFloat(order.tax) : order.tax)} 
                       onSuccess={() => {
                         setPaymentDialogOpen(false);
                         queryClient.invalidateQueries({ queryKey: [`/api/orders/${id}`] });
@@ -367,7 +377,7 @@ export default function OrderDetail() {
                   <CardContent>
                     {order.designTasks && order.designTasks.length > 0 ? (
                       <div className="space-y-4">
-                        {order.designTasks.map((task: any) => (
+                        {order.designTasks.map((task: DesignTask) => (
                           <div key={task.id} className="border border-gray-200 rounded-lg p-4">
                             <div className="flex justify-between">
                               <div>
@@ -478,7 +488,7 @@ export default function OrderDetail() {
                   <CardContent>
                     {order.productionTasks && order.productionTasks.length > 0 ? (
                       <div className="space-y-4">
-                        {order.productionTasks.map((task: any) => (
+                        {order.productionTasks.map((task: ProductionTask) => (
                           <div key={task.id} className="border border-gray-200 rounded-lg p-4">
                             <div className="flex justify-between">
                               <div>
