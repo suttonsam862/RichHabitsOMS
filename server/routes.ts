@@ -763,6 +763,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Assign manufacturer to order
+  app.put("/api/orders/:orderId/assign-manufacturer", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const { manufacturerId } = req.body;
+      
+      if (!manufacturerId) {
+        return res.status(400).json({ message: "Manufacturer ID is required" });
+      }
+      
+      // Get the order
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Verify the order status is design_approved
+      if (order.status !== 'design_approved') {
+        return res.status(400).json({ 
+          message: "Order must be in 'design_approved' status to assign a manufacturer" 
+        });
+      }
+      
+      // Get the manufacturer
+      const manufacturer = await storage.getUser(manufacturerId);
+      if (!manufacturer || manufacturer.role !== 'manufacturer') {
+        return res.status(400).json({ message: "Invalid manufacturer ID" });
+      }
+      
+      // Create or update production task for this order
+      const existingTasks = await storage.getProductionTasksByOrderId(orderId);
+      let productionTask;
+      
+      if (existingTasks && existingTasks.length > 0) {
+        // Update existing task
+        productionTask = await storage.updateProductionTask(existingTasks[0].id, {
+          manufacturerId,
+          status: 'pending'
+        });
+      } else {
+        // Create new task
+        productionTask = await storage.createProductionTask({
+          orderId,
+          manufacturerId,
+          status: 'pending',
+          description: `Production task for order #${order.orderNumber}`
+        });
+      }
+      
+      // Update order status
+      await storage.updateOrder(orderId, {
+        status: 'pending_production'
+      });
+      
+      // Send notification to manufacturer
+      if (manufacturer) {
+        sendNotification(manufacturerId, {
+          type: 'assigned_to_production',
+          order,
+          task: productionTask
+        });
+      }
+      
+      res.json({ 
+        message: "Manufacturer assigned successfully",
+        order: await storage.getOrder(orderId),
+        productionTask
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Update production status
+  app.put("/api/orders/:orderId/update-production-status", isAuthenticated, hasRole(["manufacturer", "admin"]), async (req, res, next) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const { status, notes } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      // Validate status
+      const validStatuses = ['pending_production', 'in_production', 'completed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ 
+          message: `Status must be one of: ${validStatuses.join(', ')}` 
+        });
+      }
+      
+      // Get the order
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Get production tasks for this order
+      const productionTasks = await storage.getProductionTasksByOrderId(orderId);
+      if (!productionTasks || productionTasks.length === 0) {
+        return res.status(404).json({ 
+          message: "No production task found for this order" 
+        });
+      }
+      
+      const productionTask = productionTasks[0];
+      
+      // Verify permissions (only assigned manufacturer or admin can update)
+      if (req.user.role === 'manufacturer' && productionTask.manufacturerId !== req.user.id) {
+        return res.status(403).json({ 
+          message: "You are not assigned to this production task" 
+        });
+      }
+      
+      // Update production task status
+      let taskStatus = 'pending';
+      if (status === 'in_production') {
+        taskStatus = 'in_progress';
+      } else if (status === 'completed') {
+        taskStatus = 'completed';
+      }
+      
+      await storage.updateProductionTask(productionTask.id, {
+        status: taskStatus,
+        notes: notes || productionTask.notes
+      });
+      
+      // Update order status
+      await storage.updateOrder(orderId, {
+        status
+      });
+      
+      // Notify customer about completion
+      if (status === 'completed') {
+        const customer = await storage.getCustomer(order.customerId);
+        if (customer) {
+          const customerUser = await storage.getUser(customer.userId);
+          if (customerUser) {
+            sendNotification(customerUser.id, {
+              type: 'order_production_completed',
+              order
+            });
+          }
+        }
+      }
+      
+      res.json({ 
+        message: "Production status updated successfully",
+        order: await storage.getOrder(orderId),
+        productionTask: await storage.getProductionTask(productionTask.id)
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.put("/api/production-tasks/:id", isAuthenticated, hasRole(["admin", "manufacturer"]), async (req, res, next) => {
     try {
       const taskId = parseInt(req.params.id);

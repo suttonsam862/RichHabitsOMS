@@ -1,256 +1,395 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
-import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Header } from "@/components/dashboard/Header";
-import { ProductionQueue } from "@/components/manufacturing/ProductionQueue";
-import { useQuery } from "@tanstack/react-query";
-import { MessageCenter } from "@/components/messaging/MessageCenter";
-import { formatCurrency } from "@/lib/utils";
-
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from "@/components/ui/card";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle 
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from "@/components/ui/tabs";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
+import { Loader2, ClipboardList, PlayCircle, CheckCircle, Eye } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 export default function Production() {
-  const { user, role, isAuthenticated, loading, requireAuth } = useAuth();
-  const [, setLocation] = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [messagesOpen, setMessagesOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-
-  // Check if user is authenticated and has manufacturer role
-  useEffect(() => {
-    if (!loading) {
-      const hasAccess = requireAuth(["admin", "manufacturer"]);
-      if (!hasAccess) {
-        setLocation("/dashboard");
-      }
-    }
-  }, [isAuthenticated, loading, requireAuth, setLocation]);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('pending_production');
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [notes, setNotes] = useState('');
+  const [viewingOrder, setViewingOrder] = useState<any>(null);
 
   // Fetch production tasks
-  const { data: productionTasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ["/api/production-tasks"],
-    enabled: isAuthenticated && (role === "manufacturer" || role === "admin"),
+  const { data: productionTasks = [], isLoading } = useQuery({
+    queryKey: ['/api/production-tasks'],
+    queryFn: getQueryFn({ on401: 'throw' }),
   });
 
-  // Fetch inventory
-  const { data: inventory, isLoading: inventoryLoading } = useQuery({
-    queryKey: ["/api/dashboard/inventory"],
-    enabled: isAuthenticated && (role === "manufacturer" || role === "admin"),
+  // Update production status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: (data: { orderId: number, status: string, notes?: string }) => {
+      return apiRequest('PUT', `/api/orders/${data.orderId}/update-production-status`, {
+        status: data.status,
+        notes: data.notes
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/production-tasks'] });
+      toast({
+        title: 'Status Updated',
+        description: 'Production status has been updated successfully',
+      });
+      setSelectedOrderId(null);
+      setNotes('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Update Failed',
+        description: error.message || 'Failed to update production status',
+        variant: 'destructive'
+      });
+    },
   });
 
-  // Show loading state
-  if (loading || tasksLoading || inventoryLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
+  // Filter tasks based on status
+  const filteredTasks = productionTasks.filter((task: any) => {
+    if (!task.order) return false;
+    if (activeTab === 'all') return true;
+    return task.order.status === activeTab;
+  });
 
-  // Example production metrics
-  const productionMetrics = [
-    {
-      label: "Orders In Production",
-      value: "2",
-      change: "-15%",
-      changeType: "decrease"
-    },
-    {
-      label: "Completed This Month",
-      value: "8",
-      change: "+23%",
-      changeType: "increase"
-    },
-    {
-      label: "On-Time Completion Rate",
-      value: "94%",
-      change: "+2%",
-      changeType: "increase"
-    },
-    {
-      label: "Avg. Production Time",
-      value: "4.2 days",
-      change: "-0.3 days",
-      changeType: "decrease"
+  // Handle status update
+  const handleStatusUpdate = (orderId: number, newStatus: string) => {
+    if (newStatus === 'in_production' || newStatus === 'completed') {
+      setSelectedOrderId(orderId);
+    } else {
+      updateStatusMutation.mutate({ orderId, status: newStatus });
     }
-  ];
+  };
 
-  // Example inventory items
-  const inventoryItems = [
-    {
-      name: "T-shirts (Black)",
-      sizes: "Medium, Large, XL",
-      quantity: 145,
-      percentage: 75
-    },
-    {
-      name: "Polo Shirts (Navy)",
-      sizes: "Small, Medium, Large",
-      quantity: 78,
-      percentage: 60
-    },
-    {
-      name: "Hoodies (Gray)",
-      sizes: "Medium, Large, XL",
-      quantity: 32,
-      percentage: 35
-    },
-    {
-      name: "Jackets (Black)",
-      sizes: "Small, Medium, Large",
-      quantity: 12,
-      percentage: 15
-    }
-  ];
+  // Handle submit status update with notes
+  const handleSubmitStatusUpdate = () => {
+    if (!selectedOrderId) return;
+    
+    const task = productionTasks.find((t: any) => t.orderId === selectedOrderId);
+    if (!task) return;
+    
+    const newStatus = task.order.status === 'pending_production' ? 'in_production' : 'completed';
+    
+    updateStatusMutation.mutate({
+      orderId: selectedOrderId,
+      status: newStatus,
+      notes
+    });
+  };
+
+  // View order details
+  const handleViewOrder = (order: any) => {
+    setViewingOrder(order);
+  };
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
-
-      <div className="flex-1 flex flex-col md:ml-64">
-        <Header 
-          onOpenMessages={() => setMessagesOpen(true)} 
-          onOpenNotifications={() => setNotificationsOpen(true)} 
-        />
-
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Production Dashboard</h1>
-            <p className="text-gray-600">Track and manage manufacturing production orders.</p>
-          </div>
-          
-          <Tabs defaultValue="active">
-            <TabsList className="mb-6">
-              <TabsTrigger value="active">Active Orders</TabsTrigger>
-              <TabsTrigger value="metrics">Production Metrics</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="active">
-              <ProductionQueue tasks={productionTasks || []} />
-            </TabsContent>
-            
-            <TabsContent value="metrics">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-                {productionMetrics.map((metric, index) => (
-                  <Card key={index}>
-                    <CardContent className="p-6">
-                      <h3 className="text-sm font-medium text-gray-500 uppercase">{metric.label}</h3>
-                      <p className="text-3xl font-bold mt-2">{metric.value}</p>
-                      <div className={`flex items-center mt-2 text-sm ${
-                        metric.changeType === "increase" ? "text-green-600" : "text-red-600"
-                      }`}>
-                        <span className="mr-1">{metric.changeType === "increase" ? "↑" : "↓"}</span>
-                        <span>{metric.change} from last month</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Production Timeline</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80 flex items-center justify-center">
-                    <p className="text-gray-500">Production timeline chart would go here</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="inventory">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Inventory Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {inventoryItems.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center mr-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="font-medium">{item.name}</p>
-                            <p className="text-sm text-gray-500">{item.sizes}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900">{item.quantity} units</p>
-                          <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                item.percentage > 60 ? "bg-green-500" : 
-                                item.percentage > 30 ? "bg-yellow-500" : "bg-red-500"
-                              }`} 
-                              style={{ width: `${item.percentage}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    <div className="mt-6">
-                      <Button>Request Inventory Restock</Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </main>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Production Management</h1>
+        <p className="text-muted-foreground">
+          View and manage production tasks assigned to you
+        </p>
       </div>
 
-      {/* Messages Slide-out Panel */}
-      <Sheet open={messagesOpen} onOpenChange={setMessagesOpen}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Messages</SheetTitle>
-          </SheetHeader>
-          <MessageCenter />
-        </SheetContent>
-      </Sheet>
+      <Tabs defaultValue="pending_production" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="pending_production">Awaiting Production</TabsTrigger>
+          <TabsTrigger value="in_production">In Production</TabsTrigger>
+          <TabsTrigger value="completed">Completed</TabsTrigger>
+          <TabsTrigger value="all">All Tasks</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value={activeTab} className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>{getStatusLabel(activeTab)} Production Tasks</CardTitle>
+              <CardDescription>
+                {activeTab === 'pending_production' 
+                  ? 'Orders ready for production that need your attention'
+                  : activeTab === 'in_production' 
+                  ? 'Orders currently in the production process'
+                  : activeTab === 'completed'
+                  ? 'Orders that have completed the production process'
+                  : 'All production tasks assigned to you'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : filteredTasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No production tasks found</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date Assigned</TableHead>
+                        <TableHead>Design Files</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTasks.map((task: any) => (
+                        <TableRow key={task.id}>
+                          <TableCell className="font-medium">{task.order?.orderNumber}</TableCell>
+                          <TableCell>{task.order?.customer?.company || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(task.order?.status)}>
+                              {getStatusLabel(task.order?.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatDate(task.createdAt)}</TableCell>
+                          <TableCell>
+                            {task.order?.designTasks && task.order?.designTasks.length > 0 ? (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewOrder(task.order)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View Designs
+                              </Button>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">No designs available</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              {task.order?.status === 'pending_production' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleStatusUpdate(task.order.id, 'in_production')}
+                                >
+                                  <PlayCircle className="h-4 w-4 mr-1" />
+                                  Start Production
+                                </Button>
+                              )}
+                              
+                              {task.order?.status === 'in_production' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleStatusUpdate(task.order.id, 'completed')}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Mark as Completed
+                                </Button>
+                              )}
+                              
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewOrder(task.order)}
+                              >
+                                <ClipboardList className="h-4 w-4 mr-1" />
+                                Details
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-      {/* Notifications Slide-out Panel */}
-      <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Notifications</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4">
-            {/* Notification content would go here */}
-            <p className="text-gray-500 text-center py-8">
-              No notifications at this time
-            </p>
+      {/* Status Update Dialog */}
+      <Dialog open={!!selectedOrderId} onOpenChange={(open) => !open && setSelectedOrderId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
+                ? 'Start Production' 
+                : 'Complete Production'}
+            </DialogTitle>
+            <DialogDescription>
+              {productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production'
+                ? 'Update the status to indicate that production has started'
+                : 'Mark this order as completed production'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div>
+              <Textarea
+                placeholder="Add any notes about production (optional)"
+                className="min-h-[100px]"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedOrderId(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitStatusUpdate} disabled={updateStatusMutation.isPending}>
+              {updateStatusMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
+                ? 'Start Production' 
+                : 'Complete Production'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Details Dialog */}
+      <Dialog open={!!viewingOrder} onOpenChange={(open) => !open && setViewingOrder(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Order Details: {viewingOrder?.orderNumber}</DialogTitle>
+            <DialogDescription>
+              View order information and design files
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewingOrder && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-medium mb-1">Customer</h3>
+                  <p>{viewingOrder.customer?.company || 'N/A'}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Status</h3>
+                  <Badge className={getStatusColor(viewingOrder.status)}>
+                    {getStatusLabel(viewingOrder.status)}
+                  </Badge>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Created Date</h3>
+                  <p>{formatDate(viewingOrder.createdAt)}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Total Amount</h3>
+                  <p>${parseFloat(viewingOrder.totalAmount).toFixed(2)}</p>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="font-medium mb-2">Order Items</h3>
+                <div className="rounded-md border mb-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Price</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {viewingOrder.orderItems?.map((item: any) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.productName}</TableCell>
+                          <TableCell>{item.description || 'N/A'}</TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>${parseFloat(item.totalPrice).toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="font-medium mb-2">Design Files</h3>
+                {viewingOrder.designTasks?.length > 0 && viewingOrder.designTasks[0].files?.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {viewingOrder.designTasks[0].files.map((file: any) => (
+                      <Card key={file.id} className="overflow-hidden">
+                        <CardContent className="p-0">
+                          {file.fileType.includes('image') ? (
+                            <img 
+                              src={file.filePath} 
+                              alt={file.filename} 
+                              className="w-full h-40 object-contain"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-40 bg-muted">
+                              <Button variant="outline" onClick={() => window.open(file.filePath, '_blank')}>
+                                View File
+                              </Button>
+                            </div>
+                          )}
+                        </CardContent>
+                        <div className="p-3 border-t flex justify-between items-center">
+                          <span className="text-sm truncate">{file.filename}</span>
+                          <Button variant="ghost" size="sm" onClick={() => window.open(file.filePath, '_blank')}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No design files available</p>
+                )}
+              </div>
+              
+              {viewingOrder.notes && (
+                <div>
+                  <h3 className="font-medium mb-1">Notes</h3>
+                  <p className="text-muted-foreground">{viewingOrder.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingOrder(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
