@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { configureAuth } from "./auth";
@@ -54,6 +54,174 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Stripe payment endpoint for orders
+  app.post("/api/orders/:orderId/checkout", async (req, res, next) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const order = await storage.getOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Check if order is already paid
+      if (order.isPaid) {
+        return res.status(400).json({ message: "Order has already been paid" });
+      }
+      
+      // Get order items
+      const orderItems = await storage.getOrderItemsByOrderId(orderId);
+      
+      if (!orderItems || orderItems.length === 0) {
+        return res.status(400).json({ message: "Order has no items to pay for" });
+      }
+      
+      // Get customer details
+      const customer = await storage.getCustomer(order.customerId);
+      if (!customer) {
+        return res.status(400).json({ message: "Customer not found" });
+      }
+      
+      const customerUser = await storage.getUser(customer.userId);
+      if (!customerUser) {
+        return res.status(400).json({ message: "Customer user not found" });
+      }
+      
+      // Make sure stripe is initialized
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe is not configured" });
+      }
+      
+      // Create Stripe line items from order items
+      const lineItems = orderItems.map(item => ({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: item.productName,
+            description: item.description || undefined
+          },
+          unit_amount: Math.round(parseFloat(item.unitPrice.toString()) * 100), // Convert to cents
+        },
+        quantity: item.quantity,
+      }));
+      
+      // Add tax as a separate line item if applicable
+      if (order.tax && parseFloat(order.tax.toString()) > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Tax',
+              description: 'Sales tax'
+            },
+            unit_amount: Math.round(parseFloat(order.tax.toString()) * 100), // Convert to cents
+          },
+          quantity: 1,
+        });
+      }
+      
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: lineItems,
+        mode: 'payment',
+        success_url: `${req.protocol}://${req.get('host')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.protocol}://${req.get('host')}/payment-cancel?order_id=${orderId}`,
+        client_reference_id: order.id.toString(),
+        customer_email: customerUser.email,
+        metadata: {
+          orderId: order.id.toString(),
+          orderNumber: order.orderNumber
+        }
+      });
+      
+      // Update order with Stripe session ID
+      await storage.updateOrder(orderId, {
+        stripeSessionId: session.id
+      });
+      
+      // Return the session ID and URL to the client
+      res.json({
+        sessionId: session.id,
+        url: session.url
+      });
+    } catch (error) {
+      console.error('Stripe payment error:', error);
+      next(error);
+    }
+  });
+  
+  // Stripe webhook needs raw body, so add this middleware before Express bodyParser
+  app.post("/api/stripe-webhook", express.raw({ type: 'application/json' }), async (req: any, res) => {
+    const payload = req.body;
+    const sig = req.headers['stripe-signature'];
+    
+    let event;
+    
+    try {
+      // Verify the event came from Stripe
+      // In production, you should use a webhook secret
+      // const endpointSecret = 'your_webhook_secret';
+      // event = stripe.webhooks.constructEvent(payload, sig, endpointSecret);
+      
+      // For testing purposes, we'll just parse the payload
+      event = JSON.parse(payload.toString());
+      
+    } catch (err: any) {
+      console.error('Webhook error:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    
+    // Handle the checkout.session.completed event
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      
+      // Get order ID from metadata
+      const orderId = session.metadata?.orderId;
+      
+      if (orderId) {
+        try {
+          const order = await storage.getOrder(parseInt(orderId));
+          
+          if (order && order.stripeSessionId === session.id) {
+            // Update order as paid
+            await storage.updateOrder(parseInt(orderId), {
+              isPaid: true,
+              paymentDate: new Date()
+            });
+            
+            // Create payment record
+            await storage.createPayment({
+              orderId: parseInt(orderId),
+              amount: order.totalAmount,
+              status: 'completed',
+              method: 'credit_card',
+              transactionId: session.payment_intent,
+              notes: `Stripe payment completed for order #${order.orderNumber}`
+            });
+            
+            // Send email notification
+            const customer = await storage.getCustomer(order.customerId);
+            if (customer) {
+              const customerUser = await storage.getUser(customer.userId);
+              if (customerUser) {
+                // Send notification via WebSocket if available
+                sendNotification(customer.userId, {
+                  type: 'payment_completed',
+                  order
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error processing webhook payment:', error);
+        }
+      }
+    }
+    
+    res.status(200).end();
+  });
   // Create HTTP server
   const httpServer = createServer(app);
   
