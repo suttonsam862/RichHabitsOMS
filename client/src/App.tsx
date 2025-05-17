@@ -25,6 +25,7 @@ import DesignTasks from "@/pages/DesignTasks";
 import Messages from "@/pages/Messages";
 import Production from "@/pages/Production";
 import Payments from "@/pages/Payments";
+import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
 
 function App() {
   return (
@@ -152,6 +153,15 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson', 'customer']}>
                       <Payments />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/manufacturer-assignment" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <AdminManufacturerAssignment />
                     </RequireAuth>
                   } 
                 />

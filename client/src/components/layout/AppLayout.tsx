@@ -12,7 +12,8 @@ import {
   Settings, 
   LogOut, 
   Menu, 
-  X
+  X,
+  UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -81,6 +82,13 @@ export function AppLayout() {
       icon: Factory,
       current: location.pathname === '/production',
       roles: ['admin', 'manufacturer'],
+    },
+    {
+      name: 'Manufacturer Assignment',
+      href: '/manufacturer-assignment',
+      icon: UserCheck,
+      current: location.pathname === '/manufacturer-assignment',
+      roles: ['admin'],
     },
     {
       name: 'Analytics',
