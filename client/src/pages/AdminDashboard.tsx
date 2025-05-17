@@ -1,276 +1,224 @@
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
-import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable } from "@/components/ui/data-table";
-import { OrderTable } from "@/components/orders/OrderTable";
-import { formatCurrency } from "@/lib/utils";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useAuth } from "@/hooks/use-auth";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { Header } from "@/components/dashboard/Header";
+import { useQuery } from "@tanstack/react-query";
 import { 
-  ShoppingBag, 
-  Brush, 
-  Factory, 
-  DollarSign, 
-  Users, 
-  CheckCircle,
-  Clock 
-} from "lucide-react";
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { getStatusColor, formatCurrency } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
+import { Users, Shirt, ShoppingBag, TrendingUp, DollarSign, ClipboardList } from "lucide-react";
 
-// Colors for the charts
-const COLORS = ['#4F46E5', '#0EA5E9', '#EC4899', '#F59E0B', '#10B981', '#6B7280'];
+const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
-// Props for the dashboard
-interface AdminDashboardProps {
-  data: any;
-  isLoading: boolean;
-}
+export default function AdminDashboard() {
+  const { requireAuth, user } = useAuth();
 
-export default function AdminDashboard({ data, isLoading }: AdminDashboardProps) {
-  const { requireAuth } = useAuth();
-  const [, setLocation] = useLocation();
-
-  // Require admin role
+  // Check if user is authenticated
   useEffect(() => {
-    const hasAccess = requireAuth(["admin"]);
-    if (!hasAccess) {
-      setLocation("/dashboard");
-    }
-  }, [requireAuth, setLocation]);
+    requireAuth(["admin"]);
+  }, [requireAuth]);
 
-  // Fetch recent orders
-  const { data: recentOrders, isLoading: ordersLoading } = useQuery({
-    queryKey: ["/api/orders"],
+  // Fetch dashboard data
+  const { data, isLoading } = useQuery({
+    queryKey: ['/api/admin/dashboard'],
+    enabled: !!user && user.role === 'admin',
   });
 
-  if (isLoading || ordersLoading) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {Array(4).fill(0).map((_, i) => (
-            <Card key={i}>
+  return (
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar />
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header title="Admin Dashboard" />
+        
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
+          
+          {/* Key Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card>
               <CardContent className="p-6">
-                <div className="h-16 animate-pulse bg-gray-200 rounded"></div>
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-blue-100 rounded-full">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Total Users</p>
+                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.stats?.totalUsers || 0}</h3>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="h-64 animate-pulse bg-gray-200 rounded"></div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Format data for order status chart
-  const orderStatusData = data?.orderStats || [];
-  
-  // Example stat cards data
-  const statCards = [
-    {
-      title: "Active Orders",
-      value: orderStatusData.reduce((acc: number, stat: any) => 
-        stat.status !== "completed" && stat.status !== "cancelled" ? acc + stat.count : acc, 0),
-      icon: ShoppingBag,
-      color: "bg-indigo-100 text-indigo-600"
-    },
-    {
-      title: "Pending Designs",
-      value: orderStatusData.find((s: any) => s.status === "pending_design")?.count || 0,
-      icon: Brush,
-      color: "bg-sky-100 text-sky-600"
-    },
-    {
-      title: "In Production",
-      value: orderStatusData.find((s: any) => s.status === "in_production")?.count || 0,
-      icon: Factory,
-      color: "bg-pink-100 text-pink-600"
-    },
-    {
-      title: "Revenue (MTD)",
-      value: formatCurrency(24500), // This would come from actual data
-      icon: DollarSign,
-      color: "bg-amber-100 text-amber-600"
-    },
-  ];
-
-  return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600">Welcome back. Here's an overview of your clothing order management system.</p>
-      </div>
-      
-      {/* Dashboard Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {statCards.map((card, index) => (
-          <Card key={index}>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className={`p-2 ${card.color} rounded-lg`}>
-                  <card.icon />
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-green-100 rounded-full">
+                    <ShoppingBag className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Active Orders</p>
+                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.stats?.activeOrders || 0}</h3>
+                  </div>
                 </div>
-                <h3 className="text-gray-500 font-medium">{card.title}</h3>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <p className="text-3xl font-bold">{card.value}</p>
-                {index === 0 && (
-                  <p className="text-sm text-green-600 flex items-center">
-                    <span className="mr-1">↑</span> 12%
-                  </p>
-                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-yellow-100 rounded-full">
+                    <Shirt className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Design Tasks</p>
+                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.stats?.designTasks || 0}</h3>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-purple-100 rounded-full">
+                    <DollarSign className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Total Revenue</p>
+                    <h3 className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(data?.stats?.totalRevenue || 0)}</h3>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Charts & Reports */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Orders by Status</CardTitle>
+                <CardDescription>Distribution of orders by current status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  {!isLoading && data?.ordersByStatus && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={data.ordersByStatus}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="count"
+                          nameKey="status"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {data.ordersByStatus.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name) => [value, name]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Revenue</CardTitle>
+                <CardDescription>Revenue trend over the last 6 months</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  {!isLoading && data?.monthlyRevenue && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data.monthlyRevenue}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => formatCurrency(value)} />
+                        <Bar dataKey="revenue" fill="#3B82F6" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Recent Orders */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Recent Orders</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="py-3 px-4 text-left">Order #</th>
+                      <th className="py-3 px-4 text-left">Customer</th>
+                      <th className="py-3 px-4 text-left">Date</th>
+                      <th className="py-3 px-4 text-left">Amount</th>
+                      <th className="py-3 px-4 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={5} className="py-4 text-center text-gray-500">Loading...</td>
+                      </tr>
+                    ) : data?.recentOrders?.length ? (
+                      data.recentOrders.map((order: any) => (
+                        <tr key={order.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4">{order.orderNumber}</td>
+                          <td className="py-3 px-4">{order.customerName}</td>
+                          <td className="py-3 px-4">{new Date(order.createdAt).toLocaleDateString()}</td>
+                          <td className="py-3 px-4">{formatCurrency(order.totalAmount)}</td>
+                          <td className="py-3 px-4">
+                            <Badge className={getStatusColor(order.status)}>
+                              {order.status.replace(/_/g, ' ')}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="py-4 text-center text-gray-500">No recent orders found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
-        ))}
+        </main>
       </div>
-      
-      {/* Charts and Orders */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Order Status Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Order Status Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={orderStatusData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                    nameKey="status"
-                    label={({ name, percent }) => `${name.replace('_', ' ')}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {orderStatusData.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* User Roles Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>User Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={[
-                    { name: 'Admin', count: data?.userCounts?.admin || 0 },
-                    { name: 'Salesperson', count: data?.userCounts?.salesperson || 0 },
-                    { name: 'Designer', count: data?.userCounts?.designer || 0 },
-                    { name: 'Manufacturer', count: data?.userCounts?.manufacturer || 0 },
-                    { name: 'Customer', count: data?.userCounts?.customer || 0 },
-                  ]}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#4F46E5" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Recent Orders */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <OrderTable orders={recentOrders || []} />
-        </CardContent>
-      </Card>
-      
-      {/* Task Assignment Section */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Task Assignment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Designer Assignment */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-4">Designer Assignment</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">#ORD-2023-1842</p>
-                    <p className="text-sm text-gray-500">Custom T-shirt Design</p>
-                  </div>
-                  <select className="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm">
-                    <option>Select Designer</option>
-                    <option>Alex Morgan</option>
-                    <option>Priya Sharma</option>
-                    <option>Juan Rodriguez</option>
-                  </select>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">#ORD-2023-1836</p>
-                    <p className="text-sm text-gray-500">Embroidered Jacket</p>
-                  </div>
-                  <select className="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm">
-                    <option>Select Designer</option>
-                    <option>Alex Morgan</option>
-                    <option>Priya Sharma</option>
-                    <option>Juan Rodriguez</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            
-            {/* Manufacturer Assignment */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-4">Manufacturer Assignment</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">#ORD-2023-1830</p>
-                    <p className="text-sm text-gray-500">Corporate Uniforms (20 pcs)</p>
-                  </div>
-                  <select className="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm">
-                    <option>Select Manufacturer</option>
-                    <option>Textile Masters Inc.</option>
-                    <option>Fast Stitch Co.</option>
-                    <option>Premium Apparel Ltd.</option>
-                  </select>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">#ORD-2023-1824</p>
-                    <p className="text-sm text-gray-500">Custom Hoodies (8 pcs)</p>
-                  </div>
-                  <select className="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm">
-                    <option>Select Manufacturer</option>
-                    <option>Textile Masters Inc.</option>
-                    <option>Fast Stitch Co.</option>
-                    <option>Premium Apparel Ltd.</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
