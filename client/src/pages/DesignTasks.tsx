@@ -1,223 +1,479 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
-import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Header } from "@/components/dashboard/Header";
-import { DesignTaskList } from "@/components/design/DesignTaskList";
-import { FileUpload } from "@/components/design/FileUpload";
-import { useQuery } from "@tanstack/react-query";
-import { MessageCenter } from "@/components/messaging/MessageCenter";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
+import { UploadCloud, Download, CheckCircle, AlertCircle, EyeIcon, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from "@/components/ui/card";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle 
-} from "@/components/ui/sheet";
+// File type validation
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ACCEPTED_FILE_TYPES = [
+  'image/png', 
+  'image/jpeg', 
+  'image/jpg', 
+  'application/pdf',
+  'image/svg+xml'
+];
+
+// Schema for file upload
+const uploadSchema = z.object({
+  file: z.instanceof(FileList)
+    .refine(files => files.length > 0, "File is required")
+    .refine(files => files[0].size <= MAX_FILE_SIZE, "File size must be less than 10MB")
+    .refine(
+      files => ACCEPTED_FILE_TYPES.includes(files[0].type),
+      "File must be PNG, JPEG, PDF, or SVG"
+    ),
+  notes: z.string().optional(),
+});
+
+type UploadFormValues = z.infer<typeof uploadSchema>;
 
 export default function DesignTasks() {
-  const { user, role, isAuthenticated, loading, requireAuth } = useAuth();
-  const [, setLocation] = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [messagesOpen, setMessagesOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState('pending');
+  const [previewFile, setPreviewFile] = useState<{url: string, type: string} | null>(null);
 
-  // Check if user is authenticated and has designer role
-  useEffect(() => {
-    if (!loading) {
-      const hasAccess = requireAuth(["admin", "designer"]);
-      if (!hasAccess) {
-        setLocation("/dashboard");
-      }
-    }
-  }, [isAuthenticated, loading, requireAuth, setLocation]);
-
-  // Fetch design tasks
-  const { data: designTasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ["/api/design-tasks"],
-    enabled: isAuthenticated && (role === "designer" || role === "admin"),
+  // Form for file upload
+  const form = useForm<UploadFormValues>({
+    resolver: zodResolver(uploadSchema),
+    defaultValues: {
+      notes: '',
+    },
   });
 
-  // Show loading state
-  if (loading || tasksLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
+  // Fetch design tasks
+  const { data: designTasks = [], isLoading } = useQuery({
+    queryKey: ['/api/design-tasks'],
+    queryFn: getQueryFn({ on401: 'throw' }),
+  });
+
+  // Filter tasks based on status
+  const filteredTasks = designTasks.filter((task: any) => {
+    if (activeTab === 'all') return true;
+    return task.status === activeTab;
+  });
+
+  // Upload file mutation
+  const uploadFileMutation = useMutation({
+    mutationFn: async (data: { taskId: number, formData: FormData }) => {
+      setIsUploading(true);
+      setUploadProgress(0);
+      
+      try {
+        // Custom implementation with upload progress
+        const xhr = new XMLHttpRequest();
+        
+        const promise = new Promise((resolve, reject) => {
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = Math.round((event.loaded / event.total) * 100);
+              setUploadProgress(percentComplete);
+            }
+          });
+          
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          };
+          
+          xhr.onerror = () => {
+            reject(new Error('Network error occurred during upload'));
+          };
+          
+          xhr.open('POST', `/api/design-tasks/${data.taskId}/upload`);
+          xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('token')}`);
+          xhr.send(data.formData);
+        });
+        
+        const result = await promise;
+        return result;
+      } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/design-tasks'] });
+      toast({
+        title: 'Success',
+        description: 'Design file uploaded successfully',
+      });
+      form.reset();
+      setSelectedTaskId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Upload Failed',
+        description: error.message || 'An error occurred during upload',
+      });
+    },
+  });
+
+  // Update task status mutation
+  const updateTaskStatusMutation = useMutation({
+    mutationFn: (data: { taskId: number, status: string }) => {
+      return apiRequest('PUT', `/api/design-tasks/${data.taskId}`, {
+        status: data.status,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/design-tasks'] });
+      toast({
+        title: 'Status Updated',
+        description: 'Task status has been updated successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Update Failed',
+        description: error.message || 'Failed to update task status',
+      });
+    },
+  });
+
+  // Handle file upload
+  const handleUpload = (data: UploadFormValues) => {
+    if (!selectedTaskId) return;
+    
+    const file = data.file[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    if (data.notes) {
+      formData.append('notes', data.notes);
+    }
+    
+    uploadFileMutation.mutate({ taskId: selectedTaskId, formData });
+  };
+
+  // Preview image/pdf
+  const handlePreview = (file: any) => {
+    setPreviewFile({
+      url: file.filePath,
+      type: file.fileType
+    });
+  };
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
-
-      <div className="flex-1 flex flex-col md:ml-64">
-        <Header 
-          onOpenMessages={() => setMessagesOpen(true)} 
-          onOpenNotifications={() => setNotificationsOpen(true)} 
-        />
-
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Design Tasks</h1>
-            <p className="text-gray-600">Manage your design tasks and file uploads here.</p>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Task List */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Design Tasks</CardTitle>
-                  <CardDescription>
-                    You have {designTasks?.length || 0} design tasks assigned
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <DesignTaskList 
-                    tasks={designTasks || []} 
-                    onSelectTask={setSelectedTask} 
-                    selectedTaskId={selectedTask?.id}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-            
-            {/* Task Details */}
-            <div className="lg:col-span-2">
-              {selectedTask ? (
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>Design Workspace</CardTitle>
-                        <CardDescription>
-                          Order #{selectedTask.orderId} - Task #{selectedTask.id}
-                        </CardDescription>
-                      </div>
-                      <FileUpload 
-                        designTaskId={selectedTask.id} 
-                        onSuccess={() => {
-                          // Refetch tasks after upload
-                        }}
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Design Preview */}
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">Design Preview</h3>
-                        <div className="border border-gray-200 rounded-lg bg-gray-50 h-64 flex items-center justify-center">
-                          <div className="text-center text-gray-500">
-                            <p>No preview available</p>
-                            <p className="text-sm">Upload a design file to see preview</p>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Task Description</h4>
-                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                            <p className="text-sm text-gray-700">
-                              {selectedTask.description || "No description provided."}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Design Details */}
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">Design Details</h3>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select 
-                              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                              value={selectedTask.status}
-                            >
-                              <option value="pending">Not Started</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                            </select>
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Design Notes</label>
-                            <textarea 
-                              rows={4} 
-                              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                              defaultValue={selectedTask.notes || ""}
-                              placeholder="Add notes about your design process..."
-                            ></textarea>
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                            <input 
-                              type="date" 
-                              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                              value={selectedTask.dueDate ? new Date(selectedTask.dueDate).toISOString().split('T')[0] : ''}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="mt-6 flex justify-end space-x-2">
-                          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500">
-                            Save Draft
-                          </button>
-                          <button className="px-4 py-2 text-sm font-medium text-white bg-pink-500 border border-transparent rounded-md shadow-sm hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500">
-                            Complete Task
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Task Selected</h3>
-                    <p className="text-gray-500">Select a task from the list to view its details.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </main>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Design Tasks</h1>
+        <p className="text-muted-foreground">
+          View and manage design tasks assigned to you
+        </p>
       </div>
 
-      {/* Messages Slide-out Panel */}
-      <Sheet open={messagesOpen} onOpenChange={setMessagesOpen}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Messages</SheetTitle>
-          </SheetHeader>
-          <MessageCenter />
-        </SheetContent>
-      </Sheet>
-
-      {/* Notifications Slide-out Panel */}
-      <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader className="mb-4">
-            <SheetTitle>Notifications</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4">
-            {/* Notification content would go here */}
-            <p className="text-gray-500 text-center py-8">
-              No notifications at this time
-            </p>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <Tabs defaultValue="pending" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="submitted">Submitted</TabsTrigger>
+          <TabsTrigger value="approved">Approved</TabsTrigger>
+          <TabsTrigger value="all">All Tasks</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value={activeTab}>
+          <Card>
+            <CardHeader>
+              <CardTitle>{getStatusLabel(activeTab)} Design Tasks</CardTitle>
+              <CardDescription>
+                {activeTab === 'pending' 
+                  ? 'Tasks that need your attention and design work'
+                  : activeTab === 'submitted' 
+                  ? 'Tasks you have submitted for review'
+                  : activeTab === 'approved'
+                  ? 'Tasks that have been approved by the client'
+                  : 'All design tasks assigned to you'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : filteredTasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No design tasks found</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order #</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Files</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTasks.map((task: any) => (
+                        <TableRow key={task.id}>
+                          <TableCell className="font-medium">{task.order?.orderNumber}</TableCell>
+                          <TableCell>{task.description}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(task.status)}>
+                              {getStatusLabel(task.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{task.dueDate ? formatDate(task.dueDate) : 'Not set'}</TableCell>
+                          <TableCell>
+                            {task.files && task.files.length > 0 ? (
+                              <div className="flex flex-col space-y-1">
+                                {task.files.map((file: any) => (
+                                  <div key={file.id} className="flex items-center text-sm">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handlePreview(file)}
+                                      className="p-0 h-6"
+                                    >
+                                      <EyeIcon className="h-4 w-4 mr-1" />
+                                      {file.filename}
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">No files uploaded</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              {task.status === 'pending' && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => setSelectedTaskId(task.id)}
+                                    >
+                                      <UploadCloud className="h-4 w-4 mr-1" />
+                                      Upload
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Upload Design File</DialogTitle>
+                                      <DialogDescription>
+                                        Upload your design file for order #{task.order?.orderNumber}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    
+                                    <form onSubmit={form.handleSubmit(handleUpload)} className="space-y-4">
+                                      <div className="grid w-full max-w-sm items-center gap-1.5">
+                                        <label htmlFor="file" className="text-sm font-medium">
+                                          Design File
+                                        </label>
+                                        <div className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors">
+                                          <Input
+                                            id="file"
+                                            type="file"
+                                            className="hidden"
+                                            accept=".png,.jpg,.jpeg,.pdf,.svg"
+                                            {...form.register('file')}
+                                          />
+                                          <label htmlFor="file" className="cursor-pointer flex flex-col items-center">
+                                            <UploadCloud className="h-8 w-8 mb-2 text-muted-foreground" />
+                                            <span className="text-sm font-medium">
+                                              Click to select a file
+                                            </span>
+                                            <span className="text-xs text-muted-foreground mt-1">
+                                              PNG, JPG, PDF, SVG (Max 10MB)
+                                            </span>
+                                          </label>
+                                        </div>
+                                        {form.formState.errors.file && (
+                                          <p className="text-sm text-destructive">
+                                            {form.formState.errors.file.message?.toString()}
+                                          </p>
+                                        )}
+                                        
+                                        {form.watch('file') && form.watch('file')[0] && (
+                                          <div className="flex items-center justify-between bg-muted p-2 rounded-md mt-2">
+                                            <span className="text-sm truncate">
+                                              {form.watch('file')[0].name}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                              {Math.round(form.watch('file')[0].size / 1024)} KB
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      <div className="grid w-full gap-1.5">
+                                        <label htmlFor="notes" className="text-sm font-medium">
+                                          Notes (Optional)
+                                        </label>
+                                        <Textarea
+                                          id="notes"
+                                          placeholder="Add any notes about this design"
+                                          {...form.register('notes')}
+                                        />
+                                      </div>
+                                      
+                                      {isUploading && (
+                                        <div className="space-y-2">
+                                          <Progress value={uploadProgress} className="h-2" />
+                                          <p className="text-xs text-center text-muted-foreground">
+                                            Uploading: {uploadProgress}%
+                                          </p>
+                                        </div>
+                                      )}
+                                      
+                                      <DialogFooter>
+                                        <DialogClose asChild>
+                                          <Button variant="outline" type="button" disabled={isUploading}>
+                                            Cancel
+                                          </Button>
+                                        </DialogClose>
+                                        <Button type="submit" disabled={isUploading}>
+                                          {isUploading ? (
+                                            <>
+                                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                              Uploading...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <UploadCloud className="mr-2 h-4 w-4" />
+                                              Upload Design
+                                            </>
+                                          )}
+                                        </Button>
+                                      </DialogFooter>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
+                              )}
+                              
+                              {task.status === 'submitted' && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  disabled
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Awaiting Review
+                                </Button>
+                              )}
+                              
+                              {task.files && task.files.length > 0 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(task.files[0].filePath, '_blank')}
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Download
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      
+      {/* File Preview Dialog */}
+      {previewFile && (
+        <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>File Preview</DialogTitle>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute top-2 right-2"
+                onClick={() => setPreviewFile(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogHeader>
+            <div className="overflow-auto max-h-[80vh]">
+              {previewFile.type.includes('image') ? (
+                <img 
+                  src={previewFile.url} 
+                  alt="Preview" 
+                  className="max-w-full h-auto rounded-md"
+                />
+              ) : previewFile.type.includes('pdf') ? (
+                <iframe 
+                  src={previewFile.url} 
+                  title="PDF Preview" 
+                  className="w-full h-[70vh] rounded-md"
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <p>This file type cannot be previewed</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => window.open(previewFile.url, '_blank')}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download File
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
