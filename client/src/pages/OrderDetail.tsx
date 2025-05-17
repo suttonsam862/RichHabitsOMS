@@ -117,6 +117,7 @@ export default function OrderDetail() {
       toast({
         title: "Success",
         description: "Order status updated successfully",
+        variant: "default"
       });
     },
     onError: (error) => {
@@ -135,6 +136,7 @@ export default function OrderDetail() {
       toast({
         title: "Design Approved",
         description: "The design has been approved for production",
+        variant: "default"
       });
     } catch (error) {
       console.error("Error approving design:", error);
@@ -438,6 +440,7 @@ export default function OrderDetail() {
                             toast({
                               title: "File Uploaded",
                               description: "Design file has been uploaded successfully",
+                              variant: "default"
                             });
                           }}
                         />

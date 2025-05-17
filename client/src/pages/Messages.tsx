@@ -54,6 +54,7 @@ export default function Messages() {
     toast({
       title: "Message Sent",
       description: "Your message has been sent successfully.",
+      variant: "default"
     });
   };
   
