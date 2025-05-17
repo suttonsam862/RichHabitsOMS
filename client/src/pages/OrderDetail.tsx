@@ -10,6 +10,7 @@ import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from "@/li
 import MessageCenter from "@/components/messaging/MessageCenter";
 import { FileUpload } from "@/components/design/FileUpload";
 import { CheckoutForm } from "@/components/payments/CheckoutForm";
+import { PayButton } from "@/components/payment/PayButton";
 import { DesignTask as BaseDesignTask, ProductionTask as BaseProductionTask } from "@/lib/types";
 
 // Extend the base types with additional properties for the OrderDetail component
@@ -201,29 +202,22 @@ export default function OrderDetail() {
                 </Button>
               )}
               
-              {role === "customer" && order.status === "draft" && (
-                <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <DollarSign className="mr-2 h-4 w-4" />
-                      Make Payment
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Complete Payment</DialogTitle>
-                    </DialogHeader>
-                    <CheckoutForm 
-                      orderId={order.id} 
-                      amount={(typeof order.totalAmount === 'string' ? parseFloat(order.totalAmount) : order.totalAmount) +
-                             (typeof order.tax === 'string' ? parseFloat(order.tax) : order.tax)} 
-                      onSuccess={() => {
-                        setPaymentDialogOpen(false);
-                        queryClient.invalidateQueries({ queryKey: [`/api/orders/${id}`] });
-                      }}
-                    />
-                  </DialogContent>
-                </Dialog>
+              {role === "customer" && !order.isPaid && (
+                <>
+                  <PayButton 
+                    orderId={order.id}
+                    disabled={order.items?.length === 0}
+                  />
+                </>
+              )}
+              
+              {/* Display paid status if the order is already paid */}
+              {order.isPaid && (
+                <Badge variant="default" className="bg-green-500">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Paid
+                  {order.paymentDate && ` on ${formatDate(order.paymentDate)}`}
+                </Badge>
               )}
               
               {(role === "admin" || role === "salesperson") && (

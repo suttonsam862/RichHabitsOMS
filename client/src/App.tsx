@@ -25,6 +25,8 @@ import DesignTasks from "@/pages/DesignTasks";
 import Messages from "@/pages/Messages";
 import Production from "@/pages/Production";
 import Payments from "@/pages/Payments";
+import PaymentSuccess from "@/pages/PaymentSuccess";
+import PaymentCancel from "@/pages/PaymentCancel";
 import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
 
 function App() {
@@ -37,6 +39,8 @@ function App() {
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-cancel" element={<PaymentCancel />} />
               
               {/* Redirect from root to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />
