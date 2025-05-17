@@ -4,6 +4,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
 import AdminDashboard from "@/pages/AdminDashboard";
+import SalespersonDashboard from "@/pages/SalespersonDashboard";
+import DesignerDashboard from "@/pages/DesignerDashboard";
+import ManufacturerDashboard from "@/pages/ManufacturerDashboard";
+import CustomerDashboard from "@/pages/CustomerDashboard";
 import { useQuery } from "@tanstack/react-query";
 import { useWebSocket } from "@/lib/useWebSocket";
 import { 
@@ -30,49 +34,19 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, loading, setLocation]);
 
-  // Fetch dashboard data based on role
-  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
-    queryKey: ["/api/dashboard/stats"],
-    enabled: role === "admin" && isAuthenticated,
-  });
-
   // Prepare dashboard based on role
   const renderDashboard = () => {
     switch (role) {
       case "admin":
-        return <AdminDashboard data={dashboardData} isLoading={dashboardLoading} />;
+        return <AdminDashboard />;
       case "salesperson":
-        return (
-          <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900">Salesperson Dashboard</h1>
-            <p className="text-gray-600">Manage your customer orders and communications here.</p>
-            {/* Salesperson specific dashboard content */}
-          </div>
-        );
+        return <SalespersonDashboard />;
       case "designer":
-        return (
-          <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900">Designer Dashboard</h1>
-            <p className="text-gray-600">Manage your design tasks and file uploads here.</p>
-            {/* Designer specific dashboard content */}
-          </div>
-        );
+        return <DesignerDashboard />;
       case "manufacturer":
-        return (
-          <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900">Manufacturer Dashboard</h1>
-            <p className="text-gray-600">Track and manage production orders here.</p>
-            {/* Manufacturer specific dashboard content */}
-          </div>
-        );
+        return <ManufacturerDashboard />;
       case "customer":
-        return (
-          <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900">My Orders Dashboard</h1>
-            <p className="text-gray-600">View and manage your custom clothing orders.</p>
-            {/* Customer specific dashboard content */}
-          </div>
-        );
+        return <CustomerDashboard />;
       default:
         return (
           <div className="p-6">
