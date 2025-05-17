@@ -1561,9 +1561,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const manufacturerCount = (await storage.getUsersByRole("manufacturer")).length;
       const customerCount = (await storage.getUsersByRole("customer")).length;
       
+      // Get active orders count
+      const activeOrders = orderStats.find(stat => 
+        stat.status !== 'completed' && stat.status !== 'cancelled')?.count || 0;
+      
+      // Get design tasks count
+      const designTasks = (await storage.getAllDesignTasks()).length;
+      
+      // Get total revenue
+      const payments = await storage.getAllPayments();
+      const totalRevenue = payments.reduce((sum, payment) => {
+        if (payment.status === 'completed') {
+          return sum + (typeof payment.amount === 'string' ? parseFloat(payment.amount) : payment.amount);
+        }
+        return sum;
+      }, 0);
+      
+      // Generate monthly revenue data for the past 6 months
+      const today = new Date();
+      const monthlyRevenue = [];
+      for (let i = 5; i >= 0; i--) {
+        const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthName = month.toLocaleString('default', { month: 'short' });
+        
+        const monthPayments = payments.filter(payment => {
+          const paymentDate = new Date(payment.createdAt);
+          return paymentDate.getMonth() === month.getMonth() && 
+                 paymentDate.getFullYear() === month.getFullYear() &&
+                 payment.status === 'completed';
+        });
+        
+        const revenue = monthPayments.reduce((sum, payment) => {
+          return sum + (typeof payment.amount === 'string' ? parseFloat(payment.amount) : payment.amount);
+        }, 0);
+        
+        monthlyRevenue.push({
+          month: monthName,
+          revenue
+        });
+      }
+      
+      // Format order stats for pie chart
+      const ordersByStatus = orderStats.map(stat => ({
+        status: stat.status.replace(/_/g, ' '),
+        count: stat.count
+      }));
+      
       res.json({
+        stats: {
+          totalOrders: recentOrders.length,
+          activeOrders,
+          designTasks,
+          totalRevenue
+        },
         orderStats,
+        ordersByStatus,
         recentOrders,
+        monthlyRevenue,
         userCounts: {
           admin: adminCount,
           salesperson: salespersonCount,

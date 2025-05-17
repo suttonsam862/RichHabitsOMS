@@ -521,6 +521,105 @@ export class DatabaseStorage implements IStorage {
       .from(inventory)
       .orderBy(inventory.itemName);
   }
+  
+  async getAllPayments(): Promise<Payment[]> {
+    return await db.select().from(payments);
+  }
+  
+  async assignManufacturerToOrder(orderId: number, manufacturerId: number): Promise<Order> {
+    // First ensure the order exists
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) {
+      throw new Error('Order not found');
+    }
+    
+    // Ensure the manufacturer exists and has manufacturer role
+    const [manufacturer] = await db.select().from(users).where(eq(users.id, manufacturerId));
+    if (!manufacturer || manufacturer.role !== 'manufacturer') {
+      throw new Error('Invalid manufacturer');
+    }
+    
+    // Update the order with the manufacturer ID
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ 
+        manufacturerId, 
+        updatedAt: new Date() 
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
+    
+    return updatedOrder;
+  }
+  
+  async approveDesignTask(taskId: number): Promise<DesignTask> {
+    const updates: Partial<InsertDesignTask> = { 
+      status: 'approved', 
+      updatedAt: new Date() 
+    };
+    
+    const [updatedTask] = await db
+      .update(designTasks)
+      .set(updates)
+      .where(eq(designTasks.id, taskId))
+      .returning();
+    
+    if (!updatedTask) {
+      throw new Error('Design task not found');
+    }
+    
+    // Update the order status as well
+    await db
+      .update(orders)
+      .set({ 
+        status: 'design_approved', 
+        updatedAt: new Date() 
+      })
+      .where(eq(orders.id, updatedTask.orderId));
+    
+    return updatedTask;
+  }
+  
+  async markOrderAsPaid(orderId: number): Promise<Order> {
+    // First ensure the order exists
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) {
+      throw new Error('Order not found');
+    }
+    
+    // Update the order with isPaid = true
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ 
+        isPaid: true, 
+        updatedAt: new Date() 
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
+    
+    // Create a payment record if it doesn't exist
+    const existingPayments = await db.select().from(payments).where(eq(payments.orderId, orderId));
+    if (existingPayments.length === 0) {
+      await db.insert(payments).values({
+        orderId,
+        amount: order.totalAmount,
+        status: 'completed',
+        method: 'manual',
+        createdAt: new Date()
+      });
+    } else {
+      // Update existing payment to completed
+      await db
+        .update(payments)
+        .set({ 
+          status: 'completed', 
+          updatedAt: new Date() 
+        })
+        .where(eq(payments.orderId, orderId));
+    }
+    
+    return updatedOrder;
+  }
 }
 
 export const storage = new DatabaseStorage();
