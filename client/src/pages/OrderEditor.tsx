@@ -147,7 +147,6 @@ export default function OrderEditor() {
       toast({
         title: 'Error',
         description: 'Failed to create order. Please try again.',
-        variant: 'destructive',
       });
       console.error('Error creating order:', error);
     },
@@ -173,7 +172,6 @@ export default function OrderEditor() {
       toast({
         title: 'Success',
         description: 'Order updated successfully',
-        variant: 'default',
       });
       navigate('/orders');
     },
@@ -181,7 +179,6 @@ export default function OrderEditor() {
       toast({
         title: 'Error',
         description: 'Failed to update order. Please try again.',
-        variant: 'destructive',
       });
       console.error('Error updating order:', error);
     },
@@ -499,7 +496,6 @@ export default function OrderEditor() {
                                   toast({
                                     title: 'Error',
                                     description: 'Cannot remove the last item. Orders must have at least one item.',
-                                    variant: 'destructive',
                                   });
                                 }
                               }}

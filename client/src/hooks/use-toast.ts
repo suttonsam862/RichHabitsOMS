@@ -9,7 +9,7 @@ import {
   useToast as useToastImpl,
 } from "@/components/ui/use-toast";
 
-export type ToastActionProps = React.ComponentPropsWithoutRef<typeof ToastActionElement>
+export type ToastActionProps = React.ComponentPropsWithoutRef<any>;
 
 type ToastOptions = Omit<ToastProps, "id"> & {
   action?: ToastActionProps;
