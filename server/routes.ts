@@ -152,6 +152,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint to verify payment session
+  app.get("/api/payment-verify", async (req, res, next) => {
+    try {
+      const sessionId = req.query.session_id as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Missing session ID" });
+      }
+      
+      // Make sure stripe is initialized
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe is not configured" });
+      }
+      
+      // Retrieve the session from Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      // Find the order with this session ID
+      const orders = await storage.getOrdersByStripeSessionId(sessionId);
+      
+      if (!orders || orders.length === 0) {
+        return res.status(404).json({ message: "No order found with this session ID" });
+      }
+      
+      const order = orders[0];
+      
+      // If not yet marked as paid and payment is complete, update the order
+      if (!order.isPaid && session.payment_status === 'paid') {
+        await storage.updateOrder(order.id, {
+          isPaid: true,
+          paymentDate: new Date()
+        });
+        
+        // Create payment record if it doesn't exist
+        const payments = await storage.getPaymentsByOrderId(order.id);
+        if (!payments || payments.length === 0) {
+          await storage.createPayment({
+            orderId: order.id,
+            amount: order.totalAmount,
+            status: 'completed',
+            method: 'credit_card',
+            transactionId: session.payment_intent as string,
+            notes: `Stripe payment completed for order #${order.orderNumber}`
+          });
+        }
+      }
+      
+      // Return order details
+      res.json({
+        orderNumber: order.orderNumber,
+        orderId: order.id,
+        isPaid: order.isPaid || (session.payment_status === 'paid')
+      });
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      next(error);
+    }
+  });
+  
   // Stripe webhook needs raw body, so add this middleware before Express bodyParser
   app.post("/api/stripe-webhook", express.raw({ type: 'application/json' }), async (req: any, res) => {
     const payload = req.body;

@@ -37,6 +37,7 @@ export interface IStorage {
   getOrdersByCustomerId(customerId: number): Promise<Order[]>;
   getOrdersBySalespersonId(salespersonId: number): Promise<Order[]>;
   getOrdersByStatus(status: string): Promise<Order[]>;
+  getOrdersByStripeSessionId(stripeSessionId: string): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrder(id: number, data: Partial<InsertOrder>): Promise<Order>;
   
@@ -203,6 +204,13 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(eq(orders.status, status))
       .orderBy(desc(orders.createdAt));
+  }
+  
+  async getOrdersByStripeSessionId(stripeSessionId: string): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .where(eq(orders.stripeSessionId, stripeSessionId));
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
