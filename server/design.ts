@@ -54,14 +54,19 @@ export async function uploadDesignFile(taskId: number, userId: number, filename:
     uploadedBy: userId
   });
   
-  // Update task status
-  await storage.updateDesignTask(taskId, {
+  // Update task status to submitted
+  const updatedTask = await storage.updateDesignTask(taskId, {
     status: 'submitted',
     notes: notes || task.notes
   });
   
-  // Get the updated task
-  const updatedTask = await storage.getDesignTask(taskId);
+  // Update order status if needed
+  const order = await storage.getOrder(task.orderId);
+  if (order && (order.status === 'pending_design' || order.status === 'design_in_progress')) {
+    await storage.updateOrder(order.id, {
+      status: 'design_review'
+    });
+  }
   
   // Send notifications
   await sendNotifications(task, designFile, filename);
@@ -75,7 +80,7 @@ export async function uploadDesignFile(taskId: number, userId: number, filename:
 /**
  * Update design task status
  */
-export async function updateDesignTaskStatus(taskId: number, status: string, notes?: string) {
+export async function updateDesignTaskStatus(taskId: number, status: 'pending' | 'in_progress' | 'submitted' | 'approved' | 'rejected' | 'completed' | 'cancelled', notes?: string) {
   // Get task
   const task = await storage.getDesignTask(taskId);
   if (!task) {

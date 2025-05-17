@@ -286,6 +286,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(designTasks.designerId, designerId))
       .orderBy(desc(designTasks.createdAt));
   }
+  
+  async getAllDesignTasks(): Promise<DesignTask[]> {
+    return await db
+      .select()
+      .from(designTasks)
+      .orderBy(desc(designTasks.createdAt));
+  }
 
   async createDesignTask(designTask: InsertDesignTask): Promise<DesignTask> {
     const [newDesignTask] = await db
