@@ -159,9 +159,10 @@ export default function DesignTasks() {
 
   // Update task status mutation
   const updateTaskStatusMutation = useMutation({
-    mutationFn: (data: { taskId: number, status: string }) => {
+    mutationFn: (data: { taskId: number, status: 'pending' | 'in_progress' | 'submitted' | 'approved' | 'rejected' | 'completed' | 'cancelled', notes?: string }) => {
       return apiRequest('PUT', `/api/design-tasks/${data.taskId}`, {
         status: data.status,
+        notes: data.notes
       });
     },
     onSuccess: () => {
@@ -202,6 +203,89 @@ export default function DesignTasks() {
     });
   };
 
+  // Render the file upload form
+  const renderUploadForm = () => (
+    <form onSubmit={form.handleSubmit(handleUpload)} className="space-y-4">
+      <div className="grid w-full max-w-sm items-center gap-1.5">
+        <label htmlFor="file" className="text-sm font-medium">
+          Design File
+        </label>
+        <div className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors">
+          <Input
+            id="file"
+            type="file"
+            className="hidden"
+            accept=".png,.jpg,.jpeg,.pdf,.svg"
+            {...form.register('file')}
+          />
+          <label htmlFor="file" className="cursor-pointer flex flex-col items-center">
+            <UploadCloud className="h-8 w-8 mb-2 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              Click to select a file
+            </span>
+            <span className="text-xs text-muted-foreground mt-1">
+              PNG, JPG, PDF, SVG (Max 10MB)
+            </span>
+          </label>
+        </div>
+        {form.formState.errors.file && (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.file.message?.toString()}
+          </p>
+        )}
+        
+        {form.watch('file') && form.watch('file')[0] && (
+          <div className="flex items-center justify-between bg-muted p-2 rounded-md mt-2">
+            <span className="text-sm truncate">
+              {form.watch('file')[0].name}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {Math.round(form.watch('file')[0].size / 1024)} KB
+            </span>
+          </div>
+        )}
+      </div>
+      
+      <div className="grid w-full gap-1.5">
+        <label htmlFor="notes" className="text-sm font-medium">
+          Notes (Optional)
+        </label>
+        <Textarea
+          id="notes"
+          placeholder="Add any notes about this design"
+          {...form.register('notes')}
+        />
+      </div>
+      
+      {isUploading && (
+        <div className="space-y-2">
+          <Progress value={uploadProgress} className="h-2" />
+          <p className="text-xs text-center text-muted-foreground">
+            Uploading: {uploadProgress}%
+          </p>
+        </div>
+      )}
+      
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="outline" type="button" disabled={isUploading}>
+            Cancel
+          </Button>
+        </DialogClose>
+        <Button type="submit" disabled={isUploading}>
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+              Uploading...
+            </>
+          ) : (
+            'Upload'
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -214,6 +298,7 @@ export default function DesignTasks() {
       <Tabs defaultValue="pending" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="in_progress">In Progress</TabsTrigger>
           <TabsTrigger value="submitted">Submitted</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
           <TabsTrigger value="all">All Tasks</TabsTrigger>
@@ -226,6 +311,8 @@ export default function DesignTasks() {
               <CardDescription>
                 {activeTab === 'pending' 
                   ? 'Tasks that need your attention and design work'
+                  : activeTab === 'in_progress'
+                  ? 'Tasks you are currently working on'
                   : activeTab === 'submitted' 
                   ? 'Tasks you have submitted for review'
                   : activeTab === 'approved'
@@ -290,6 +377,43 @@ export default function DesignTasks() {
                           <TableCell>
                             <div className="flex space-x-2">
                               {task.status === 'pending' && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateTaskStatusMutation.mutate({ 
+                                      taskId: task.id, 
+                                      status: 'in_progress' 
+                                    })}
+                                  >
+                                    Start Work
+                                  </Button>
+
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => setSelectedTaskId(task.id)}
+                                      >
+                                        <UploadCloud className="h-4 w-4 mr-1" />
+                                        Upload
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Upload Design File</DialogTitle>
+                                        <DialogDescription>
+                                          Upload your design file for order #{task.order?.orderNumber}
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      {renderUploadForm()}
+                                    </DialogContent>
+                                  </Dialog>
+                                </>
+                              )}
+                              
+                              {task.status === 'in_progress' && (
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button 
@@ -298,123 +422,62 @@ export default function DesignTasks() {
                                       onClick={() => setSelectedTaskId(task.id)}
                                     >
                                       <UploadCloud className="h-4 w-4 mr-1" />
-                                      Upload
+                                      Submit Design
                                     </Button>
                                   </DialogTrigger>
                                   <DialogContent>
                                     <DialogHeader>
-                                      <DialogTitle>Upload Design File</DialogTitle>
+                                      <DialogTitle>Submit Design</DialogTitle>
                                       <DialogDescription>
-                                        Upload your design file for order #{task.order?.orderNumber}
+                                        Upload your completed design for order #{task.order?.orderNumber}
                                       </DialogDescription>
                                     </DialogHeader>
-                                    
-                                    <form onSubmit={form.handleSubmit(handleUpload)} className="space-y-4">
-                                      <div className="grid w-full max-w-sm items-center gap-1.5">
-                                        <label htmlFor="file" className="text-sm font-medium">
-                                          Design File
-                                        </label>
-                                        <div className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                                          <Input
-                                            id="file"
-                                            type="file"
-                                            className="hidden"
-                                            accept=".png,.jpg,.jpeg,.pdf,.svg"
-                                            {...form.register('file')}
-                                          />
-                                          <label htmlFor="file" className="cursor-pointer flex flex-col items-center">
-                                            <UploadCloud className="h-8 w-8 mb-2 text-muted-foreground" />
-                                            <span className="text-sm font-medium">
-                                              Click to select a file
-                                            </span>
-                                            <span className="text-xs text-muted-foreground mt-1">
-                                              PNG, JPG, PDF, SVG (Max 10MB)
-                                            </span>
-                                          </label>
-                                        </div>
-                                        {form.formState.errors.file && (
-                                          <p className="text-sm text-destructive">
-                                            {form.formState.errors.file.message?.toString()}
-                                          </p>
-                                        )}
-                                        
-                                        {form.watch('file') && form.watch('file')[0] && (
-                                          <div className="flex items-center justify-between bg-muted p-2 rounded-md mt-2">
-                                            <span className="text-sm truncate">
-                                              {form.watch('file')[0].name}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">
-                                              {Math.round(form.watch('file')[0].size / 1024)} KB
-                                            </span>
-                                          </div>
-                                        )}
-                                      </div>
-                                      
-                                      <div className="grid w-full gap-1.5">
-                                        <label htmlFor="notes" className="text-sm font-medium">
-                                          Notes (Optional)
-                                        </label>
-                                        <Textarea
-                                          id="notes"
-                                          placeholder="Add any notes about this design"
-                                          {...form.register('notes')}
-                                        />
-                                      </div>
-                                      
-                                      {isUploading && (
-                                        <div className="space-y-2">
-                                          <Progress value={uploadProgress} className="h-2" />
-                                          <p className="text-xs text-center text-muted-foreground">
-                                            Uploading: {uploadProgress}%
-                                          </p>
-                                        </div>
-                                      )}
-                                      
-                                      <DialogFooter>
-                                        <DialogClose asChild>
-                                          <Button variant="outline" type="button" disabled={isUploading}>
-                                            Cancel
-                                          </Button>
-                                        </DialogClose>
-                                        <Button type="submit" disabled={isUploading}>
-                                          {isUploading ? (
-                                            <>
-                                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                              Uploading...
-                                            </>
-                                          ) : (
-                                            <>
-                                              <UploadCloud className="mr-2 h-4 w-4" />
-                                              Upload Design
-                                            </>
-                                          )}
-                                        </Button>
-                                      </DialogFooter>
-                                    </form>
+                                    {renderUploadForm()}
                                   </DialogContent>
                                 </Dialog>
                               )}
                               
                               {task.status === 'submitted' && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  disabled
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Awaiting Review
-                                </Button>
+                                <div className="text-sm text-muted-foreground">
+                                  Waiting for review
+                                </div>
                               )}
                               
-                              {task.files && task.files.length > 0 && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => window.open(task.files[0].filePath, '_blank')}
-                                >
-                                  <Download className="h-4 w-4 mr-1" />
-                                  Download
-                                </Button>
+                              {task.status === 'approved' && (
+                                <div className="flex items-center">
+                                  <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                                  <span className="text-sm text-muted-foreground">Approved</span>
+                                </div>
+                              )}
+                              
+                              {task.status === 'rejected' && (
+                                <>
+                                  <div className="flex items-center">
+                                    <AlertCircle className="h-4 w-4 mr-1 text-red-500" />
+                                    <span className="text-sm text-muted-foreground">Rejected</span>
+                                  </div>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => setSelectedTaskId(task.id)}
+                                      >
+                                        <UploadCloud className="h-4 w-4 mr-1" />
+                                        Upload Revision
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Upload Revised Design</DialogTitle>
+                                        <DialogDescription>
+                                          Upload your revised design for order #{task.order?.orderNumber}
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      {renderUploadForm()}
+                                    </DialogContent>
+                                  </Dialog>
+                                </>
                               )}
                             </div>
                           </TableCell>
@@ -428,49 +491,50 @@ export default function DesignTasks() {
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       {/* File Preview Dialog */}
       {previewFile && (
         <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="sm:max-w-[80vw] h-[80vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>File Preview</DialogTitle>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute top-2 right-2"
-                onClick={() => setPreviewFile(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <DialogDescription>
+                Viewing design file
+              </DialogDescription>
             </DialogHeader>
-            <div className="overflow-auto max-h-[80vh]">
+            <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/30 rounded-md">
               {previewFile.type.includes('image') ? (
                 <img 
                   src={previewFile.url} 
-                  alt="Preview" 
-                  className="max-w-full h-auto rounded-md"
+                  alt="Design Preview" 
+                  className="max-w-full max-h-full object-contain"
                 />
               ) : previewFile.type.includes('pdf') ? (
                 <iframe 
                   src={previewFile.url} 
-                  title="PDF Preview" 
-                  className="w-full h-[70vh] rounded-md"
+                  className="w-full h-full" 
+                  title="PDF Preview"
                 />
               ) : (
                 <div className="text-center py-12">
-                  <p>This file type cannot be previewed</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => window.open(previewFile.url, '_blank')}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download File
+                  <p>Cannot preview this file type. Please download to view.</p>
+                  <Button variant="outline" className="mt-2">
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
                   </Button>
                 </div>
               )}
             </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => window.open(previewFile.url, '_blank')}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Download
+              </Button>
+              <Button onClick={() => setPreviewFile(null)}>Close</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

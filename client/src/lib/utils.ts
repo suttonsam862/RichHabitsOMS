@@ -68,13 +68,20 @@ export function getStatusColor(status: string): string {
   switch (status) {
     case 'draft':
       return 'bg-gray-100 text-gray-800';
+    case 'pending':
     case 'pending_design':
-    case 'design_in_progress':
       return 'bg-blue-100 text-blue-800';
+    case 'in_progress':
+    case 'design_in_progress':
+      return 'bg-cyan-100 text-cyan-800';
+    case 'submitted':
     case 'design_review':
       return 'bg-purple-100 text-purple-800';
+    case 'approved':
     case 'design_approved':
       return 'bg-indigo-100 text-indigo-800';
+    case 'rejected':
+      return 'bg-rose-100 text-rose-800';
     case 'pending_production':
       return 'bg-amber-100 text-amber-800';
     case 'in_production':
