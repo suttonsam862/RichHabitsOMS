@@ -1,6 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -9,72 +18,56 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Plus, Search } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
 import { getQueryFn } from '@/lib/queryClient';
-import { formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
+import { PlusCircle, Search, Filter, ArrowUpDown, MoreHorizontal } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Order } from '@/types';
 
 export default function Orders() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { role } = useAuth();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   
-  // Fetch orders based on user role
-  const { data: orders = [], isLoading } = useQuery({
+  // Fetch orders
+  const { data: orders = [], isLoading } = useQuery<Order[]>({
     queryKey: ['/api/orders'],
     queryFn: getQueryFn({ on401: 'throw' }),
   });
-
-  // Helper to get status badge color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return 'bg-gray-200 text-gray-800';
-      case 'pending_design':
-        return 'bg-yellow-200 text-yellow-800';
-      case 'design_in_progress':
-        return 'bg-blue-200 text-blue-800';
-      case 'design_review':
-        return 'bg-purple-200 text-purple-800';
-      case 'design_approved':
-        return 'bg-green-200 text-green-800';
-      case 'pending_production':
-        return 'bg-orange-200 text-orange-800';
-      case 'in_production':
-        return 'bg-indigo-200 text-indigo-800';
-      case 'completed':
-        return 'bg-green-200 text-green-800';
-      case 'cancelled':
-        return 'bg-red-200 text-red-800';
-      default:
-        return 'bg-gray-200 text-gray-800';
-    }
+  
+  // Filter orders based on search term and status
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = search === '' || 
+      order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+      (order.customer?.user.firstName + ' ' + order.customer?.user.lastName).toLowerCase().includes(search.toLowerCase());
+    
+    const matchesStatus = statusFilter === '' || order.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+  
+  // Get unique statuses for filter dropdown
+  const statuses = [...new Set(orders.map(order => order.status))];
+  
+  // Calculate order totals
+  const getOrderTotal = (order: Order) => {
+    return order.items.reduce((total, item) => {
+      const itemTotal = typeof item.totalPrice === 'string' 
+        ? parseFloat(item.totalPrice) 
+        : item.totalPrice;
+      return total + itemTotal;
+    }, 0);
   };
-
-  // Format status for display
-  const formatStatus = (status: string) => {
-    return status.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
-
-  // Filter orders based on search
-  const filteredOrders = orders.filter((order: any) =>
-    order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (order.customer?.firstName && order.customer.firstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (order.customer?.lastName && order.customer.lastName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    order.status.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <div className="space-y-6">
@@ -82,98 +75,120 @@ export default function Orders() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
           <p className="text-muted-foreground">
-            View and manage custom clothing orders
+            View and manage all customer orders
           </p>
         </div>
         
-        {/* Only show create button for admin or salesperson */}
-        {(user?.role === 'admin' || user?.role === 'salesperson') && (
-          <Button onClick={() => navigate('/orders/new')}>
-            <Plus className="mr-2 h-4 w-4" /> Create Order
+        {/* Only allow admin and salesperson to create orders */}
+        {(role === 'admin' || role === 'salesperson') && (
+          <Button onClick={() => navigate('/orders/edit/new')}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            New Order
           </Button>
         )}
       </div>
-
+      
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>All Orders</CardTitle>
+        <CardHeader>
+          <CardTitle>Order Management</CardTitle>
           <CardDescription>
-            Manage and track the status of customer orders
+            Browse, filter, and manage all orders in the system
           </CardDescription>
-          <div className="relative mt-2">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search orders..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search orders by number or customer..."
+                className="pl-8"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-          ) : filteredOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32">
-              <p className="text-center text-muted-foreground">No orders found</p>
-              {(user?.role === 'admin' || user?.role === 'salesperson') && (
-                <Button 
-                  variant="outline" 
-                  className="mt-2"
-                  onClick={() => navigate('/orders/new')}
-                >
-                  <Plus className="mr-2 h-4 w-4" /> Create New Order
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Statuses</SelectItem>
+                {statuses.map(status => (
+                  <SelectItem key={status} value={status}>
+                    {getStatusLabel(status)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Order #</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="w-[80px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array(5).fill(0).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredOrders.length === 0 ? (
                   <TableRow>
-                    <TableHead>Order #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No orders found.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order: any) => (
-                    <TableRow key={order.id}>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <TableRow key={order.id} className="cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>
                       <TableCell className="font-medium">{order.orderNumber}</TableCell>
                       <TableCell>
-                        {order.customer?.firstName} {order.customer?.lastName}
+                        {order.customer ? 
+                          `${order.customer.user.firstName} ${order.customer.user.lastName}` : 
+                          'Unknown Customer'}
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(order.status)}>
-                          {formatStatus(order.status)}
+                          {getStatusLabel(order.status)}
                         </Badge>
                       </TableCell>
+                      <TableCell>{formatDate(order.createdAt)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(getOrderTotal(order))}</TableCell>
                       <TableCell>
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(parseFloat(order.totalAmount))}
-                      </TableCell>
-                      <TableCell className="text-right">
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => navigate(`/orders/${order.id}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/orders/edit/${order.id}`);
+                          }}
                         >
-                          <Eye className="h-4 w-4" />
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

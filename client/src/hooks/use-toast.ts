@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import {
   Toast,
-  ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast";
 
@@ -9,12 +8,12 @@ import {
   useToast as useToastImpl,
 } from "@/components/ui/use-toast";
 
-export type ToastActionProps = React.ComponentPropsWithoutRef<any>;
-
-type ToastOptions = Omit<ToastProps, "id"> & {
-  action?: ToastActionProps;
+// Simple toast options interface
+interface ToastOptions {
   title?: string;
   description?: string;
+  variant?: 'default' | 'destructive';
+  action?: any;
 }
 
 export function useToast() {

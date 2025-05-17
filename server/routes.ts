@@ -63,6 +63,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure authentication
   const { isAuthenticated, hasRole } = configureAuth(app);
   
+  // Customer routes
+  app.get("/api/customers", isAuthenticated, hasRole(["admin", "salesperson"]), async (req, res, next) => {
+    try {
+      const customers = await storage.getUsersByRole('customer');
+      const result = [];
+      
+      for (const user of customers) {
+        const customer = await storage.getCustomerByUserId(user.id);
+        if (customer) {
+          result.push({
+            id: customer.id,
+            user: {
+              id: user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email
+            }
+          });
+        }
+      }
+      
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // Error handling for validation
   const validateRequest = (schema: z.ZodType<any, any>) => (req: any, res: any, next: any) => {
     try {
