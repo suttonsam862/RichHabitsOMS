@@ -20,6 +20,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
+import OrderEditor from "@/pages/OrderEditor";
 import DesignTasks from "@/pages/DesignTasks";
 import Messages from "@/pages/Messages";
 import Production from "@/pages/Production";
@@ -102,10 +103,19 @@ function App() {
                 />
                 
                 <Route 
-                  path="/orders/:orderId" 
+                  path="/orders/:id" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
                       <OrderDetail />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/orders/edit/:id" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                      <OrderEditor />
                     </RequireAuth>
                   } 
                 />
