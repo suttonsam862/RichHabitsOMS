@@ -3,32 +3,39 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, FileText, MessageSquare, Clock, AlertTriangle } from 'lucide-react';
+import { ShoppingBag, FileText, MessageSquare, PieChart, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
+
+// Define dashboard data type
+interface CustomerDashboardData {
+  customer: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  metrics: {
+    totalOrders: number;
+    activeOrders: number;
+    designsNeedingApproval: number;
+    totalSpent: string;
+  };
+  orderStatusCounts: Record<string, number>;
+  recentOrders: Array<any>;
+  recentMessages: Array<any>;
+}
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
   
-  // Get customer's orders
-  const { data: orders, isLoading: isLoadingOrders } = useQuery({
-    queryKey: ['orders'],
+  // Get customer dashboard data from dedicated API endpoint
+  const { data: dashboardData, isLoading } = useQuery<CustomerDashboardData>({
+    queryKey: ['customer', 'dashboard'],
     queryFn: async () => {
-      const response = await fetch('/api/orders');
+      const response = await fetch('/api/customer/dashboard');
       if (!response.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-      return response.json();
-    }
-  });
-  
-  // Get customer's messages
-  const { data: messages, isLoading: isLoadingMessages } = useQuery({
-    queryKey: ['messages'],
-    queryFn: async () => {
-      const response = await fetch('/api/messages');
-      if (!response.ok) {
-        throw new Error('Failed to fetch messages');
+        throw new Error('Failed to fetch customer dashboard data');
       }
       return response.json();
     }
@@ -36,50 +43,57 @@ export default function CustomerDashboard() {
   
   if (!user) return null;
   
-  // Calculate dashboard metrics
-  const activeOrders = orders?.filter(order => 
-    order.status !== 'completed' && order.status !== 'cancelled'
-  ) || [];
+  // Extract dashboard metrics
+  const metrics = dashboardData?.metrics || {
+    totalOrders: 0,
+    activeOrders: 0,
+    designsNeedingApproval: 0,
+    totalSpent: '0.00'
+  };
   
-  const designsNeedingApproval = orders?.filter(order => 
-    order.status === 'design_review'
-  ) || [];
-  
-  const totalSpent = orders?.reduce((sum, order) => {
-    return sum + (parseFloat(order.totalAmount || '0') || 0);
-  }, 0).toFixed(2) || '0.00';
-  
-  // Get recent orders (limited to 5)
-  const recentOrders = [...(orders || [])].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  ).slice(0, 5);
-  
-  // Get recent messages (limited to 5)
-  const recentMessages = [...(messages || [])].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  ).slice(0, 5);
+  const recentOrders = dashboardData?.recentOrders || [];
+  const recentMessages = dashboardData?.recentMessages || [];
   
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Customer Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome, {user.firstName || user.username}
+          Welcome, {dashboardData?.customer?.firstName || user.firstName || user.username}
         </p>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
             <ShoppingBag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingOrders ? (
+            {isLoading ? (
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{activeOrders.length}</div>
+                <div className="text-2xl font-bold">{metrics.totalOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  Lifetime orders
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
+            <Tag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{metrics.activeOrders}</div>
                 <p className="text-xs text-muted-foreground">
                   In progress orders
                 </p>
@@ -94,13 +108,13 @@ export default function CustomerDashboard() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingOrders ? (
+            {isLoading ? (
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{designsNeedingApproval.length}</div>
+                <div className="text-2xl font-bold">{metrics.designsNeedingApproval}</div>
                 <p className="text-xs text-muted-foreground">
-                  {designsNeedingApproval.length === 1 ? 'Design' : 'Designs'} pending your review
+                  {metrics.designsNeedingApproval === 1 ? 'Design' : 'Designs'} pending review
                 </p>
               </>
             )}
@@ -110,16 +124,16 @@ export default function CustomerDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            <PieChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoadingOrders ? (
+            {isLoading ? (
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             ) : (
               <>
-                <div className="text-2xl font-bold">${totalSpent}</div>
+                <div className="text-2xl font-bold">${metrics.totalSpent}</div>
                 <p className="text-xs text-muted-foreground">
-                  Lifetime orders
+                  Lifetime spending
                 </p>
               </>
             )}
@@ -136,7 +150,7 @@ export default function CustomerDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            {isLoadingOrders ? (
+            {isLoading ? (
               <div className="flex justify-center py-4">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>
@@ -180,7 +194,7 @@ export default function CustomerDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            {isLoadingMessages ? (
+            {isLoading ? (
               <div className="flex justify-center py-4">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>

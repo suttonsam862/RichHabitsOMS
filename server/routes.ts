@@ -667,6 +667,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Customer Dashboard API
+  app.get("/api/customer/dashboard", isAuthenticated, async (req, res, next) => {
+    try {
+      // Ensure user is a customer
+      if (req.user.role !== 'customer') {
+        return res.status(403).json({ message: "Access denied. Customer role required." });
+      }
+      
+      // Get customer record
+      const customer = await storage.getCustomerByUserId(req.user.id);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer record not found" });
+      }
+      
+      // Get customer orders
+      const orders = await storage.getOrdersByCustomerId(customer.id);
+      
+      // Get customer messages
+      const sentMessages = await storage.getMessagesBySenderId(req.user.id);
+      const receivedMessages = await storage.getMessagesByReceiverId(req.user.id);
+      const messages = [...sentMessages, ...receivedMessages].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ).slice(0, 5); // Get only most recent 5 messages
+      
+      // Calculate dashboard metrics
+      const activeOrders = orders.filter(order => 
+        order.status !== 'completed' && order.status !== 'cancelled'
+      );
+      
+      const designsNeedingApproval = orders.filter(order => 
+        order.status === 'design_review'
+      );
+      
+      const totalSpent = orders.reduce((sum, order) => {
+        return sum + (parseFloat(order.totalAmount || '0') || 0);
+      }, 0).toFixed(2);
+      
+      // Get order status counts
+      const orderStatusCounts = {};
+      orders.forEach(order => {
+        const status = order.status || 'unknown';
+        if (orderStatusCounts[status]) {
+          orderStatusCounts[status]++;
+        } else {
+          orderStatusCounts[status] = 1;
+        }
+      });
+      
+      // Return dashboard data
+      res.json({
+        customer: {
+          id: customer.id,
+          firstName: req.user.firstName,
+          lastName: req.user.lastName,
+          email: req.user.email
+        },
+        metrics: {
+          totalOrders: orders.length,
+          activeOrders: activeOrders.length,
+          designsNeedingApproval: designsNeedingApproval.length,
+          totalSpent
+        },
+        orderStatusCounts,
+        recentOrders: orders.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ).slice(0, 5),
+        recentMessages: messages
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // User routes
   app.get("/api/users", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
     try {
