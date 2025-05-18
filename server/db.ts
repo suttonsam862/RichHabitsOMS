@@ -1,26 +1,24 @@
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from "@shared/schema";
-import { neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
 
-// Configure for Supabase PostgreSQL connection
+// Configure for WebSocket connections
+neonConfig.webSocketConstructor = ws;
+
+// Check for Supabase connection string
 if (!process.env.DATABASE_URL) {
   throw new Error(
-    "DATABASE_URL must be set. Missing Supabase connection string."
+    "DATABASE_URL must be set. Make sure the Supabase connection string is properly configured."
   );
 }
 
-// Support WebSocket connections for Supabase
-neonConfig.webSocketConstructor = ws;
+// Connection info (hide credentials in logs)
+console.log("Connecting to Supabase PostgreSQL database using WebSocket connection...");
 
-// Log connection attempt (without exposing credentials)
-console.log("Connecting to Supabase PostgreSQL database...");
-
+// Create pool with the Supabase database connection
 export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  // Enable SSL for Supabase connections
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL 
 });
 
 // Verify database connection
@@ -29,9 +27,9 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('Supabase PostgreSQL connection error:', err);
-  // Don't crash the server on connection errors
+  console.error('Database connection error:', err);
   console.log('Will retry connection on next request');
 });
 
+// Create Drizzle instance
 export const db = drizzle(pool, { schema });
