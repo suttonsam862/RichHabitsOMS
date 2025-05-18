@@ -50,7 +50,7 @@ export default function Orders() {
   const navigate = useNavigate();
   const { role } = useAuth();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   
   // Fetch orders
   const { data: orders = [], isLoading, refetch } = useQuery<Order[]>({
@@ -64,7 +64,7 @@ export default function Orders() {
       order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
       (order.customer?.user.firstName + ' ' + order.customer?.user.lastName).toLowerCase().includes(search.toLowerCase());
     
-    const matchesStatus = statusFilter === '' || order.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -161,9 +161,9 @@ export default function Orders() {
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 {statuses.map(status => (
-                  <SelectItem key={status} value={status}>
+                  <SelectItem key={status} value={status || "unknown"}>
                     {getStatusLabel(status)}
                   </SelectItem>
                 ))}
