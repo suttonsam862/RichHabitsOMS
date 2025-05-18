@@ -48,6 +48,8 @@ export const users = pgTable('users', {
   role: roleEnum('role').notNull().default('customer'),
   phone: text('phone'),
   company: text('company'),
+  setupToken: text('setup_token'),
+  setupTokenExpires: timestamp('setup_token_expires'),
   createdAt: timestamp('created_at').defaultNow(),
   stripeCustomerId: text('stripe_customer_id'),
 });

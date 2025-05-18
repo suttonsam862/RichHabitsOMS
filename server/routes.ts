@@ -379,6 +379,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin customer routes
+  app.post("/api/admin/customers", isAuthenticated, requireAdmin, async (req, res, next) => {
+    try {
+      const { firstName, lastName, email, phone, company, address, city, state, zip, country } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ success: false, message: "A user with this email already exists" });
+      }
+      
+      // Generate a username from the email
+      const username = email.split('@')[0] + Math.floor(Math.random() * 100);
+      
+      // Generate a temporary random password (this will be reset by the user)
+      const tempPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
+      
+      // Create the user with customer role
+      const user = await storage.createUser({
+        email,
+        username,
+        password: tempPassword, // This will be replaced when user sets up their account
+        firstName,
+        lastName,
+        role: 'customer',
+        phone,
+        company
+      });
+      
+      // Create the customer record
+      const customer = await storage.createCustomer({
+        userId: user.id,
+        address: address || '',
+        city: city || '',
+        state: state || '',
+        zip: zip || '',
+        country: country || '',
+      });
+      
+      // Import onboarding functions
+      const { generateSetupToken, sendWelcomeEmail } = require('./onboarding');
+      
+      // Generate setup token
+      const setupToken = await generateSetupToken(user.id);
+      
+      // Send welcome email with setup link
+      const name = firstName || 'Customer';
+      await sendWelcomeEmail(email, name, setupToken);
+      
+      res.status(201).json({ 
+        success: true,
+        customer: {
+          id: customer.id,
+          user: {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      next(error);
+    }
+  });
+  
   // Error handling for validation
   const validateRequest = (schema: z.ZodType<any, any>) => (req: any, res: any, next: any) => {
     try {
