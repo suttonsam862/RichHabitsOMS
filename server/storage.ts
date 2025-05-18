@@ -523,7 +523,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAllPayments(): Promise<Payment[]> {
-    return await db.select().from(payments);
+    try {
+      return await db.select().from(payments);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      return []; // Return empty array in case of error
+    }
   }
   
   async assignManufacturerToOrder(orderId: number, manufacturerId: number): Promise<Order> {
