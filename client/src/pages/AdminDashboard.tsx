@@ -36,7 +36,7 @@ export default function AdminDashboard() {
     requireAuth(["admin"]);
   }, [requireAuth]);
 
-  // Fetch dashboard data
+  // Use existing dashboard endpoint
   const { data, isLoading } = useQuery({
     queryKey: ['/api/admin/dashboard'],
     enabled: !!user && user.role === 'admin',

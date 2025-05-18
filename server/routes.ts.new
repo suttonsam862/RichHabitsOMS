@@ -1,0 +1,634 @@
+import express, { type Express, Request, Response, NextFunction } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { configureAuth } from "./auth";
+import { setupWebSocketServer, sendNotification } from "./messaging";
+import { sendEmail, getOrderStatusChangeEmailTemplate, getPaymentReceiptEmailTemplate, getDesignApprovalEmailTemplate } from "./email";
+import { requireAdmin } from "./middleware/adminAuth";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import Stripe from "stripe";
+import { loginSchema, registerSchema } from "@shared/schema";
+import { z } from "zod";
+import { ZodError } from "zod";
+import { fromZodError } from "zod-validation-error";
+import passport from "passport";
+import adminRoutes from "./admin";
+
+// Setup Stripe
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2025-04-30.basil",
+}) : undefined;
+
+// Configure file uploads
+const storage_dir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(storage_dir)) {
+  fs.mkdirSync(storage_dir, { recursive: true });
+}
+
+const fileStorage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, storage_dir);
+  },
+  filename: function(req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: fileStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only specific file types
+    const allowedFileTypes = [
+      '.pdf', '.ai', '.psd', '.eps', '.svg', '.png', '.jpg', '.jpeg'
+    ];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedFileTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only design files are allowed.') as any);
+    }
+  } 
+});
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Configure authentication
+  const { isAuthenticated, hasRole } = configureAuth(app);
+  
+  // Health check endpoint for production monitoring
+  app.get('/api/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: app.get('env'),
+      version: process.env.npm_package_version || '1.0.0'
+    });
+  });
+  
+  // Register admin routes
+  app.use('/api/admin', isAuthenticated, adminRoutes);
+  
+  // Stripe payment endpoint for orders
+  app.post("/api/orders/:orderId/checkout", async (req, res, next) => {
+    // First check if user is authenticated
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // Continue with checkout processing
+    try {
+      const orderId = parseInt(req.params.orderId);
+      
+      // Get the order
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Make sure order has a total amount
+      if (!order.totalAmount) {
+        return res.status(400).json({ message: "Order has no total amount" });
+      }
+      
+      // If order is already paid, return error
+      const existingPayments = await storage.getPaymentsByOrderId(orderId);
+      const completedPayments = existingPayments.filter(p => p.status === 'completed');
+      if (completedPayments.length > 0) {
+        return res.status(400).json({ message: "Order is already paid" });
+      }
+      
+      // If Stripe is not configured, return error
+      if (!stripe) {
+        return res.status(501).json({ message: "Payment processing is not configured" });
+      }
+      
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: `Order #${order.orderNumber}`,
+                description: 'Custom clothing order',
+              },
+              unit_amount: Math.round(Number(order.totalAmount) * 100), // Convert to cents
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${req.protocol}://${req.get('host')}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.protocol}://${req.get('host')}/payment-cancel`,
+        metadata: {
+          orderId: order.id.toString(),
+          orderNumber: order.orderNumber,
+        },
+      });
+      
+      // Create payment record
+      await storage.createPayment({
+        orderId: order.id,
+        amount: order.totalAmount.toString(),
+        status: 'pending',
+        stripePaymentId: session.id,
+        stripeClientSecret: session.payment_intent as string,
+        transactionId: null,
+        notes: 'Payment session created',
+        method: 'credit_card'
+      });
+      
+      // Return session ID to client
+      res.json({ 
+        sessionId: session.id,
+        url: session.url
+      });
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ message: "Error processing payment" });
+    }
+  });
+  
+  // Stripe webhook endpoint for payment notifications
+  app.post('/api/stripe-webhook', express.raw({type: 'application/json'}), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    
+    if (!stripe) {
+      return res.status(501).json({ message: "Payment processing is not configured" });
+    }
+    
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(501).json({ message: "Webhook secret is not configured" });
+    }
+    
+    let event;
+    
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error(`Webhook signature verification failed: ${err}`);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    
+    // Handle the checkout.session.completed event
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      
+      try {
+        // Extract order ID from metadata
+        const orderId = parseInt(session.metadata.orderId);
+        
+        // Find payment by session ID
+        const payments = await storage.getPaymentsByOrderId(orderId);
+        const payment = payments.find(p => p.stripePaymentId === session.id);
+        
+        if (!payment) {
+          throw new Error(`Payment record not found for session ${session.id}`);
+        }
+        
+        // Update payment status
+        await storage.updatePayment(payment.id, {
+          status: 'completed',
+          notes: 'Payment completed via Stripe',
+          transactionId: session.payment_intent as string,
+        });
+        
+        // Update order status
+        const order = await storage.getOrder(orderId);
+        if (order) {
+          let newStatus = order.status;
+          
+          // If order is in draft status, move to pending_design
+          if (order.status === 'draft') {
+            newStatus = 'pending_design';
+          }
+          
+          await storage.updateOrder(orderId, {
+            status: newStatus,
+            updatedAt: new Date(),
+          });
+          
+          // Notify customer about payment
+          const customer = await storage.getCustomer(order.customerId);
+          if (customer) {
+            const user = await storage.getUser(customer.userId);
+            if (user) {
+              // Send email notification
+              const emailTemplate = getPaymentReceiptEmailTemplate(
+                order.orderNumber,
+                order.totalAmount.toString(),
+                `${user.firstName || ''} ${user.lastName || ''}`.trim()
+              );
+              
+              await sendEmail({
+                to: user.email,
+                subject: emailTemplate.subject,
+                text: emailTemplate.text,
+                html: emailTemplate.html
+              });
+              
+              // Send in-app notification
+              await sendNotification(user.id, {
+                type: 'payment_success',
+                message: `Your payment for order #${order.orderNumber} has been processed successfully.`,
+                orderId: order.id
+              });
+            }
+          }
+        }
+        
+        res.json({received: true});
+      } catch (error) {
+        console.error('Error processing webhook:', error);
+        res.status(500).json({ message: 'Error processing webhook' });
+      }
+    } else {
+      // Return 200 for other event types
+      res.json({received: true});
+    }
+  });
+  
+  // Authentication routes
+  app.post('/api/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+      
+      if (!user) {
+        return res.status(401).json({ message: info.message || 'Invalid credentials' });
+      }
+      
+      req.login(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        
+        // Return user info (excluding sensitive data)
+        const { password, ...userInfo } = user;
+        return res.json(userInfo);
+      });
+    })(req, res, next);
+  });
+  
+  app.post('/api/register', async (req, res, next) => {
+    try {
+      const { email, username, password, firstName, lastName, role, phone, company } = req.body;
+      
+      // Check if username already exists
+      const existingUsername = await storage.getUserByUsername(username);
+      if (existingUsername) {
+        return res.status(400).json({ message: 'Username already taken' });
+      }
+      
+      // Check if email already exists
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+      
+      // Create new user with customer role by default
+      const user = await storage.createUser({
+        email,
+        username,
+        password, // Will be hashed in the storage layer
+        firstName,
+        lastName,
+        role: role || 'customer',
+        phone,
+        company
+      });
+      
+      // Create customer profile if role is customer
+      if (user.role === 'customer') {
+        await storage.createCustomer({
+          userId: user.id,
+          customerNotes: ''
+        });
+      }
+      
+      // Log the user in automatically
+      req.login(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        
+        // Return user info (excluding sensitive data)
+        const { password, ...userInfo } = user;
+        return res.json(userInfo);
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/logout', (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error logging out' });
+      }
+      res.json({ message: 'Logged out successfully' });
+    });
+  });
+  
+  app.get('/api/me', isAuthenticated, (req, res) => {
+    // Return user info (excluding sensitive data)
+    const { password, ...userInfo } = req.user;
+    res.json(userInfo);
+  });
+  
+  // Customer API routes
+  app.get('/api/customer/dashboard', isAuthenticated, async (req, res, next) => {
+    try {
+      // Ensure user is a customer
+      if (req.user?.role !== 'customer') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      // Get customer profile
+      const customer = await storage.getCustomerByUserId(req.user.id);
+      if (!customer) {
+        return res.status(404).json({ message: 'Customer profile not found' });
+      }
+      
+      // Get customer orders
+      const orders = await storage.getOrdersByCustomerId(customer.id);
+      
+      // Get order statistics
+      const pendingDesign = orders.filter(order => order.status === 'pending_design').length;
+      const designInProgress = orders.filter(order => 
+        ['design_in_progress', 'design_review'].includes(order.status)
+      ).length;
+      const pendingProduction = orders.filter(order => order.status === 'pending_production').length;
+      const inProduction = orders.filter(order => order.status === 'in_production').length;
+      const completed = orders.filter(order => order.status === 'completed').length;
+      
+      // Get payments and calculate total spent
+      const payments = [];
+      for (const order of orders) {
+        const orderPayments = await storage.getPaymentsByOrderId(order.id);
+        payments.push(...orderPayments);
+      }
+      
+      const totalSpent = payments
+        .filter(payment => payment.status === 'completed')
+        .reduce((sum, payment) => sum + Number(payment.amount), 0);
+      
+      // Get recent messages
+      const messagesReceived = await storage.getMessagesByReceiverId(req.user.id);
+      const messagesSent = await storage.getMessagesBySenderId(req.user.id);
+      const allMessages = [...messagesReceived, ...messagesSent]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5);
+      
+      // Format messages
+      const recentMessages = [];
+      for (const message of allMessages) {
+        const sender = await storage.getUser(message.senderId);
+        let orderNumber = null;
+        
+        if (message.orderId) {
+          const order = await storage.getOrder(message.orderId);
+          orderNumber = order ? order.orderNumber : null;
+        }
+        
+        recentMessages.push({
+          id: message.id,
+          senderName: sender ? 
+            `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || sender.username : 
+            'Unknown',
+          content: message.content,
+          createdAt: message.createdAt,
+          orderId: message.orderId,
+          orderNumber
+        });
+      }
+      
+      // Return dashboard data
+      res.json({
+        stats: {
+          totalOrders: orders.length,
+          pendingDesign,
+          inDesign: designInProgress,
+          pendingProduction,
+          inProduction,
+          completed,
+          totalSpent
+        },
+        recentOrders: orders
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 5),
+        recentMessages
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/customer/orders', isAuthenticated, async (req, res, next) => {
+    try {
+      // Ensure user is a customer
+      if (req.user?.role !== 'customer') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      // Get customer profile
+      const customer = await storage.getCustomerByUserId(req.user.id);
+      if (!customer) {
+        return res.status(404).json({ message: 'Customer profile not found' });
+      }
+      
+      // Get customer orders
+      const orders = await storage.getOrdersByCustomerId(customer.id);
+      
+      res.json(orders);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/customer/orders/:orderId', isAuthenticated, async (req, res, next) => {
+    try {
+      // Ensure user is a customer
+      if (req.user?.role !== 'customer') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const orderId = parseInt(req.params.orderId);
+      
+      // Get customer profile
+      const customer = await storage.getCustomerByUserId(req.user.id);
+      if (!customer) {
+        return res.status(404).json({ message: 'Customer profile not found' });
+      }
+      
+      // Get order
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      // Ensure order belongs to customer
+      if (order.customerId !== customer.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      // Get order details
+      const orderItems = await storage.getOrderItemsByOrderId(orderId);
+      const designTasks = await storage.getDesignTasksByOrderId(orderId);
+      const productionTasks = await storage.getProductionTasksByOrderId(orderId);
+      const payments = await storage.getPaymentsByOrderId(orderId);
+      
+      // Get messages related to this order
+      const orderMessages = [];
+      
+      res.json({
+        order,
+        orderItems,
+        designTasks,
+        productionTasks,
+        payments,
+        messages: orderMessages
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Message routes
+  app.get('/api/messages', isAuthenticated, async (req, res, next) => {
+    try {
+      // Get sent and received messages
+      const sentMessages = await storage.getMessagesBySenderId(req.user.id);
+      const receivedMessages = await storage.getMessagesByReceiverId(req.user.id);
+      const allMessages = [...sentMessages, ...receivedMessages];
+      
+      // Group by conversation partner
+      const conversations = new Map();
+      
+      for (const message of allMessages) {
+        let partnerId;
+        
+        if (message.senderId === req.user.id) {
+          partnerId = message.receiverId;
+        } else {
+          partnerId = message.senderId;
+        }
+        
+        if (!conversations.has(partnerId)) {
+          const partner = await storage.getUser(partnerId);
+          
+          conversations.set(partnerId, {
+            id: partnerId,
+            name: partner ? 
+              `${partner.firstName || ''} ${partner.lastName || ''}`.trim() || partner.username : 
+              'Unknown',
+            lastMessage: message,
+            unread: message.senderId !== req.user.id && !message.readAt ? 1 : 0
+          });
+        } else {
+          const convo = conversations.get(partnerId);
+          
+          // Update last message if this is newer
+          if (new Date(message.createdAt) > new Date(convo.lastMessage.createdAt)) {
+            convo.lastMessage = message;
+          }
+          
+          // Count unread messages
+          if (message.senderId !== req.user.id && !message.readAt) {
+            convo.unread++;
+          }
+          
+          conversations.set(partnerId, convo);
+        }
+      }
+      
+      // Format result
+      const result = Array.from(conversations.values())
+        .sort((a, b) => 
+          new Date(b.lastMessage.createdAt).getTime() - 
+          new Date(a.lastMessage.createdAt).getTime()
+        );
+      
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/messages/:userId', isAuthenticated, async (req, res, next) => {
+    try {
+      const partnerId = parseInt(req.params.userId);
+      
+      // Get messages between users
+      const sentMessages = await storage.getMessagesBySenderId(req.user.id)
+        .then(msgs => msgs.filter(m => m.receiverId === partnerId));
+      
+      const receivedMessages = await storage.getMessagesByReceiverId(req.user.id)
+        .then(msgs => msgs.filter(m => m.senderId === partnerId));
+      
+      // Combine and sort
+      const messages = [...sentMessages, ...receivedMessages]
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      
+      // Mark received messages as read
+      for (const message of receivedMessages) {
+        if (!message.readAt) {
+          await storage.markMessageAsRead(message.id);
+        }
+      }
+      
+      res.json(messages);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post('/api/messages', isAuthenticated, async (req, res, next) => {
+    try {
+      const { receiverId, content, orderId } = req.body;
+      
+      if (!receiverId || !content) {
+        return res.status(400).json({ message: 'Recipient and content are required' });
+      }
+      
+      // Create message
+      const message = await storage.createMessage({
+        senderId: req.user.id,
+        receiverId,
+        content,
+        orderId: orderId || null
+      });
+      
+      res.json(message);
+      
+      // Send notification to receiver
+      await sendNotification(receiverId, {
+        type: 'new_message',
+        message: 'You have a new message',
+        senderId: req.user.id,
+        messageId: message.id
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Create HTTP server
+  const httpServer = createServer(app);
+  
+  // Setup WebSocket server
+  setupWebSocketServer(httpServer);
+  
+  return httpServer;
+}
