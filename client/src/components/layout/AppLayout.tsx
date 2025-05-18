@@ -111,16 +111,16 @@ export function AppLayout() {
     },
     {
       name: 'Analytics',
-      href: '/analytics',
+      href: '/admin/analytics',
       icon: BarChart,
-      current: location.pathname === '/analytics',
+      current: location.pathname === '/admin/analytics',
       roles: ['admin'],
     },
     {
       name: 'Settings',
-      href: '/settings',
+      href: '/admin/settings',
       icon: Settings,
-      current: location.pathname === '/settings',
+      current: location.pathname === '/admin/settings',
       roles: ['admin', 'salesperson', 'designer', 'manufacturer', 'customer'],
     },
   ];
