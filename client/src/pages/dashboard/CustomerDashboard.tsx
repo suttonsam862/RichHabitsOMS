@@ -195,7 +195,7 @@ export default function CustomerDashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Messages</CardTitle>
             <Button variant="outline" size="sm" asChild>
-              <Link to="/messages">View All</Link>
+              <Link to="/customer/messages">View All</Link>
             </Button>
           </CardHeader>
           <CardContent>
