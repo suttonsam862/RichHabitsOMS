@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'wouter';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,7 +43,7 @@ const setupSchema = z.object({
 type SetupFormValues = z.infer<typeof setupSchema>;
 
 export default function SetupPassword() {
-  const [location, setLocation] = useLocation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [token, setToken] = useState<string | null>(null);
@@ -54,8 +54,8 @@ export default function SetupPassword() {
 
   // Parse token from URL
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get('token');
+    const searchParams = new URLSearchParams(location.search);
+    const tokenParam = searchParams.get('token');
     setToken(tokenParam);
 
     if (tokenParam) {
@@ -64,7 +64,7 @@ export default function SetupPassword() {
       setIsVerifying(false);
       setVerifyError('No setup token provided. Please check your email link.');
     }
-  }, []);
+  }, [location]);
 
   // Verify the token is valid
   const verifyToken = async (tokenValue: string) => {

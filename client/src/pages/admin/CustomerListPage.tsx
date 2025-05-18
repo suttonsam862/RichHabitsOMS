@@ -326,7 +326,7 @@ export default function CustomerListPage() {
           <DialogHeader>
             <DialogTitle>Add New Customer</DialogTitle>
             <DialogDescription>
-              Fill in the customer details below. All fields marked with an asterisk (*) are required.
+              Fill in the customer details below. All fields marked with an asterisk (*) are required. A welcome email with account setup instructions will be sent to the customer automatically.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddCustomer}>
