@@ -86,7 +86,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await apiRequest("POST", "/api/auth/logout");
       setUser(null);
-      setLocation("/login");
+      // Clear any cached data in localStorage
+      localStorage.clear();
+      // Clear any query cache
+      window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
       throw error;
