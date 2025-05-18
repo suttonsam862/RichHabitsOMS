@@ -982,16 +982,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[ORDER CREATION] Creating order for customer: ${orderData.customerId}, by salesperson: ${req.user.id}`);
       
-      // Create order
-      const order = await storage.createOrder({
-        ...orderData,
+      // Validate order items
+      for (const item of items) {
+        if (!item.productName) {
+          return res.status(400).json({ message: "Each order item must have a productName" });
+        }
+        
+        if (!item.unitPrice) {
+          return res.status(400).json({ message: "Each order item must have a unitPrice" });
+        }
+        
+        // Calculate total price if not provided
+        if (!item.totalPrice) {
+          const quantity = item.quantity || 1;
+          const unitPrice = parseFloat(item.unitPrice);
+          item.totalPrice = (unitPrice * quantity).toString();
+        }
+      }
+      
+      // Prepare the order data with defaults
+      const orderPayload = {
+        customerId: orderData.customerId,
         salespersonId: req.user.id,
-        // Set default values for anything that might be missing
         status: orderData.status || 'draft',
         totalAmount: orderData.totalAmount || '0',
         tax: orderData.tax || '0',
         isPaid: orderData.isPaid || false,
-      });
+        notes: orderData.notes || '',
+      };
+      
+      console.log(`[ORDER CREATION] Order payload:`, orderPayload);
+      
+      // Create order
+      const order = await storage.createOrder(orderPayload);
       
       console.log(`[ORDER CREATION] Order created successfully with ID: ${order.id}`);
       
@@ -1000,12 +1023,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const item of items) {
         console.log(`[ORDER CREATION] Processing item: ${JSON.stringify(item)}`);
         const orderItem = await storage.createOrderItem({
-          ...item,
           orderId: order.id,
-          // Set default values for anything that might be missing
+          productName: item.productName,
+          description: item.description || '',
+          size: item.size || '',
+          color: item.color || '',
           quantity: item.quantity || 1,
-          unitPrice: item.unitPrice || '0',
-          totalPrice: item.totalPrice || '0',
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
         });
         createdItems.push(orderItem);
       }
@@ -1032,8 +1057,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("[ORDER CREATION ERROR]", error);
+      
+      // Provide more specific error message based on error type
+      let errorMessage = "Failed to create order";
+      if (error instanceof Error) {
+        // Extract the specific error details
+        if (error.message.includes("violates unique constraint")) {
+          errorMessage = "A similar order already exists. Please try with different order details.";
+        } else if (error.message.includes("violates foreign key constraint")) {
+          errorMessage = "Invalid reference to customer or other related record.";
+        } else if (error.message.includes("violates not-null constraint")) {
+          errorMessage = "Missing required field in order data.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       res.status(500).json({ 
-        message: "Failed to create order", 
+        message: errorMessage,
         error: error instanceof Error ? error.message : String(error)
       });
     }

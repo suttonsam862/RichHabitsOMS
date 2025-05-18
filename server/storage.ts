@@ -214,15 +214,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
-    const orderNumber = `ORD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const [newOrder] = await db
-      .insert(orders)
-      .values({
+    try {
+      // Generate a unique order number if one isn't provided
+      const orderNumber = order.orderNumber || 
+        `ORD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      console.log(`[DEBUG] Creating order with data:`, {
         ...order,
-        orderNumber,
-      })
-      .returning();
-    return newOrder;
+        orderNumber
+      });
+      
+      const [newOrder] = await db
+        .insert(orders)
+        .values({
+          ...order,
+          orderNumber,
+        })
+        .returning();
+        
+      console.log(`[DEBUG] Order created successfully: ${newOrder.id}`);
+      return newOrder;
+    } catch (error) {
+      console.error(`[ERROR] Failed to create order:`, error);
+      throw error;
+    }
   }
 
   async updateOrder(id: number, data: Partial<InsertOrder>): Promise<Order> {
