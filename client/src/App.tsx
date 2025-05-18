@@ -30,6 +30,9 @@ import PaymentCancel from "@/pages/PaymentCancel";
 import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
 import AdminOversightDashboard from "@/pages/AdminOversightDashboard";
 import CustomerList from "@/pages/admin/CustomerList";
+import CustomerListPage from "@/pages/admin/CustomerListPage";
+import SettingsPage from "@/pages/admin/SettingsPage";
+import AnalyticsPage from "@/pages/admin/AnalyticsPage";
 
 function App() {
   return (
@@ -185,7 +188,25 @@ function App() {
                   path="/admin/customers" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
-                      <CustomerList />
+                      <CustomerListPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/settings" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <SettingsPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/analytics" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <AnalyticsPage />
                     </RequireAuth>
                   } 
                 />
