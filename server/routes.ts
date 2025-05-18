@@ -13,6 +13,7 @@ import { loginSchema, registerSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import passport from "passport";
 
 // Setup Stripe
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
