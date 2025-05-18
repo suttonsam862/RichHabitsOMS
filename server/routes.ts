@@ -740,6 +740,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Customer Orders API
+  app.get("/api/customer/orders", isAuthenticated, async (req, res, next) => {
+    try {
+      // Ensure user is a customer
+      if (req.user.role !== 'customer') {
+        return res.status(403).json({ message: "Access denied. Customer role required." });
+      }
+      
+      // Get customer record
+      const customer = await storage.getCustomerByUserId(req.user.id);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer record not found" });
+      }
+      
+      // Get customer orders
+      const orders = await storage.getOrdersByCustomerId(customer.id);
+      
+      // Return all customer orders with basic information
+      res.json(orders.map(order => ({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        totalAmount: order.totalAmount,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      })));
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Customer Messages API
+  app.get("/api/customer/messages", isAuthenticated, async (req, res, next) => {
+    try {
+      // Ensure user is a customer
+      if (req.user.role !== 'customer') {
+        return res.status(403).json({ message: "Access denied. Customer role required." });
+      }
+      
+      // Get customer's messages
+      const sentMessages = await storage.getMessagesBySenderId(req.user.id);
+      const receivedMessages = await storage.getMessagesByReceiverId(req.user.id);
+      const messages = [...sentMessages, ...receivedMessages].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      // Return all customer messages
+      res.json(messages);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Send Customer Message API
+  app.post("/api/customer/messages", isAuthenticated, async (req, res, next) => {
+    try {
+      // Ensure user is a customer
+      if (req.user.role !== 'customer') {
+        return res.status(403).json({ message: "Access denied. Customer role required." });
+      }
+      
+      const { receiverId, orderId, content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ message: "Message content is required" });
+      }
+      
+      // If an orderId is provided, verify the customer has access to this order
+      if (orderId) {
+        const order = await storage.getOrder(orderId);
+        if (!order) {
+          return res.status(404).json({ message: "Order not found" });
+        }
+        
+        // Get customer record
+        const customer = await storage.getCustomerByUserId(req.user.id);
+        if (!customer || order.customerId !== customer.id) {
+          return res.status(403).json({ message: "You don't have permission to access this order" });
+        }
+      }
+      
+      // Create the message
+      const message = await storage.createMessage({
+        senderId: req.user.id,
+        receiverId,
+        orderId,
+        content,
+        senderName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username,
+        status: 'unread'
+      });
+      
+      res.status(201).json(message);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // User routes
   app.get("/api/users", isAuthenticated, hasRole(["admin"]), async (req, res, next) => {
     try {
