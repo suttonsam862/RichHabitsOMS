@@ -959,20 +959,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/orders", isAuthenticated, hasRole(["admin", "salesperson"]), async (req, res, next) => {
     try {
+      console.log("[ORDER CREATION] Request body:", JSON.stringify(req.body));
       const { items, ...orderData } = req.body;
+      
+      // Validate required fields
+      if (!orderData.customerId) {
+        console.log("[ORDER CREATION] Missing customerId");
+        return res.status(400).json({ message: "customerId is required" });
+      }
+      
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        console.log("[ORDER CREATION] Missing or invalid items array");
+        return res.status(400).json({ message: "Order must have at least one item" });
+      }
+      
+      // Validate customerId exists
+      const customerExists = await storage.getCustomer(orderData.customerId);
+      if (!customerExists) {
+        console.log(`[ORDER CREATION] Customer with ID ${orderData.customerId} not found`);
+        return res.status(400).json({ message: `Customer with ID ${orderData.customerId} not found` });
+      }
+      
+      console.log(`[ORDER CREATION] Creating order for customer: ${orderData.customerId}, by salesperson: ${req.user.id}`);
       
       // Create order
       const order = await storage.createOrder({
         ...orderData,
         salespersonId: req.user.id,
+        // Set default values for anything that might be missing
+        status: orderData.status || 'draft',
+        totalAmount: orderData.totalAmount || '0',
+        tax: orderData.tax || '0',
+        isPaid: orderData.isPaid || false,
       });
+      
+      console.log(`[ORDER CREATION] Order created successfully with ID: ${order.id}`);
       
       // Create order items
       const createdItems = [];
       for (const item of items) {
+        console.log(`[ORDER CREATION] Processing item: ${JSON.stringify(item)}`);
         const orderItem = await storage.createOrderItem({
           ...item,
           orderId: order.id,
+          // Set default values for anything that might be missing
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || '0',
+          totalPrice: item.totalPrice || '0',
         });
         createdItems.push(orderItem);
       }
@@ -985,6 +1018,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const tax = totalAmount * 0.08; // 8% tax
       
+      console.log(`[ORDER CREATION] Calculated total: ${totalAmount}, tax: ${tax}`);
+      
       // Update order with total
       const updatedOrder = await storage.updateOrder(order.id, {
         totalAmount: totalAmount.toString(),
@@ -996,7 +1031,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         items: createdItems,
       });
     } catch (error) {
-      next(error);
+      console.error("[ORDER CREATION ERROR]", error);
+      res.status(500).json({ 
+        message: "Failed to create order", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
   
