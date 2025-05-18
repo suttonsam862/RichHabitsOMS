@@ -290,25 +290,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication routes
   app.post('/api/login', (req, res, next) => {
-    passport.authenticate('local', (err, user, info) => {
-      if (err) {
-        return next(err);
-      }
-      
-      if (!user) {
-        return res.status(401).json({ message: info.message || 'Invalid credentials' });
-      }
-      
-      req.login(user, (err) => {
+    try {
+      passport.authenticate('local', (err, user, info) => {
         if (err) {
-          return next(err);
+          console.error('Login error:', err);
+          return res.status(500).json({ message: 'Internal server error during authentication' });
         }
         
-        // Return user info (excluding sensitive data)
-        const { password, ...userInfo } = user;
-        return res.json(userInfo);
-      });
-    })(req, res, next);
+        if (!user) {
+          return res.status(401).json({ message: info?.message || 'Invalid credentials' });
+        }
+        
+        req.login(user, (loginErr) => {
+          if (loginErr) {
+            console.error('Session login error:', loginErr);
+            return res.status(500).json({ message: 'Error establishing session' });
+          }
+          
+          try {
+            // Return user info (excluding sensitive data)
+            const userInfo = {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role,
+              phone: user.phone,
+              company: user.company,
+              createdAt: user.createdAt,
+              stripeCustomerId: user.stripeCustomerId
+            };
+            return res.status(200).json(userInfo);
+          } catch (dataErr) {
+            console.error('User data processing error:', dataErr);
+            return res.status(500).json({ message: 'Error processing user data' });
+          }
+        });
+      })(req, res, next);
+    } catch (outerErr) {
+      console.error('Unexpected login error:', outerErr);
+      return res.status(500).json({ message: 'Unexpected error during login process' });
+    }
   });
   
   app.post('/api/register', async (req, res, next) => {
