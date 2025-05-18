@@ -1632,6 +1632,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add a new customer - POST endpoint
+  app.post("/api/admin/customers", isAuthenticated, requireAdmin, async (req, res, next) => {
+    try {
+      const { firstName, lastName, email, company, phone, address, city, state, zip, country } = req.body;
+      
+      // Create user first
+      const user = await storage.createUser({
+        username: email.split('@')[0], // Generate username from email
+        email: email,
+        password: Math.random().toString(36).slice(-8), // Generate random password
+        firstName: firstName,
+        lastName: lastName,
+        role: 'customer',
+        phone: phone,
+        company: company
+      });
+      
+      // Then create customer profile
+      const customer = await storage.createCustomer({
+        userId: user.id,
+        address: address,
+        city: city,
+        state: state,
+        zip: zip,
+        country: country
+      });
+      
+      res.status(201).json({ success: true, customer });
+    } catch (error) {
+      console.error("Error creating customer:", error);
+      next(error);
+    }
+  });
+
   app.get("/api/dashboard/stats", isAuthenticated, requireAdmin, async (req, res, next) => {
     try {
       // Get order statistics

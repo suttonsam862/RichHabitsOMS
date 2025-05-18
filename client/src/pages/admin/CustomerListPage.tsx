@@ -50,7 +50,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
-// Customer interface type
 interface Customer {
   id: number;
   name?: string;
@@ -69,31 +68,6 @@ export default function CustomerListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
   const { toast } = useToast();
-  
-  // Fetch real customer data from API
-  const { data: customers, isLoading, isError } = useQuery({
-    queryKey: ["admin", "customers"],
-    queryFn: async () => {
-      const response = await fetch("/api/admin/customers");
-      if (!response.ok) {
-        throw new Error("Failed to fetch customers");
-      }
-      return response.json();
-    }
-  });
-
-  // Filter customers based on search term
-  const filteredCustomers = customers?.filter((customer: Customer) => {
-    const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
-    const searchLower = searchTerm.toLowerCase();
-    
-    return (
-      (fullName && fullName.toLowerCase().includes(searchLower)) ||
-      (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
-      (customer.company && customer.company.toLowerCase().includes(searchLower))
-    );
-  });
-
   const queryClient = useQueryClient();
   
   // Form state
@@ -116,6 +90,18 @@ export default function CustomerListPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
+  // Fetch real customer data from API
+  const { data: customers, isLoading, isError } = useQuery({
+    queryKey: ["admin", "customers"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/customers");
+      if (!response.ok) {
+        throw new Error("Failed to fetch customers");
+      }
+      return response.json();
+    }
+  });
+
   // Add customer mutation
   const addCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
@@ -169,6 +155,18 @@ export default function CustomerListPage() {
     }
   });
   
+  // Filter customers based on search term
+  const filteredCustomers = customers?.filter((customer: Customer) => {
+    const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+      (fullName && fullName.toLowerCase().includes(searchLower)) ||
+      (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
+      (customer.company && customer.company.toLowerCase().includes(searchLower))
+    );
+  });
+  
   const handleAddCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     addCustomerMutation.mutate(formData);
@@ -184,63 +182,21 @@ export default function CustomerListPage() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0">
-          <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Customer
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Customer</DialogTitle>
-                <DialogDescription>
-                  Fill out the form below to add a new customer to your database.
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleAddCustomer}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Name
-                    </Label>
-                    <Input id="name" className="col-span-3" />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="email" className="text-right">
-                      Email
-                    </Label>
-                    <Input id="email" type="email" className="col-span-3" />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="company" className="text-right">
-                      Company
-                    </Label>
-                    <Input id="company" className="col-span-3" />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">Add Customer</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => setIsAddCustomerDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Customer
+          </Button>
         </div>
       </div>
-
+      
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle>Customer Directory</CardTitle>
-          <CardDescription>
-            View and manage all your customer accounts
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row justify-between mb-4 gap-4">
-            <div className="relative max-w-md">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div className="relative w-full max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search customers..."
+              <Input 
+                type="search" 
+                placeholder="Search customers..." 
                 className="pl-8 max-w-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -251,8 +207,18 @@ export default function CustomerListPage() {
                 <Filter className="mr-2 h-4 w-4" />
                 Filter
               </Button>
-              <Button variant="outline" size="sm" className="h-9">
-                <RefreshCw className="mr-2 h-4 w-4" />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-9" 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["admin", "customers"] })}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
                 Refresh
               </Button>
             </div>
@@ -286,10 +252,8 @@ export default function CustomerListPage() {
                   {filteredCustomers.map((customer: Customer) => (
                     <TableRow key={customer.id}>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {customer.firstName} {customer.lastName}
-                          </p>
+                        <div className="font-medium">
+                          {customer.firstName} {customer.lastName}
                         </div>
                       </TableCell>
                       <TableCell>{customer.email || "-"}</TableCell>
@@ -355,6 +319,161 @@ export default function CustomerListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Customer Dialog */}
+      <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Customer</DialogTitle>
+            <DialogDescription>
+              Fill in the customer details below. All fields marked with an asterisk (*) are required.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddCustomer}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    placeholder="John"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    placeholder="Doe"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="john.doe@example.com"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company">Company</Label>
+                  <Input
+                    id="company"
+                    name="company"
+                    value={formData.company}
+                    onChange={handleInputChange}
+                    placeholder="Acme Inc."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  placeholder="123 Main St"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="New York"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleInputChange}
+                    placeholder="NY"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="zip">Zip/Postal Code</Label>
+                  <Input
+                    id="zip"
+                    name="zip"
+                    value={formData.zip}
+                    onChange={handleInputChange}
+                    placeholder="10001"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Input
+                    id="country"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleInputChange}
+                    placeholder="USA"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsAddCustomerDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={addCustomerMutation.isPending}
+              >
+                {addCustomerMutation.isPending ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"></div>
+                    Saving...
+                  </>
+                ) : (
+                  'Add Customer'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
