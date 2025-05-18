@@ -1622,6 +1622,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // Dashboard data routes
+  // Admin endpoints for customer management
+  app.get("/api/admin/customers", isAuthenticated, requireAdmin, async (req, res, next) => {
+    try {
+      const allCustomers = await storage.getAllCustomers();
+      res.json(allCustomers);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.get("/api/dashboard/stats", isAuthenticated, requireAdmin, async (req, res, next) => {
     try {
       // Get order statistics

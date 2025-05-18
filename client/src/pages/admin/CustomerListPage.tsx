@@ -44,7 +44,8 @@ import {
   Mail, 
   UserPlus, 
   FileText, 
-  Trash2 
+  Trash2,
+  Users 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";

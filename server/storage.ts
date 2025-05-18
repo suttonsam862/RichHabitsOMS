@@ -531,12 +531,28 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getAllCustomers(): Promise<Customer[]> {
+  async getAllCustomers(): Promise<any[]> {
     try {
-      return await db
-        .select()
+      // Get all customers with their related user information
+      const results = await db
+        .select({
+          id: customers.id,
+          userId: customers.userId,
+          address: customers.address,
+          city: customers.city,
+          state: customers.state,
+          zip: customers.zip,
+          country: customers.country,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          company: users.company,
+          phone: users.phone
+        })
         .from(customers)
         .leftJoin(users, eq(customers.userId, users.id));
+        
+      return results;
     } catch (error) {
       console.error("Error getting all customers:", error);
       return [];
