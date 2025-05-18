@@ -62,9 +62,9 @@ export function AppLayout() {
     },
     {
       name: 'Customers',
-      href: '/customers',
+      href: '/admin/customers',
       icon: Users,
-      current: location.pathname === '/customers',
+      current: location.pathname === '/admin/customers',
       roles: ['admin', 'salesperson'],
     },
     {
