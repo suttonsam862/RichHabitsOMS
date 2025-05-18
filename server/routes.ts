@@ -55,6 +55,15 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for production monitoring
+  app.get('/api/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: app.get('env'),
+      version: process.env.npm_package_version || '1.0.0'
+    });
+  });
   
   // Stripe payment endpoint for orders
   app.post("/api/orders/:orderId/checkout", async (req, res, next) => {
