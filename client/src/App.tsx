@@ -14,6 +14,10 @@ import DesignerDashboard from "@/pages/dashboard/DesignerDashboard";
 import ManufacturerDashboard from "@/pages/dashboard/ManufacturerDashboard";
 import CustomerDashboard from "@/pages/dashboard/CustomerDashboard";
 
+// Customer pages
+import CustomerOrdersPage from "@/pages/customer/OrdersPage";
+import CustomerMessagesPage from "@/pages/customer/MessagesPage";
+
 // Other pages
 import { NotFound } from "@/pages/not-found";
 import Login from "@/pages/Login";
@@ -100,6 +104,24 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['customer']}>
                       <CustomerDashboard />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/customer/orders" 
+                  element={
+                    <RequireAuth allowedRoles={['customer']}>
+                      <CustomerOrdersPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/customer/messages" 
+                  element={
+                    <RequireAuth allowedRoles={['customer']}>
+                      <CustomerMessagesPage />
                     </RequireAuth>
                   } 
                 />

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingBag, FileText, MessageSquare, PieChart, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
+import { CustomerNavigation } from '@/components/customer/CustomerNavigation';
 
 // Define dashboard data type
 interface CustomerDashboardData {
@@ -56,6 +57,10 @@ export default function CustomerDashboard() {
   
   return (
     <div className="space-y-6">
+      <div className="mb-6 border-b pb-4">
+        <CustomerNavigation />
+      </div>
+    
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Customer Dashboard</h1>
         <p className="text-muted-foreground">
@@ -146,7 +151,7 @@ export default function CustomerDashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Orders</CardTitle>
             <Button variant="outline" size="sm" asChild>
-              <Link to="/orders">View All</Link>
+              <Link to="/customer/orders">View All</Link>
             </Button>
           </CardHeader>
           <CardContent>

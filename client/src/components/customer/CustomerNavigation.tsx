@@ -26,11 +26,6 @@ export function CustomerNavigation() {
       href: "/customer/messages",
       icon: MessageSquare,
     },
-    {
-      title: "Account",
-      href: "/customer/account",
-      icon: UserCircle,
-    },
   ];
   
   return (
