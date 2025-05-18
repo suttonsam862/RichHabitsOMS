@@ -37,23 +37,18 @@ export function configureAuth(app: express.Express) {
       { usernameField: "email" },
       async (email, password, done) => {
         try {
-          console.log(`Attempting login for email: ${email}`);
           const user = await storage.getUserByEmail(email);
           if (!user) {
-            console.log('User not found');
             return done(null, false, { message: "Incorrect email or password" });
           }
 
-          console.log('User found, comparing passwords');
           const passwordValid = await compare(password, user.password);
-          console.log(`Password valid: ${passwordValid}`);
           if (!passwordValid) {
             return done(null, false, { message: "Incorrect email or password" });
           }
 
           return done(null, user);
         } catch (error) {
-          console.error('Authentication error:', error);
           return done(error);
         }
       }
