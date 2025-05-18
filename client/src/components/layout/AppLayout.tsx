@@ -103,6 +103,13 @@ export function AppLayout() {
       roles: ['admin'],
     },
     {
+      name: 'Customer Management',
+      href: '/admin/customers',
+      icon: Users,
+      current: location.pathname === '/admin/customers',
+      roles: ['admin'],
+    },
+    {
       name: 'Analytics',
       href: '/analytics',
       icon: BarChart,
