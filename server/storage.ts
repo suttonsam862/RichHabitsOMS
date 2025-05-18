@@ -524,7 +524,19 @@ export class DatabaseStorage implements IStorage {
   
   async getAllPayments(): Promise<Payment[]> {
     try {
-      return await db.select().from(payments);
+      // Only select columns that exist in the database
+      return await db.select({
+        id: payments.id,
+        orderId: payments.orderId,
+        amount: payments.amount,
+        status: payments.status,
+        transactionId: payments.transactionId,
+        notes: payments.notes,
+        stripePaymentId: payments.stripePaymentId,
+        stripeClientSecret: payments.stripeClientSecret,
+        createdAt: payments.createdAt,
+        updatedAt: payments.updatedAt
+      }).from(payments);
     } catch (error) {
       console.error("Error fetching payments:", error);
       return []; // Return empty array in case of error
