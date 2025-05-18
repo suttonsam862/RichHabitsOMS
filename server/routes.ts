@@ -311,6 +311,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure authentication
   const { isAuthenticated, hasRole } = configureAuth(app);
   
+  // Admin customer management routes
+  app.get("/api/admin/customers", isAuthenticated, requireAdmin, async (req, res, next) => {
+    try {
+      const customers = await storage.getUsersByRole('customer');
+      const result = [];
+      
+      for (const user of customers) {
+        const customer = await storage.getCustomerByUserId(user.id);
+        if (customer) {
+          result.push({
+            id: customer.id,
+            userId: user.id,
+            firstName: user.firstName || "",
+            lastName: user.lastName || "",
+            email: user.email,
+            phone: user.phone || "",
+            company: user.company || "",
+            createdAt: user.createdAt,
+            metadata: customer
+          });
+        } else {
+          // Include users who are customers but don't have a customer profile yet
+          result.push({
+            userId: user.id,
+            firstName: user.firstName || "",
+            lastName: user.lastName || "",
+            email: user.email,
+            phone: user.phone || "",
+            company: user.company || "", 
+            createdAt: user.createdAt,
+            metadata: null
+          });
+        }
+      }
+      
+      return res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // Customer routes
   app.get("/api/customers", isAuthenticated, hasRole(["admin", "salesperson"]), async (req, res, next) => {
     try {
