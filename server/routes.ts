@@ -543,6 +543,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Account setup routes
+  app.post("/api/auth/verify-setup-token", async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ success: false, message: "Token is required" });
+      }
+      
+      // Import onboarding functions
+      const { verifySetupToken } = require('./onboarding');
+      
+      // Verify token
+      const userId = await verifySetupToken(token);
+      
+      if (!userId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid or expired token. Please contact support for assistance." 
+        });
+      }
+      
+      // Get user information
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "User not found" 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName
+        } 
+      });
+    } catch (error) {
+      console.error('Error verifying setup token:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "An error occurred while verifying your setup token" 
+      });
+    }
+  });
+  
+  app.post("/api/auth/complete-setup", async (req, res) => {
+    try {
+      const { token, password, confirmPassword } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Token and password are required" 
+        });
+      }
+      
+      if (password !== confirmPassword) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Passwords do not match" 
+        });
+      }
+      
+      // Validate password strength
+      if (password.length < 8) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Password must be at least 8 characters long" 
+        });
+      }
+      
+      // Import onboarding functions
+      const { verifySetupToken, completeSetup } = require('./onboarding');
+      
+      // Verify token
+      const userId = await verifySetupToken(token);
+      
+      if (!userId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid or expired token. Please contact support for assistance." 
+        });
+      }
+      
+      // Complete the setup
+      const success = await completeSetup(userId, password);
+      
+      if (!success) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "An error occurred while setting up your account" 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Your account has been set up successfully. You can now log in." 
+      });
+    } catch (error) {
+      console.error('Error completing setup:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: "An error occurred while setting up your account" 
+      });
+    }
+  });
+  
   app.get("/api/auth/me", isAuthenticated, (req, res) => {
     const user = req.user;
     res.json({

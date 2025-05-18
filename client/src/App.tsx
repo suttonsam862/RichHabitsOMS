@@ -18,6 +18,7 @@ import CustomerDashboard from "@/pages/dashboard/CustomerDashboard";
 import { NotFound } from "@/pages/not-found";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import SetupPassword from "@/pages/SetupPassword";
 import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
 import OrderEditor from "@/pages/OrderEditor";
