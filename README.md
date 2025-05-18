@@ -96,9 +96,26 @@ The application can be deployed to any Node.js-compatible hosting service. Here 
 
 This project is optimized for deployment on Replit:
 
-1. Simply click the "Deploy" button in the Replit interface
-2. Ensure all environment variables are properly configured
-3. The application will be automatically built and deployed
+1. Make sure all environment variables are set in the Replit Secrets tab:
+   - `DATABASE_URL`: Your PostgreSQL connection string
+   - `STRIPE_SECRET_KEY`: Your Stripe secret key
+   - `VITE_STRIPE_PUBLIC_KEY`: Your Stripe publishable key
+   - Other optional environment variables as needed
+
+2. Click the "Deploy" button in the Replit interface
+
+3. The deployment process will:
+   - Build the frontend assets
+   - Bundle the server code
+   - Configure the appropriate environment for production
+   - Set up a custom domain if configured
+
+4. After deployment, verify that:
+   - Authentication works correctly
+   - Stripe payment processing is functioning
+   - Database connections are established
+   - File uploads are working
+   - All role-based access controls are enforced
 
 ## User Roles and Access
 
