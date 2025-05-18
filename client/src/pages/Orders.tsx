@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -29,8 +29,21 @@ import { Badge } from '@/components/ui/badge';
 import { getQueryFn } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
-import { PlusCircle, Search, Filter, ArrowUpDown, MoreHorizontal } from 'lucide-react';
+import { 
+  PlusCircle, 
+  Search, 
+  Filter, 
+  Eye, 
+  Edit, 
+  Calendar, 
+  User, 
+  DollarSign, 
+  FileText,
+  RefreshCw 
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Order } from '@/types';
 
 export default function Orders() {

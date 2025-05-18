@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { Mail, Lock, User, Building, UserCheck, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 
 import {
   Form,
@@ -13,12 +14,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Label } from "@/components/ui/label";
 
 export type AuthFormType = "login" | "register";
 
@@ -110,21 +114,26 @@ export function AuthForm({ type }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold">
-          {type === "login" ? "Sign In" : "Create an Account"}
+    <Card className="w-full max-w-md mx-auto shadow-lg border border-gray-100">
+      <CardHeader className="pb-6">
+        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <UserCheck className="h-6 w-6 text-primary" />
+        </div>
+        <CardTitle className="text-2xl font-bold text-center">
+          {type === "login" ? "Welcome Back" : "Create Your Account"}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-center pt-1.5">
           {type === "login" 
-            ? "Enter your credentials to access your account" 
-            : "Fill out the form below to create your account"}
+            ? "Sign in to access your clothing orders and designs" 
+            : "Join our custom clothing platform to start creating"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="mb-6 animate-fadeIn">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="ml-2">Authentication Error</AlertTitle>
+            <AlertDescription className="ml-6 mt-2">{error}</AlertDescription>
           </Alert>
         )}
 
@@ -134,12 +143,21 @@ export function AuthForm({ type }: AuthFormProps) {
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="email@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
+                <FormItem className="space-y-1.5">
+                  <FormLabel className="text-sm font-medium">Email Address</FormLabel>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <FormControl>
+                      <Input 
+                        placeholder="your.email@example.com" 
+                        className="pl-10 h-10 focus:ring-2 focus:ring-primary/20" 
+                        {...field}
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage className="text-xs font-medium text-red-500 ml-1" />
                 </FormItem>
               )}
             />
@@ -149,12 +167,21 @@ export function AuthForm({ type }: AuthFormProps) {
                 control={form.control}
                 name="username"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input placeholder="johndoe" {...field} />
-                    </FormControl>
-                    <FormMessage />
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-sm font-medium">Username</FormLabel>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <User className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <FormControl>
+                        <Input 
+                          placeholder="johndoe" 
+                          className="pl-10 h-10 focus:ring-2 focus:ring-primary/20" 
+                          {...field}
+                        />
+                      </FormControl>
+                    </div>
+                    <FormMessage className="text-xs font-medium text-red-500 ml-1" />
                   </FormItem>
                 )}
               />
@@ -164,12 +191,29 @@ export function AuthForm({ type }: AuthFormProps) {
               control={form.control}
               name="password"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
+                <FormItem className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <FormLabel className="text-sm font-medium">Password</FormLabel>
+                    {type === "login" && (
+                      <Button variant="link" size="sm" className="p-0 h-auto text-xs">
+                        Forgot password?
+                      </Button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Lock className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        placeholder="••••••••" 
+                        className="pl-10 h-10 focus:ring-2 focus:ring-primary/20" 
+                        {...field} 
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage className="text-xs font-medium text-red-500 ml-1" />
                 </FormItem>
               )}
             />
@@ -180,27 +224,41 @@ export function AuthForm({ type }: AuthFormProps) {
                   control={form.control}
                   name="confirmPassword"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-sm font-medium">Confirm Password</FormLabel>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <Lock className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <FormControl>
+                          <Input 
+                            type="password" 
+                            placeholder="••••••••" 
+                            className="pl-10 h-10 focus:ring-2 focus:ring-primary/20" 
+                            {...field} 
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage className="text-xs font-medium text-red-500 ml-1" />
                     </FormItem>
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="firstName"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className="text-sm font-medium">First Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="John" {...field} />
+                          <Input 
+                            placeholder="John" 
+                            className="h-10 focus:ring-2 focus:ring-primary/20" 
+                            {...field} 
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs font-medium text-red-500 ml-1" />
                       </FormItem>
                     )}
                   />
@@ -209,12 +267,16 @@ export function AuthForm({ type }: AuthFormProps) {
                     control={form.control}
                     name="lastName"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className="text-sm font-medium">Last Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Doe" {...field} />
+                          <Input 
+                            placeholder="Doe" 
+                            className="h-10 focus:ring-2 focus:ring-primary/20" 
+                            {...field} 
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs font-medium text-red-500 ml-1" />
                       </FormItem>
                     )}
                   />
@@ -224,58 +286,78 @@ export function AuthForm({ type }: AuthFormProps) {
                   control={form.control}
                   name="role"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Account Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select account type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="customer">Customer</SelectItem>
-                          <SelectItem value="salesperson">Salesperson</SelectItem>
-                          <SelectItem value="designer">Designer</SelectItem>
-                          <SelectItem value="manufacturer">Manufacturer</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-sm font-medium">Account Type</FormLabel>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <Building className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="pl-10 h-10 focus:ring-2 focus:ring-primary/20">
+                              <SelectValue placeholder="Select account type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="customer">Customer</SelectItem>
+                            <SelectItem value="salesperson">Salesperson</SelectItem>
+                            <SelectItem value="designer">Designer</SelectItem>
+                            <SelectItem value="manufacturer">Manufacturer</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <FormDescription className="text-xs text-gray-500 ml-1">
+                        Select the type of account that best fits your role
+                      </FormDescription>
+                      <FormMessage className="text-xs font-medium text-red-500 ml-1" />
                     </FormItem>
                   )}
                 />
               </>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full h-11 mt-6 font-medium shadow-sm transition-all hover:shadow-md"
+              disabled={isLoading}
+            >
               {isLoading ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {type === "login" ? "Signing in..." : "Creating account..."}
                 </span>
               ) : (
-                type === "login" ? "Sign In" : "Create Account"
+                <span className="flex items-center justify-center gap-2">
+                  {type === "login" ? "Sign In" : "Create Account"}
+                  <ArrowRight className="h-4 w-4" />
+                </span>
               )}
             </Button>
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex justify-center border-t pt-4">
+      <CardFooter className="flex justify-center border-t pt-6 pb-6">
         <p className="text-sm text-gray-600">
           {type === "login" ? (
             <>
               Don't have an account?{" "}
-              <Button variant="link" className="p-0" onClick={() => setLocation("/register")}>
+              <Button 
+                variant="link" 
+                className="p-0 font-medium text-primary hover:text-primary/80" 
+                onClick={() => setLocation("/register")}
+              >
                 Register
               </Button>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <Button variant="link" className="p-0" onClick={() => setLocation("/login")}>
+              <Button 
+                variant="link" 
+                className="p-0 font-medium text-primary hover:text-primary/80" 
+                onClick={() => setLocation("/login")}
+              >
                 Sign In
               </Button>
             </>
