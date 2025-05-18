@@ -407,7 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: tempPassword,
         firstName: firstName || null,
         lastName: lastName || null,
-        role: 'customer',
+        role: "customer", // Use string literal to match enum type
         phone: phone || null,
         company: company || null
       };
