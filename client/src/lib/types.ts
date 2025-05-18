@@ -107,8 +107,19 @@ export interface ManufacturerDashboardData {
 }
 
 export interface CustomerDashboardData {
-  stats: CustomerDashboardStats;
-  activeOrders: OrderSummary[];
-  orderHistory: OrderSummary[];
+  customer: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  metrics: {
+    totalOrders: number;
+    activeOrders: number;
+    designsNeedingApproval: number;
+    totalSpent: string;
+  };
+  orderStatusCounts: Record<string, number>;
+  recentOrders: OrderSummary[];
   recentMessages: MessageSummary[];
 }

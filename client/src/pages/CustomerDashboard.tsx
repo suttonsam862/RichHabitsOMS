@@ -35,9 +35,16 @@ export default function CustomerDashboard() {
     requireAuth(["customer"]);
   }, [requireAuth]);
 
-  // Fetch customer's orders and data
+  // Fetch customer's real data from backend
   const { data = {} as CustomerDashboardData, isLoading } = useQuery<CustomerDashboardData>({
-    queryKey: ['/api/customer/dashboard'],
+    queryKey: ['customer', 'dashboard'],
+    queryFn: async () => {
+      const response = await fetch('/api/customer/dashboard');
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+      return response.json();
+    },
     enabled: !!user && user.role === 'customer',
   });
 
@@ -67,7 +74,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Total Orders</p>
-                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.stats?.totalOrders || 0}</h3>
+                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.metrics?.totalOrders || 0}</h3>
                   </div>
                 </div>
               </CardContent>
@@ -81,7 +88,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Pending Orders</p>
-                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.stats?.activeOrders || 0}</h3>
+                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.metrics?.activeOrders || 0}</h3>
                   </div>
                 </div>
               </CardContent>
@@ -95,7 +102,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Total Spent</p>
-                    <h3 className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(data?.stats?.totalSpent || 0)}</h3>
+                    <h3 className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(data?.metrics?.totalSpent || '0')}</h3>
                   </div>
                 </div>
               </CardContent>
@@ -111,9 +118,11 @@ export default function CustomerDashboard() {
             <CardContent>
               {isLoading ? (
                 <div className="py-4 text-center text-gray-500">Loading orders...</div>
-              ) : data?.activeOrders?.length ? (
+              ) : data?.recentOrders?.length ? (
                 <div className="space-y-4">
-                  {data.activeOrders.map((order: OrderSummary) => (
+                  {data.recentOrders.filter((order: OrderSummary) => 
+                    !['completed', 'cancelled'].includes(order.status)
+                  ).map((order: OrderSummary) => (
                     <Card key={order.id} className="bg-white border hover:border-blue-200 transition-colors">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
@@ -177,25 +186,25 @@ export default function CustomerDashboard() {
             <CardContent>
               {isLoading ? (
                 <div className="py-4 text-center text-gray-500">Loading history...</div>
-              ) : data?.orderHistory?.length ? (
+              ) : data?.recentOrders?.length ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
                         <th className="py-3 px-4 text-left">Order #</th>
                         <th className="py-3 px-4 text-left">Date</th>
-                        <th className="py-3 px-4 text-left">Items</th>
                         <th className="py-3 px-4 text-left">Total</th>
                         <th className="py-3 px-4 text-left">Status</th>
                         <th className="py-3 px-4 text-left">Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.orderHistory.map((order: OrderSummary) => (
+                      {data.recentOrders.filter((order: OrderSummary) => 
+                        ['completed', 'cancelled'].includes(order.status)
+                      ).map((order: OrderSummary) => (
                         <tr key={order.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4">{order.orderNumber}</td>
                           <td className="py-3 px-4">{formatDate(order.createdAt)}</td>
-                          <td className="py-3 px-4">{order.itemCount} items</td>
                           <td className="py-3 px-4">{formatCurrency(order.totalAmount)}</td>
                           <td className="py-3 px-4">
                             <Badge className={getStatusColor(order.status)}>
@@ -239,6 +248,7 @@ export default function CustomerDashboard() {
                 <div className="py-4 text-center text-gray-500">Loading messages...</div>
               ) : data?.recentMessages?.length ? (
                 <div className="space-y-4">
+                  {/* Show real messages from the database */}
                   {data.recentMessages.map((message: MessageSummary) => (
                     <div key={message.id} className="flex items-start space-x-4 p-4 border-b last:border-0">
                       <div className="bg-primary text-primary-foreground h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0">
