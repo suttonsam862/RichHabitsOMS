@@ -96,8 +96,30 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      // Only select columns we know exist in the database to avoid errors
+      const [user] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          password: users.password,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          role: users.role,
+          phone: users.phone,
+          company: users.company,
+          createdAt: users.createdAt,
+          stripeCustomerId: users.stripeCustomerId
+        })
+        .from(users)
+        .where(eq(users.id, id));
+      
+      return user;
+    } catch (error) {
+      console.error('Error in getUser:', error);
+      return undefined;
+    }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -134,15 +156,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(userData: InsertUser): Promise<User> {
-    const hashedPassword = await hash(userData.password, 10);
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...userData,
+    try {
+      console.log("Creating user with data:", { ...userData, password: "[REDACTED]" });
+      const hashedPassword = await hash(userData.password, 10);
+      
+      // Only include fields that exist in the database
+      const userInsertData = {
+        email: userData.email,
+        username: userData.username,
         password: hashedPassword,
-      })
-      .returning();
-    return user;
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
+        role: userData.role || 'customer',
+        phone: userData.phone || null,
+        company: userData.company || null
+      };
+      
+      const [user] = await db
+        .insert(users)
+        .values(userInsertData)
+        .returning({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          role: users.role,
+          phone: users.phone,
+          company: users.company,
+          createdAt: users.createdAt,
+          stripeCustomerId: users.stripeCustomerId
+        });
+        
+      console.log("User created with ID:", user.id);
+      return user;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw new Error(`Failed to create user: ${error.message}`);
+    }
   }
 
   async updateUser(id: number, data: Partial<InsertUser>): Promise<User> {

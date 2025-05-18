@@ -382,51 +382,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin customer routes
   app.post("/api/admin/customers", isAuthenticated, requireAdmin, async (req, res, next) => {
     try {
+      console.log("Creating new customer from admin panel:", req.body);
       const { firstName, lastName, email, phone, company, address, city, state, zip, country } = req.body;
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
+        console.log("Customer creation failed: Email already exists:", email);
         return res.status(400).json({ success: false, message: "A user with this email already exists" });
       }
       
-      // Generate a username from the email
-      const username = email.split('@')[0] + Math.floor(Math.random() * 100);
+      // Generate a username from the email with random suffix to ensure uniqueness
+      const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
       
-      // Generate a temporary random password (this will be reset by the user)
+      // Generate a temporary random password (will be reset by the user)
       const tempPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
       
+      console.log(`Creating user for customer with email: ${email}, username: ${username}`);
+      
       // Create the user with customer role
-      const user = await storage.createUser({
+      const userData = {
         email,
         username,
-        password: tempPassword, // This will be replaced when user sets up their account
-        firstName,
-        lastName,
+        password: tempPassword,
+        firstName: firstName || null,
+        lastName: lastName || null,
         role: 'customer',
-        phone,
-        company
-      });
+        phone: phone || null,
+        company: company || null
+      };
+      
+      // Create the user
+      const user = await storage.createUser(userData);
+      console.log("User created successfully:", user.id);
       
       // Create the customer record
-      const customer = await storage.createCustomer({
+      const customerData = {
         userId: user.id,
         address: address || '',
         city: city || '',
         state: state || '',
         zip: zip || '',
-        country: country || '',
-      });
+        country: country || ''
+      };
       
-      // Import onboarding functions
+      const customer = await storage.createCustomer(customerData);
+      console.log("Customer profile created successfully:", customer.id);
+      
+      // Generate setup token for account activation
       const { generateSetupToken, sendWelcomeEmail } = require('./onboarding');
-      
-      // Generate setup token
       const setupToken = await generateSetupToken(user.id);
       
-      // Send welcome email with setup link
+      // Send welcome email with setup instructions
       const name = firstName || 'Customer';
       await sendWelcomeEmail(email, name, setupToken);
+      console.log("Setup email sent to:", email);
       
       res.status(201).json({ 
         success: true,
@@ -442,7 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error creating customer:', error);
-      next(error);
+      res.status(500).json({ success: false, message: error.message || "Failed to create customer" });
     }
   });
   
@@ -787,6 +797,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Customer Dashboard API - Real data, no placeholders
+  app.get("/api/customer/dashboard", isAuthenticated, async (req, res, next) => {
+    try {
+      console.log("Fetching dashboard data for customer user ID:", req.user.id);
+      
+      // Ensure user is a customer
+      if (req.user.role !== 'customer') {
+        return res.status(403).json({ message: "Access denied. Customer role required." });
+      }
+      
+      // Get customer record
+      const customer = await storage.getCustomerByUserId(req.user.id);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer profile not found" });
+      }
+      
+      // Get customer's orders
+      const orders = await storage.getOrdersByCustomerId(customer.id);
+      console.log(`Found ${orders.length} orders for customer ID ${customer.id}`);
+      
+      // Get customer's design tasks that need approval
+      const designTasksNeedingApproval = orders
+        .filter(order => order.status === 'design_review')
+        .length;
+      
+      // Calculate active orders (orders not in completed or cancelled status)
+      const activeOrders = orders.filter(order => 
+        !['completed', 'cancelled'].includes(order.status)
+      ).length;
+      
+      // Calculate total spent from completed payments
+      const payments = await Promise.all(
+        orders.map(order => storage.getPaymentsByOrderId(order.id))
+      );
+      const allPayments = payments.flat();
+      const totalSpent = allPayments
+        .filter(payment => payment.status === 'completed')
+        .reduce((sum, payment) => sum + parseFloat(payment.amount), 0)
+        .toFixed(2);
+      
+      // Get recent messages
+      const sentMessages = await storage.getMessagesBySenderId(req.user.id);
+      const receivedMessages = await storage.getMessagesByReceiverId(req.user.id);
+      const allMessages = [...sentMessages, ...receivedMessages].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      // Get recent 5 messages
+      const recentMessages = allMessages.slice(0, 5);
+      
+      // Get recent 5 orders
+      const recentOrders = orders
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5);
+      
+      // Return real data dashboard
+      res.json({
+        customer: {
+          id: customer.id,
+          firstName: req.user.firstName,
+          lastName: req.user.lastName,
+          email: req.user.email
+        },
+        metrics: {
+          totalOrders: orders.length,
+          activeOrders: activeOrders,
+          designsNeedingApproval: designTasksNeedingApproval,
+          totalSpent: totalSpent
+        },
+        orderStatusCounts: orders.reduce((counts, order) => {
+          counts[order.status] = (counts[order.status] || 0) + 1;
+          return counts;
+        }, {}),
+        recentOrders: recentOrders,
+        recentMessages: recentMessages
+      });
+    } catch (error) {
+      console.error("Error fetching customer dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard data" });
+    }
+  });
+  
   // Customer Messages API
   app.get("/api/customer/messages", isAuthenticated, async (req, res, next) => {
     try {
@@ -805,7 +897,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return all customer messages
       res.json(messages);
     } catch (error) {
-      next(error);
+      console.error("Error fetching customer messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
     }
   });
   
