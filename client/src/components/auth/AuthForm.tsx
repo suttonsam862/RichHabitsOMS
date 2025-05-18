@@ -86,25 +86,44 @@ export function AuthForm({ type }: AuthFormProps) {
       if (type === "login") {
         // Handle login
         await login(data.email, data.password);
+        
         toast({
           title: "Login successful",
           description: "Welcome back to ThreadCraft!",
         });
+        
+        // Redirect based on user role after successful login
         setLocation("/dashboard");
       } else {
         // Handle registration
         await register(data);
+        
         toast({
           title: "Registration successful",
           description: "Welcome to ThreadCraft!",
         });
+        
         setLocation("/dashboard");
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred during authentication");
+      console.error("Authentication error:", err);
+      
+      // Set a user-friendly error message
+      let errorMessage = "Please check your credentials and try again.";
+      
+      if (err.message && err.message.includes("Invalid email or password")) {
+        errorMessage = "Invalid email or password. Please try again.";
+      } else if (err.message && err.message.includes("User not found")) {
+        errorMessage = "No account found with this email. Please check your email or register.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      
       toast({
         title: "Authentication failed",
-        description: err.message || "Please check your credentials and try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
