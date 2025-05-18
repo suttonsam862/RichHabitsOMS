@@ -759,6 +759,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Order not found" });
       }
       
+      // Customer role security check - customers can only access their own orders
+      if (req.user.role === 'customer') {
+        const customer = await storage.getCustomerByUserId(req.user.id);
+        if (!customer || order.customerId !== customer.id) {
+          return res.status(403).json({ message: "You don't have permission to access this order" });
+        }
+      }
+      
       // Get order items
       const items = await storage.getOrderItemsByOrderId(orderId);
       
