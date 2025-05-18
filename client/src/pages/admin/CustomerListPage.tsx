@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
   CardContent, 
@@ -94,13 +94,84 @@ export default function CustomerListPage() {
     );
   });
 
+  const queryClient = useQueryClient();
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    company: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: ''
+  });
+  
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  // Add customer mutation
+  const addCustomerMutation = useMutation({
+    mutationFn: async (customerData: any) => {
+      const response = await fetch('/api/admin/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(customerData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to add customer');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      // Clear form data
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        company: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        country: ''
+      });
+      
+      // Close dialog
+      setIsAddCustomerDialogOpen(false);
+      
+      // Invalidate queries to refresh the customer list
+      queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+      
+      // Show success toast
+      toast({
+        title: "Customer added",
+        description: "New customer has been added successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add customer",
+        variant: "destructive"
+      });
+    }
+  });
+  
   const handleAddCustomer = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsAddCustomerDialogOpen(false);
-    toast({
-      title: "Customer added",
-      description: "New customer has been added successfully",
-    });
+    addCustomerMutation.mutate(formData);
   };
 
   return (
