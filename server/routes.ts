@@ -514,6 +514,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin Customer Management
+  app.get("/api/admin/customers", requireAdmin, async (req, res, next) => {
+    try {
+      // Get all users with role "customer"
+      const customerUsers = await storage.getUsersByRole("customer");
+      
+      // Format and return customer data
+      const customers = customerUsers.map(user => ({
+        userId: user.id,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email,
+        phone: user.phone || '',
+        company: user.company || '',
+        createdAt: user.createdAt,
+        metadata: null
+      }));
+      
+      res.json(customers);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // Order routes
   app.get("/api/orders", isAuthenticated, async (req, res, next) => {
     try {
