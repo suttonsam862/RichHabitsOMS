@@ -1,33 +1,36 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
-import ws from 'ws';
 
-// Configure for WebSocket connections
-neonConfig.webSocketConstructor = ws;
-
-// Check for Supabase connection string
+// Check for database connection string
 if (!process.env.DATABASE_URL) {
   throw new Error(
-    "DATABASE_URL must be set. Make sure the Supabase connection string is properly configured."
+    "DATABASE_URL must be set. Did you forget to provision a database?"
   );
 }
 
-// Connection info (hide credentials in logs)
-console.log("Connecting to Supabase PostgreSQL database using WebSocket connection...");
+// For Replit development, use the local PostgreSQL database
+console.log("Connecting to PostgreSQL database...");
 
-// Create pool with the Supabase database connection
+// Connect to the database with appropriate settings for Replit environment
 export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL 
+  connectionString: process.env.DATABASE_URL,
+  // Don't use SSL for local database in Replit
+  ssl: false,
+  // Configuration optimized for Replit environment
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  max: 20
 });
 
 // Verify database connection
 pool.on('connect', () => {
-  console.log('Connected to Supabase PostgreSQL database successfully');
+  console.log('Connected to PostgreSQL database successfully');
 });
 
 pool.on('error', (err) => {
   console.error('Database connection error:', err);
+  // Don't crash on connection errors
   console.log('Will retry connection on next request');
 });
 
