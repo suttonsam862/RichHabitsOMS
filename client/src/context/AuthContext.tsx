@@ -60,29 +60,54 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Login function
   const login = async (email: string, password: string) => {
     try {
-      const res = await apiRequest("POST", "/api/auth/login", { email, password });
-      
-      // Check if response was not OK (e.g., 401, 500, etc.)
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Login failed. Please check your credentials.");
+      // Create a safe fetch request that always returns JSON, even on errors
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include"
+      });
+
+      // Always parse response as JSON
+      let data;
+      try {
+        const text = await response.text();
+        if (!text) {
+          throw new Error("Empty response from server");
+        }
+        
+        try {
+          data = JSON.parse(text);
+        } catch (parseError) {
+          console.error("JSON parse error:", parseError, "Response text:", text);
+          throw new Error("Invalid response format from server. Please try again later.");
+        }
+      } catch (responseError) {
+        console.error("Response processing error:", responseError);
+        throw new Error("Unable to process server response. Please try again later.");
       }
-      
-      const userData = await res.json();
-      setUser(userData);
+
+      // Handle error responses
+      if (!response.ok) {
+        throw new Error(data?.message || "Authentication failed. Please check your credentials.");
+      }
+
+      // Handle success response
+      if (data.success && data.user) {
+        setUser(data.user);
+      } else {
+        throw new Error("Invalid response format. Missing user data.");
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       
-      // Make sure we throw an error with a proper message
-      if (error.response) {
-        // This is an axios-style error object
-        throw new Error(error.response.data?.message || "Login failed. Please check your credentials.");
-      } else if (error instanceof Error) {
-        // This is a standard Error object
+      // Ensure a clean error is thrown with helpful message
+      if (error instanceof Error) {
         throw error;
+      } else if (typeof error === 'string') {
+        throw new Error(error);
       } else {
-        // This is something else, convert to a proper Error
-        throw new Error("Login failed. Please check your credentials.");
+        throw new Error("Authentication failed. Please try again later.");
       }
     }
   };

@@ -289,48 +289,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Authentication routes
-  app.post('/api/login', (req, res, next) => {
+  app.post('/api/auth/login', (req, res) => {
     try {
+      // Input validation
+      if (!req.body.email || !req.body.password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Email and password are required' 
+        });
+      }
+
+      // Use passport for authentication but handle all errors explicitly
       passport.authenticate('local', (err, user, info) => {
+        // Handle authentication errors
         if (err) {
           console.error('Login error:', err);
-          return res.status(500).json({ message: 'Internal server error during authentication' });
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error during authentication'
+          });
         }
         
+        // Handle invalid credentials
         if (!user) {
-          return res.status(401).json({ message: info?.message || 'Invalid credentials' });
+          return res.status(401).json({ 
+            success: false, 
+            message: info?.message || 'Invalid email or password'
+          });
         }
         
+        // Handle session creation
         req.login(user, (loginErr) => {
           if (loginErr) {
             console.error('Session login error:', loginErr);
-            return res.status(500).json({ message: 'Error establishing session' });
+            return res.status(500).json({ 
+              success: false, 
+              message: 'Error establishing session'
+            });
           }
           
           try {
-            // Return user info (excluding sensitive data)
+            // Create a safe user object without sensitive data
             const userInfo = {
               id: user.id,
               username: user.username,
               email: user.email,
-              firstName: user.firstName,
-              lastName: user.lastName,
+              firstName: user.firstName || null,
+              lastName: user.lastName || null,
               role: user.role,
-              phone: user.phone,
-              company: user.company,
+              phone: user.phone || null,
+              company: user.company || null,
               createdAt: user.createdAt,
-              stripeCustomerId: user.stripeCustomerId
+              stripeCustomerId: user.stripeCustomerId || null
             };
-            return res.status(200).json(userInfo);
+            
+            // Return success response with user data
+            return res.status(200).json({
+              success: true,
+              message: 'Login successful',
+              user: userInfo
+            });
           } catch (dataErr) {
             console.error('User data processing error:', dataErr);
-            return res.status(500).json({ message: 'Error processing user data' });
+            return res.status(500).json({ 
+              success: false, 
+              message: 'Error processing user data'
+            });
           }
         });
-      })(req, res, next);
+      })(req, res, () => {
+        // This function is intentionally empty to prevent next() from being called
+        // which could potentially lead to HTML error pages
+      });
     } catch (outerErr) {
       console.error('Unexpected login error:', outerErr);
-      return res.status(500).json({ message: 'Unexpected error during login process' });
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Unexpected error during login process'
+      });
     }
   });
   
