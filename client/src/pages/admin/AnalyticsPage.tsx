@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
                               dataKey="value"
                               label={({ name, percent }) => percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
                             >
-                              {emptyOrderStatusData.map((entry, index) => (
+                              {emptyOrderStatusData.map((entry: any, index: number) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
                             </Pie>
@@ -337,7 +337,7 @@ export default function AnalyticsPage() {
                             dataKey="value"
                             label={({ name, percent }) => percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
                           >
-                            {topProducts.map((entry, index) => (
+                            {topProducts.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
