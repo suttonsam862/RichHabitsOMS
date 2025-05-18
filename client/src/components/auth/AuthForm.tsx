@@ -100,8 +100,7 @@ export function AuthForm({ type }: AuthFormProps) {
         });
         setLocation("/dashboard");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
       setError(err.message || "An error occurred during authentication");
       toast({
         title: "Authentication failed",
