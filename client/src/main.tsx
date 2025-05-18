@@ -1,6 +1,10 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { fixWebSocketConnection } from "./lib/fixWebSocketError";
+
+// Fix WebSocket connection issues with Vite HMR
+fixWebSocketConnection();
 
 // Disable any development debugging tools in production
 // This will prevent Eruda and similar tools from running in production
