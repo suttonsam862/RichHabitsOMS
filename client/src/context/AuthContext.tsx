@@ -61,11 +61,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     try {
       const res = await apiRequest("POST", "/api/auth/login", { email, password });
+      
+      // Check if response was not OK (e.g., 401, 500, etc.)
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Login failed. Please check your credentials.");
+      }
+      
       const userData = await res.json();
       setUser(userData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      throw error;
+      
+      // Make sure we throw an error with a proper message
+      if (error.response) {
+        // This is an axios-style error object
+        throw new Error(error.response.data?.message || "Login failed. Please check your credentials.");
+      } else if (error instanceof Error) {
+        // This is a standard Error object
+        throw error;
+      } else {
+        // This is something else, convert to a proper Error
+        throw new Error("Login failed. Please check your credentials.");
+      }
     }
   };
 

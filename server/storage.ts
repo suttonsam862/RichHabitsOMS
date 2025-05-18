@@ -101,8 +101,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    try {
+      // Only select columns we know exist in the database to avoid errors with missing columns
+      const [user] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          password: users.password,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          role: users.role,
+          phone: users.phone,
+          company: users.company,
+          createdAt: users.createdAt,
+          stripeCustomerId: users.stripeCustomerId
+        })
+        .from(users)
+        .where(eq(users.email, email));
+      
+      return user;
+    } catch (error) {
+      console.error('Error in getUserByEmail:', error);
+      // Return undefined on error to keep the same function signature
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {

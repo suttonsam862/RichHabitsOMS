@@ -462,17 +462,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Auth routes
   app.post("/api/auth/login", validateRequest(loginSchema), (req, res, next) => {
+    console.log("Processing login request for:", req.body.email);
+    
     passport.authenticate("local", (err, user, info) => {
       if (err) {
-        return next(err);
+        console.error("Authentication error:", err);
+        return res.status(500).json({ 
+          message: "Login failed: " + (err.message || "An internal server error occurred")
+        });
       }
+      
       if (!user) {
-        return res.status(401).json({ message: info.message });
+        console.log("Authentication failed:", info?.message || "Invalid credentials");
+        return res.status(401).json({ 
+          message: info?.message || "Invalid email or password" 
+        });
       }
+      
       req.logIn(user, (err) => {
         if (err) {
-          return next(err);
+          console.error("Session login error:", err);
+          return res.status(500).json({ 
+            message: "Failed to create session. Please try again."
+          });
         }
+        
+        console.log(`User ${user.id} (${user.email}) logged in successfully`);
+        
         return res.json({
           id: user.id,
           username: user.username,
