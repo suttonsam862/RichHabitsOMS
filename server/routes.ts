@@ -152,15 +152,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { status: 'cancelled', count: cancelled.length }
       ];
       
-      // Mock monthly revenue data (TODO: Calculate from real data)
-      const monthlyRevenue = [
-        { month: 'Jan', revenue: 12500 },
-        { month: 'Feb', revenue: 15000 },
-        { month: 'Mar', revenue: 18000 },
-        { month: 'Apr', revenue: 22000 },
-        { month: 'May', revenue: 19500 },
-        { month: 'Jun', revenue: 25000 }
-      ];
+      // Calculate monthly revenue for the past 6 months from real payment data
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      // Initialize revenue by month
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const revenueByMonth = {};
+      
+      // Get the last 6 months
+      const last6Months = [];
+      for (let i = 0; i < 6; i++) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const monthName = monthNames[d.getMonth()];
+        last6Months.unshift(monthName);
+        revenueByMonth[monthName] = 0; // Initialize with zero
+      }
+      
+      // Group completed payments by month
+      for (const payment of allPayments) {
+        if (payment.status === 'completed' && payment.createdAt) {
+          const paymentDate = new Date(payment.createdAt);
+          if (paymentDate >= sixMonthsAgo) {
+            const month = monthNames[paymentDate.getMonth()];
+            revenueByMonth[month] = (revenueByMonth[month] || 0) + Number(payment.amount);
+          }
+        }
+      }
+      
+      // Format for chart - ensure we only show the last 6 months in order
+      const monthlyRevenue = last6Months.map(month => ({
+        month,
+        revenue: revenueByMonth[month] || 0
+      }));
       
       // Return dashboard data
       res.json({
