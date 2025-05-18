@@ -49,102 +49,49 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
-// Example customer data
-const CUSTOMERS = [
-  { 
-    id: 1, 
-    name: "Jane Cooper", 
-    email: "jane.cooper@example.com", 
-    company: "Acme Inc", 
-    orders: 12,
-    spent: "$4,200",
-    lastOrder: "2025-04-23",
-    status: "active"
-  },
-  { 
-    id: 2, 
-    name: "Wade Warren", 
-    email: "wade.warren@example.com", 
-    company: "Biffco Enterprises", 
-    orders: 8,
-    spent: "$3,100", 
-    lastOrder: "2025-04-12",
-    status: "active"
-  },
-  { 
-    id: 3, 
-    name: "Esther Howard", 
-    email: "esther.howard@example.com", 
-    company: "Abstergo Ltd.", 
-    orders: 3,
-    spent: "$1,250", 
-    lastOrder: "2025-03-28",
-    status: "active"
-  },
-  { 
-    id: 4, 
-    name: "Cameron Williamson", 
-    email: "cameron.williamson@example.com", 
-    company: "Binford Ltd.", 
-    orders: 0,
-    spent: "$0", 
-    lastOrder: null,
-    status: "inactive"
-  },
-  { 
-    id: 5, 
-    name: "Brooklyn Simmons", 
-    email: "brooklyn.simmons@example.com", 
-    company: "Acme Co.", 
-    orders: 5,
-    spent: "$2,150", 
-    lastOrder: "2025-04-01",
-    status: "active"
-  },
-  { 
-    id: 6, 
-    name: "Leslie Alexander", 
-    email: "leslie.alexander@example.com", 
-    company: "Globex Corp", 
-    orders: 2,
-    spent: "$890", 
-    lastOrder: "2025-03-15",
-    status: "active"
-  },
-  { 
-    id: 7, 
-    name: "Ralph Edwards", 
-    email: "ralph.edwards@example.com", 
-    company: "Soylent Corp", 
-    orders: 1,
-    spent: "$450", 
-    lastOrder: "2025-02-20",
-    status: "inactive"
-  }
-];
+// Customer interface type
+interface Customer {
+  id: number;
+  name?: string;
+  email?: string;
+  company?: string;
+  orders?: number;
+  spent?: string;
+  lastOrder?: string | null;
+  status?: string;
+  firstName?: string;
+  lastName?: string;
+  userId?: number;
+}
 
 export default function CustomerListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
   const { toast } = useToast();
   
-  // Simulate a data fetch with React Query
-  const { data: customers, isLoading } = useQuery({
-    queryKey: ["customers"],
+  // Fetch real customer data from API
+  const { data: customers, isLoading, isError } = useQuery({
+    queryKey: ["admin", "customers"],
     queryFn: async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return CUSTOMERS;
-    },
-    staleTime: 60000 // 1 minute
+      const response = await fetch("/api/admin/customers");
+      if (!response.ok) {
+        throw new Error("Failed to fetch customers");
+      }
+      return response.json();
+    }
   });
 
   // Filter customers based on search term
-  const filteredCustomers = customers?.filter(customer => 
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.company.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers?.filter((customer: Customer) => {
+    const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+      (fullName && fullName.toLowerCase().includes(searchLower)) ||
+      (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
+      (customer.company && customer.company.toLowerCase().includes(searchLower))
+    );
+  });
 
   const handleAddCustomer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,37 +190,42 @@ export default function CustomerListPage() {
             <div className="flex justify-center py-8">
               <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
             </div>
-          ) : (
+          ) : isError ? (
+            <div className="flex justify-center py-8 text-center">
+              <div className="max-w-md">
+                <h3 className="text-lg font-medium mb-2">Unable to load customers</h3>
+                <p className="text-muted-foreground">There was an error fetching customer data. Please try again later.</p>
+              </div>
+            </div>
+          ) : filteredCustomers && filteredCustomers.length > 0 ? (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Company</TableHead>
                     <TableHead>Orders</TableHead>
-                    <TableHead>Spent</TableHead>
-                    <TableHead>Last Order</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCustomers?.map((customer) => (
+                  {filteredCustomers.map((customer: Customer) => (
                     <TableRow key={customer.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{customer.name}</p>
-                          <p className="text-sm text-muted-foreground">{customer.email}</p>
-                          <p className="text-xs text-muted-foreground">{customer.company}</p>
+                          <p className="font-medium">
+                            {customer.firstName} {customer.lastName}
+                          </p>
                         </div>
                       </TableCell>
-                      <TableCell>{customer.orders}</TableCell>
-                      <TableCell>{customer.spent}</TableCell>
+                      <TableCell>{customer.email || "-"}</TableCell>
+                      <TableCell>{customer.company || "-"}</TableCell>
+                      <TableCell>{customer.orders || 0}</TableCell>
                       <TableCell>
-                        {customer.lastOrder || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={customer.status === "active" ? "default" : "secondary"}>
-                          {customer.status}
+                        <Badge variant="default">
+                          Active
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -310,6 +262,23 @@ export default function CustomerListPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center border rounded-md">
+              <div className="bg-gray-100 p-3 rounded-full mb-4">
+                <Users className="h-10 w-10 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">No customers found</h3>
+              <p className="text-muted-foreground max-w-md mb-6">
+                There are no customers in the system yet. Add your first customer to get started.
+              </p>
+              <Button 
+                onClick={() => setIsAddCustomerDialogOpen(true)}
+                className="flex items-center"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Customer
+              </Button>
             </div>
           )}
         </CardContent>

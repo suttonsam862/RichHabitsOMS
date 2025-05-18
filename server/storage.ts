@@ -531,6 +531,18 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  async getAllCustomers(): Promise<Customer[]> {
+    try {
+      return await db
+        .select()
+        .from(customers)
+        .leftJoin(users, eq(customers.userId, users.id));
+    } catch (error) {
+      console.error("Error getting all customers:", error);
+      return [];
+    }
+  }
+
   async assignManufacturerToOrder(orderId: number, manufacturerId: number): Promise<Order> {
     // First ensure the order exists
     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
