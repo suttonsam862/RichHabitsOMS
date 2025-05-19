@@ -300,31 +300,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log(`Attempting login for user: ${email}`);
+
       // Authenticate with Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      if (error || !data.user || !data.session) {
+      if (error) {
         console.error('Supabase Auth login error:', error);
         return res.status(401).json({ 
           success: false, 
-          message: error?.message || 'Invalid email or password'
+          message: 'Invalid login credentials'
         });
       }
 
-      // Store session token
+      if (!data?.user || !data?.session) {
+        console.error('Missing user or session data from Supabase Auth');
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Authentication error - missing user data'
+        });
+      }
+
+      console.log(`User authenticated successfully: ${data.user.id}`);
+
+      // Get user profile data from database to get role
+      const { data: profileData, error: profileError } = await supabase
+        .from('users')
+        .select('role, firstName, lastName, username')
+        .eq('email', email)
+        .single();
+
+      if (profileError) {
+        console.warn('Could not fetch user profile, using auth metadata role:', profileError.message);
+      }
+
+      // Store tokens in session
       req.session.token = data.session.access_token;
+      req.session.refreshToken = data.session.refresh_token;
+      req.session.userId = data.user.id;
       
-      // Return success with minimal user data
+      // Determine role from profile or metadata
+      const role = profileData?.role || data.user.user_metadata?.role || 'customer';
+      
+      // Return success with user data
       return res.status(200).json({
         success: true,
         message: 'Login successful',
         user: {
           id: data.user.id,
           email: data.user.email,
-          role: data.user.user_metadata.role || 'customer'
+          username: profileData?.username || data.user.user_metadata?.username,
+          firstName: profileData?.firstName || data.user.user_metadata?.firstName,
+          lastName: profileData?.lastName || data.user.user_metadata?.lastName,
+          role
         },
         session: {
           token: data.session.access_token,
@@ -467,14 +498,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/auth/me', (req, res) => {
-    // Check if user is in session
-    if (!req.session.user) {
-      return res.status(401).json({ message: 'Not authenticated' });
+  app.get('/api/auth/me', async (req, res) => {
+    try {
+      // First check if the token exists in the session
+      if (!req.session.token) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      
+      // Verify the token with Supabase Auth
+      const { data: { user }, error } = await supabase.auth.getUser(req.session.token);
+      
+      if (error || !user) {
+        console.error('Error verifying auth token:', error?.message);
+        // Clear invalid session
+        req.session.destroy(() => {});
+        return res.status(401).json({ message: 'Authentication failed' });
+      }
+      
+      // Get user profile from database for role and other info
+      const { data: profileData, error: profileError } = await supabase
+        .from('users')
+        .select('role, firstName, lastName, username')
+        .eq('email', user.email)
+        .single();
+        
+      if (profileError) {
+        console.warn('Could not fetch user profile, using auth metadata:', profileError.message);
+      }
+      
+      // Combine Auth and Profile data
+      const userData = {
+        id: user.id,
+        email: user.email,
+        username: profileData?.username || user.user_metadata?.username,
+        firstName: profileData?.firstName || user.user_metadata?.firstName,
+        lastName: profileData?.lastName || user.user_metadata?.lastName,
+        role: profileData?.role || user.user_metadata?.role || 'customer'
+      };
+      
+      // Store in session for future use
+      req.session.user = userData;
+      
+      // Return user info
+      return res.json(userData);
+    } catch (err) {
+      console.error('Auth verification error:', err);
+      return res.status(401).json({ message: 'Authentication error' });
     }
-    
-    // Return user info from session
-    res.json(req.session.user);
   });
   
   // Create HTTP server

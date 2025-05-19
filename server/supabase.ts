@@ -19,12 +19,15 @@ export const supabase = createClient(
   process.env.SUPABASE_ANON_KEY,
   {
     auth: {
-      persistSession: false,
+      persistSession: true,
       autoRefreshToken: true,
+      detectSessionInUrl: false,
+      flowType: 'implicit'
     },
     global: {
       headers: {
-        'x-application-name': 'RichHabitsOMS'
+        'x-application-name': 'RichHabitsOMS',
+        'Content-Type': 'application/json'
       },
     },
   }
