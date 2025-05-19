@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase } from "./supabase"; // Import Supabase client
 import { initializeDatabase } from "./supabase-init"; // Use Supabase initialization
+import path from "path";
 
 const app = express();
 app.use(express.json());
