@@ -337,13 +337,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn('Could not fetch user profile, using auth metadata role:', profileError.message);
       }
 
+      // Determine role from profile or metadata
+      const role = profileData?.role || data.user.user_metadata?.role || 'customer';
+      
       // Store tokens in session
       req.session.token = data.session.access_token;
       req.session.refreshToken = data.session.refresh_token;
       req.session.userId = data.user.id;
       
-      // Determine role from profile or metadata
-      const role = profileData?.role || data.user.user_metadata?.role || 'customer';
+      // Store user data in session for easier access later
+      const userData = {
+        id: data.user.id,
+        email: data.user.email,
+        username: profileData?.username || data.user.user_metadata?.username || email.split('@')[0],
+        firstName: profileData?.firstName || data.user.user_metadata?.firstName,
+        lastName: profileData?.lastName || data.user.user_metadata?.lastName,
+        role: role
+      };
+      
+      req.session.user = userData;
       
       // Return success with user data
       return res.status(200).json({
@@ -500,19 +512,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/auth/me', async (req, res) => {
     try {
-      // First check if the token exists in the session
-      if (!req.session.token) {
-        return res.status(401).json({ message: 'Unauthorized' });
+      // First check if there's a session token
+      const token = req.session.token;
+      
+      if (!token) {
+        // If no session token, check for Authorization header (if client passes token directly)
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          console.log('No auth token found in session or headers');
+          return res.status(401).json({ message: 'Unauthorized' });
+        }
       }
       
-      // Verify the token with Supabase Auth
-      const { data: { user }, error } = await supabase.auth.getUser(req.session.token);
+      // Get current session from Supabase
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (error || !user) {
-        console.error('Error verifying auth token:', error?.message);
-        // Clear invalid session
-        req.session.destroy(() => {});
-        return res.status(401).json({ message: 'Authentication failed' });
+      if (sessionError || !session) {
+        console.error('No active Supabase session:', sessionError?.message);
+        
+        // Try to get user directly if we have a token
+        if (token) {
+          const { data: { user }, error } = await supabase.auth.getUser(token);
+          
+          if (error || !user) {
+            console.error('Error verifying token:', error?.message);
+            // Clear invalid session
+            req.session.destroy(() => {});
+            return res.status(401).json({ message: 'Authentication failed' });
+          }
+          
+          // If we have a valid user but no session, refresh the session
+          await supabase.auth.setSession({
+            access_token: token,
+            refresh_token: req.session.refreshToken || ''
+          });
+        } else {
+          // No token and no session
+          return res.status(401).json({ message: 'No valid authentication' });
+        }
+      }
+      
+      // At this point we should have a valid session or user
+      // Get the current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Error getting authenticated user:', userError?.message);
+        return res.status(401).json({ message: 'Authentication error' });
       }
       
       // Get user profile from database for role and other info
@@ -536,8 +582,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: profileData?.role || user.user_metadata?.role || 'customer'
       };
       
-      // Store in session for future use
+      // Store updated info in session
       req.session.user = userData;
+      req.session.token = session?.access_token || token;
+      req.session.refreshToken = session?.refresh_token || req.session.refreshToken;
       
       // Return user info
       return res.json(userData);

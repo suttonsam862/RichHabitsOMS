@@ -44,10 +44,43 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const res = await apiRequest("GET", "/api/auth/me");
+        // Check for stored token in localStorage
+        const storedToken = localStorage.getItem('authToken');
+        
+        if (!storedToken) {
+          console.log('No auth token found in localStorage');
+          setUser(null);
+          return;
+        }
+        
+        // The server handles token validation with Supabase Auth
+        const res = await fetch("/api/auth/me", {
+          headers: {
+            Authorization: `Bearer ${storedToken}`
+          },
+          credentials: 'include'
+        });
+        
+        if (!res.ok) {
+          console.log('Auth validation failed, clearing session');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('tokenExpires');
+          setUser(null);
+          return;
+        }
+        
         const userData = await res.json();
-        setUser(userData);
+        if (userData) {
+          console.log('User session validated successfully');
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
       } catch (error) {
+        console.error('Error checking auth status:', error);
+        // Clear potentially invalid tokens
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('tokenExpires');
         setUser(null);
       } finally {
         setLoading(false);
@@ -60,6 +93,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Login function
   const login = async (email: string, password: string) => {
     try {
+      console.log(`Attempting login for ${email}`);
+      
+      // Clear any existing tokens/data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('tokenExpires');
+      
       // Create a safe fetch request that always returns JSON, even on errors
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -89,15 +128,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       // Handle error responses
       if (!response.ok) {
+        console.error("Authentication failed:", data);
         throw new Error(data?.message || "Authentication failed. Please check your credentials.");
       }
 
-      // Handle success response
-      if (data.success && data.user) {
-        setUser(data.user);
-      } else {
-        throw new Error("Invalid response format. Missing user data.");
+      // Validate response format
+      if (!data.success || !data.user || !data.session || !data.session.token) {
+        console.error("Invalid auth response format:", data);
+        throw new Error("Invalid response from authentication server");
       }
+
+      // Store token in localStorage for future auth checks
+      localStorage.setItem('authToken', data.session.token);
+      if (data.session.expires) {
+        localStorage.setItem('tokenExpires', data.session.expires.toString());
+      }
+      
+      // Update user state with authenticated user data
+      setUser(data.user);
+      
+      console.log("Authentication successful");
+      return data.user;
     } catch (error: any) {
       console.error("Login error:", error);
       
