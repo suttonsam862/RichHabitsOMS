@@ -302,7 +302,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Attempting login for user: ${email}`);
 
-      // Authenticate with Supabase Auth
+      // First, verify the connection to Supabase
+      try {
+        const { data: sessionTest } = await supabase.auth.getSession();
+        console.log('Supabase connection verified, proceeding with login');
+      } catch (connErr) {
+        console.error('Supabase connection error:', connErr);
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to connect to authentication service'
+        });
+      }
+
+      // Authenticate with Supabase Auth with debug info
+      console.log('Sending login request to Supabase Auth');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -310,9 +323,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (error) {
         console.error('Supabase Auth login error:', error);
+        console.error('Error details:', error.message);
+        
         return res.status(401).json({ 
           success: false, 
-          message: 'Invalid login credentials'
+          message: 'Invalid login credentials',
+          details: error.message
         });
       }
 
@@ -325,8 +341,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`User authenticated successfully: ${data.user.id}`);
+      console.log('Session data:', data.session ? 'Present' : 'Missing');
 
       // Get user profile data from database to get role
+      console.log('Fetching user profile data');
       const { data: profileData, error: profileError } = await supabase
         .from('users')
         .select('role, firstName, lastName, username')
@@ -335,10 +353,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (profileError) {
         console.warn('Could not fetch user profile, using auth metadata role:', profileError.message);
+      } else {
+        console.log('Found user profile data');
       }
 
       // Determine role from profile or metadata
       const role = profileData?.role || data.user.user_metadata?.role || 'customer';
+      console.log('User role:', role);
       
       // Store tokens in session
       req.session.token = data.session.access_token;
@@ -357,22 +378,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       req.session.user = userData;
       
-      // Return success with user data
-      return res.status(200).json({
-        success: true,
-        message: 'Login successful',
-        user: {
-          id: data.user.id,
-          email: data.user.email,
-          username: profileData?.username || data.user.user_metadata?.username,
-          firstName: profileData?.firstName || data.user.user_metadata?.firstName,
-          lastName: profileData?.lastName || data.user.user_metadata?.lastName,
-          role
-        },
-        session: {
-          token: data.session.access_token,
-          expires: data.session.expires_at
+      console.log('Login successful, sending response');
+      
+      // Save session before sending response
+      req.session.save((err) => {
+        if (err) {
+          console.error('Error saving session:', err);
         }
+        
+        // Return success with user data
+        return res.status(200).json({
+          success: true,
+          message: 'Login successful',
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            username: profileData?.username || data.user.user_metadata?.username || email.split('@')[0],
+            firstName: profileData?.firstName || data.user.user_metadata?.firstName,
+            lastName: profileData?.lastName || data.user.user_metadata?.lastName,
+            role
+          },
+          session: {
+            token: data.session.access_token,
+            expires: data.session.expires_at
+          }
+        });
       });
     } catch (err) {
       console.error('Unexpected login error:', err);
