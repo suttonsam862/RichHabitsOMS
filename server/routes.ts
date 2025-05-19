@@ -386,7 +386,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Email already registered' });
       }
       
-      // Create new user with customer role by default
+      // First register the user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            firstName,
+            lastName,
+            role: 'customer' // Force customer role for new registrations
+          }
+        }
+      });
+      
+      if (authError) {
+        console.error('Supabase Auth signup error:', authError);
+        return res.status(400).json({ 
+          message: 'Error creating account with Supabase Auth',
+          details: authError.message
+        });
+      }
+      
+      // Create user in our database as well
       const user = await storage.createUser({
         email,
         username,
@@ -415,17 +437,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(userInfo);
       });
     } catch (error) {
+      console.error('Registration error:', error);
       next(error);
     }
   });
   
-  app.get('/api/logout', (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: 'Error logging out' });
-      }
-      res.json({ message: 'Logged out successfully' });
-    });
+  app.get('/api/logout', async (req, res) => {
+    try {
+      // Sign out from Supabase Auth
+      await supabase.auth.signOut();
+      
+      // Sign out from session-based auth
+      req.logout((err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Error logging out' });
+        }
+        res.json({ message: 'Logged out successfully' });
+      });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      res.status(500).json({ message: 'Error during logout process' });
+    }
   });
   
   app.get('/api/me', isAuthenticated, (req, res) => {

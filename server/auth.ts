@@ -2,6 +2,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { compare } from "bcrypt";
 import { storage } from "./storage";
+import { supabase } from "./supabase";
 import type { User } from "@shared/schema";
 import express, { Request, Response, NextFunction } from "express";
 import session from "express-session";
@@ -31,13 +32,37 @@ export function configureAuth(app: express.Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Configure local strategy
+  // Configure local strategy using Supabase Auth when possible
   passport.use(
     new LocalStrategy(
       { usernameField: "email" },
       async (email, password, done) => {
         try {
           console.log(`Attempting login for email: ${email}`);
+          
+          // First try to authenticate with Supabase
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (!authError && authData?.user) {
+            console.log('Authenticated with Supabase Auth');
+            
+            // Get the full user profile from our users table
+            const user = await storage.getUserByEmail(email);
+            if (user) {
+              return done(null, user);
+            }
+            
+            // If user exists in Supabase Auth but not in our users table,
+            // we should create a record in our users table
+            console.log('User exists in Supabase Auth but not in our users table');
+            return done(null, false, { message: "User account not fully set up" });
+          }
+          
+          // If Supabase Auth fails, fall back to our custom implementation
+          console.log('Falling back to custom authentication');
           const user = await storage.getUserByEmail(email);
           if (!user) {
             console.log('User not found');
@@ -49,6 +74,13 @@ export function configureAuth(app: express.Express) {
           console.log(`Password valid: ${passwordValid}`);
           if (!passwordValid) {
             return done(null, false, { message: "Incorrect email or password" });
+          }
+
+          // Also sign in with Supabase Auth to keep them in sync
+          try {
+            await supabase.auth.signInWithPassword({ email, password });
+          } catch (e) {
+            console.log('Failed to sync with Supabase Auth, continuing anyway');
           }
 
           return done(null, user);
