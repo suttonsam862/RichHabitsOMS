@@ -131,11 +131,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(null);
       // Clear any cached data in localStorage
       localStorage.clear();
-      // Clear any query cache
+      // Redirect to login page
       window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
-      throw error;
+      // Force logout even if API call fails
+      setUser(null);
+      localStorage.clear();
+      window.location.href = "/login";
     }
   };
 

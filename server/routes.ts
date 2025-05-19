@@ -301,38 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { email, password } = req.body;
       
-      // Special case for admin login during development
-      if (email === 'samsutton@rich-habits.com' && password === 'Arlodog2013!') {
-        // Create a hardcoded admin session for development
-        const adminUser = {
-          id: '00000000-0000-0000-0000-000000000000',
-          email: 'samsutton@rich-habits.com',
-          role: 'admin',
-          username: 'samadmin',
-          firstName: 'Sam',
-          lastName: 'Sutton',
-          phone: null,
-          company: 'Rich Habits',
-          createdAt: new Date().toISOString(),
-          stripeCustomerId: null
-        };
-        
-        // Add to session
-        req.session.user = adminUser;
-        
-        // Return success response with admin user data
-        return res.status(200).json({
-          success: true,
-          message: 'Admin login successful',
-          user: adminUser,
-          session: {
-            token: 'admin-session-token',
-            expires: Math.floor(Date.now() / 1000) + 86400 // 24 hours from now
-          }
-        });
-      }
-      
-      // Regular authentication via Supabase Auth
+      // Authenticate with Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -353,9 +322,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Get user metadata
+      // Retrieve user metadata from Supabase user profile
+      // First try to get from user_metadata
       const userData = data.user.user_metadata as {
-        role: 'admin' | 'salesperson' | 'designer' | 'manufacturer' | 'customer';
+        role?: 'admin' | 'salesperson' | 'designer' | 'manufacturer' | 'customer';
         username?: string;
         firstName?: string;
         lastName?: string;
@@ -363,18 +333,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         company?: string;
       };
       
-      // Create session user object
+      // Then try to get from user_profiles table using the user ID as join key
+      let userProfile = null;
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', data.user.id)
+          .single();
+          
+        if (!profileError && profileData) {
+          userProfile = profileData;
+        }
+      } catch (profileErr) {
+        console.warn('Could not retrieve user profile:', profileErr);
+      }
+      
+      // Create session user object, prioritizing profile data if available
       const sessionUser = {
         id: data.user.id,
         email: data.user.email,
-        role: userData.role || 'customer', // Default to customer if no role specified
-        username: userData.username || data.user.email?.split('@')[0] || 'user',
-        firstName: userData.firstName || null,
-        lastName: userData.lastName || null,
-        phone: userData.phone || null,
-        company: userData.company || null,
-        createdAt: new Date(data.user.created_at || new Date()).toISOString(),
-        stripeCustomerId: null
+        role: userProfile?.role || userData.role || 'customer', // Default to customer if no role specified
+        username: userProfile?.username || userData.username || data.user.email?.split('@')[0] || 'user',
+        firstName: userProfile?.first_name || userData.firstName || null,
+        lastName: userProfile?.last_name || userData.lastName || null,
+        phone: userProfile?.phone || userData.phone || null,
+        company: userProfile?.company || userData.company || null,
+        createdAt: data.user.created_at || new Date().toISOString(),
+        stripeCustomerId: userProfile?.stripe_customer_id || null
       };
       
       // Add to session
@@ -399,18 +385,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/register', async (req, res) => {
+  app.post('/api/auth/register', async (req, res) => {
     try {
       const { email, username, password, firstName, lastName, phone, company } = req.body;
       
-      // Check if user already exists in Supabase Auth
-      const { data: checkData } = await supabase.auth.signInWithPassword({
-        email,
-        password: password + '_check' // Use invalid password to just check if email exists
-      });
-      
-      if (checkData?.user) {
-        return res.status(400).json({ message: 'Email already registered' });
+      // Check if user already exists in a better way
+      const { data: userCheck, error: userCheckError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+        
+      if (userCheck) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Email already registered' 
+        });
       }
       
       // Register with Supabase Auth
@@ -419,10 +409,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password,
         options: {
           data: {
+            role: 'customer', // Force customer role for new registrations
             username,
             firstName,
             lastName,
-            role: 'customer', // Force customer role for new registrations
             phone,
             company
           }
@@ -432,13 +422,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error) {
         console.error('Supabase Auth signup error:', error);
         return res.status(400).json({ 
+          success: false,
           message: 'Error creating account',
           details: error.message
         });
       }
       
       if (!data.user) {
-        return res.status(500).json({ message: 'Error creating user account' });
+        return res.status(500).json({ 
+          success: false,
+          message: 'Error creating user account' 
+        });
+      }
+      
+      // Also create profile in user_profiles table for easier access
+      try {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            user_id: data.user.id,
+            email: email,
+            username: username || email.split('@')[0],
+            first_name: firstName || null,
+            last_name: lastName || null,
+            role: 'customer',
+            phone: phone || null,
+            company: company || null,
+            created_at: new Date().toISOString()
+          });
+          
+        if (profileError) {
+          console.warn('Could not create user profile:', profileError);
+        }
+      } catch (profileErr) {
+        console.warn('Error creating user profile:', profileErr);
       }
       
       // Create session user
@@ -470,13 +487,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Registration error:', error);
       return res.status(500).json({ 
+        success: false,
         message: 'Error during registration process',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
   
-  app.get('/api/logout', async (req, res) => {
+  app.post('/api/auth/logout', async (req, res) => {
     try {
       // Sign out from Supabase Auth
       await supabase.auth.signOut();
