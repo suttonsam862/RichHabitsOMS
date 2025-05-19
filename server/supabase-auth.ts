@@ -37,71 +37,42 @@ export function configureAuth(app: express.Express) {
 
   // Add middleware to check supabase auth on each request
   app.use(async (req: Request, res: Response, next: NextFunction) => {
-    // Skip auth check for public routes, static files, and the root/client-side routes
+    // Skip auth check for public routes
     if (
       req.path === '/api/auth/login' ||
       req.path === '/api/auth/register' ||
       req.path === '/api/health' ||
-      req.path.startsWith('/uploads/') ||
-      req.path.startsWith('/assets/') ||
-      // Skip auth check for static files and client-side routes
-      !req.path.startsWith('/api/') ||
-      req.method === 'GET'
+      !req.path.startsWith('/api/')
     ) {
       return next();
     }
 
-    // If user is already authenticated in the session, continue
-    if (req.session.user) {
-      req.user = req.session.user;
-      return next();
+    const token = req.session.token || (req.headers.authorization?.startsWith('Bearer ') && 
+      req.headers.authorization.substring(7));
+
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    // Check for auth header
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser(token);
       
-      try {
-        // Validate the token with Supabase
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        
-        if (error || !user) {
-          console.log('Invalid token:', error?.message);
-          return res.status(401).json({ message: 'Unauthorized' });
-        }
-
-        // Get user metadata/info
-        const userData = user.user_metadata as {
-          role: 'admin' | 'salesperson' | 'designer' | 'manufacturer' | 'customer';
-          username?: string;
-          firstName?: string;
-          lastName?: string;
-        };
-
-        // Create session user
-        const sessionUser: SupabaseUser = {
-          id: user.id,
-          email: user.email || '',
-          role: userData.role || 'customer', // Default to customer if no role
-          username: userData.username,
-          firstName: userData.firstName,
-          lastName: userData.lastName
-        };
-
-        // Store in session
-        req.session.user = sessionUser;
-        req.user = sessionUser;
-        
-        return next();
-      } catch (err) {
-        console.error('Token validation error:', err);
-        return res.status(401).json({ message: 'Unauthorized' });
+      if (error || !user) {
+        return res.status(401).json({ message: 'Invalid token' });
       }
-    }
 
-    // If not authenticated through any method, return 401
-    return res.status(401).json({ message: 'Unauthorized' });
+      // Only store essential user data from Supabase Auth
+      req.user = {
+        id: user.id,
+        email: user.email || '',
+        role: user.user_metadata.role || 'customer'
+      };
+      
+      return next();
+    } catch (err) {
+      console.error('Token validation error:', err);
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
   });
 
   // Authentication middleware

@@ -291,89 +291,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post('/api/auth/login', async (req, res) => {
     try {
-      // Input validation
-      if (!req.body.email || !req.body.password) {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
         return res.status(400).json({ 
           success: false, 
           message: 'Email and password are required' 
         });
       }
 
-      const { email, password } = req.body;
-      
       // Authenticate with Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      if (error) {
+      if (error || !data.user || !data.session) {
         console.error('Supabase Auth login error:', error);
         return res.status(401).json({ 
           success: false, 
-          message: error.message || 'Invalid email or password'
+          message: error?.message || 'Invalid email or password'
         });
       }
+
+      // Store session token
+      req.session.token = data.session.access_token;
       
-      if (!data.user) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'User not found'
-        });
-      }
-      
-      // Retrieve user metadata from Supabase user profile
-      // First try to get from user_metadata
-      const userData = data.user.user_metadata as {
-        role?: 'admin' | 'salesperson' | 'designer' | 'manufacturer' | 'customer';
-        username?: string;
-        firstName?: string;
-        lastName?: string;
-        phone?: string;
-        company?: string;
-      };
-      
-      // Then try to get from user_profiles table using the user ID as join key
-      let userProfile = null;
-      try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', data.user.id)
-          .single();
-          
-        if (!profileError && profileData) {
-          userProfile = profileData;
-        }
-      } catch (profileErr) {
-        console.warn('Could not retrieve user profile:', profileErr);
-      }
-      
-      // Create session user object, prioritizing profile data if available
-      const sessionUser = {
-        id: data.user.id,
-        email: data.user.email,
-        role: userProfile?.role || userData.role || 'customer', // Default to customer if no role specified
-        username: userProfile?.username || userData.username || data.user.email?.split('@')[0] || 'user',
-        firstName: userProfile?.first_name || userData.firstName || null,
-        lastName: userProfile?.last_name || userData.lastName || null,
-        phone: userProfile?.phone || userData.phone || null,
-        company: userProfile?.company || userData.company || null,
-        createdAt: data.user.created_at || new Date().toISOString(),
-        stripeCustomerId: userProfile?.stripe_customer_id || null
-      };
-      
-      // Add to session
-      req.session.user = sessionUser;
-      
-      // Return success response with user data and token
+      // Return success with minimal user data
       return res.status(200).json({
         success: true,
         message: 'Login successful',
-        user: sessionUser,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          role: data.user.user_metadata.role || 'customer'
+        },
         session: {
-          token: data.session?.access_token,
-          expires: data.session?.expires_at
+          token: data.session.access_token,
+          expires: data.session.expires_at
         }
       });
     } catch (err) {
