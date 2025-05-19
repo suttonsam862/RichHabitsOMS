@@ -69,8 +69,18 @@ app.use((req, res, next) => {
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
+      // First try the built-in serveStatic function
       serveStatic(app);
     }
+    
+    // Add additional static file serving for client/dist to be extra safe
+    const clientDistPath = path.join(import.meta.dirname, "..", "client", "dist");
+    app.use(express.static(clientDistPath));
+    
+    // Add a catch-all route to serve the React app for any unmatched routes
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(import.meta.dirname, "..", "client", "dist", "index.html"));
+    });
 
     // ALWAYS serve the app on port 5000
     // this serves both the API and the client.
