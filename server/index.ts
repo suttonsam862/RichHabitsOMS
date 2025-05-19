@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { supabase } from "./supabase"; // Import Supabase client
+import { initializeDatabase } from "./supabase-init"; // Use Supabase initialization
 
 const app = express();
 app.use(express.json());
@@ -36,10 +38,17 @@ app.use((req, res, next) => {
   next();
 });
 
-import { initializeDatabase } from "./initdb";
-
 (async () => {
   try {
+    // Verify Supabase connection
+    const { error } = await supabase.from('users').select('count').limit(1);
+    if (error) {
+      console.warn("Supabase connection check:", error.message);
+      console.log("Will continue and retry connection as needed");
+    } else {
+      console.log("Supabase connection verified successfully");
+    }
+    
     // Initialize database safely (won't wipe existing data)
     await initializeDatabase();
     
