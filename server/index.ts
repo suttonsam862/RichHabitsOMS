@@ -4,6 +4,10 @@ import { setupVite, serveStatic, log } from "./vite";
 import { supabase } from "./supabase"; // Import Supabase client
 import { initializeDatabase } from "./supabase-init"; // Use Supabase initialization
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
@@ -73,13 +77,12 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
     
-    // Add additional static file serving for client/dist to be extra safe
-    const clientDistPath = path.join(import.meta.dirname, "..", "client", "dist");
-    app.use(express.static(clientDistPath));
+    // Serve static files from the client/dist directory
+    app.use(express.static(path.resolve(__dirname, "../client/dist")));
     
     // Add a catch-all route to serve the React app for any unmatched routes
     app.get("*", (req, res) => {
-      res.sendFile(path.join(import.meta.dirname, "..", "client", "dist", "index.html"));
+      res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
     });
 
     // ALWAYS serve the app on port 5000

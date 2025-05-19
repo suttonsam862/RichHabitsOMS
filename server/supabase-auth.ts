@@ -37,13 +37,16 @@ export function configureAuth(app: express.Express) {
 
   // Add middleware to check supabase auth on each request
   app.use(async (req: Request, res: Response, next: NextFunction) => {
-    // Skip auth check for public routes
+    // Skip auth check for public routes, static files, and the root/client-side routes
     if (
       req.path === '/api/auth/login' ||
       req.path === '/api/auth/register' ||
       req.path === '/api/health' ||
       req.path.startsWith('/uploads/') ||
-      req.path.startsWith('/assets/')
+      req.path.startsWith('/assets/') ||
+      // Skip auth check for static files and client-side routes
+      !req.path.startsWith('/api/') ||
+      req.method === 'GET'
     ) {
       return next();
     }
