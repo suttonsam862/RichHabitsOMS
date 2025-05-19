@@ -1,7 +1,7 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { configureAuth } from "./auth";
+import { configureAuth } from "./supabase-auth";
 import { setupWebSocketServer, sendNotification } from "./messaging";
 import { sendEmail, getOrderStatusChangeEmailTemplate, getPaymentReceiptEmailTemplate, getDesignApprovalEmailTemplate } from "./email";
 import { requireAdmin } from "./middleware/adminAuth";
@@ -13,7 +13,7 @@ import { loginSchema, registerSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import passport from "passport";
+import { supabase } from "./supabase";
 
 // Setup Stripe
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -289,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Authentication routes
-  app.post('/api/auth/login', (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     try {
       // Input validation
       if (!req.body.email || !req.body.password) {
@@ -299,70 +299,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Use passport for authentication but handle all errors explicitly
-      passport.authenticate('local', (err, user, info) => {
-        // Handle authentication errors
-        if (err) {
-          console.error('Login error:', err);
-          return res.status(500).json({ 
-            success: false, 
-            message: 'Internal server error during authentication'
-          });
-        }
-        
-        // Handle invalid credentials
-        if (!user) {
-          return res.status(401).json({ 
-            success: false, 
-            message: info?.message || 'Invalid email or password'
-          });
-        }
-        
-        // Handle session creation
-        req.login(user, (loginErr) => {
-          if (loginErr) {
-            console.error('Session login error:', loginErr);
-            return res.status(500).json({ 
-              success: false, 
-              message: 'Error establishing session'
-            });
-          }
-          
-          try {
-            // Create a safe user object without sensitive data
-            const userInfo = {
-              id: user.id,
-              username: user.username,
-              email: user.email,
-              firstName: user.firstName || null,
-              lastName: user.lastName || null,
-              role: user.role,
-              phone: user.phone || null,
-              company: user.company || null,
-              createdAt: user.createdAt,
-              stripeCustomerId: user.stripeCustomerId || null
-            };
-            
-            // Return success response with user data
-            return res.status(200).json({
-              success: true,
-              message: 'Login successful',
-              user: userInfo
-            });
-          } catch (dataErr) {
-            console.error('User data processing error:', dataErr);
-            return res.status(500).json({ 
-              success: false, 
-              message: 'Error processing user data'
-            });
-          }
-        });
-      })(req, res, () => {
-        // This function is intentionally empty to prevent next() from being called
-        // which could potentially lead to HTML error pages
+      const { email, password } = req.body;
+      
+      // Authenticate directly with Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
-    } catch (outerErr) {
-      console.error('Unexpected login error:', outerErr);
+      
+      if (error) {
+        console.error('Supabase Auth login error:', error);
+        return res.status(401).json({ 
+          success: false, 
+          message: error.message || 'Invalid email or password'
+        });
+      }
+      
+      if (!data.user) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'User not found'
+        });
+      }
+      
+      // Get user metadata
+      const userData = data.user.user_metadata as {
+        role: 'admin' | 'salesperson' | 'designer' | 'manufacturer' | 'customer';
+        username?: string;
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        company?: string;
+      };
+      
+      // Create session user object
+      const sessionUser = {
+        id: data.user.id,
+        email: data.user.email,
+        role: userData.role || 'customer', // Default to customer if no role specified
+        username: userData.username || data.user.email?.split('@')[0] || 'user',
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
+        phone: userData.phone || null,
+        company: userData.company || null,
+        createdAt: new Date(data.user.created_at || new Date()).toISOString(),
+        stripeCustomerId: null
+      };
+      
+      // Add to session
+      req.session.user = sessionUser;
+      
+      // Return success response with user data and token
+      return res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        user: sessionUser,
+        session: {
+          token: data.session?.access_token,
+          expires: data.session?.expires_at
+        }
+      });
+    } catch (err) {
+      console.error('Unexpected login error:', err);
       return res.status(500).json({ 
         success: false, 
         message: 'Unexpected error during login process'
@@ -370,24 +368,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/register', async (req, res, next) => {
+  app.post('/api/register', async (req, res) => {
     try {
-      const { email, username, password, firstName, lastName, role, phone, company } = req.body;
+      const { email, username, password, firstName, lastName, phone, company } = req.body;
       
-      // Check if username already exists
-      const existingUsername = await storage.getUserByUsername(username);
-      if (existingUsername) {
-        return res.status(400).json({ message: 'Username already taken' });
-      }
+      // Check if user already exists in Supabase Auth
+      const { data: checkData } = await supabase.auth.signInWithPassword({
+        email,
+        password: password + '_check' // Use invalid password to just check if email exists
+      });
       
-      // Check if email already exists
-      const existingEmail = await storage.getUserByEmail(email);
-      if (existingEmail) {
+      if (checkData?.user) {
         return res.status(400).json({ message: 'Email already registered' });
       }
       
-      // First register the user with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Register with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -395,50 +391,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
             username,
             firstName,
             lastName,
-            role: 'customer' // Force customer role for new registrations
+            role: 'customer', // Force customer role for new registrations
+            phone,
+            company
           }
         }
       });
       
-      if (authError) {
-        console.error('Supabase Auth signup error:', authError);
+      if (error) {
+        console.error('Supabase Auth signup error:', error);
         return res.status(400).json({ 
-          message: 'Error creating account with Supabase Auth',
-          details: authError.message
+          message: 'Error creating account',
+          details: error.message
         });
       }
       
-      // Create user in our database as well
-      const user = await storage.createUser({
-        email,
-        username,
-        password, // Will be hashed in the storage layer
-        firstName,
-        lastName,
-        role: 'customer', // Force customer role for new registrations
-        phone,
-        company
-      });
+      if (!data.user) {
+        return res.status(500).json({ message: 'Error creating user account' });
+      }
       
-      // Create customer profile
-      await storage.createCustomer({
-        userId: user.id,
-        customerNotes: ''
-      });
+      // Create session user
+      const sessionUser = {
+        id: data.user.id,
+        email: data.user.email,
+        role: 'customer',
+        username: username || data.user.email?.split('@')[0] || 'user',
+        firstName: firstName || null,
+        lastName: lastName || null,
+        phone: phone || null,
+        company: company || null,
+        createdAt: new Date(data.user.created_at || new Date()).toISOString()
+      };
       
-      // Log the user in automatically
-      req.login(user, (err) => {
-        if (err) {
-          return next(err);
+      // Store in session
+      req.session.user = sessionUser;
+      
+      // Return user info
+      return res.json({
+        success: true,
+        message: 'Registration successful',
+        user: sessionUser,
+        session: {
+          token: data.session?.access_token,
+          expires: data.session?.expires_at
         }
-        
-        // Return user info (excluding sensitive data)
-        const { password, ...userInfo } = user;
-        return res.json(userInfo);
       });
     } catch (error) {
       console.error('Registration error:', error);
-      next(error);
+      return res.status(500).json({ 
+        message: 'Error during registration process',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
   
@@ -447,8 +450,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sign out from Supabase Auth
       await supabase.auth.signOut();
       
-      // Sign out from session-based auth
-      req.logout((err) => {
+      // Clear session
+      req.session.destroy((err) => {
         if (err) {
           return res.status(500).json({ message: 'Error logging out' });
         }
@@ -460,10 +463,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/me', isAuthenticated, (req, res) => {
-    // Return user info (excluding sensitive data)
-    const { password, ...userInfo } = req.user;
-    res.json(userInfo);
+  app.get('/api/me', (req, res) => {
+    // Check if user is in session
+    if (!req.session.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    // Return user info from session
+    res.json(req.session.user);
   });
   
   // Create HTTP server
