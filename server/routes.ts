@@ -463,7 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/me', (req, res) => {
+  app.get('/api/auth/me', (req, res) => {
     // Check if user is in session
     if (!req.session.user) {
       return res.status(401).json({ message: 'Not authenticated' });
