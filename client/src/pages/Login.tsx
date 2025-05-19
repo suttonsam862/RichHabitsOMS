@@ -1,23 +1,20 @@
 import { useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { AuthForm } from "@/components/auth/AuthForm";
 
 export default function Login() {
   const { user, isAuthenticated, loading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [, setLocation] = useLocation();
   
-  // Get the page the user was trying to visit before being redirected to login
-  const from = location.state?.from?.pathname || "/";
-
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !loading && user) {
+      console.log("Already authenticated as:", user.role);
       // Redirect to the appropriate dashboard based on user role
-      navigate(`/dashboard/${user.role}`);
+      setLocation("/dashboard");
     }
-  }, [isAuthenticated, loading, navigate, user]);
+  }, [isAuthenticated, loading, setLocation, user]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

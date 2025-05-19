@@ -212,11 +212,7 @@ export function AuthForm({ type }: AuthFormProps) {
                 <FormItem className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <FormLabel className="text-sm font-medium">Password</FormLabel>
-                    {type === "login" && (
-                      <Button variant="link" size="sm" className="p-0 h-auto text-xs">
-                        Forgot password?
-                      </Button>
-                    )}
+                    {/* Removed forgot password for now as it requires additional Supabase Auth setup */}
                   </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">

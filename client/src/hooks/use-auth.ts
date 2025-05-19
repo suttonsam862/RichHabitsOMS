@@ -1,10 +1,10 @@
 import { useContext } from "react";
 import { AuthContext } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 export const useAuth = () => {
   const auth = useContext(AuthContext);
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   // Redirect to login if not authenticated
   const requireAuth = (allowedRoles?: string[]) => {
@@ -13,7 +13,8 @@ export const useAuth = () => {
 
     // If not authenticated, redirect to login
     if (!auth.isAuthenticated) {
-      navigate("/login");
+      console.log("Not authenticated, redirecting to login");
+      setLocation("/login");
       return false;
     }
 
@@ -21,8 +22,9 @@ export const useAuth = () => {
     if (allowedRoles && auth.user) {
       const hasRole = allowedRoles.includes(auth.user.role);
       if (!hasRole) {
+        console.log("User does not have required role:", auth.user.role, "Required:", allowedRoles);
         // Redirect to the appropriate dashboard based on user role
-        navigate(`/dashboard/${auth.user.role}`);
+        setLocation("/dashboard");
         return false;
       }
     }
