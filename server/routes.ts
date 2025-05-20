@@ -61,6 +61,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .eq('id', data.user.id)
         .single();
       
+      let userProfile = profileData;
+      
       if (profileError) {
         console.warn('Could not fetch user profile, creating minimal profile');
         
@@ -80,12 +82,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Error creating user profile:', createError);
         } else {
           console.log('Created new user profile');
-          profileData = newProfile[0];
+          userProfile = newProfile[0];
         }
       }
       
       // Store session in cookie
-      req.session.token = data.session.access_token;
+      if (req.session) {
+        req.session.supabaseToken = data.session.access_token;
+      }
       
       // Return user data and session
       return res.status(200).json({

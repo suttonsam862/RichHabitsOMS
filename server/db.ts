@@ -45,7 +45,8 @@ console.log('Supabase client initialized');
 // Test Supabase connection
 export async function testSupabaseConnection() {
   try {
-    const { data, error } = await supabase.from('user_profiles').select('count(*)').limit(1);
+    // Simple query to check connection
+    const { data, error } = await supabase.from('user_profiles').select('*').limit(1);
     
     if (error) {
       throw error;

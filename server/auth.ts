@@ -1,11 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from './db';
 
-// Custom interface to extend Express Request
+// Custom interface to extend Express Request and Session
 declare global {
   namespace Express {
     interface Request {
       user?: any;
+    }
+    
+    interface Session {
+      supabaseToken?: string;
     }
   }
 }
@@ -19,7 +23,7 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
     
     if (!authHeader) {
       // No auth header, check for session token in cookies
-      const token = req.session?.token || null;
+      const token = req.session?.supabaseToken || null;
       
       if (!token) {
         return next(); // Unauthenticated request

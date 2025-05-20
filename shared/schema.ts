@@ -252,7 +252,7 @@ export const registerSchema = z.object({
   username: z.string().min(3),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-  role: roleEnum,
+  role: z.enum(['admin', 'salesperson', 'designer', 'manufacturer', 'customer']),
   phone: z.string().optional(),
   company: z.string().optional(),
 });
