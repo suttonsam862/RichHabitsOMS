@@ -57,30 +57,27 @@ app.use((req, res, next) => {
     // Initialize database safely (won't wipe existing data)
     await initializeDatabase();
     
+    // Register API routes first
     const server = await registerRoutes(app);
 
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Error handling middleware for API routes
+    app.use("/api", (err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-
       res.status(status).json({ message });
       console.error(err);
     });
 
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
+    // Static file serving and client-side routing should come after API routes
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
-      // First try the built-in serveStatic function
       serveStatic(app);
     }
     
-    // Serve static files from the client/dist directory
     app.use(express.static(path.resolve(__dirname, "../client/dist")));
     
-    // Add a catch-all route to serve the React app for any unmatched routes
+    // Catch-all route should be last
     app.get("*", (req, res) => {
       res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
     });
