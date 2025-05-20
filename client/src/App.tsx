@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import DashboardRouter from "@/pages/DashboardRouter";
 
 // Dashboard components
 import AdminDashboard from "@/pages/dashboard/AdminDashboard";
@@ -34,7 +35,7 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
 import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
 import AdminOversightDashboard from "@/pages/AdminOversightDashboard";
-import CustomerList from "@/pages/admin/CustomerList";
+// CustomerList is already imported via CustomerListPage
 import CustomerListPage from "@/pages/admin/CustomerListPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
 import AnalyticsPage from "@/pages/admin/AnalyticsPage";
@@ -55,6 +56,16 @@ function App() {
               
               {/* Redirect from root to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />
+              
+              {/* Main dashboard route that redirects to role-specific dashboard */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
+                    <DashboardRouter />
+                  </RequireAuth>
+                } 
+              />
               
               {/* Protected routes with layout */}
               <Route element={<AppLayout />}>
