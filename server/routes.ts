@@ -30,26 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Attempting login for user: ${email}`);
       
-      // Temporary admin account handling - bypass email confirmation for admin
-      const isAdmin = email === 'samsutton@rich-habits.com' && password === 'Arlodog2013!';
-      
-      if (isAdmin) {
-        console.log('Admin login detected, using hardcoded response for development');
-        
-        // For development purposes only - provide a hardcoded successful admin login
-        // This allows us to test the system without email confirmation
-        return res.json({
-          success: true,
-          user: {
-            id: '0a1fc1ab-b9ba-4580-b798-9034cde69c61', // This is the admin ID from your admin creation
-            email: email,
-            role: 'admin',
-          },
-          token: 'dev-token'
-        });
-      }
-      
-      // Regular authentication with Supabase Auth
+      // Authenticate user through Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -107,7 +88,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Store session in cookie
       if (req.session) {
-        req.session.supabaseToken = data.session.access_token;
+        req.session.auth = {
+          token: data.session.access_token,
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            role: userProfile?.role || 'customer'
+          }
+        };
       }
       
       // Return user data and session

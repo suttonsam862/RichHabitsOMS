@@ -9,7 +9,10 @@ declare global {
     }
     
     interface Session {
-      supabaseToken?: string;
+      auth?: {
+        token?: string;
+        user?: any;
+      };
     }
   }
 }
@@ -23,7 +26,7 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
     
     if (!authHeader) {
       // No auth header, check for session token in cookies
-      const token = req.session?.supabaseToken || null;
+      const token = req.session?.auth?.token || null;
       
       if (!token) {
         return next(); // Unauthenticated request
