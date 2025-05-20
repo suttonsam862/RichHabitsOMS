@@ -224,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/logout', async (req, res) => {
     try {
       // Get token from session or auth header
-      const token = req.session?.token || req.headers.authorization?.split(' ')[1];
+      const token = req.session?.supabaseToken || req.headers.authorization?.split(' ')[1];
       
       if (token) {
         // Sign out with Supabase Auth

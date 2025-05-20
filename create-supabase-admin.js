@@ -49,7 +49,7 @@ async function createAdminUser() {
       console.error('Error creating admin in Supabase Auth:', error.message);
       
       // Check if error is because user already exists
-      if (error.message.includes('already exists')) {
+      if (error.message.includes('already registered') || error.message.includes('already exists')) {
         console.log('Admin user might already exist, attempting to sign in...');
         
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -83,8 +83,8 @@ async function createAdminUser() {
       .upsert({
         id: data.user.id,
         username: adminUsername,
-        firstName: firstName,
-        lastName: lastName,
+        first_name: firstName,
+        last_name: lastName,
         role: 'admin'
       })
       .select();
@@ -102,9 +102,9 @@ async function createAdminUser() {
     const { data: customerData, error: customerError } = await supabase
       .from('customers')
       .upsert({
-        userId: data.user.id,
-        firstName: firstName,
-        lastName: lastName,
+        user_id: data.user.id,
+        first_name: firstName,
+        last_name: lastName,
         email: adminEmail
       })
       .select();
