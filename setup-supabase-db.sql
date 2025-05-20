@@ -24,26 +24,24 @@ CREATE TABLE IF NOT EXISTS "user_profiles" (
 -- Create RLS policies for user_profiles
 ALTER TABLE "user_profiles" ENABLE ROW LEVEL SECURITY;
 
+-- Allow inserts for everyone (needed for initial setup)
+CREATE POLICY "Anyone can insert user profiles"
+  ON "user_profiles" FOR INSERT
+  WITH CHECK (true);
+
+-- Allow service role to do anything
+CREATE POLICY "Service role can manage all profiles"
+  ON "user_profiles" FOR ALL
+  USING (auth.role() = 'service_role');
+
+-- Users can view/update their own profile
 CREATE POLICY "Users can view their own profile"
   ON "user_profiles" FOR SELECT
   USING (auth.uid() = id);
 
-CREATE POLICY "Admin users can view all profiles"
-  ON "user_profiles" FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles
-      WHERE user_profiles.id = auth.uid() AND user_profiles.role = 'admin'
-    )
-  );
-
 CREATE POLICY "Users can update their own profile"
   ON "user_profiles" FOR UPDATE
   USING (auth.uid() = id);
-
-CREATE POLICY "Service role can manage all profiles"
-  ON "user_profiles" FOR ALL
-  USING (auth.role() = 'service_role');
 
 -- Create customers table
 CREATE TABLE IF NOT EXISTS "customers" (

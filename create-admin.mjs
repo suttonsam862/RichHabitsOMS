@@ -1,97 +1,140 @@
-// This script creates an admin user in Supabase Auth
+// Create an admin user in Supabase Auth with ES modules
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
-// Check for required environment variables
-if (!process.env.SUPABASE_URL) {
-  throw new Error('SUPABASE_URL is not set');
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL) {
+  console.error('SUPABASE_URL environment variable is not set');
+  process.exit(1);
 }
 
-if (!process.env.SUPABASE_ANON_KEY) {
-  throw new Error('SUPABASE_ANON_KEY is not set');
+if (!SUPABASE_ANON_KEY) {
+  console.error('SUPABASE_ANON_KEY environment variable is not set');
+  process.exit(1);
 }
 
-console.log('Supabase URL:', process.env.SUPABASE_URL);
-console.log('Supabase Anon Key length:', process.env.SUPABASE_ANON_KEY.length);
+console.log('Connecting to Supabase at:', SUPABASE_URL);
 
-// Create Supabase client
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 );
 
 // Admin user details
 const adminEmail = 'samsutton@rich-habits.com';
 const adminPassword = 'Arlodog2013!';
+const adminUsername = 'samsutton';
+const firstName = 'Sam';
+const lastName = 'Sutton';
 
 async function createAdminUser() {
-  console.log(`Creating admin user: ${adminEmail}`);
+  console.log('Creating admin user in Supabase Auth...');
+  console.log(`Email: ${adminEmail}`);
   
   try {
-    // Admin user signup
+    // 1. Create user in Supabase Auth
+    console.log('Signing up admin user in Supabase Auth...');
     const { data, error } = await supabase.auth.signUp({
       email: adminEmail,
       password: adminPassword,
       options: {
         data: {
-          role: 'admin',
-          username: 'samadmin',
-          firstName: 'Sam',
-          lastName: 'Sutton'
+          firstName,
+          lastName,
+          role: 'admin'
         }
       }
     });
     
     if (error) {
-      console.error('Error creating admin user:', error.message);
+      console.error('Error creating admin in Supabase Auth:', error.message);
+      
+      // Check if error is because user already exists
+      if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        console.log('Admin user might already exist, attempting to sign in...');
+        
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: adminEmail,
+          password: adminPassword
+        });
+        
+        if (signInError) {
+          console.error('Error signing in as admin:', signInError.message);
+          return false;
+        }
+        
+        console.log('Successfully signed in as admin user');
+        data.user = signInData.user;
+      } else {
+        return false;
+      }
+    } else {
+      console.log('Admin created in Supabase Auth:', data.user.id);
+    }
+    
+    if (!data?.user) {
+      console.error('No user data returned from Supabase Auth');
       return false;
     }
     
-    console.log('Admin user created successfully:', data.user?.id);
+    // 2. Create user profile in user_profiles table
+    console.log('Creating user profile for admin...');
+    const { data: profileData, error: profileError } = await supabase
+      .from('user_profiles')
+      .upsert({
+        id: data.user.id,
+        username: adminUsername,
+        first_name: firstName,
+        last_name: lastName,
+        role: 'admin'
+      })
+      .select();
     
-    // Also create a profile in user_profiles if that table exists
-    try {
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          user_id: data.user.id,
-          email: adminEmail,
-          username: 'samadmin',
-          first_name: 'Sam',
-          last_name: 'Sutton',
-          role: 'admin'
-        });
-        
-      if (profileError) {
-        console.warn('Could not create user profile:', profileError.message);
-      } else {
-        console.log('User profile created successfully');
-      }
-    } catch (profileErr) {
-      console.warn('Error trying to create user profile:', profileErr.message);
+    if (profileError) {
+      console.error('Error creating admin profile:', profileError.message);
+      console.log('Make sure the database schema has been created properly');
+      return false;
     }
+    
+    console.log('Admin profile created:', profileData);
+    
+    // 3. Create customer record for admin
+    console.log('Creating customer record for admin...');
+    const { data: customerData, error: customerError } = await supabase
+      .from('customers')
+      .upsert({
+        user_id: data.user.id,
+        first_name: firstName,
+        last_name: lastName,
+        email: adminEmail
+      })
+      .select();
+    
+    if (customerError) {
+      console.warn('Error creating customer record for admin:', customerError.message);
+      console.warn('This is not critical but may impact some functionality');
+    } else {
+      console.log('Customer record created for admin:', customerData);
+    }
+    
+    console.log('\nAdmin user created successfully!');
+    console.log('Email:', adminEmail);
+    console.log('Password:', adminPassword);
+    console.log('You can now log in to the system with these credentials.');
     
     return true;
   } catch (err) {
-    console.error('Unexpected error:', err.message || err);
+    console.error('Unexpected error during admin creation:', err);
     return false;
   }
 }
 
 createAdminUser()
   .then(success => {
-    if (success) {
-      console.log('Admin user creation process completed successfully');
-    } else {
-      console.log('Admin user creation process failed');
-    }
     process.exit(success ? 0 : 1);
   })
   .catch(err => {
