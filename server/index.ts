@@ -4,7 +4,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase, testSupabaseConnection } from "./db"; // Import from our new db.ts file
 import { authenticateRequest } from "./auth"; // Import our new auth middleware
-import crypto from 'crypto';
+import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -22,7 +22,7 @@ const generateRandomString = (length = 32) => {
 
 // Use environment variable or generate a secure random secret
 const sessionSecret = process.env.SESSION_SECRET || 
-  `ThreadCraft-${generateRandomString(64)}-${Date.now()}`;
+  `ThreadCraft-${generateRandomString(32)}-${Date.now()}`;
 
 // Setup session middleware with improved security
 app.use(session({
