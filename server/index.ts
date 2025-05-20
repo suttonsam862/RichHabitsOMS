@@ -71,16 +71,23 @@ if (process.env.NODE_ENV === 'production' && canConnectToPg && process.env.USE_P
 
 // If PostgreSQL store failed or wasn't configured, use memory store with proper cleanup
 if (!pgStoreEnabled) {
-  console.log('Using enhanced memory session store');
-  sessionStore = new MemoryStoreClass({
-    checkPeriod: 86400000, // Prune expired entries every 24h
-    max: 1000, // Maximum number of sessions to store
-    ttl: 86400000, // Time to live in milliseconds (24h)
-    dispose: (key, value) => {
-      console.log(`Session expired: ${key.substring(0, 8)}...`);
-    },
-    stale: false // Delete stale sessions
-  });
+  try {
+    console.log('Using enhanced memory session store');
+    sessionStore = new MemoryStoreClass({
+      checkPeriod: 86400000, // Prune expired entries every 24h
+      max: 1000, // Maximum number of sessions to store
+      ttl: 86400000, // Time to live in milliseconds (24h)
+      dispose: (key, value) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Session expired: ${key.substring(0, 8)}...`);
+        }
+      },
+      stale: false // Delete stale sessions
+    });
+  } catch (err: any) {
+    console.warn('Error initializing enhanced memory store, falling back to default Express memory store');
+    sessionStore = undefined; // Default memory store will be used
+  }
 }
 
 // Setup session middleware with appropriate storage for the environment
@@ -90,8 +97,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    // Only use secure cookies when in production AND with HTTPS
-    secure: process.env.NODE_ENV === 'production' && process.env.SECURE_COOKIES === 'true',
+    // In production, Replit handles HTTPS - so we can set secure cookies
+    // But we provide an override in case the deployment platform doesn't support HTTPS
+    secure: process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax', // Prevents CSRF while allowing normal navigation
     httpOnly: true, // Prevents client-side JS from accessing the cookie
