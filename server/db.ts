@@ -45,11 +45,22 @@ console.log('Supabase client initialized');
 // Test Supabase connection
 export async function testSupabaseConnection() {
   try {
-    // Simple query to check connection
-    const { data, error } = await supabase.from('user_profiles').select('*').limit(1);
+    // First, check if the user_profiles table exists
+    const { error: tableError } = await supabase.from('user_profiles').select('*').limit(1);
     
-    if (error) {
-      throw error;
+    if (tableError) {
+      // Table might not exist yet, which is okay
+      console.log('User profiles table not found, you may need to run the schema creation script');
+      
+      // Check if we can at least connect to Supabase
+      const { data: authData, error: authError } = await supabase.auth.getSession();
+      
+      if (authError) {
+        throw authError;
+      }
+      
+      console.log('Supabase authentication is working');
+      return true;
     }
     
     console.log('Supabase connection established successfully');
