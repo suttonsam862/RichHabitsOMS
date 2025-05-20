@@ -266,9 +266,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get current user
   app.get('/api/auth/me', requireAuth, (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
+      });
+    }
+    
+    // Format the user data to match what the frontend expects
     return res.json({
       success: true,
-      user: req.user
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        username: req.user.username || req.user.email.split('@')[0], 
+        firstName: req.user.firstName || '',
+        lastName: req.user.lastName || '',
+        role: req.user.role || 'customer'
+      }
     });
   });
 

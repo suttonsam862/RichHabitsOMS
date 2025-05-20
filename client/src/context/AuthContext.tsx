@@ -133,9 +133,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       // Validate response format
-      if (!data.success || !data.user || !data.session || !data.session.token) {
+      if (!data.success || !data.user) {
         console.error("Invalid auth response format:", data);
         throw new Error("Invalid response from authentication server");
+      }
+      
+      // Check for session with token
+      if (!data.session?.token) {
+        console.warn("Response missing token, using fallback structure");
+        // Try to use alternate response structure
+        if (data.token) {
+          data.session = { token: data.token };
+        } else {
+          console.error("No token found in response");
+          throw new Error("Authentication failed - no token returned");
+        }
       }
 
       // Store token in localStorage for future auth checks
