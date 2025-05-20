@@ -302,76 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Attempting login for user: ${email}`);
 
-      // Check for admin credentials and bypass Supabase Auth
-      if (email === 'samsutton@rich-habits.com' && password === 'Arlodog2013!') {
-        console.log('Admin credentials detected, bypassing Supabase Auth for direct login');
-        
-        try {
-          // Hard-coded admin user data - using the data we already found in the database
-          // This way we don't depend on Supabase queries that might fail
-          const adminUser = {
-            id: "1e6c0028-13af-4fae-a2bc-f53b68ecba33",
-            email: "samsutton@rich-habits.com",
-            username: "samsutton",
-            role: "admin",
-            firstName: "Sam",
-            lastName: "Sutton"
-          };
-          
-          console.log('Using admin user data:', adminUser);
-          
-          // Generate a mock session token
-          const mockToken = Buffer.from(Date.now().toString() + email).toString('base64');
-          const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
-          
-          // Store session data
-          req.session.token = mockToken;
-          req.session.refreshToken = mockToken;
-          req.session.userId = adminUser.id;
-          
-          // Store user data in session
-          const userData = {
-            id: adminUser.id,
-            email: adminUser.email,
-            username: adminUser.username,
-            firstName: adminUser.firstName,
-            lastName: adminUser.lastName,
-            role: adminUser.role
-          };
-          
-          req.session.user = userData;
-          
-          console.log('Admin login successful, sending response');
-          
-          // Return success with admin user data
-          return res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            user: userData,
-            session: {
-              token: mockToken,
-              expires: expiresAt
-            }
-          });
-        } catch (adminErr) {
-          console.error('Error in admin login bypass:', adminErr);
-          // Continue with standard auth as fallback
-        }
-      }
-
-      // Standard Supabase Auth login for non-admin users
-      try {
-        const { data: sessionTest } = await supabase.auth.getSession();
-        console.log('Supabase connection verified, proceeding with login');
-      } catch (connErr) {
-        console.error('Supabase connection error:', connErr);
-        return res.status(500).json({
-          success: false,
-          message: 'Unable to connect to authentication service'
-        });
-      }
-
-      console.log('Sending login request to Supabase Auth');
+      // Authenticate with Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -379,12 +310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (error) {
         console.error('Supabase Auth login error:', error);
-        console.error('Error details:', error.message);
-        
         return res.status(401).json({ 
           success: false, 
-          message: 'Invalid login credentials',
-          details: error.message
+          message: 'Invalid login credentials'
         });
       }
 
@@ -397,25 +325,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`User authenticated successfully: ${data.user.id}`);
-      console.log('Session data:', data.session ? 'Present' : 'Missing');
 
       // Get user profile data from database to get role
-      console.log('Fetching user profile data');
+      console.log('Fetching user profile from users table using email:', email);
+      
+      // Query the users table (which has our application data)
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('role, firstName, lastName, username')
+        .select('id, role, firstName, lastName, username')
         .eq('email', email)
         .single();
 
       if (profileError) {
-        console.warn('Could not fetch user profile, using auth metadata role:', profileError.message);
+        console.warn('Could not fetch user profile:', profileError.message);
+        console.warn('This may indicate that you need to run the migration script in the Supabase SQL Editor');
+        console.warn('See SUPABASE_MIGRATION.md for the necessary SQL to set up your database');
       } else {
-        console.log('Found user profile data');
+        console.log('Found user profile data in users table:', profileData);
       }
 
       // Determine role from profile or metadata
       const role = profileData?.role || data.user.user_metadata?.role || 'customer';
-      console.log('User role:', role);
       
       // Store tokens in session
       req.session.token = data.session.access_token;
@@ -434,31 +364,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       req.session.user = userData;
       
-      console.log('Login successful, sending response');
-      
-      // Save session before sending response
-      req.session.save((err) => {
-        if (err) {
-          console.error('Error saving session:', err);
+      // Return success with user data
+      return res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        user: userData,
+        session: {
+          token: data.session.access_token,
+          expires: data.session.expires_at
         }
-        
-        // Return success with user data
-        return res.status(200).json({
-          success: true,
-          message: 'Login successful',
-          user: {
-            id: data.user.id,
-            email: data.user.email,
-            username: profileData?.username || data.user.user_metadata?.username || email.split('@')[0],
-            firstName: profileData?.firstName || data.user.user_metadata?.firstName,
-            lastName: profileData?.lastName || data.user.user_metadata?.lastName,
-            role
-          },
-          session: {
-            token: data.session.access_token,
-            expires: data.session.expires_at
-          }
-        });
       });
     } catch (err) {
       console.error('Unexpected login error:', err);
