@@ -7,8 +7,8 @@ declare module 'express-session' {
       token?: string;
       user?: {
         id: string;
-        email: string;
-        role: string;
+        email?: string;
+        role?: string;
       };
     };
   }

@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
+import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase, testSupabaseConnection } from "./db"; // Import from our new db.ts file
@@ -8,6 +9,7 @@ import { authenticateRequest } from "./auth"; // Import our new auth middleware
 import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
+import { URL } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,26 +27,60 @@ const generateRandomString = (length = 32) => {
 const sessionSecret = process.env.SESSION_SECRET || 
   `ThreadCraft-${generateRandomString(32)}-${Date.now()}`;
 
-// Initialize session store based on environment
-// For production, we'd use PostgreSQL, but for development we'll use memory store
-// since direct PostgreSQL connection to Supabase isn't available from external networks
-let sessionStore;
+// Configure enhanced memory store with proper memory management
+const MemoryStoreClass = MemoryStore(session);
 
-if (process.env.NODE_ENV === 'production' && process.env.USE_PG_SESSION === 'true') {
-  // Use PostgreSQL session store for production
-  const PgSessionStore = pgSession(session);
-  sessionStore = new PgSessionStore({
-    conString: process.env.DATABASE_URL,
-    tableName: 'session',
-    createTableIfMissing: true,
-    pruneSessionInterval: 60 * 15
+// Initialize session store based on environment
+let sessionStore;
+let pgStoreEnabled = false;
+
+// Safely check database URL connectivity before attempting to use PG session store
+const canConnectToPg = (() => {
+  try {
+    if (!process.env.DATABASE_URL) return false;
+    
+    // Parse the URL to check if it's a valid PostgreSQL URL
+    const dbUrl = new URL(process.env.DATABASE_URL);
+    return dbUrl.protocol === 'postgres:' || dbUrl.protocol === 'postgresql:';
+  } catch (error: any) {
+    console.warn('Invalid DATABASE_URL format:', error?.message || 'Unknown error');
+    return false;
+  }
+})();
+
+// Configure session store based on environment and connectivity
+if (process.env.NODE_ENV === 'production' && canConnectToPg && process.env.USE_PG_SESSION === 'true') {
+  try {
+    // Use PostgreSQL session store for production
+    const PgSessionStore = pgSession(session);
+    sessionStore = new PgSessionStore({
+      conString: process.env.DATABASE_URL,
+      tableName: 'user_sessions', // Changed to avoid conflicts with any existing 'session' table
+      createTableIfMissing: true,
+      pruneSessionInterval: 60 * 15, // 15 minutes
+      errorLog: console.error.bind(console)
+    });
+    pgStoreEnabled = true;
+    console.log('Using PostgreSQL session store');
+  } catch (error) {
+    console.error('Failed to initialize PostgreSQL session store:', error);
+    console.log('Falling back to memory store');
+    pgStoreEnabled = false;
+  }
+}
+
+// If PostgreSQL store failed or wasn't configured, use memory store with proper cleanup
+if (!pgStoreEnabled) {
+  console.log('Using enhanced memory session store');
+  sessionStore = new MemoryStoreClass({
+    checkPeriod: 86400000, // Prune expired entries every 24h
+    max: 1000, // Maximum number of sessions to store
+    ttl: 86400000, // Time to live in milliseconds (24h)
+    dispose: (key, value) => {
+      console.log(`Session expired: ${key.substring(0, 8)}...`);
+    },
+    stale: false // Delete stale sessions
   });
-  console.log('Using PostgreSQL session store');
-} else {
-  // Use memory store for development (note: this doesn't persist across restarts)
-  console.log('Using memory session store for development');
-  // Memory store is the default when no store is specified
-  sessionStore = undefined;
 }
 
 // Setup session middleware with appropriate storage for the environment
@@ -54,10 +90,12 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+    // Only use secure cookies when in production AND with HTTPS
+    secure: process.env.NODE_ENV === 'production' && process.env.SECURE_COOKIES === 'true',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax',
-    httpOnly: true
+    sameSite: 'lax', // Prevents CSRF while allowing normal navigation
+    httpOnly: true, // Prevents client-side JS from accessing the cookie
+    path: '/' // Makes cookie available for all routes
   },
   rolling: true // Refresh session with each request to prevent expiration
 }));
