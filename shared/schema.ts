@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, decimal, timestamp, pgEnum, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, decimal, timestamp, pgEnum, boolean, jsonb, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -37,40 +37,42 @@ export const messageStatusEnum = pgEnum('message_status', [
   'read'
 ]);
 
-// Users table
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  email: text('email').notNull().unique(),
+// User profiles table (linked to Supabase Auth)
+export const userProfiles = pgTable('user_profiles', {
+  id: uuid('id').primaryKey(), // References auth.users(id)
   username: text('username').notNull().unique(),
-  password: text('password').notNull(),
   firstName: text('first_name'),
   lastName: text('last_name'),
   role: roleEnum('role').notNull().default('customer'),
   phone: text('phone'),
   company: text('company'),
-  setupToken: text('setup_token'),
-  setupTokenExpires: timestamp('setup_token_expires'),
   createdAt: timestamp('created_at').defaultNow(),
   stripeCustomerId: text('stripe_customer_id'),
 });
 
 // Customers table
 export const customers = pgTable('customers', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').notNull().references(() => users.id),
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => userProfiles.id, { onDelete: 'cascade' }),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text('email').notNull().unique(),
+  phone: text('phone'),
+  company: text('company'),
   address: text('address'),
   city: text('city'),
   state: text('state'),
   zip: text('zip'),
   country: text('country'),
+  createdAt: timestamp('created_at').defaultNow()
 });
 
 // Orders table
 export const orders = pgTable('orders', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   orderNumber: text('order_number').notNull().unique(),
-  customerId: integer('customer_id').notNull().references(() => customers.id),
-  salespersonId: integer('salesperson_id').references(() => users.id),
+  customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  salespersonId: uuid('salesperson_id').references(() => userProfiles.id),
   status: orderStatusEnum('status').notNull().default('draft'),
   totalAmount: decimal('total_amount').notNull().default('0'),
   tax: decimal('tax').notNull().default('0'),
@@ -84,22 +86,22 @@ export const orders = pgTable('orders', {
 
 // Order items
 export const orderItems = pgTable('order_items', {
-  id: serial('id').primaryKey(),
-  orderId: integer('order_id').notNull().references(() => orders.id),
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   productName: text('product_name').notNull(),
   description: text('description'),
   size: text('size'),
   color: text('color'),
-  quantity: integer('quantity').notNull().default(1),
+  quantity: decimal('quantity').notNull().default('1'),
   unitPrice: decimal('unit_price').notNull(),
   totalPrice: decimal('total_price').notNull(),
 });
 
 // Design tasks
 export const designTasks = pgTable('design_tasks', {
-  id: serial('id').primaryKey(),
-  orderId: integer('order_id').notNull().references(() => orders.id),
-  designerId: integer('designer_id').references(() => users.id),
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  designerId: uuid('designer_id').references(() => userProfiles.id),
   status: taskStatusEnum('status').notNull().default('pending'),
   description: text('description'),
   notes: text('notes'),
@@ -110,20 +112,20 @@ export const designTasks = pgTable('design_tasks', {
 
 // Design files
 export const designFiles = pgTable('design_files', {
-  id: serial('id').primaryKey(),
-  designTaskId: integer('design_task_id').notNull().references(() => designTasks.id),
+  id: uuid('id').primaryKey().defaultRandom(),
+  designTaskId: uuid('design_task_id').notNull().references(() => designTasks.id, { onDelete: 'cascade' }),
   filename: text('filename').notNull(),
   fileType: text('file_type').notNull(),
   filePath: text('file_path').notNull(),
-  uploadedBy: integer('uploaded_by').notNull().references(() => users.id),
+  uploadedBy: uuid('uploaded_by').notNull().references(() => userProfiles.id),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
 // Production tasks
 export const productionTasks = pgTable('production_tasks', {
-  id: serial('id').primaryKey(),
-  orderId: integer('order_id').notNull().references(() => orders.id),
-  manufacturerId: integer('manufacturer_id').references(() => users.id),
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  manufacturerId: uuid('manufacturer_id').references(() => userProfiles.id),
   status: taskStatusEnum('status').notNull().default('pending'),
   description: text('description'),
   notes: text('notes'),
@@ -134,15 +136,15 @@ export const productionTasks = pgTable('production_tasks', {
 
 // Messages
 export const messages = pgTable('messages', {
-  id: serial('id').primaryKey(),
-  senderId: integer('sender_id').notNull().references(() => users.id),
-  receiverId: integer('receiver_id').notNull().references(() => users.id),
+  id: uuid('id').primaryKey().defaultRandom(),
+  senderId: uuid('sender_id').notNull().references(() => userProfiles.id),
+  receiverId: uuid('receiver_id').notNull().references(() => userProfiles.id),
   subject: text('subject'),
   content: text('content').notNull(),
   status: messageStatusEnum('status').notNull().default('sent'),
-  orderId: integer('order_id').references(() => orders.id),
-  designTaskId: integer('design_task_id').references(() => designTasks.id),
-  productionTaskId: integer('production_task_id').references(() => productionTasks.id),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }),
+  designTaskId: uuid('design_task_id').references(() => designTasks.id),
+  productionTaskId: uuid('production_task_id').references(() => productionTasks.id),
   createdAt: timestamp('created_at').defaultNow(),
   readAt: timestamp('read_at'),
   emailSent: boolean('email_sent').default(false),
@@ -150,8 +152,8 @@ export const messages = pgTable('messages', {
 
 // Payments
 export const payments = pgTable('payments', {
-  id: serial('id').primaryKey(),
-  orderId: integer('order_id').notNull().references(() => orders.id),
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   amount: decimal('amount').notNull(),
   status: paymentStatusEnum('status').notNull().default('pending'),
   method: text('method'),
@@ -165,40 +167,40 @@ export const payments = pgTable('payments', {
 
 // Inventory
 export const inventory = pgTable('inventory', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   itemName: text('item_name').notNull(),
   category: text('category').notNull(),
   size: text('size'),
   color: text('color'),
-  quantity: integer('quantity').notNull().default(0),
-  minQuantity: integer('min_quantity').default(10),
+  quantity: decimal('quantity').notNull().default('0'),
+  minQuantity: decimal('min_quantity').default('10'),
   notes: text('notes'),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 // Activity logs
 export const activityLogs = pgTable('activity_logs', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').references(() => users.id),
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => userProfiles.id),
   action: text('action').notNull(),
   entityType: text('entity_type').notNull(),
-  entityId: integer('entity_id'),
+  entityId: uuid('entity_id'),
   details: jsonb('details'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
 // User settings
 export const userSettings = pgTable('user_settings', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').notNull().references(() => users.id).unique(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => userProfiles.id, { onDelete: 'cascade' }).unique(),
   emailNotifications: boolean('email_notifications').default(true),
   theme: text('theme').default('light'),
   preferences: jsonb('preferences').default({}),
 });
 
 // Create insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, stripeCustomerId: true });
-export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true });
+export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({ createdAt: true, stripeCustomerId: true });
+export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true });
 export const insertDesignTaskSchema = createInsertSchema(designTasks).omit({ id: true, createdAt: true, updatedAt: true });
@@ -208,8 +210,8 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Define types for inserting and selecting
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
 
 export type Customer = typeof customers.$inferSelect;
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
@@ -243,12 +245,16 @@ export const loginSchema = z.object({
 
 export type LoginData = z.infer<typeof loginSchema>;
 
-// Registration schema
-export const registerSchema = insertUserSchema.extend({
-  confirmPassword: z.string().min(6),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+// Registration schema (without password fields since Supabase Auth manages that)
+export const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  username: z.string().min(3),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  role: roleEnum,
+  phone: z.string().optional(),
+  company: z.string().optional(),
 });
 
 export type RegisterData = z.infer<typeof registerSchema>;

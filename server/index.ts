@@ -1,8 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { supabase } from "./supabase"; // Import Supabase client
-import { initializeDatabase } from "./supabase-init"; // Use Supabase initialization
+import { supabase, testSupabaseConnection } from "./db"; // Import from our new db.ts file
+import { authenticateRequest } from "./auth"; // Import our new auth middleware
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -13,6 +14,21 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Setup session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'custom-clothing-app-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Add authentication middleware
+app.use(authenticateRequest);
+
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -46,16 +62,15 @@ app.use((req, res, next) => {
 (async () => {
   try {
     // Verify Supabase connection
-    const { error } = await supabase.from('users').select('count').limit(1);
-    if (error) {
-      console.warn("Supabase connection check:", error.message);
+    console.log("Checking database initialization state with Supabase client...");
+    const connected = await testSupabaseConnection();
+    
+    if (!connected) {
+      console.warn("Supabase connection failed. Please check your environment variables and database setup.");
       console.log("Will continue and retry connection as needed");
     } else {
       console.log("Supabase connection verified successfully");
     }
-    
-    // Initialize database safely (won't wipe existing data)
-    await initializeDatabase();
     
     // Register API routes first
     const server = await registerRoutes(app);

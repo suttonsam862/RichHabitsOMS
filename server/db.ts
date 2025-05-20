@@ -1,48 +1,60 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from "@shared/schema";
+import { createClient } from '@supabase/supabase-js';
+import * as schema from '../shared/schema';
 
-// Check for database connection string
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set for Supabase connection"
-  );
+// Validate required environment variables
+if (!process.env.SUPABASE_URL) {
+  throw new Error('SUPABASE_URL environment variable is not set');
 }
 
-// For Supabase connection
-console.log("Connecting to Supabase PostgreSQL database...");
+if (!process.env.SUPABASE_ANON_KEY) {
+  throw new Error('SUPABASE_ANON_KEY environment variable is not set');
+}
 
-// Parse connection details from env variable
-const SUPABASE_URL = "postgresql://postgres:Arlodog2013!@db.qzllffhidxeskqlugpwc.supabase.co:5432/postgres";
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
 
-// Use explicit connection details to avoid DNS issues
-const parsedUrl = new URL(SUPABASE_URL);
+// Connection to Supabase PostgreSQL database
 const connectionConfig = {
-  user: parsedUrl.username || 'postgres',
-  password: parsedUrl.password || 'Arlodog2013!',
-  host: parsedUrl.hostname || 'db.qzllffhidxeskqlugpwc.supabase.co',
-  port: parseInt(parsedUrl.port || '5432', 10),
-  database: parsedUrl.pathname.substring(1) || 'postgres',
-  ssl: { rejectUnauthorized: false },
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 };
 
-console.log(`Connecting to database host: ${connectionConfig.host}`);
+console.log('Connecting to Supabase PostgreSQL database...');
+console.log(`Connecting to database host: ${new URL(process.env.DATABASE_URL).hostname}`);
 
-// Create connection pool
+// Create PostgreSQL pool
 export const pool = new Pool(connectionConfig);
 
-// Verify database connection
-pool.on('connect', () => {
-  console.log('Connected to Supabase PostgreSQL database successfully');
-});
-
-pool.on('error', (err) => {
-  console.error('Supabase database connection error:', err);
-  // Don't crash on connection errors
-  console.log('Will retry connection on next request');
-});
-
-// Create Drizzle instance
+// Initialize Drizzle ORM with our schema
 export const db = drizzle(pool, { schema });
+
+// Initialize Supabase client for Auth and Storage
+console.log('Connecting to Supabase...');
+console.log(`URL: ${process.env.SUPABASE_URL}`);
+
+export const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
+
+console.log('Supabase client initialized');
+
+// Test Supabase connection
+export async function testSupabaseConnection() {
+  try {
+    const { data, error } = await supabase.from('user_profiles').select('count(*)').limit(1);
+    
+    if (error) {
+      throw error;
+    }
+    
+    console.log('Supabase connection established successfully');
+    return true;
+  } catch (err) {
+    console.error('Error connecting to Supabase:', err);
+    return false;
+  }
+}
