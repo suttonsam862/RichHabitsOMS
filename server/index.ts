@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import pgSession from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase, testSupabaseConnection } from "./db"; // Import from our new db.ts file
@@ -24,8 +25,31 @@ const generateRandomString = (length = 32) => {
 const sessionSecret = process.env.SESSION_SECRET || 
   `ThreadCraft-${generateRandomString(32)}-${Date.now()}`;
 
-// Setup session middleware with improved security
+// Initialize session store based on environment
+// For production, we'd use PostgreSQL, but for development we'll use memory store
+// since direct PostgreSQL connection to Supabase isn't available from external networks
+let sessionStore;
+
+if (process.env.NODE_ENV === 'production' && process.env.USE_PG_SESSION === 'true') {
+  // Use PostgreSQL session store for production
+  const PgSessionStore = pgSession(session);
+  sessionStore = new PgSessionStore({
+    conString: process.env.DATABASE_URL,
+    tableName: 'session',
+    createTableIfMissing: true,
+    pruneSessionInterval: 60 * 15
+  });
+  console.log('Using PostgreSQL session store');
+} else {
+  // Use memory store for development (note: this doesn't persist across restarts)
+  console.log('Using memory session store for development');
+  // Memory store is the default when no store is specified
+  sessionStore = undefined;
+}
+
+// Setup session middleware with appropriate storage for the environment
 app.use(session({
+  store: sessionStore,
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
@@ -35,7 +59,7 @@ app.use(session({
     sameSite: 'lax',
     httpOnly: true
   },
-  rolling: true
+  rolling: true // Refresh session with each request to prevent expiration
 }));
 
 // Add authentication middleware
