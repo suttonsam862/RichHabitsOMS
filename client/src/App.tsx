@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/components/auth/RequireAuth";
-import DashboardRouter from "@/pages/DashboardRouter";
+import DashboardPage from "@/pages/DashboardPage";
 
 // Dashboard components
 import AdminDashboard from "@/pages/dashboard/AdminDashboard";
@@ -62,7 +62,7 @@ function App() {
                 path="/dashboard" 
                 element={
                   <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
-                    <DashboardRouter />
+                    <DashboardPage />
                   </RequireAuth>
                 } 
               />

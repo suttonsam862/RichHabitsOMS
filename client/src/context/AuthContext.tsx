@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
 import { apiRequest } from "@/lib/queryClient";
-import { useLocation } from "wouter";
+// Using window.location instead of useLocation for consistent navigation
 
 interface User {
   id: number;
@@ -38,7 +38,7 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [, setLocation] = useLocation();
+  // Removed wouter dependency
 
   // Check if user is already authenticated
   useEffect(() => {
