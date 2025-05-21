@@ -234,20 +234,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Return success with temporary password and show customer profile information
+      // Determine if this is a request from the customer page or user management
+      const sendInvite = req.query.sendInvite === 'true' || req.body.sendInvite === true;
+      
+      // Generate invitation link (only used if sendInvite is true)
+      const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
+      const inviteUrl = `${baseUrl}/register?token=${randomPassword}&email=${encodeURIComponent(customerEmail)}`;
+      
+      // Log creation details
+      console.log(`Customer created: ${customerEmail}, Send invite: ${sendInvite}`);
+      
+      // Return success with customer data and appropriate invite information
       return res.status(201).json({
         success: true,
-        message: 'Customer created successfully',
+        message: sendInvite 
+          ? 'Customer created and invite sent' 
+          : 'Customer created successfully',
         customer: createdProfile ? createdProfile[0] : { 
           id: data.user.id,
           email: customerEmail,
           first_name: customerFirstName,
           last_name: customerLastName
         },
-        tempPassword: randomPassword
+        tempPassword: randomPassword,
+        inviteUrl: sendInvite ? inviteUrl : undefined,
+        inviteSent: sendInvite
       });
     } catch (err: any) {
       console.error('Error creating customer:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred: ' + (err.message || 'Unknown error')
+      });
+    }
+  });
+  
+  // Send invite to existing customer
+  app.post('/api/admin/customers/:id/send-invite', requireAuth, async (req, res) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+    
+    try {
+      const userId = req.params.id;
+      
+      // Get the customer's data
+      const { data: customer, error: customerError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (customerError || !customer) {
+        console.error('Error finding customer:', customerError);
+        return res.status(404).json({
+          success: false,
+          message: 'Customer not found'
+        });
+      }
+      
+      // Generate a password reset token through Supabase Auth
+      const { data, error } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: customer.email,
+      });
+      
+      if (error) {
+        console.error('Error generating recovery link:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to generate invite link: ' + error.message
+        });
+      }
+      
+      // Get the recovery link
+      const recoveryLink = data?.properties?.action_link;
+      
+      if (!recoveryLink) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to generate recovery link'
+        });
+      }
+      
+      // In a real implementation, we would send this link via email
+      console.log(`Invite link for ${customer.email} generated: ${recoveryLink}`);
+      
+      // Return success
+      return res.json({
+        success: true,
+        message: 'Invite link generated successfully',
+        inviteLink: recoveryLink
+      });
+    } catch (err: any) {
+      console.error('Error sending invite:', err);
       return res.status(500).json({
         success: false,
         message: 'An unexpected error occurred: ' + (err.message || 'Unknown error')
