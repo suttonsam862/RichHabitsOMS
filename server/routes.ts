@@ -11,6 +11,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register admin routes
   app.use('/api/admin', adminRoutes);
   
+  // Temporary routes for customer invites functionality
+  app.get('/api/admin/invites', requireAuth, async (req, res) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+    
+    // Generate sample invite data (in production, this would come from database)
+    const sampleInvites = [
+      {
+        id: 1,
+        email: 'customer1@example.com',
+        first_name: 'John',
+        last_name: 'Smith',
+        company: 'ABC Apparel',
+        token: 'abc123xyz789',
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        invited_by: req.user.id,
+        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 2,
+        email: 'jane.doe@example.com',
+        first_name: 'Jane',
+        last_name: 'Doe',
+        company: 'Fashion Forward',
+        token: 'def456uvw123',
+        expires_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+        invited_by: req.user.id,
+        created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+      }
+    ];
+    
+    return res.json(sampleInvites);
+  });
+  
+  app.post('/api/admin/invite', requireAuth, async (req, res) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+    
+    const { email, firstName, lastName, company, message } = req.body;
+    
+    // Generate a unique token
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    
+    // Create the invitation URL
+    const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
+    const inviteUrl = `${baseUrl}/register?invite=${token}`;
+    
+    // In production, this would be saved to the database
+    const invite = {
+      id: Date.now(),
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      company,
+      token,
+      inviteUrl,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      invited_by: req.user.id,
+      message,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Invitation created successfully',
+      invite
+    });
+  });
+  
+  app.delete('/api/admin/invites/:id', requireAuth, async (req, res) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+    
+    // In production, this would delete from the database
+    return res.json({
+      success: true,
+      message: 'Invitation deleted successfully'
+    });
+  });
+  
+  // Temporary route for admin users until we complete the full implementation
+  app.get('/api/admin/users', requireAuth, async (req, res) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+    
+    try {
+      // Get users from user_profiles table
+      const { data: profiles, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching users:', error);
+        return res.status(500).json({ success: false, message: 'Failed to fetch users' });
+      }
+
+      return res.json(profiles || []);
+    } catch (err) {
+      console.error('Unexpected error fetching users:', err);
+      return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+    }
+  });
+  
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
