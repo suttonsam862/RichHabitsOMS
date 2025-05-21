@@ -102,13 +102,7 @@ export function AppLayout() {
       current: location.pathname === '/admin/oversight',
       roles: ['admin'],
     },
-    {
-      name: 'Customer Management',
-      href: '/admin/customers',
-      icon: Users,
-      current: location.pathname === '/admin/customers',
-      roles: ['admin'],
-    },
+    // Customer Management entry removed as it was redundant
     {
       name: 'Analytics',
       href: '/admin/analytics',
