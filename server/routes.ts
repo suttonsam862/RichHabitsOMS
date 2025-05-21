@@ -364,6 +364,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
   });
+  
+  // Special endpoint to create a test user for Sam Sutton (temporary, for testing)
+  app.post('/api/create-sam-test-user', async (req, res) => {
+    try {
+      const email = 'suttonsam862@gmail.com';
+      const password = 'TestPassword123!';
+      
+      // Check if user already exists
+      // Use a query that works with the current Supabase API
+      const { data: existingUsers, error: lookupError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('email', email)
+        .limit(1);
+      
+      const existingUser = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
+      
+      if (existingUser) {
+        return res.json({
+          success: true,
+          message: 'Test user already exists',
+          user: { id: existingUser.id, email }
+        });
+      }
+      
+      // Create user in Supabase Auth
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          firstName: 'Sam',
+          lastName: 'Sutton',
+          role: 'customer'
+        }
+      });
+      
+      if (error) {
+        console.error('Error creating test user:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create test user: ' + error.message
+        });
+      }
+      
+      if (!data?.user) {
+        return res.status(500).json({
+          success: false,
+          message: 'Unknown error creating test user'
+        });
+      }
+      
+      // Create user profile
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: data.user.id,
+          username: 'samsutton123',
+          email,
+          first_name: 'Sam',
+          last_name: 'Sutton',
+          role: 'customer',
+          company: 'Test Company',
+          phone: '2055869574',
+          address: '204 Virginia Drive',
+          city: 'Birmingham',
+          state: 'AL',
+          postal_code: '35209',
+          country: 'United States'
+        });
+      
+      if (profileError) {
+        console.error('Error creating test user profile:', profileError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create test user profile: ' + profileError.message
+        });
+      }
+      
+      // Generate a password reset link
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+      });
+      
+      const recoveryLink = linkData?.properties?.action_link;
+      
+      return res.json({
+        success: true,
+        message: 'Test user created successfully',
+        user: { id: data.user.id, email },
+        password,
+        recoveryLink
+      });
+    } catch (err: any) {
+      console.error('Error in test user creation:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred: ' + (err.message || 'Unknown error')
+      });
+    }
+  });
 
   // Authentication routes
   app.post('/api/auth/login', async (req, res) => {
