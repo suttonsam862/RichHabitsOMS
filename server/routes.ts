@@ -130,9 +130,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { email, firstName, lastName, company, phone } = req.body;
+      // Handle different field naming conventions from different forms
+      const { 
+        email, firstName, lastName, company, phone,
+        emailAddress, first_name, last_name, 
+        address, city, state, zip, country 
+      } = req.body;
       
-      if (!email || !firstName || !lastName) {
+      // Normalize field names
+      const customerEmail = email || emailAddress;
+      const customerFirstName = firstName || first_name;
+      const customerLastName = lastName || last_name;
+      const customerCompany = company;
+      const customerPhone = phone;
+      
+      // Add additional address fields if present
+      const additionalData: Record<string, any> = {};
+      if (address) additionalData.address = address;
+      if (city) additionalData.city = city;
+      if (state) additionalData.state = state;
+      if (zip) additionalData.zip = zip;
+      if (country) additionalData.country = country;
+      
+      if (!customerEmail || !customerFirstName || !customerLastName) {
         return res.status(400).json({
           success: false,
           message: 'Email, first name, and last name are required'
@@ -145,13 +165,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.admin.createUser({
-        email,
+        email: customerEmail,
         password: randomPassword,
         email_confirm: true,
         user_metadata: {
-          firstName,
-          lastName,
-          role: 'customer'
+          firstName: customerFirstName,
+          lastName: customerLastName,
+          role: 'customer',
+          ...additionalData
         }
       });
       
@@ -171,21 +192,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create username from first and last name
-      const username = (firstName + lastName).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const username = (customerFirstName + customerLastName).toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      // Prepare additional data for user profile
+      const profileData: Record<string, any> = {
+        id: data.user.id,
+        username: username + Math.floor(Math.random() * 1000), // Add random number to ensure uniqueness
+        email: customerEmail,
+        first_name: customerFirstName,
+        last_name: customerLastName,
+        role: 'customer'
+      };
+      
+      // Add optional fields if they exist
+      if (customerCompany) profileData.company = customerCompany;
+      if (customerPhone) profileData.phone = customerPhone;
+      if (address) profileData.address = address;
+      if (city) profileData.city = city;
+      if (state) profileData.state = state;
+      if (zip) profileData.postal_code = zip;
+      if (country) profileData.country = country;
+      
+      // Log what we're inserting
+      console.log('Creating customer profile with data:', profileData);
       
       // Create customer profile
-      const { data: profileData, error: profileError } = await supabase
+      const { data: createdProfile, error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          id: data.user.id,
-          username: username + Math.floor(Math.random() * 1000), // Add random number to ensure uniqueness
-          email,
-          first_name: firstName,
-          last_name: lastName,
-          role: 'customer',
-          company,
-          phone
-        })
+        .insert(profileData)
         .select();
       
       if (profileError) {
@@ -200,11 +234,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Return success with temporary password (in a real app, this would be emailed)
+      // Return success with temporary password and show customer profile information
       return res.status(201).json({
         success: true,
         message: 'Customer created successfully',
-        customer: profileData[0],
+        customer: createdProfile ? createdProfile[0] : { 
+          id: data.user.id,
+          email: customerEmail,
+          first_name: customerFirstName,
+          last_name: customerLastName
+        },
         tempPassword: randomPassword
       });
     } catch (err: any) {
