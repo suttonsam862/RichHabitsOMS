@@ -1,10 +1,11 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
 import { createServer, Server } from 'http';
 import { WebSocketServer } from 'ws';
 import { z } from 'zod';
 import { loginSchema, registerSchema } from '../shared/schema';
 import { supabase } from './db';
 import { requireAuth, requireRole } from './auth';
+import adminRoutes from './routes/admin';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
