@@ -11,8 +11,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!loading) {
-      if (role) {
-        // Set redirect to the appropriate dashboard based on role
+      console.log("Dashboard deciding where to route user with role:", role);
+      
+      if (role === 'admin') {
+        // Admin users go to admin dashboard
+        console.log("Routing to admin dashboard");
+        setRedirectPath('/dashboard/admin');
+      } else if (role) {
+        // Set redirect to the appropriate dashboard based on other roles
+        console.log(`Routing to ${role} dashboard`);
         setRedirectPath(`/dashboard/${role}`);
       } else if (user) {
         // If no role, default to customer
@@ -20,6 +27,7 @@ export default function DashboardPage() {
         setRedirectPath("/dashboard/customer");
       } else {
         // No user, go to login
+        console.log("No authenticated user, redirecting to login");
         setRedirectPath("/login");
       }
     }

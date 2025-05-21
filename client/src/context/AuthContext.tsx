@@ -70,10 +70,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
         
         const userData = await res.json();
-        if (userData) {
+        if (userData && userData.success && userData.user) {
           console.log('User session validated successfully');
-          setUser(userData);
+          console.log('Already authenticated as:', userData.user.role);
+          setUser(userData.user);
         } else {
+          console.log('Invalid user data received');
           setUser(null);
         }
       } catch (error) {
