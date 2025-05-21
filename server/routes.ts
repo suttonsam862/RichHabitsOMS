@@ -54,6 +54,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`User authenticated successfully: ${data.user.id}`);
       
+      // Check if the user has role in metadata first (this has priority)
+      const userMetadataRole = data.user.user_metadata?.role;
+      const isSuperAdmin = data.user.user_metadata?.is_super_admin === true;
+      
+      console.log('User metadata from Supabase Auth:', data.user.user_metadata);
+      
       // Get user profile data
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
@@ -62,17 +68,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .single();
       
       let userProfile = profileData;
+      let userRole = userMetadataRole || (profileData?.role || 'customer');
+      
+      // If user is marked as super admin in metadata, ensure role is admin
+      if (isSuperAdmin) {
+        userRole = 'admin';
+        console.log('User is a super admin, setting role to admin');
+      }
       
       if (profileError) {
         console.warn('Could not fetch user profile, creating minimal profile');
         
-        // Profile doesn't exist, create it
+        // Profile doesn't exist, create it - use the role from metadata if available
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
           .insert({
             id: data.user.id,
             username: email.split('@')[0],
-            role: 'customer',
+            role: userRole,
             firstName: data.user.user_metadata?.firstName,
             lastName: data.user.user_metadata?.lastName
           })
@@ -93,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: {
             id: data.user.id,
             email: data.user.email || '',
-            role: userProfile?.role || 'customer'
+            role: userRole
           }
         };
       }
@@ -108,7 +121,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: profileData?.username || email.split('@')[0],
           firstName: profileData?.firstName || data.user.user_metadata?.firstName,
           lastName: profileData?.lastName || data.user.user_metadata?.lastName,
-          role: profileData?.role || 'customer'
+          role: userRole,
+          isSuperAdmin: isSuperAdmin
         },
         session: {
           token: data.session.access_token,
@@ -265,12 +279,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current user
-  app.get('/api/auth/me', requireAuth, (req, res) => {
+  app.get('/api/auth/me', requireAuth, async (req, res) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
         message: 'Not authenticated'
       });
+    }
+    
+    // Get the latest user data from Supabase Auth to check metadata
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    
+    let isSuperAdmin = false;
+    let userRole = req.user.role || 'customer';
+    
+    if (token) {
+      try {
+        const { data: userData, error } = await supabase.auth.getUser(token);
+        
+        if (!error && userData?.user) {
+          // Check for super admin flag in metadata
+          isSuperAdmin = userData.user.user_metadata?.is_super_admin === true;
+          const metadataRole = userData.user.user_metadata?.role;
+          
+          // If user is super admin or has admin role in metadata, set role to admin
+          if (isSuperAdmin || metadataRole === 'admin') {
+            userRole = 'admin';
+            console.log('User has admin privileges from auth metadata');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user metadata:', err);
+      }
     }
     
     // Format the user data to match what the frontend expects
@@ -282,7 +323,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: req.user.username || req.user.email.split('@')[0], 
         firstName: req.user.firstName || '',
         lastName: req.user.lastName || '',
-        role: req.user.role || 'customer'
+        role: userRole,
+        isSuperAdmin: isSuperAdmin
       }
     });
   });
