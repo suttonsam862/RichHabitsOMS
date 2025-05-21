@@ -39,6 +39,8 @@ import AdminOversightDashboard from "@/pages/AdminOversightDashboard";
 import CustomerListPage from "@/pages/admin/CustomerListPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
 import AnalyticsPage from "@/pages/admin/AnalyticsPage";
+import CustomerInvitesPage from "@/pages/admin/CustomerInvitesPage";
+import NewOrderInquiriesPage from "@/pages/admin/NewOrderInquiriesPage";
 
 function App() {
   return (
@@ -242,6 +244,24 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin']}>
                       <AnalyticsPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/invites" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                      <CustomerInvitesPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/inquiries" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                      <NewOrderInquiriesPage />
                     </RequireAuth>
                   } 
                 />

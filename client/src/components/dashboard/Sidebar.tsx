@@ -16,7 +16,10 @@ import {
   Shirt,
   ChevronDown,
   Menu,
-  X
+  X,
+  Mail,
+  FileText,
+  PlusCircle
 } from "lucide-react";
 
 // Navigation items for different roles
@@ -24,14 +27,18 @@ const navigationItems = {
   admin: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Orders", href: "/orders", icon: ShoppingBag },
+    { name: "Customer Invites", href: "/admin/invites", icon: Mail },
+    { name: "Order Inquiries", href: "/admin/inquiries", icon: FileText },
     { name: "Users", href: "/users", icon: Users },
     { name: "Task Assignment", href: "/tasks", icon: Brush },
     { name: "Reports", href: "/reports", icon: BarChart },
-    { name: "Settings", href: "/settings", icon: Settings },
+    { name: "Settings", href: "/admin/settings", icon: Settings },
   ],
   salesperson: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Orders", href: "/orders", icon: ShoppingBag },
+    { name: "Customer Invites", href: "/admin/invites", icon: Mail },
+    { name: "Order Inquiries", href: "/admin/inquiries", icon: FileText },
     { name: "Customers", href: "/customers", icon: Users },
     { name: "Messages", href: "/messages", icon: MessageSquare },
   ],

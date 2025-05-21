@@ -8,6 +8,9 @@ import { requireAuth, requireRole } from './auth';
 import adminRoutes from './routes/admin';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register admin routes
+  app.use('/api/admin', adminRoutes);
+  
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
