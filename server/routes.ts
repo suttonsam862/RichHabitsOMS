@@ -97,6 +97,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Customer management routes
+  app.get('/api/admin/customers', requireAuth, async (req, res) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+    
+    try {
+      // Get users from user_profiles table where role is customer
+      const { data: profiles, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('role', 'customer')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching customers:', error);
+        return res.status(500).json({ success: false, message: 'Failed to fetch customers' });
+      }
+
+      return res.json(profiles || []);
+    } catch (err) {
+      console.error('Unexpected error fetching customers:', err);
+      return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+    }
+  });
+  
+  // Create new customer
+  app.post('/api/admin/customers', requireAuth, async (req, res) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+    
+    try {
+      const { email, firstName, lastName, company, phone } = req.body;
+      
+      if (!email || !firstName || !lastName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email, first name, and last name are required'
+        });
+      }
+      
+      // Generate a random password (in a real app, we would send this via email)
+      const randomPassword = Math.random().toString(36).substring(2, 10) + 
+                           Math.random().toString(36).substring(2, 10);
+      
+      // Create user in Supabase Auth
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        password: randomPassword,
+        email_confirm: true,
+        user_metadata: {
+          firstName,
+          lastName,
+          role: 'customer'
+        }
+      });
+      
+      if (error) {
+        console.error('Error creating customer in Supabase Auth:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create customer account: ' + error.message
+        });
+      }
+      
+      if (!data?.user) {
+        return res.status(500).json({
+          success: false,
+          message: 'Unknown error creating customer account'
+        });
+      }
+      
+      // Create username from first and last name
+      const username = (firstName + lastName).toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      // Create customer profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: data.user.id,
+          username: username + Math.floor(Math.random() * 1000), // Add random number to ensure uniqueness
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          role: 'customer',
+          company,
+          phone
+        })
+        .select();
+      
+      if (profileError) {
+        console.error('Error creating customer profile:', profileError);
+        
+        // Try to clean up the auth user since profile creation failed
+        await supabase.auth.admin.deleteUser(data.user.id);
+        
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create customer profile: ' + profileError.message
+        });
+      }
+      
+      // Return success with temporary password (in a real app, this would be emailed)
+      return res.status(201).json({
+        success: true,
+        message: 'Customer created successfully',
+        customer: profileData[0],
+        tempPassword: randomPassword
+      });
+    } catch (err: any) {
+      console.error('Error creating customer:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred: ' + (err.message || 'Unknown error')
+      });
+    }
+  });
+  
   // Temporary route for admin users until we complete the full implementation
   app.get('/api/admin/users', requireAuth, async (req, res) => {
     if (req.user?.role !== 'admin') {
