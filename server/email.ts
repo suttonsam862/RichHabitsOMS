@@ -1,14 +1,6 @@
-import { MailService } from '@sendgrid/mail';
-
-// Initialize SendGrid mail service
-const mailService = new MailService();
-
-// Check if the SendGrid API key is available
-if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-} else {
-  console.warn('SENDGRID_API_KEY not found. Email functionality will be limited.');
-}
+// Simple email service abstraction
+// This could be replaced with any email service implementation in the future
+// Currently operates in "mock" mode by default, just logging what would be sent
 
 interface EmailOptions {
   to: string;
@@ -19,31 +11,23 @@ interface EmailOptions {
 }
 
 /**
- * Send an email using SendGrid
+ * Mock email sending function
+ * In a production environment, this would connect to a real email service
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
-    // Default sender email
-    const from = options.from || 'noreply@threadcraft.com';
-
-    if (!process.env.SENDGRID_API_KEY) {
-      console.warn('Cannot send email: SendGrid API key not configured.');
-      console.log('Would have sent:', { ...options, from });
-      return false;
-    }
-
-    await mailService.send({
+    // Just log the email details for now
+    console.log('Email would be sent:', {
       to: options.to,
-      from,
       subject: options.subject,
-      text: options.text,
-      html: options.html || options.text,
+      textLength: options.text.length,
+      hasHtml: !!options.html
     });
-
-    console.log(`Email sent to ${options.to}`);
+    
+    // Always return true in mock mode since there's no actual sending
     return true;
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error('Email service error:', error);
     return false;
   }
 }

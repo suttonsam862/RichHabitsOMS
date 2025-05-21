@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { supabase } from '../db';
 import { requireAuth, requireRole } from '../auth';
 import { hash } from 'bcrypt';
+import { sendEmail, getCustomerInviteEmailTemplate } from '../email';
 
 const router = Router();
 
@@ -404,14 +405,24 @@ router.post('/invite', requireAuth, requireRole(['admin', 'salesperson']), async
       });
     }
     
-    // Send invitation email
-    // In a real implementation, this would use SendGrid or similar email service
-    // For now, we'll just return success
+    // Generate invitation link
+    const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
+    const inviteUrl = `${baseUrl}/register?invite=${token}`;
+    
+    // Log invitation for reference
+    console.log(`Invitation created for ${email} with token ${token}`);
+    console.log(`Invitation URL: ${inviteUrl}`);
+    
+    // Add the URL to the invite data for the response
+    const inviteWithUrl = {
+      ...inviteData[0],
+      inviteUrl
+    };
     
     return res.status(201).json({
       success: true,
-      message: 'Invitation sent successfully',
-      invite: inviteData[0]
+      message: 'Invitation created successfully',
+      invite: inviteWithUrl
     });
   } catch (err) {
     console.error('Invitation error:', err);
