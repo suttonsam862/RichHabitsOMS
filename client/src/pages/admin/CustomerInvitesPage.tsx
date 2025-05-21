@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -101,29 +101,60 @@ export default function CustomerInvitesPage() {
     enabled: !!user && (user.role === "admin" || user.role === "salesperson"),
   });
 
-  // Send invite mutation
+  // Create invite mutation
   const sendInviteMutation = useMutation({
     mutationFn: async (data: InviteFormValues) => {
       const response = await apiRequest("POST", "/api/admin/invite", data);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to send invitation");
+        throw new Error(errorData.message || "Failed to create invitation");
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Extract the invitation URL from the response to display to the user
+      const inviteUrl = data.invite?.inviteUrl;
+      
       toast({
-        title: "Invitation sent",
-        description: "The customer invitation has been sent successfully",
+        title: "Invitation created",
+        description: "The customer invitation has been created successfully",
         variant: "default",
       });
+      
+      // If we have an invite URL, show it in a separate toast that can be clicked to copy
+      if (inviteUrl) {
+        setTimeout(() => {
+          toast({
+            title: "Invitation link ready",
+            description: "Click to copy the invitation link to share with the customer",
+            variant: "default",
+            action: (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(inviteUrl);
+                  toast({
+                    title: "Link copied",
+                    description: "Invitation link copied to clipboard",
+                    variant: "default",
+                  });
+                }}
+              >
+                Copy Link
+              </Button>
+            ),
+          });
+        }, 500);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invites"] });
       form.reset();
       setIsDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to send invitation",
+        title: "Failed to create invitation",
         description: error.message,
         variant: "destructive",
       });
