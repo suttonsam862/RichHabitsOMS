@@ -235,20 +235,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Determine if this is a request from the customer page or user management
+      // Check both query parameters and body for sendInvite flag
       const sendInvite = req.query.sendInvite === 'true' || req.body.sendInvite === true;
       
-      // Generate invitation link (only used if sendInvite is true)
+      // Generate invitation URL (different for invites vs direct creation)
       const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
-      const inviteUrl = `${baseUrl}/register?token=${randomPassword}&email=${encodeURIComponent(customerEmail)}`;
+      let inviteUrl = '';
+      
+      // If sending invite, generate a recovery link through Supabase
+      if (sendInvite) {
+        try {
+          const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+            type: 'recovery',
+            email: customerEmail,
+          });
+          
+          if (linkError) {
+            console.error('Error generating recovery link:', linkError);
+          } else if (linkData?.properties?.action_link) {
+            inviteUrl = linkData.properties.action_link;
+          }
+        } catch (linkErr) {
+          console.error('Failed to generate invite link:', linkErr);
+          // Don't fail the overall request if just the link generation fails
+          inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+        }
+      } else {
+        // For direct creation without invite
+        inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+      }
       
       // Log creation details
       console.log(`Customer created: ${customerEmail}, Send invite: ${sendInvite}`);
+      console.log(`Source: ${req.get('Referer') || 'Unknown'}, Created by: ${req.user?.id || 'Unknown'}`);
+      
+      // Store in customer metadata whether this was created via invitation
+      try {
+        // Update user metadata to include creation method
+        await supabase.auth.admin.updateUserById(data.user.id, {
+          user_metadata: {
+            ...data.user.user_metadata,
+            created_via: sendInvite ? 'invitation' : 'direct_creation',
+            created_by: req.user?.id || null,
+            requires_verification: !sendInvite
+          }
+        });
+      } catch (metaErr) {
+        console.warn('Could not update user metadata:', metaErr);
+      }
       
       // Return success with customer data and appropriate invite information
       return res.status(201).json({
         success: true,
         message: sendInvite 
-          ? 'Customer created and invite sent' 
+          ? 'Customer created and invite will be sent' 
           : 'Customer created successfully',
         customer: createdProfile ? createdProfile[0] : { 
           id: data.user.id,
@@ -256,9 +296,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           first_name: customerFirstName,
           last_name: customerLastName
         },
-        tempPassword: randomPassword,
-        inviteUrl: sendInvite ? inviteUrl : undefined,
-        inviteSent: sendInvite
+        inviteUrl: inviteUrl,
+        inviteSent: sendInvite,
+        requiresVerification: !sendInvite
       });
     } catch (err: any) {
       console.error('Error creating customer:', err);
@@ -269,8 +309,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Send invite to existing customer
-  app.post('/api/admin/customers/:id/send-invite', requireAuth, async (req, res) => {
+  // Send verification link to an existing customer
+  app.post('/api/admin/customers/:id/send-verification', requireAuth, async (req, res) => {
     if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
