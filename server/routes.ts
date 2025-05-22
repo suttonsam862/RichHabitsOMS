@@ -6,10 +6,14 @@ import { loginSchema, registerSchema } from '../shared/schema';
 import { supabase } from './db';
 import { requireAuth, requireRole } from './auth';
 import adminRoutes from './routes/admin';
+import customerRoutes from './routes/customerRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register admin routes
   app.use('/api/admin', adminRoutes);
+  
+  // Register customer routes
+  app.use('/api/customers', customerRoutes);
   
   // Temporary routes for customer invites functionality
   app.get('/api/admin/invites', requireAuth, async (req, res) => {
