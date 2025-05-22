@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
   CardContent, 
@@ -25,16 +25,6 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { 
   Search, 
   MoreHorizontal, 
@@ -49,6 +39,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import AddCustomerForm from "./AddCustomerForm";
 
 interface Customer {
   id: number;
@@ -70,26 +61,6 @@ export default function CustomerListPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Form state
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    company: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    country: ''
-  });
-  
-  // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-  
   // Fetch real customer data from API
   const { data: customers, isLoading, isError } = useQuery({
     queryKey: ["admin", "customers"],
@@ -102,70 +73,7 @@ export default function CustomerListPage() {
     }
   });
 
-  // Add customer mutation
-  const addCustomerMutation = useMutation({
-    mutationFn: async (customerData: any) => {
-      console.log("Sending customer data:", customerData); // Debug log
-      
-      const response = await fetch('/api/admin/customers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...customerData,
-          sendInvite: true // Enable sending invitation to the customer
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Customer creation error:", errorData);
-        throw new Error(errorData.message || 'Failed to add customer');
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      console.log("Customer created successfully:", data);
-      
-      // Clear form data
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        company: '',
-        phone: '',
-        address: '',
-        city: '',
-        state: '',
-        zip: '',
-        country: ''
-      });
-      
-      // Close dialog
-      setIsAddCustomerDialogOpen(false);
-      
-      // Invalidate queries to refresh the customer list
-      queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
-      
-      // Show success toast
-      toast({
-        title: "Customer added",
-        description: data.inviteSent 
-          ? "New customer has been added and an invitation email was sent" 
-          : "New customer has been added successfully",
-      });
-    },
-    onError: (error: any) => {
-      console.error("Customer creation error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add customer",
-        variant: "destructive"
-      });
-    }
-  });
+  // We're using the new AddCustomerForm component now
   
   // Filter customers based on search term
   const filteredCustomers = customers?.filter((customer: Customer) => {
@@ -179,11 +87,6 @@ export default function CustomerListPage() {
     );
   });
   
-  const handleAddCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    addCustomerMutation.mutate(formData);
-  };
-
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -332,160 +235,11 @@ export default function CustomerListPage() {
         </CardContent>
       </Card>
 
-      {/* Add Customer Dialog */}
-      <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
-            <DialogDescription>
-              Fill in the customer details below. All fields marked with an asterisk (*) are required. A welcome email with account setup instructions will be sent to the customer automatically.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAddCustomer}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    placeholder="John"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Doe"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="john.doe@example.com"
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company</Label>
-                  <Input
-                    id="company"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleInputChange}
-                    placeholder="Acme Inc."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="123 Main St"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="New York"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                    placeholder="NY"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="zip">Zip/Postal Code</Label>
-                  <Input
-                    id="zip"
-                    name="zip"
-                    value={formData.zip}
-                    onChange={handleInputChange}
-                    placeholder="10001"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input
-                    id="country"
-                    name="country"
-                    value={formData.country}
-                    onChange={handleInputChange}
-                    placeholder="USA"
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsAddCustomerDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                disabled={addCustomerMutation.isPending}
-              >
-                {addCustomerMutation.isPending ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"></div>
-                    Saving...
-                  </>
-                ) : (
-                  'Add Customer'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Use our new AddCustomerForm component */}
+      <AddCustomerForm 
+        isOpen={isAddCustomerDialogOpen} 
+        onClose={() => setIsAddCustomerDialogOpen(false)} 
+      />
     </div>
   );
 }

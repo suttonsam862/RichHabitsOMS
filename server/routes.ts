@@ -125,9 +125,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Create new customer
   app.post('/api/admin/customers', requireAuth, async (req, res) => {
+    // Authorization check
     if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
+    
+    // Log the request for debugging
+    console.log('Customer creation request received:', {
+      user: req.user?.email,
+      body: req.body,
+      sendInvite: req.body.sendInvite
+    });
     
     try {
       // Handle different field naming conventions from different forms
@@ -137,6 +145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         address, city, state, zip, country 
       } = req.body;
       
+      // Determine if we should send an invitation email
+      const shouldSendInvite = req.body.sendInvite === true || req.query.sendInvite === 'true';
+      
       // Normalize field names
       const customerEmail = email || emailAddress;
       const customerFirstName = firstName || first_name;
@@ -144,14 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customerCompany = company;
       const customerPhone = phone;
       
-      // Add additional address fields if present
-      const additionalData: Record<string, any> = {};
-      if (address) additionalData.address = address;
-      if (city) additionalData.city = city;
-      if (state) additionalData.state = state;
-      if (zip) additionalData.zip = zip;
-      if (country) additionalData.country = country;
-      
+      // Validate required fields
       if (!customerEmail || !customerFirstName || !customerLastName) {
         return res.status(400).json({
           success: false,
@@ -159,20 +163,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Generate a random password (in a real app, we would send this via email)
+      // Check if user already exists
+      const { data: existingUsers } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('email', customerEmail);
+      
+      if (existingUsers && existingUsers.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'A customer with this email already exists'
+        });
+      }
+      
+      // Generate a strong random password (will be reset by user during invitation flow)
       const randomPassword = Math.random().toString(36).substring(2, 10) + 
-                           Math.random().toString(36).substring(2, 10);
+                           Math.random().toString(36).substring(2, 15);
+      
+      console.log(`Creating customer in Supabase Auth: ${customerEmail}`);
       
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.admin.createUser({
         email: customerEmail,
         password: randomPassword,
-        email_confirm: true,
+        email_confirm: true, // Auto-confirm the email
         user_metadata: {
-          firstName: customerFirstName,
-          lastName: customerLastName,
+          first_name: customerFirstName,
+          last_name: customerLastName,
           role: 'customer',
-          ...additionalData
+          requires_password_reset: true
         }
       });
       
@@ -194,14 +213,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create username from first and last name
       const username = (customerFirstName + customerLastName).toLowerCase().replace(/[^a-z0-9]/g, '');
       
-      // Prepare additional data for user profile
+      // Create profile data
       const profileData: Record<string, any> = {
         id: data.user.id,
         username: username + Math.floor(Math.random() * 1000), // Add random number to ensure uniqueness
         email: customerEmail,
         first_name: customerFirstName,
         last_name: customerLastName,
-        role: 'customer'
+        role: 'customer',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_active: true,
+        invitation_status: sendInvite ? 'invited' : 'active'
       };
       
       // Add optional fields if they exist
@@ -213,10 +236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (zip) profileData.postal_code = zip;
       if (country) profileData.country = country;
       
-      // Log what we're inserting
       console.log('Creating customer profile with data:', profileData);
       
-      // Create customer profile
+      // Create customer profile in the database
       const { data: createdProfile, error: profileError } = await supabase
         .from('user_profiles')
         .insert(profileData)
@@ -234,13 +256,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Determine if this is a request from the customer page or user management
-      // Check both query parameters and body for sendInvite flag
-      const sendInvite = req.query.sendInvite === 'true' || req.body.sendInvite === true;
-      
-      // Generate invitation URL (different for invites vs direct creation)
-      const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
+      // Now handle invitation email if requested
       let inviteUrl = '';
+      let inviteSent = false;
+      
+      // Generate invitation URL base
+      const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
+      
+      if (sendInvite) {
+        try {
+          // Generate a recovery link through Supabase
+          const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+            type: 'recovery',
+            email: customerEmail,
+          });
+          
+          if (linkError) {
+            console.error('Error generating recovery link:', linkError);
+            inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+          } else if (linkData?.properties?.action_link) {
+            inviteUrl = linkData.properties.action_link;
+            
+            // Send invitation email if we have the email functions available
+            try {
+              const { getCustomerInviteEmailTemplate } = require('./email');
+              const { sendEmail } = require('./email');
+              
+              const emailTemplate = getCustomerInviteEmailTemplate(
+                customerEmail,
+                customerFirstName,
+                customerLastName,
+                inviteUrl
+              );
+              
+              inviteSent = await sendEmail(emailTemplate);
+              console.log(`Invitation email ${inviteSent ? 'sent' : 'failed'} to ${customerEmail}`);
+            } catch (moduleErr) {
+              console.error('Email module not available:', moduleErr);
+              // Continue without sending email
+            }
+          }
+        } catch (emailErr) {
+          console.error('Failed to send invitation email:', emailErr);
+          inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+        }
+      } else {
+        // For direct creation without invite
+        inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+      }
+      
+      // Log creation details
+      console.log(`Customer created: ${customerEmail}, Send invite: ${sendInvite}, Invite sent: ${inviteSent}`);
+      
+      // Return success with customer data
+      return res.status(201).json({
+        success: true,
+        message: inviteSent 
+          ? 'Customer created and invitation email sent successfully' 
+          : 'Customer created successfully',
+        customer: createdProfile ? createdProfile[0] : { 
+          id: data.user.id,
+          email: customerEmail,
+          first_name: customerFirstName,
+          last_name: customerLastName,
+          role: 'customer'
+        },
+        inviteUrl,
+        inviteSent
+      });
       
       // If sending invite, generate a recovery link through Supabase
       if (sendInvite) {

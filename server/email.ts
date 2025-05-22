@@ -1,14 +1,11 @@
 // Email service abstraction
 // Uses SendGrid if API key is available, otherwise operates in mock mode
-import { MailService } from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 
 // Setup the SendGrid mail service if API key is available
-let mailService: MailService | null = null;
-
 if (process.env.SENDGRID_API_KEY) {
-  mailService = new MailService();
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-  console.log('SendGrid email service initialized');
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log('SendGrid email service initialized with API key');
 } else {
   console.log('No SENDGRID_API_KEY found, will use mock email service');
 }
@@ -27,23 +24,25 @@ interface EmailOptions {
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
     // Set default from address if not provided
-    const from = options.from || 'noreply@threadcraft.com';
+    const from = options.from || 'notification@threadcraft.com';
     
-    // If SendGrid is configured, use it
-    if (mailService) {
-      await mailService.send({
+    // If SendGrid API key is configured, use it
+    if (process.env.SENDGRID_API_KEY) {
+      const msg = {
         to: options.to,
         from: from,
         subject: options.subject,
         text: options.text,
         html: options.html || options.text,
-      });
-      console.log(`Email sent via SendGrid to ${options.to}`);
+      };
+      
+      const response = await sgMail.send(msg);
+      console.log(`Email sent via SendGrid to ${options.to} - Status: ${response[0].statusCode}`);
       return true;
     } 
     
     // Otherwise use mock mode
-    console.log('Email would be sent:', {
+    console.log('Email would be sent (MOCK MODE):', {
       to: options.to,
       from: from,
       subject: options.subject,
@@ -52,8 +51,8 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     });
     
     return true;
-  } catch (error) {
-    console.error('Email service error:', error);
+  } catch (error: any) {
+    console.error('Email service error:', error?.response?.body || error);
     return false;
   }
 }
