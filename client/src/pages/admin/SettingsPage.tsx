@@ -41,6 +41,50 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 
+// Define specific permission types for different roles
+const adminPermissions = z.object({
+  manage_users: z.boolean().default(true),
+  manage_roles: z.boolean().default(true),
+  view_all_orders: z.boolean().default(true),
+  edit_all_orders: z.boolean().default(true),
+  view_financial_data: z.boolean().default(true),
+  manage_system_settings: z.boolean().default(false),
+  super_admin: z.boolean().default(false),
+});
+
+const salespersonPermissions = z.object({
+  create_orders: z.boolean().default(true),
+  edit_orders: z.boolean().default(true),
+  view_customer_data: z.boolean().default(true),
+  manage_customers: z.boolean().default(true),
+  send_customer_communications: z.boolean().default(true),
+  view_sales_reports: z.boolean().default(true),
+});
+
+const designerPermissions = z.object({
+  upload_designs: z.boolean().default(true),
+  edit_designs: z.boolean().default(true),
+  view_design_library: z.boolean().default(true),
+  communicate_with_customers: z.boolean().default(true),
+  communicate_with_manufacturers: z.boolean().default(true),
+});
+
+const manufacturerPermissions = z.object({
+  view_production_queue: z.boolean().default(true),
+  update_production_status: z.boolean().default(true),
+  manage_inventory: z.boolean().default(true),
+  report_production_issues: z.boolean().default(true),
+  view_design_files: z.boolean().default(true),
+});
+
+const customerPermissions = z.object({
+  view_orders: z.boolean().default(true),
+  create_orders: z.boolean().default(true),
+  approve_designs: z.boolean().default(true),
+  make_payments: z.boolean().default(true),
+  view_order_history: z.boolean().default(true),
+});
+
 // Form schema for creating/editing users
 const userSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -54,7 +98,13 @@ const userSchema = z.object({
   role: z.enum(['admin', 'salesperson', 'designer', 'manufacturer', 'customer']),
   phone: z.string().optional(),
   company: z.string().optional(),
-  permissions: z.record(z.boolean()).optional(),
+  permissions: z.object({
+    admin: adminPermissions.optional(),
+    salesperson: salespersonPermissions.optional(),
+    designer: designerPermissions.optional(),
+    manufacturer: manufacturerPermissions.optional(),
+    customer: customerPermissions.optional(),
+  }).optional(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;

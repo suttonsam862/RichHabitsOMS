@@ -378,8 +378,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to get all users for the User Management tab
   app.get('/api/admin/users', async (req, res) => {
     try {
-      // Special override for development - immediately return users
-      // Get users from user_profiles table without auth check
+      // Check if user is admin
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      }
+      
+      // Get users from user_profiles table
       const { data: profiles, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -395,6 +399,251 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error('Unexpected error fetching users:', err);
       return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+    }
+  });
+  
+  // API endpoint to create a new user
+  app.post('/api/admin/users', async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      }
+      
+      const { email, username, firstName, lastName, role, permissions, password } = req.body;
+      
+      // Validate required fields
+      if (!email || !username || !role || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Email, username, role, and password are required' 
+        });
+      }
+      
+      // Check if user already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('email', email)
+        .single();
+        
+      if (existingUser) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'User with this email already exists' 
+        });
+      }
+      
+      // Create user in Supabase Auth
+      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          role,
+          first_name: firstName,
+          last_name: lastName,
+          username
+        }
+      });
+      
+      if (authError) {
+        console.error('Error creating user in Supabase Auth:', authError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to create user' 
+        });
+      }
+      
+      // Create user profile in database
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: authUser.user.id,
+          email,
+          username,
+          first_name: firstName,
+          last_name: lastName,
+          role,
+          permissions: permissions || {},
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (profileError) {
+        console.error('Error creating user profile:', profileError);
+        // Try to clean up the auth user if profile creation failed
+        await supabase.auth.admin.deleteUser(authUser.user.id);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to create user profile' 
+        });
+      }
+      
+      return res.status(201).json({ 
+        success: true, 
+        message: 'User created successfully',
+        user: profile
+      });
+    } catch (err) {
+      console.error('Unexpected error creating user:', err);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'An unexpected error occurred' 
+      });
+    }
+  });
+  
+  // API endpoint to update a user
+  app.patch('/api/admin/users/:id', async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      }
+      
+      const { id } = req.params;
+      const { email, username, firstName, lastName, role, permissions, password } = req.body;
+      
+      // Update user metadata in Supabase Auth if needed
+      if (role || firstName || lastName || username) {
+        const userMetadata: any = {};
+        
+        if (role) userMetadata.role = role;
+        if (firstName) userMetadata.first_name = firstName;
+        if (lastName) userMetadata.last_name = lastName;
+        if (username) userMetadata.username = username;
+        
+        const { error: authError } = await supabase.auth.admin.updateUserById(
+          id,
+          { user_metadata: userMetadata }
+        );
+        
+        if (authError) {
+          console.error('Error updating user in Supabase Auth:', authError);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to update user authentication data' 
+          });
+        }
+      }
+      
+      // Update password if provided
+      if (password) {
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(
+          id,
+          { password }
+        );
+        
+        if (passwordError) {
+          console.error('Error updating user password:', passwordError);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to update user password' 
+          });
+        }
+      }
+      
+      // Update user profile in database
+      const updates: any = {};
+      if (email) updates.email = email;
+      if (username) updates.username = username;
+      if (firstName) updates.first_name = firstName;
+      if (lastName) updates.last_name = lastName;
+      if (role) updates.role = role;
+      if (permissions) updates.permissions = permissions;
+      updates.updated_at = new Date().toISOString();
+      
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (profileError) {
+        console.error('Error updating user profile:', profileError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to update user profile' 
+        });
+      }
+      
+      return res.json({ 
+        success: true, 
+        message: 'User updated successfully',
+        user: profile
+      });
+    } catch (err) {
+      console.error('Unexpected error updating user:', err);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'An unexpected error occurred' 
+      });
+    }
+  });
+  
+  // API endpoint to delete a user
+  app.delete('/api/admin/users/:id', async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      }
+      
+      const { id } = req.params;
+      
+      // Check if user exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (!existingUser) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+      
+      // Delete user from Supabase Auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(id);
+      
+      if (authError) {
+        console.error('Error deleting user from Supabase Auth:', authError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to delete user authentication data' 
+        });
+      }
+      
+      // Delete user profile from database
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', id);
+        
+      if (profileError) {
+        console.error('Error deleting user profile:', profileError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to delete user profile' 
+        });
+      }
+      
+      return res.json({ 
+        success: true, 
+        message: 'User deleted successfully' 
+      });
+    } catch (err) {
+      console.error('Unexpected error deleting user:', err);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'An unexpected error occurred' 
+      });
     }
   });
   
