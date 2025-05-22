@@ -375,29 +375,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Temporary route for admin users until we complete the full implementation
-  app.get('/api/admin/users', requireAuth, async (req, res) => {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+  // Route to get all users for the settings page
+  app.get('/api/admin/users', async (req, res) => {
+    // Check if we can find a session cookie
+    const sessionToken = req.session?.auth?.token;
+    
+    // For debugging - log that we're trying to access users endpoint
+    console.log('Accessing /api/admin/users endpoint');
+    console.log('Session token exists:', !!sessionToken);
+    console.log('User in request:', !!req.user, req.user?.role);
+    
+    // First try to validate using the session cookie if exists
+    if (sessionToken) {
+      try {
+        // Validate user with Supabase
+        const { data, error } = await supabase.auth.getUser(sessionToken);
+        
+        if (!error && data?.user) {
+          // Verify if user has admin role from metadata
+          const isAdmin = data.user.user_metadata?.role === 'admin' || 
+                         data.user.user_metadata?.is_super_admin === true;
+          
+          if (isAdmin) {
+            // Get users from user_profiles table
+            const { data: profiles, error: profilesError } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .order('created_at', { ascending: false });
+    
+            if (profilesError) {
+              console.error('Error fetching users:', profilesError);
+              return res.status(500).json({ success: false, message: 'Failed to fetch users' });
+            }
+    
+            return res.json(profiles || []);
+          }
+        }
+      } catch (err) {
+        console.error('Error validating session:', err);
+      }
     }
     
-    try {
-      // Get users from user_profiles table
-      const { data: profiles, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching users:', error);
-        return res.status(500).json({ success: false, message: 'Failed to fetch users' });
+    // If we got here, either there's no session or the user doesn't have admin privileges
+    // Check if we have a user in the request that came from our middleware
+    if (req.user?.role === 'admin') {
+      try {
+        // Get users from user_profiles table
+        const { data: profiles, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+  
+        if (error) {
+          console.error('Error fetching users:', error);
+          return res.status(500).json({ success: false, message: 'Failed to fetch users' });
+        }
+  
+        return res.json(profiles || []);
+      } catch (err) {
+        console.error('Unexpected error fetching users:', err);
+        return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
       }
-
-      return res.json(profiles || []);
-    } catch (err) {
-      console.error('Unexpected error fetching users:', err);
-      return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
     }
+    
+    // If we got here, user is definitely not authorized
+    return res.status(403).json({ success: false, message: 'Insufficient permissions' });
   });
   
   // Health check endpoint
