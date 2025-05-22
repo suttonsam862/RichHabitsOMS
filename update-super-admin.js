@@ -1,78 +1,128 @@
-// Script to update user to super admin status using standard Auth API
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+/**
+ * Script to update the admin user with super admin privileges
+ * This will grant your admin account full permissions to create users and manage the database
+ */
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
-dotenv.config();
+// Get Supabase credentials from environment variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
-// Supabase connection details
-const supabaseUrl = process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing Supabase credentials in .env file');
+  process.exit(1);
+}
 
-// Admin user details
-const adminEmail = 'samsutton@rich-habits.com';
-const adminPassword = 'Arlodog2013!';
+// Create admin client with the service role key
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
+
+// Default admin email if not provided
+const adminEmail = process.argv[2] || 'admin@example.com';
 
 async function updateToSuperAdmin() {
-  console.log('Updating user to super admin status...');
-  
   try {
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('Supabase client initialized');
+    console.log(`Looking for admin user with email: ${adminEmail}`);
     
-    // Sign in as the admin user first
-    console.log(`Signing in as ${adminEmail}...`);
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: adminEmail,
-      password: adminPassword
-    });
+    // First get the user ID from the profiles table
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('id, email, first_name, last_name, role')
+      .eq('email', adminEmail)
+      .single();
     
-    if (signInError) {
-      console.error('Error signing in:', signInError.message);
-      return false;
+    if (profileError || !profile) {
+      console.error('Error finding admin profile:', profileError || 'No profile found');
+      
+      // Try to get the user directly from auth
+      const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (usersError) {
+        console.error('Failed to list users:', usersError);
+        return;
+      }
+      
+      const adminUser = users.find(user => user.email === adminEmail);
+      
+      if (!adminUser) {
+        console.error(`No user found with email: ${adminEmail}`);
+        return;
+      }
+      
+      // Update the user's metadata directly
+      const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+        adminUser.id,
+        {
+          user_metadata: {
+            role: 'admin',
+            is_super_admin: true,
+            full_access: true,
+            permissions: ['create_user', 'delete_user', 'modify_user', 'create_customer']
+          }
+        }
+      );
+      
+      if (error) {
+        console.error('Error updating admin user:', error);
+        return;
+      }
+      
+      console.log('✅ Successfully granted super admin privileges!');
+      console.log('User ID:', adminUser.id);
+      console.log('User Email:', adminUser.email);
+      return;
     }
     
-    console.log('Successfully signed in');
+    console.log('Found user profile:', profile);
     
-    // Now update the user metadata to include is_super_admin flag
-    console.log('Updating user metadata with super admin flag...');
-    const { data, error: updateError } = await supabase.auth.updateUser({
-      data: { 
-        role: 'admin',
-        is_super_admin: true
+    // Now update both the auth metadata and profile
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      profile.id,
+      {
+        user_metadata: {
+          role: 'admin',
+          is_super_admin: true,
+          full_access: true,
+          permissions: ['create_user', 'delete_user', 'modify_user', 'create_customer']
+        }
       }
-    });
+    );
+    
+    if (error) {
+      console.error('Error updating admin user metadata:', error);
+      return;
+    }
+    
+    // Also update the profile in the database
+    const { error: updateError } = await supabaseAdmin
+      .from('user_profiles')
+      .update({
+        role: 'admin',
+        is_super_admin: true,
+        permissions: ['create_user', 'delete_user', 'modify_user', 'create_customer'],
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', profile.id);
     
     if (updateError) {
-      console.error('Error updating user metadata:', updateError);
-      return false;
+      console.error('Error updating user profile:', updateError);
+    } else {
+      console.log('✅ User profile updated with super admin privileges');
     }
     
-    console.log('User metadata updated successfully:');
-    console.log(data.user.user_metadata);
+    console.log('✅ Successfully promoted to super admin with full permissions!');
+    console.log('User ID:', profile.id);
+    console.log('User Email:', profile.email);
     
-    // Sign out after updating
-    await supabase.auth.signOut();
-    console.log('Signed out successfully');
-    
-    return true;
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return false;
+  } catch (err) {
+    console.error('Unexpected error:', err);
   }
 }
 
-// Run the function
-updateToSuperAdmin()
-  .then(success => {
-    if (success) {
-      console.log('Super admin update completed successfully');
-    } else {
-      console.error('Super admin update failed');
-    }
-    process.exit(success ? 0 : 1);
-  })
-  .catch(err => {
-    console.error('Unhandled error:', err);
-    process.exit(1);
-  });
+// Run the script
+updateToSuperAdmin();
