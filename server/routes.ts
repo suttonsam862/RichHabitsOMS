@@ -410,13 +410,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ success: false, message: 'Insufficient permissions' });
       }
       
-      const { email, username, firstName, lastName, role, permissions, password } = req.body;
+      const { email, username, firstName, lastName, role, permissions, password, sendInvite } = req.body;
       
       // Validate required fields
-      if (!email || !username || !role || !password) {
+      if (!email || !username || !role) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Email, username, role, and password are required' 
+          message: 'Email, username, and role are required' 
         });
       }
       
@@ -434,16 +434,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Generate a random password if not provided and sending invite
+      const userPassword = password || (sendInvite ? Math.random().toString(36).slice(-10) : null);
+      
+      if (!userPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password is required when not sending an invitation'
+        });
+      }
+      
       // Create user in Supabase Auth
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
         email,
-        password,
-        email_confirm: true,
+        password: userPassword,
+        email_confirm: !sendInvite, // Don't auto-confirm if sending invitation
         user_metadata: {
           role,
           first_name: firstName,
           last_name: lastName,
-          username
+          username,
+          requires_password_reset: sendInvite
         }
       });
       
@@ -467,7 +478,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role,
           permissions: permissions || {},
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          last_login: null,
+          is_active: !sendInvite, // Set to inactive if sending invite
+          invitation_status: sendInvite ? 'pending' : 'completed'
         })
         .select()
         .single();
@@ -482,9 +496,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Create an activity log for user creation
+      const { error: activityError } = await supabase
+        .from('user_activity_logs')
+        .insert({
+          user_id: authUser.user.id,
+          action: 'user_created',
+          details: {
+            created_by: req.user?.id || 'system',
+            created_at: new Date().toISOString(),
+            role,
+            invitation_sent: sendInvite
+          },
+          created_at: new Date().toISOString(),
+          ip_address: req.ip || 'unknown'
+        });
+        
+      if (activityError) {
+        console.error('Error creating activity log:', activityError);
+        // Don't fail the entire request for activity log errors
+      }
+      
+      // Send invitation email if requested
+      if (sendInvite) {
+        try {
+          // Create a setup token
+          const { data: setupToken, error: tokenError } = await supabase
+            .from('user_setup_tokens')
+            .insert({
+              user_id: authUser.user.id,
+              token: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+            
+          if (tokenError) {
+            console.error('Error creating setup token:', tokenError);
+          } else {
+            // Use email service to send invite
+            const emailResult = await sendEmail({
+              to: email,
+              subject: 'Invitation to Custom Clothing Order Management System',
+              text: `Hello ${firstName || ''},\n\nYou have been invited to the Custom Clothing Order Management System as a ${role}. Please click the link below to set up your account:\n\nhttp://localhost:5000/setup-account?token=${setupToken.token}\n\nThis link will expire in 7 days.\n\nRegards,\nAdmin Team`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                  <h2 style="color: #333;">Welcome to Custom Clothing Order Management</h2>
+                  <p>Hello ${firstName || ''},</p>
+                  <p>You have been invited to join the Custom Clothing Order Management System as a <strong>${role}</strong>.</p>
+                  <div style="margin: 25px 0;">
+                    <a href="http://localhost:5000/setup-account?token=${setupToken.token}" style="background-color: #4a90e2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Account</a>
+                  </div>
+                  <p>This link will expire in 7 days.</p>
+                  <p>If you didn't expect this invitation, please ignore this email.</p>
+                  <p>Regards,<br>Admin Team</p>
+                </div>
+              `
+            });
+            
+            if (!emailResult) {
+              console.error('Error sending invitation email');
+            }
+          }
+        } catch (emailErr) {
+          console.error('Error in invitation email process:', emailErr);
+        }
+      }
+      
       return res.status(201).json({ 
         success: true, 
-        message: 'User created successfully',
+        message: sendInvite ? 'User invited successfully' : 'User created successfully',
         user: profile
       });
     } catch (err) {

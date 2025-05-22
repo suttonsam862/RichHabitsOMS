@@ -61,48 +61,138 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Define specific permission types for different roles
+// Define specific permission types for different roles with expanded detailed permissions
 const adminPermissions = z.object({
+  // User Management Permissions
   manage_users: z.boolean().default(true),
   manage_roles: z.boolean().default(true),
+  delete_users: z.boolean().default(false),
+  assign_permissions: z.boolean().default(true),
+  view_user_activity: z.boolean().default(true),
+  
+  // Order Management Permissions
   view_all_orders: z.boolean().default(true),
   edit_all_orders: z.boolean().default(true),
+  delete_orders: z.boolean().default(false),
+  approve_orders: z.boolean().default(true),
+  
+  // Financial Permissions
   view_financial_data: z.boolean().default(true),
+  manage_pricing: z.boolean().default(false),
+  manage_payments: z.boolean().default(false),
+  view_financial_reports: z.boolean().default(true),
+  
+  // System Permissions
   manage_system_settings: z.boolean().default(false),
+  manage_api_keys: z.boolean().default(false),
+  view_system_logs: z.boolean().default(true),
   super_admin: z.boolean().default(false),
 });
 
 const salespersonPermissions = z.object({
+  // Order Management
   create_orders: z.boolean().default(true),
   edit_orders: z.boolean().default(true),
+  view_assigned_orders: z.boolean().default(true),
+  delete_orders: z.boolean().default(false),
+  
+  // Customer Management
   view_customer_data: z.boolean().default(true),
   manage_customers: z.boolean().default(true),
+  create_customers: z.boolean().default(true),
+  edit_customers: z.boolean().default(true),
+  delete_customers: z.boolean().default(false),
+  
+  // Communication
   send_customer_communications: z.boolean().default(true),
+  send_customer_quotes: z.boolean().default(true),
+  communicate_with_designers: z.boolean().default(true),
+  
+  // Reporting
   view_sales_reports: z.boolean().default(true),
+  view_commission_data: z.boolean().default(true),
+  export_reports: z.boolean().default(false),
 });
 
 const designerPermissions = z.object({
+  // Design Management
   upload_designs: z.boolean().default(true),
   edit_designs: z.boolean().default(true),
+  delete_designs: z.boolean().default(false),
   view_design_library: z.boolean().default(true),
+  create_design_templates: z.boolean().default(false),
+  
+  // Task Management
+  view_assigned_tasks: z.boolean().default(true),
+  update_task_status: z.boolean().default(true),
+  set_design_deadlines: z.boolean().default(false),
+  
+  // Communication
   communicate_with_customers: z.boolean().default(true),
   communicate_with_manufacturers: z.boolean().default(true),
+  communicate_with_sales: z.boolean().default(true),
+  
+  // Tools Access
+  use_design_tools: z.boolean().default(true),
+  upload_design_assets: z.boolean().default(true),
+  manage_asset_library: z.boolean().default(false),
 });
 
 const manufacturerPermissions = z.object({
+  // Production Management
   view_production_queue: z.boolean().default(true),
   update_production_status: z.boolean().default(true),
+  set_production_priorities: z.boolean().default(false),
+  schedule_production: z.boolean().default(true),
+  
+  // Inventory Management
   manage_inventory: z.boolean().default(true),
+  request_materials: z.boolean().default(true),
+  update_stock_levels: z.boolean().default(true),
+  manage_suppliers: z.boolean().default(false),
+  
+  // Quality Control
   report_production_issues: z.boolean().default(true),
+  review_quality_metrics: z.boolean().default(true),
+  approve_final_products: z.boolean().default(true),
+  
+  // Design Access
   view_design_files: z.boolean().default(true),
+  comment_on_designs: z.boolean().default(true),
+  request_design_modifications: z.boolean().default(true),
+  
+  // Shipping
+  update_shipping_status: z.boolean().default(true),
+  print_shipping_labels: z.boolean().default(true),
+  manage_shipping_providers: z.boolean().default(false),
 });
 
 const customerPermissions = z.object({
+  // Order Management
   view_orders: z.boolean().default(true),
   create_orders: z.boolean().default(true),
+  edit_own_orders: z.boolean().default(true),
+  cancel_orders: z.boolean().default(true),
+  
+  // Design Management
   approve_designs: z.boolean().default(true),
+  request_design_changes: z.boolean().default(true),
+  view_design_history: z.boolean().default(true),
+  
+  // Financial
   make_payments: z.boolean().default(true),
+  view_payment_history: z.boolean().default(true),
+  access_invoices: z.boolean().default(true),
+  
+  // Account Management
   view_order_history: z.boolean().default(true),
+  manage_shipping_addresses: z.boolean().default(true),
+  manage_payment_methods: z.boolean().default(true),
+  
+  // Communication
+  submit_feedback: z.boolean().default(true),
+  participate_in_threads: z.boolean().default(true),
+  receive_notifications: z.boolean().default(true),
 });
 
 // Form schema for creating/editing users
@@ -173,8 +263,46 @@ export default function SettingsPage() {
   // State for user invitation dialog
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("customer");
+  const [inviteFirstName, setInviteFirstName] = useState("");
+  const [inviteLastName, setInviteLastName] = useState("");
+  
+  // State for delete dialog
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  
+  // State for bulk actions
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [showBulkActionDialog, setShowBulkActionDialog] = useState(false);
+  const [bulkAction, setBulkAction] = useState<"delete" | "changeRole" | null>(null);
+  const [bulkRoleChange, setBulkRoleChange] = useState("customer");
+  
+  // State for activity tracking
+  const [userActivity, setUserActivity] = useState<any[]>([
+    {
+      id: 1,
+      user_id: "1",
+      action: "login",
+      details: { ip: "192.168.1.1", browser: "Chrome", device: "Desktop" },
+      created_at: new Date(Date.now() - 3600000).toISOString()
+    },
+    {
+      id: 2,
+      user_id: "1",
+      action: "update_profile",
+      details: { fields_updated: ["firstName", "lastName"] },
+      created_at: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+      id: 3,
+      user_id: "2",
+      action: "login",
+      details: { ip: "192.168.1.2", browser: "Firefox", device: "Mobile" },
+      created_at: new Date(Date.now() - 7200000).toISOString()
+    }
+  ]);
+  const [showActivityLog, setShowActivityLog] = useState(false);
+  const [selectedUserForActivity, setSelectedUserForActivity] = useState<any>(null);
   
   // Filter users by search query
   const filteredUsers = users.filter((user: any) => 
@@ -502,16 +630,42 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div className="relative w-full max-w-sm">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search users..."
-                    className="pl-8"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Search users..."
+                      className="pl-8"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  {/* Bulk Actions Dropdown */}
+                  {selectedUserIds.length > 0 && (
+                    <Select
+                      onValueChange={(value) => {
+                        if (value === "delete") {
+                          setBulkAction("delete");
+                          setShowBulkActionDialog(true);
+                        } else if (value === "changeRole") {
+                          setBulkAction("changeRole");
+                          setShowBulkActionDialog(true);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Bulk Actions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="delete">Delete Selected</SelectItem>
+                        <SelectItem value="changeRole">Change Role</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
+                
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button variant="default" className="ml-2">
@@ -519,7 +673,7 @@ export default function SettingsPage() {
                       Add User
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
+                  <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                       <DialogTitle>Add New User</DialogTitle>
                       <DialogDescription>
@@ -540,10 +694,37 @@ export default function SettingsPage() {
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="invite-firstName" className="text-right">
+                          First Name
+                        </Label>
+                        <Input 
+                          id="invite-firstName" 
+                          className="col-span-3" 
+                          placeholder="First Name" 
+                          value={inviteFirstName}
+                          onChange={(e) => setInviteFirstName(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="invite-lastName" className="text-right">
+                          Last Name
+                        </Label>
+                        <Input 
+                          id="invite-lastName" 
+                          className="col-span-3" 
+                          placeholder="Last Name" 
+                          value={inviteLastName}
+                          onChange={(e) => setInviteLastName(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="invite-role" className="text-right">
                           Role
                         </Label>
-                        <Select defaultValue="customer">
+                        <Select 
+                          defaultValue="customer"
+                          onValueChange={(value) => setInviteRole(value)}
+                        >
                           <SelectTrigger className="col-span-3">
                             <SelectValue placeholder="Select a role" />
                           </SelectTrigger>
@@ -556,6 +737,17 @@ export default function SettingsPage() {
                           </SelectContent>
                         </Select>
                       </div>
+                      
+                      <Separator className="my-2" />
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="send-invite" defaultChecked />
+                        <Label htmlFor="send-invite">Send invitation email</Label>
+                      </div>
+                      
+                      <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground">
+                        <p>The invitation will include a secure link for the user to set up their account and password.</p>
+                      </div>
                     </div>
                     <DialogFooter>
                       <Button 
@@ -567,21 +759,52 @@ export default function SettingsPage() {
                               id: String(users.length + 1),
                               username: inviteEmail.split('@')[0],
                               email: inviteEmail,
-                              first_name: "",
-                              last_name: "",
-                              role: "customer",
+                              first_name: inviteFirstName,
+                              last_name: inviteLastName,
+                              role: inviteRole,
+                              status: "invited",
+                              created_at: new Date().toISOString(),
                               permissions: {
-                                customer: {
+                                [inviteRole]: inviteRole === 'admin' ? {
+                                  manage_users: true,
+                                  manage_roles: true,
+                                  view_all_orders: true
+                                } : inviteRole === 'salesperson' ? {
+                                  create_orders: true,
+                                  edit_orders: true,
+                                  view_customer_data: true
+                                } : inviteRole === 'designer' ? {
+                                  upload_designs: true,
+                                  edit_designs: true,
+                                  view_design_library: true
+                                } : inviteRole === 'manufacturer' ? {
+                                  view_production_queue: true,
+                                  update_production_status: true,
+                                  manage_inventory: true
+                                } : {
                                   view_orders: true,
                                   create_orders: true,
-                                  approve_designs: true,
-                                  make_payments: true,
-                                  view_order_history: true
+                                  approve_designs: true
                                 }
                               }
                             };
                             
                             setUsers([...users, newUser]);
+                            
+                            // Add to activity log
+                            const activityEntry = {
+                              id: userActivity.length + 1,
+                              user_id: "system",
+                              action: "invite_user",
+                              details: { 
+                                email: inviteEmail,
+                                role: inviteRole,
+                                invited_by: "admin"
+                              },
+                              created_at: new Date().toISOString()
+                            };
+                            
+                            setUserActivity([activityEntry, ...userActivity]);
                             
                             toast({
                               title: "Invitation sent",
@@ -590,6 +813,9 @@ export default function SettingsPage() {
                             });
                             
                             setInviteEmail("");
+                            setInviteFirstName("");
+                            setInviteLastName("");
+                            setInviteRole("customer");
                           }
                         }}
                       >
@@ -599,6 +825,135 @@ export default function SettingsPage() {
                   </DialogContent>
                 </Dialog>
               </div>
+              
+              {/* Bulk Action Confirmation Dialog */}
+              <AlertDialog open={showBulkActionDialog} onOpenChange={setShowBulkActionDialog}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {bulkAction === "delete" ? "Delete Selected Users" : "Change Role for Selected Users"}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {bulkAction === "delete" 
+                        ? `Are you sure you want to delete ${selectedUserIds.length} selected users? This action cannot be undone.`
+                        : `Change the role of ${selectedUserIds.length} selected users to:`}
+                    </AlertDialogDescription>
+                    
+                    {bulkAction === "changeRole" && (
+                      <div className="py-4">
+                        <Select
+                          value={bulkRoleChange}
+                          onValueChange={setBulkRoleChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="salesperson">Salesperson</SelectItem>
+                            <SelectItem value="designer">Designer</SelectItem>
+                            <SelectItem value="manufacturer">Manufacturer</SelectItem>
+                            <SelectItem value="customer">Customer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        if (bulkAction === "delete") {
+                          // Delete selected users
+                          setUsers(users.filter(user => !selectedUserIds.includes(user.id)));
+                          
+                          // Add to activity log
+                          const activityEntry = {
+                            id: userActivity.length + 1,
+                            user_id: "system",
+                            action: "bulk_delete_users",
+                            details: { 
+                              count: selectedUserIds.length,
+                              deleted_by: "admin"
+                            },
+                            created_at: new Date().toISOString()
+                          };
+                          
+                          setUserActivity([activityEntry, ...userActivity]);
+                          
+                          toast({
+                            title: "Users deleted",
+                            description: `${selectedUserIds.length} users have been deleted`,
+                            variant: "default",
+                          });
+                        } else if (bulkAction === "changeRole") {
+                          // Change role for selected users
+                          setUsers(users.map(user => {
+                            if (selectedUserIds.includes(user.id)) {
+                              return {
+                                ...user,
+                                role: bulkRoleChange,
+                                // Set default permissions for the new role
+                                permissions: {
+                                  [bulkRoleChange]: bulkRoleChange === 'admin' ? {
+                                    manage_users: true,
+                                    manage_roles: true,
+                                    view_all_orders: true
+                                  } : bulkRoleChange === 'salesperson' ? {
+                                    create_orders: true,
+                                    edit_orders: true,
+                                    view_customer_data: true
+                                  } : bulkRoleChange === 'designer' ? {
+                                    upload_designs: true,
+                                    edit_designs: true,
+                                    view_design_library: true
+                                  } : bulkRoleChange === 'manufacturer' ? {
+                                    view_production_queue: true,
+                                    update_production_status: true,
+                                    manage_inventory: true
+                                  } : {
+                                    view_orders: true,
+                                    create_orders: true,
+                                    approve_designs: true
+                                  }
+                                }
+                              };
+                            }
+                            return user;
+                          }));
+                          
+                          // Add to activity log
+                          const activityEntry = {
+                            id: userActivity.length + 1,
+                            user_id: "system",
+                            action: "bulk_change_role",
+                            details: { 
+                              count: selectedUserIds.length,
+                              new_role: bulkRoleChange,
+                              changed_by: "admin"
+                            },
+                            created_at: new Date().toISOString()
+                          };
+                          
+                          setUserActivity([activityEntry, ...userActivity]);
+                          
+                          toast({
+                            title: "Roles updated",
+                            description: `${selectedUserIds.length} users have been updated to ${bulkRoleChange} role`,
+                            variant: "default",
+                          });
+                        }
+                        
+                        setSelectedUserIds([]);
+                        setShowBulkActionDialog(false);
+                      }}
+                      className={bulkAction === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+                    >
+                      {bulkAction === "delete" ? "Delete Users" : "Change Role"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               {isLoading ? (
                 <div className="flex justify-center p-4">
@@ -614,25 +969,51 @@ export default function SettingsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[50px]">
+                          <Checkbox 
+                            checked={selectedUserIds.length === filteredUsers.length && filteredUsers.length > 0}
+                            indeterminate={selectedUserIds.length > 0 && selectedUserIds.length < filteredUsers.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedUserIds(filteredUsers.map(user => user.id));
+                              } else {
+                                setSelectedUserIds([]);
+                              }
+                            }}
+                          />
+                        </TableHead>
                         <TableHead className="w-[250px]">Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredUsers.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                          <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                             No users found
                           </TableCell>
                         </TableRow>
                       ) : (
                         filteredUsers.map((user: any) => (
                           <TableRow key={user.id}>
+                            <TableCell>
+                              <Checkbox 
+                                checked={selectedUserIds.includes(user.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedUserIds([...selectedUserIds, user.id]);
+                                  } else {
+                                    setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
+                                  }
+                                }}
+                              />
+                            </TableCell>
                             <TableCell className="font-medium">
                               <div className="flex flex-col">
-                                <span>{user.firstName} {user.lastName}</span>
+                                <span>{user.first_name || user.firstName} {user.last_name || user.lastName}</span>
                                 <span className="text-sm text-muted-foreground">@{user.username}</span>
                               </div>
                             </TableCell>
@@ -642,27 +1023,295 @@ export default function SettingsPage() {
                                 {user.role}
                               </span>
                             </TableCell>
+                            <TableCell>
+                              {user.status === "invited" ? (
+                                <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
+                                  Invited
+                                </span>
+                              ) : user.is_active === false ? (
+                                <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-100 text-red-800">
+                                  Inactive
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
+                                  Active
+                                </span>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end space-x-2">
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => {
-                                    setSelectedUser(user);
-                                    setIsEditing(true);
+                                    setSelectedUserForActivity(user);
+                                    setShowActivityLog(true);
                                   }}
+                                  title="View Activity"
                                 >
-                                  <Edit className="h-4 w-4" />
-                                  <span className="sr-only">Edit</span>
+                                  <BellRing className="h-4 w-4" />
+                                  <span className="sr-only">Activity</span>
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeleteUser(user.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                  <span className="sr-only">Delete</span>
-                                </Button>
+                                
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Edit User"
+                                      onClick={() => {
+                                        setSelectedUser(user);
+                                        setIsEditing(true);
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                      <span className="sr-only">Edit</span>
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="sm:max-w-[625px]">
+                                    <DialogHeader>
+                                      <DialogTitle>Edit User</DialogTitle>
+                                      <DialogDescription>
+                                        Update user details and permissions
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-4">
+                                      <Form {...form}>
+                                        <form className="space-y-4">
+                                          <div className="grid grid-cols-2 gap-4">
+                                            <FormField
+                                              control={form.control}
+                                              name="firstName"
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>First Name</FormLabel>
+                                                  <FormControl>
+                                                    <Input placeholder="First name" {...field} />
+                                                  </FormControl>
+                                                  <FormMessage />
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name="lastName"
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Last Name</FormLabel>
+                                                  <FormControl>
+                                                    <Input placeholder="Last name" {...field} />
+                                                  </FormControl>
+                                                  <FormMessage />
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-2 gap-4">
+                                            <FormField
+                                              control={form.control}
+                                              name="email"
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Email</FormLabel>
+                                                  <FormControl>
+                                                    <Input placeholder="Email" {...field} />
+                                                  </FormControl>
+                                                  <FormMessage />
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name="role"
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Role</FormLabel>
+                                                  <Select 
+                                                    onValueChange={field.onChange} 
+                                                    value={field.value}
+                                                  >
+                                                    <FormControl>
+                                                      <SelectTrigger>
+                                                        <SelectValue placeholder="Select role" />
+                                                      </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                      <SelectItem value="admin">Admin</SelectItem>
+                                                      <SelectItem value="salesperson">Salesperson</SelectItem>
+                                                      <SelectItem value="designer">Designer</SelectItem>
+                                                      <SelectItem value="manufacturer">Manufacturer</SelectItem>
+                                                      <SelectItem value="customer">Customer</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                  <FormMessage />
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          {/* Role-specific permissions section */}
+                                          <div className="border rounded-lg p-4">
+                                            <h3 className="text-sm font-medium mb-3">Role Permissions</h3>
+                                            
+                                            {form.watch("role") === "admin" && (
+                                              <div className="grid grid-cols-2 gap-2">
+                                                <FormField
+                                                  control={form.control}
+                                                  name="permissions.admin.manage_users"
+                                                  render={({ field }) => (
+                                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                                      <FormControl>
+                                                        <Checkbox
+                                                          checked={field.value}
+                                                          onCheckedChange={field.onChange}
+                                                        />
+                                                      </FormControl>
+                                                      <FormLabel className="text-sm font-normal">
+                                                        Manage Users
+                                                      </FormLabel>
+                                                    </FormItem>
+                                                  )}
+                                                />
+                                                
+                                                <FormField
+                                                  control={form.control}
+                                                  name="permissions.admin.view_all_orders"
+                                                  render={({ field }) => (
+                                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                                      <FormControl>
+                                                        <Checkbox
+                                                          checked={field.value}
+                                                          onCheckedChange={field.onChange}
+                                                        />
+                                                      </FormControl>
+                                                      <FormLabel className="text-sm font-normal">
+                                                        View All Orders
+                                                      </FormLabel>
+                                                    </FormItem>
+                                                  )}
+                                                />
+                                                
+                                                <FormField
+                                                  control={form.control}
+                                                  name="permissions.admin.super_admin"
+                                                  render={({ field }) => (
+                                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                                      <FormControl>
+                                                        <Checkbox
+                                                          checked={field.value}
+                                                          onCheckedChange={field.onChange}
+                                                        />
+                                                      </FormControl>
+                                                      <FormLabel className="text-sm font-normal">
+                                                        Super Admin
+                                                      </FormLabel>
+                                                    </FormItem>
+                                                  )}
+                                                />
+                                              </div>
+                                            )}
+                                            
+                                            {/* Other role permissions sections would go here */}
+                                          </div>
+                                        </form>
+                                      </Form>
+                                    </div>
+                                    <DialogFooter>
+                                      <Button
+                                        onClick={() => {
+                                          // Update user in local state
+                                          const formData = form.getValues();
+                                          const updatedUser = {
+                                            ...user,
+                                            first_name: formData.firstName,
+                                            last_name: formData.lastName,
+                                            email: formData.email,
+                                            role: formData.role,
+                                            permissions: formData.permissions
+                                          };
+                                          
+                                          setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+                                          
+                                          // Add activity log
+                                          const activityEntry = {
+                                            id: userActivity.length + 1,
+                                            user_id: user.id,
+                                            action: "user_updated",
+                                            details: { 
+                                              updated_by: "admin",
+                                              fields_changed: ["details", "permissions", "role"]
+                                            },
+                                            created_at: new Date().toISOString()
+                                          };
+                                          
+                                          setUserActivity([activityEntry, ...userActivity]);
+                                          
+                                          toast({
+                                            title: "User updated",
+                                            description: "User information has been updated successfully",
+                                            variant: "default",
+                                          });
+                                        }}
+                                      >
+                                        Save Changes
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+                                
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Delete User"
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                      <span className="sr-only">Delete</span>
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this user? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => {
+                                          // Delete user from local state
+                                          setUsers(users.filter(u => u.id !== user.id));
+                                          
+                                          // Add activity log
+                                          const activityEntry = {
+                                            id: userActivity.length + 1,
+                                            user_id: "system",
+                                            action: "user_deleted",
+                                            details: { 
+                                              deleted_user: user.email,
+                                              deleted_by: "admin"
+                                            },
+                                            created_at: new Date().toISOString()
+                                          };
+                                          
+                                          setUserActivity([activityEntry, ...userActivity]);
+                                          
+                                          toast({
+                                            title: "User deleted",
+                                            description: "The user has been deleted successfully",
+                                            variant: "default",
+                                          });
+                                        }}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -672,6 +1321,82 @@ export default function SettingsPage() {
                   </Table>
                 </div>
               )}
+              
+              {/* User Activity Log Dialog */}
+              <Dialog open={showActivityLog} onOpenChange={setShowActivityLog}>
+                <DialogContent className="sm:max-w-[625px]">
+                  <DialogHeader>
+                    <DialogTitle>User Activity Log</DialogTitle>
+                    <DialogDescription>
+                      {selectedUserForActivity ? 
+                        `Activity history for ${selectedUserForActivity.first_name || selectedUserForActivity.firstName} ${selectedUserForActivity.last_name || selectedUserForActivity.lastName}` :
+                        "System activity log"
+                      }
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="max-h-[400px] overflow-y-auto border rounded-md">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Details</TableHead>
+                          <TableHead>Date/Time</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {userActivity
+                          .filter(activity => !selectedUserForActivity || activity.user_id === selectedUserForActivity.id)
+                          .map(activity => (
+                            <TableRow key={activity.id}>
+                              <TableCell className="font-medium">
+                                <span className="capitalize">
+                                  {activity.action.replace(/_/g, ' ')}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  {activity.details && typeof activity.details === 'object' ? 
+                                    Object.entries(activity.details).map(([key, value]) => (
+                                      <div key={key}>
+                                        <span className="font-medium">{key.replace(/_/g, ' ')}</span>: {
+                                          Array.isArray(value) 
+                                            ? value.join(', ') 
+                                            : typeof value === 'object'
+                                              ? JSON.stringify(value)
+                                              : String(value)
+                                        }
+                                      </div>
+                                    )) : 
+                                    String(activity.details || '')
+                                  }
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {new Date(activity.created_at).toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        }
+                        
+                        {userActivity.filter(activity => !selectedUserForActivity || activity.user_id === selectedUserForActivity.id).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                              No activity found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowActivityLog(false)}>
+                      Close
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               
               <Card>
                 <CardHeader>
