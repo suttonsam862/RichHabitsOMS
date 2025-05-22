@@ -1445,7 +1445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User setup email API endpoint
+  // User setup email API endpoint - ONLY sends emails, never creates users
   app.post('/api/users/invite', async (req, res) => {
     try {
       const { email, firstName, lastName, role } = req.body;
@@ -1457,140 +1457,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if user already exists
-      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = existingUsers.users.find(user => user.email === email);
+      // Simply send setup email - no user creation
+      const setupToken = Buffer.from(JSON.stringify({
+        email,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        role: role || 'customer',
+        expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+        timestamp: Date.now()
+      })).toString('base64url');
       
-      if (existingUser) {
-        // Send setup email for existing user
-        const setupToken = Buffer.from(JSON.stringify({
-          email,
-          userId: existingUser.id,
-          expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
-          timestamp: Date.now()
-        })).toString('base64url');
-        
-        const setupUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${setupToken}`;
-        
-        try {
-          const emailTemplate = {
-            to: email,
-            subject: 'Complete Your Account Setup - ThreadCraft',
-            text: `Hi ${firstName || existingUser.user_metadata?.firstName || 'there'},
+      const setupUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${setupToken}`;
+      
+      try {
+        const emailTemplate = {
+          to: email,
+          subject: 'Complete Your Account Setup - ThreadCraft',
+          text: `Hi ${firstName || 'there'},
 
-Your account has been created! Please complete your account setup by clicking the link below:
+You've been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:
 ${setupUrl}
 
 This link will expire in 7 days.
 
 Best regards,
 The ThreadCraft Team`,
-            html: `
-              <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-                <h2 style="color: #333;">Complete Your Account Setup</h2>
-                <p>Hi ${firstName || existingUser.user_metadata?.firstName || 'there'},</p>
-                <p>Your account has been created! Please complete your account setup to access your dashboard.</p>
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${setupUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                    Complete Setup
-                  </a>
-                </div>
-                <p style="color: #666; font-size: 14px;">
-                  If the button doesn't work, you can copy and paste this link into your browser:<br>
-                  <a href="${setupUrl}">${setupUrl}</a>
-                </p>
-                <p style="color: #666; font-size: 14px;">
-                  This link will expire in 7 days.
-                </p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                <p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p>
+          html: `
+            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+              <h2 style="color: #333;">Complete Your Account Setup</h2>
+              <p>Hi ${firstName || 'there'},</p>
+              <p>You've been invited to complete your account setup for ThreadCraft!</p>
+              <p>Please click the button below to access your dashboard:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${setupUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Complete Setup
+                </a>
               </div>
-            `
-          };
-          
-          await sendEmail(emailTemplate);
-          console.log(`Setup email sent to existing user: ${email}`);
-          
-          return res.json({
-            success: true,
-            message: `Setup email sent successfully! ${firstName || 'User'} will receive an email to complete their account setup.`
-          });
-        } catch (emailError) {
-          console.error('Error sending setup email:', emailError);
-          return res.status(500).json({
-            success: false,
-            message: 'Failed to send setup email. Please check your email configuration.'
-          });
-        }
-      } else {
-        // Create new user invitation
-        const invitationToken = Buffer.from(JSON.stringify({
-          email,
-          firstName: firstName || '',
-          lastName: lastName || '',
-          role: role || 'customer',
-          expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
-          timestamp: Date.now()
-        })).toString('base64url');
+              <p style="color: #666; font-size: 14px;">
+                If the button doesn't work, you can copy and paste this link into your browser:<br>
+                <a href="${setupUrl}">${setupUrl}</a>
+              </p>
+              <p style="color: #666; font-size: 14px;">
+                This link will expire in 7 days.
+              </p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+              <p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p>
+            </div>
+          `
+        };
         
-        const registrationUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/register?invite=${invitationToken}`;
+        await sendEmail(emailTemplate);
+        console.log(`Setup email sent to: ${email}`);
         
-        try {
-          const emailTemplate = {
-            to: email,
-            subject: `You're invited to join ThreadCraft as ${role || 'team member'}`,
-            text: `Hi ${firstName || 'there'},
-
-You've been invited to join our team as a ${role || 'team member'}! 
-
-To complete your registration and set up your account, please click the link below:
-${registrationUrl}
-
-This invitation will expire in 7 days.
-
-Best regards,
-The ThreadCraft Team`,
-            html: `
-              <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-                <h2 style="color: #333;">You're invited to join ThreadCraft!</h2>
-                <p>Hi ${firstName || 'there'},</p>
-                <p>You've been invited to join our team as a <strong>${role || 'team member'}</strong>!</p>
-                <p>To complete your registration and set up your account, please click the button below:</p>
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${registrationUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                    Complete Registration
-                  </a>
-                </div>
-                <p style="color: #666; font-size: 14px;">
-                  If the button doesn't work, you can copy and paste this link into your browser:<br>
-                  <a href="${registrationUrl}">${registrationUrl}</a>
-                </p>
-                <p style="color: #666; font-size: 14px;">
-                  This invitation will expire in 7 days.
-                </p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                <p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p>
-              </div>
-            `
-          };
-          
-          await sendEmail(emailTemplate);
-          console.log(`Invitation email sent to new user: ${email} for role: ${role}`);
-          
-          return res.json({
-            success: true,
-            message: `Invitation sent successfully! ${firstName || 'User'} will receive an email to complete registration.`
-          });
-        } catch (emailError) {
-          console.error('Error sending invitation email:', emailError);
-          return res.status(500).json({
-            success: false,
-            message: 'Failed to send invitation email. Please check your email configuration.'
-          });
-        }
+        return res.json({
+          success: true,
+          message: `Setup email sent successfully! ${firstName || 'User'} will receive an email to complete their account setup.`
+        });
+      } catch (emailError) {
+        console.error('Error sending setup email:', emailError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send setup email. Please check your email configuration.'
+        });
       }
     } catch (err: any) {
-      console.error('Error sending setup/invitation email:', err);
+      console.error('Error sending setup email:', err);
       return res.status(500).json({
         success: false,
         message: 'An unexpected error occurred'
