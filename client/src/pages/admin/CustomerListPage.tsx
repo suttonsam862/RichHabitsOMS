@@ -81,7 +81,7 @@ export default function CustomerListPage() {
   // We're using the new AddCustomerForm component now
   
   // Filter customers based on search term
-  const customerData = customers?.customers || [];
+  const customerData = customers || [];
   const filteredCustomers = customerData.filter((customer: Customer) => {
     const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
     const searchLower = searchTerm.toLowerCase();
