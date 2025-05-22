@@ -1,156 +1,102 @@
-// Script to set the admin user as a super admin in Supabase
+/**
+ * Script to promote the existing admin to a super admin with full database privileges
+ */
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
+// Load environment variables
 dotenv.config();
 
-// Supabase connection details
-const supabaseUrl = process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+// Validate environment variables
+const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
 
-// Admin user details
-const adminEmail = 'samsutton@rich-habits.com';
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error('ERROR: Missing Supabase credentials.');
+  console.error('Please ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set in your .env file');
+  process.exit(1);
+}
+
+// Create Supabase admin client with service key for full access
+const supabaseAdmin = createClient(
+  SUPABASE_URL,
+  SUPABASE_SERVICE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
+// Get the admin user email (or use a default value)
+const adminEmail = process.argv[2] || 'admin@example.com';
 
 async function makeSuperAdmin() {
-  console.log('Setting user as super admin in Supabase...');
-  
+  console.log(`Looking for admin user with email: ${adminEmail}`);
+
   try {
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('Supabase client initialized');
-    
-    // First, find the user by email to get their ID
-    console.log(`Looking up user with email: ${adminEmail}`);
-    
-    // Try to get the user from user_profiles table if it exists
-    let userId;
-    
-    // Try different approaches to find the user
-    
-    // 1. First try user_profiles table
-    const { data: profileData, error: profileError } = await supabase
+    // First, find the user by email
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('user_profiles')
-      .select('id')
+      .select('id, email, first_name, last_name, role')
       .eq('email', adminEmail)
       .single();
-    
-    if (profileData) {
-      userId = profileData.id;
-      console.log(`Found user in user_profiles with ID: ${userId}`);
-    } else {
-      console.log('User not found in user_profiles, trying users table...');
-      
-      // 2. Try users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', adminEmail)
-        .single();
-      
-      if (userData) {
-        userId = userData.id;
-        console.log(`Found user in users table with ID: ${userId}`);
-      } else {
-        // 3. Try to get user from auth.users via admin API (requires service role key)
-        console.log('Attempting to find user via auth API...');
-        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-        
-        if (authError) {
-          console.error('Error listing users from auth:', authError);
-        } else {
-          const authUser = authData.users.find(u => u.email === adminEmail);
-          if (authUser) {
-            userId = authUser.id;
-            console.log(`Found user in auth.users with ID: ${userId}`);
-          }
-        }
-      }
+
+    if (userError) {
+      console.error('Error finding admin user:', userError);
+      return;
     }
-    
-    if (!userId) {
-      console.error(`Could not find user with email: ${adminEmail}`);
-      return false;
+
+    if (!userData) {
+      console.error(`No user found with email: ${adminEmail}`);
+      return;
     }
-    
-    // Now update the user with super admin flag in metadata
-    console.log('Updating user auth metadata with super admin flag...');
-    
-    // Try updating user metadata via auth API
-    const { error: updateAuthError } = await supabase.auth.admin.updateUserById(
-      userId,
-      { user_metadata: { role: 'admin', is_super_admin: true } }
-    );
-    
-    if (updateAuthError) {
-      console.error('Error updating auth metadata:', updateAuthError);
-      
-      // Fallback to regular update if admin update fails
-      const { error: regularUpdateError } = await supabase.auth.updateUser({
-        data: { 
+
+    console.log('Found user:', userData);
+
+    // Update the user's metadata to grant super admin privileges
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      userData.id,
+      {
+        user_metadata: {
           role: 'admin',
-          is_super_admin: true
+          is_super_admin: true,
+          has_full_access: true,
+          permissions: ['create_users', 'delete_users', 'update_users', 'create_tables', 'edit_tables']
         }
-      });
-      
-      if (regularUpdateError) {
-        console.error('Error updating user metadata:', regularUpdateError);
-        return false;
       }
+    );
+
+    if (error) {
+      console.error('Error promoting admin to super admin:', error);
+      return;
     }
-    
-    console.log('Updated user auth metadata successfully');
-    
-    // Now update the user in any relevant tables
-    
-    // 1. Try to update users table if it exists
-    const { error: userUpdateError } = await supabase
-      .from('users')
-      .update({ 
-        role: 'admin',
-        is_super_admin: true 
-      })
-      .eq('id', userId);
-    
-    if (userUpdateError) {
-      console.log('Note: Could not update users table, might not exist or have these columns');
-    } else {
-      console.log('Updated users table successfully');
-    }
-    
-    // 2. Try to update user_profiles table if it exists
-    const { error: profileUpdateError } = await supabase
+
+    console.log('✅ Successfully promoted user to super admin with full privileges!');
+    console.log('User ID:', userData.id);
+    console.log('User Email:', userData.email);
+    console.log('New Permissions:', data.user.user_metadata);
+
+    // Also update the profile in the database
+    const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
-      .update({ 
+      .update({
         role: 'admin',
-        is_super_admin: true 
+        is_super_admin: true,
+        updated_at: new Date().toISOString()
       })
-      .eq('id', userId);
-    
-    if (profileUpdateError) {
-      console.log('Note: Could not update user_profiles table, might not exist or have these columns');
+      .eq('id', userData.id);
+
+    if (profileError) {
+      console.error('Error updating user profile:', profileError);
     } else {
-      console.log('Updated user_profiles table successfully');
+      console.log('✅ User profile also updated in database');
     }
-    
-    console.log('Super admin flags have been set for the user');
-    return true;
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return false;
+
+  } catch (err) {
+    console.error('Unexpected error:', err);
   }
 }
 
-// Run the function
-makeSuperAdmin()
-  .then(success => {
-    if (success) {
-      console.log('Super admin setup completed successfully');
-    } else {
-      console.error('Super admin setup failed');
-    }
-    process.exit(success ? 0 : 1);
-  })
-  .catch(err => {
-    console.error('Unhandled error:', err);
-    process.exit(1);
-  });
+// Run the script
+makeSuperAdmin();
