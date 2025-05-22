@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { 
   Form, 
   FormControl, 
@@ -435,80 +436,32 @@ export default function SettingsPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="default" className="ml-2">
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Add User
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Add New User</DialogTitle>
-                      <DialogDescription>
-                        Create a new user account with specific role and permissions.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="email" className="text-right">
-                          Email
-                        </Label>
-                        <Input id="email" className="col-span-3" placeholder="user@example.com" />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="username" className="text-right">
-                          Username
-                        </Label>
-                        <Input id="username" className="col-span-3" placeholder="username" />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="role" className="text-right">
-                          Role
-                        </Label>
-                        <Select>
-                          <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="salesperson">Salesperson</SelectItem>
-                            <SelectItem value="designer">Designer</SelectItem>
-                            <SelectItem value="manufacturer">Manufacturer</SelectItem>
-                            <SelectItem value="customer">Customer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button 
-                        type="submit" 
-                        onClick={() => {
-                          // Normally this would call createUserMutation.mutate with form values
-                          // For now, let's add a user to our test data
-                          const newUser = {
-                            id: String(users.length + 1),
-                            username: "newuser",
-                            email: "newuser@example.com",
-                            first_name: "New",
-                            last_name: "User",
-                            role: "customer"
-                          };
-                          
-                          setUsers([...users, newUser]);
-                          
-                          toast({
-                            title: "User created successfully",
-                            description: "The new user has been added to the system",
-                            variant: "default",
-                          });
-                        }}
-                      >
-                        Create User
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <Button 
+                  variant="default" 
+                  className="ml-2"
+                  onClick={() => {
+                    // Add a new user directly to the list
+                    const newUser = {
+                      id: String(users.length + 1),
+                      username: "newuser",
+                      email: "newuser@example.com",
+                      first_name: "New",
+                      last_name: "User",
+                      role: "customer"
+                    };
+                    
+                    setUsers([...users, newUser]);
+                    
+                    toast({
+                      title: "User created successfully",
+                      description: "A new user was added with default values",
+                      variant: "default",
+                    });
+                  }}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add User
+                </Button>
               </div>
 
               {isLoading ? (
