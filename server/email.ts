@@ -1,7 +1,7 @@
 /**
  * Email service for sending notifications
  */
-import * as SendGrid from '@sendgrid/mail';
+import SendGrid from '@sendgrid/mail';
 
 // Initialize SendGrid if API key is available
 if (process.env.SENDGRID_API_KEY) {
