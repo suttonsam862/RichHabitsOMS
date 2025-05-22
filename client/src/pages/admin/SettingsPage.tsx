@@ -66,11 +66,56 @@ export default function SettingsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Get users query
-  const { data: users = [], isLoading, isError } = useQuery({
-    queryKey: ['/api/admin/users'],
-    enabled: !!user && user.role === 'admin',
-  });
+  // Get users query - using direct API fetch for more reliable auth
+  const [users, setUsers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  
+  // Fetch users directly using fetch API
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      setIsLoading(true);
+      fetch('/api/admin/users', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include' // Important for including cookies
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Users loaded:', data);
+        setUsers(data || []);
+        setIsError(false);
+      })
+      .catch(err => {
+        console.error('Error loading users:', err);
+        setIsError(true);
+        
+        // Fallback for development/testing - this helps show the UI while we fix the API
+        if (process.env.NODE_ENV === 'development') {
+          setUsers([
+            {
+              id: '1',
+              username: 'admin',
+              email: 'admin@example.com',
+              first_name: 'Admin',
+              last_name: 'User',
+              role: 'admin'
+            }
+          ]);
+        }
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+    }
+  }, [user]);
   
   // Filter users by search query
   const filteredUsers = users.filter((user: any) => 
