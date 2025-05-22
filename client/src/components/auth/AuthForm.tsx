@@ -28,6 +28,14 @@ export type AuthFormType = "login" | "register";
 
 interface AuthFormProps {
   type: AuthFormType;
+  invitationData?: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    expires: number;
+    timestamp: number;
+  } | null;
 }
 
 // Login form schema
@@ -50,7 +58,7 @@ const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export function AuthForm({ type }: AuthFormProps) {
+export function AuthForm({ type, invitationData }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -61,18 +69,18 @@ export function AuthForm({ type }: AuthFormProps) {
   const schema = type === "login" ? loginSchema : registerSchema;
   type FormData = z.infer<typeof schema>;
 
-  // Form definition
+  // Form definition with invitation data pre-filled
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      email: "",
+      email: invitationData?.email || "",
       password: "",
       ...(type === "register" ? {
-        username: "",
+        username: invitationData?.email?.split('@')[0] || "",
         confirmPassword: "",
-        firstName: "",
-        lastName: "",
-        role: "customer",
+        firstName: invitationData?.firstName || "",
+        lastName: invitationData?.lastName || "",
+        role: invitationData?.role || "customer",
       } : {}),
     },
   });

@@ -1457,54 +1457,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create user in Supabase Auth (they'll need to set password via email)
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        email_confirm: false, // They'll confirm via email
-        user_metadata: {
-          firstName,
-          lastName,
-          role
-        }
-      });
+      // Check if user already exists
+      const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
+      const userExists = existingUser.users.some(user => user.email === email);
       
-      if (error) {
-        console.error('Error creating user:', error);
-        return res.status(500).json({
+      if (userExists) {
+        return res.status(400).json({
           success: false,
-          message: 'Failed to create user: ' + error.message
+          message: 'A user with this email already exists'
         });
       }
       
-      // Send welcome email with setup instructions
+      // Generate a secure invitation token
+      const invitationToken = Buffer.from(JSON.stringify({
+        email,
+        firstName,
+        lastName,
+        role,
+        expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+        timestamp: Date.now()
+      })).toString('base64url');
+      
+      // Create registration URL with pre-assigned role
+      const registrationUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/register?invite=${invitationToken}`;
+      
+      // Send invitation email with registration link
       try {
-        const emailTemplate = getCustomerInviteEmailTemplate(
-          email,
-          `${firstName} ${lastName}`,
-          role,
-          `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${data.user?.id}`
-        );
+        const emailTemplate = {
+          to: email,
+          subject: `You're invited to join our team as ${role}`,
+          text: `Hi ${firstName},
+
+You've been invited to join our team as a ${role}! 
+
+To complete your registration and set up your account, please click the link below:
+${registrationUrl}
+
+This invitation will expire in 7 days.
+
+Best regards,
+The Team`,
+          html: `
+            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+              <h2 style="color: #333;">You're invited to join our team!</h2>
+              <p>Hi ${firstName},</p>
+              <p>You've been invited to join our team as a <strong>${role}</strong>!</p>
+              <p>To complete your registration and set up your account, please click the button below:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${registrationUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Complete Registration
+                </a>
+              </div>
+              <p style="color: #666; font-size: 14px;">
+                If the button doesn't work, you can copy and paste this link into your browser:<br>
+                <a href="${registrationUrl}">${registrationUrl}</a>
+              </p>
+              <p style="color: #666; font-size: 14px;">
+                This invitation will expire in 7 days.
+              </p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+              <p style="color: #666; font-size: 12px;">Best regards,<br>The Team</p>
+            </div>
+          `
+        };
         
         await sendEmail(emailTemplate);
-        console.log(`Welcome email sent to ${email}`);
+        console.log(`Invitation email sent to ${email} for role: ${role}`);
       } catch (emailError) {
-        console.error('Error sending welcome email:', emailError);
-        // Don't fail the request if email fails
+        console.error('Error sending invitation email:', emailError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send invitation email. Please check your email configuration.'
+        });
       }
       
       return res.json({
         success: true,
-        message: `User invited successfully! An email has been sent to ${email}`,
-        user: {
-          id: data.user?.id,
-          email: data.user?.email,
-          firstName,
-          lastName,
-          role
-        }
+        message: `Invitation sent successfully! ${firstName} will receive an email to complete registration as ${role}.`,
+        invitationToken,
+        registrationUrl
       });
     } catch (err: any) {
-      console.error('Error inviting user:', err);
+      console.error('Error sending invitation:', err);
       return res.status(500).json({
         success: false,
         message: 'An unexpected error occurred'

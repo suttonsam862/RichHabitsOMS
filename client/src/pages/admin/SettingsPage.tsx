@@ -1976,6 +1976,22 @@ export default function SettingsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              // Send individual invite email
+                              inviteUserMutation.mutate({
+                                email: user.email,
+                                firstName: user.first_name || '',
+                                lastName: user.last_name || '',
+                                role: user.role
+                              });
+                            }}
+                            disabled={inviteUserMutation.isPending}
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="sm">
                             <Edit className="h-4 w-4" />
                           </Button>
