@@ -1308,8 +1308,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Fetching real customers from Supabase...');
       
-      // Get all users from Supabase Auth
-      const { data, error } = await supabase.auth.admin.listUsers();
+      // Get all users from Supabase Auth using admin client
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers();
       
       if (error) {
         console.error('Error fetching customers from Supabase Auth:', error);
