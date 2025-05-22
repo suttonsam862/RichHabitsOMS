@@ -227,38 +227,22 @@ export default function SettingsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Example users for testing the UI - in a production app, these would come from the API
-  const testUsers = [
-    {
-      id: '1',
-      username: 'admin',
-      email: 'admin@example.com',
-      first_name: 'Admin',
-      last_name: 'User',
-      role: 'admin'
-    },
-    {
-      id: '2',
-      username: 'designer1',
-      email: 'designer@example.com',
-      first_name: 'Design',
-      last_name: 'Expert',
-      role: 'designer'
-    },
-    {
-      id: '3',
-      username: 'sales1',
-      email: 'sales@example.com',
-      first_name: 'Sales',
-      last_name: 'Manager',
-      role: 'salesperson'
+  // Fetch real users from API
+  const { data: users, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin", "users"],
+    queryFn: async () => {
+      console.log("Fetching real users from API...");
+      const response = await fetch("/api/users");
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      
+      const data = await response.json();
+      console.log("Received user data:", data);
+      return data;
     }
-  ];
-  
-  // For now, we'll use the test data directly while we fix the API
-  const [users, setUsers] = useState<any[]>(testUsers);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isError, setIsError] = useState(false);
+  });
   
   // State for user invitation dialog
   const [showInviteDialog, setShowInviteDialog] = useState(false);
@@ -266,6 +250,45 @@ export default function SettingsPage() {
   const [inviteRole, setInviteRole] = useState("customer");
   const [inviteFirstName, setInviteFirstName] = useState("");
   const [inviteLastName, setInviteLastName] = useState("");
+
+  // User invitation mutation
+  const inviteUserMutation = useMutation({
+    mutationFn: async (userData: { email: string; firstName: string; lastName: string; role: string }) => {
+      const response = await fetch('/api/users/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to invite user');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "User Invited",
+        description: data.message,
+      });
+      setShowInviteDialog(false);
+      setInviteEmail("");
+      setInviteFirstName("");
+      setInviteLastName("");
+      setInviteRole("customer");
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
   
   // State for delete dialog
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -752,26 +775,25 @@ export default function SettingsPage() {
                     <DialogFooter>
                       <Button 
                         onClick={() => {
-                          if (inviteEmail) {
-                            // In a real app, this would call an API to send an invitation
-                            // For demo purposes, just create a new user
-                            const newUser = {
-                              id: String(users.length + 1),
-                              username: inviteEmail.split('@')[0],
+                          if (inviteEmail && inviteFirstName && inviteLastName) {
+                            inviteUserMutation.mutate({
                               email: inviteEmail,
-                              first_name: inviteFirstName,
-                              last_name: inviteLastName,
-                              role: inviteRole,
-                              status: "invited",
-                              created_at: new Date().toISOString(),
-                              permissions: {
-                                [inviteRole]: inviteRole === 'admin' ? {
-                                  manage_users: true,
-                                  manage_roles: true,
-                                  view_all_orders: true
-                                } : inviteRole === 'salesperson' ? {
-                                  create_orders: true,
-                                  edit_orders: true,
+                              firstName: inviteFirstName,
+                              lastName: inviteLastName,
+                              role: inviteRole
+                            });
+                          }
+                        }}
+                        disabled={inviteUserMutation.isPending || !inviteEmail || !inviteFirstName || !inviteLastName}
+                      >
+                        {inviteUserMutation.isPending ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          "Send Invitation"
+                        )}
                                   view_customer_data: true
                                 } : inviteRole === 'designer' ? {
                                   upload_designs: true,

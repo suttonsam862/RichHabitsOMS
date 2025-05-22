@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { loginSchema, registerSchema } from '../shared/schema';
 import { supabase } from './db';
 import { requireAuth, requireRole } from './auth';
+import { sendEmail, getCustomerInviteEmailTemplate } from './email';
 import adminRoutes from './routes/admin';
 import customerRoutes from './routes/customerRoutes';
 import { createClient } from '@supabase/supabase-js';
@@ -1397,6 +1398,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('close', () => {
       console.log('WebSocket connection closed');
     });
+  });
+
+  // Users API endpoint to fetch all users for user management
+  app.get('/api/users', async (req, res) => {
+    try {
+      console.log('Fetching real users from Supabase...');
+      
+      // Get all users from Supabase Auth using admin client
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (error) {
+        console.error('Error fetching users from Supabase Auth:', error);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to retrieve users: ' + error.message 
+        });
+      }
+      
+      // Transform users to expected format
+      const users = data.users.map(user => {
+        const metadata = user.user_metadata || {};
+        return {
+          id: user.id,
+          email: user.email || '',
+          username: metadata.username || user.email?.split('@')[0] || '',
+          first_name: metadata.firstName || '',
+          last_name: metadata.lastName || '',
+          role: metadata.role || 'customer',
+          phone: metadata.phone || '',
+          company: metadata.company || '',
+          created_at: user.created_at,
+          email_confirmed: !!user.email_confirmed_at,
+          last_sign_in: user.last_sign_in_at
+        };
+      });
+      
+      console.log(`Found ${users.length} users in Supabase`);
+      return res.json(users);
+    } catch (err: any) {
+      console.error('Error fetching users:', err);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'An unexpected error occurred'
+      });
+    }
+  });
+
+  // User invitation API endpoint
+  app.post('/api/users/invite', async (req, res) => {
+    try {
+      const { email, firstName, lastName, role } = req.body;
+      
+      if (!email || !firstName || !lastName || !role) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email, first name, last name, and role are required'
+        });
+      }
+      
+      // Create user in Supabase Auth (they'll need to set password via email)
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        email_confirm: false, // They'll confirm via email
+        user_metadata: {
+          firstName,
+          lastName,
+          role
+        }
+      });
+      
+      if (error) {
+        console.error('Error creating user:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create user: ' + error.message
+        });
+      }
+      
+      // Send welcome email with setup instructions
+      try {
+        const emailTemplate = getCustomerInviteEmailTemplate(
+          email,
+          `${firstName} ${lastName}`,
+          role,
+          `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${data.user?.id}`
+        );
+        
+        await sendEmail(emailTemplate);
+        console.log(`Welcome email sent to ${email}`);
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't fail the request if email fails
+      }
+      
+      return res.json({
+        success: true,
+        message: `User invited successfully! An email has been sent to ${email}`,
+        user: {
+          id: data.user?.id,
+          email: data.user?.email,
+          firstName,
+          lastName,
+          role
+        }
+      });
+    } catch (err: any) {
+      console.error('Error inviting user:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred'
+      });
+    }
   });
 
   return httpServer;
