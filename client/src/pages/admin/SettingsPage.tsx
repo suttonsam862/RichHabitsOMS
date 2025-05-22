@@ -30,7 +30,24 @@ import {
   X, 
   Edit, 
   Trash2, 
-  RefreshCw 
+  RefreshCw,
+  Users,
+  Settings,
+  BarChart3,
+  Download,
+  Upload,
+  Calendar,
+  Clock,
+  Mail,
+  Phone,
+  Building,
+  Globe,
+  TrendingUp,
+  Filter,
+  MoreHorizontal,
+  Activity,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -226,6 +243,8 @@ export default function SettingsPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("general");
+  const [showUserManagement, setShowUserManagement] = useState(false);
   
   // Fetch real users from API
   const { data: users, isLoading, isError, refetch } = useQuery({
@@ -327,12 +346,12 @@ export default function SettingsPage() {
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [selectedUserForActivity, setSelectedUserForActivity] = useState<any>(null);
   
-  // Filter users by search query
-  const filteredUsers = users.filter((user: any) => 
+  // Filter users by search query (with null check)
+  const filteredUsers = (users || []).filter((user: any) => 
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.lastName?.toLowerCase().includes(searchQuery.toLowerCase())
+    user.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.last_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   // Create user mutation
@@ -480,18 +499,98 @@ export default function SettingsPage() {
     }
   };
   
+  // Calculate user analytics
+  const userAnalytics = {
+    totalUsers: users?.length || 0,
+    activeUsers: users?.filter(u => u.email_confirmed)?.length || 0,
+    adminUsers: users?.filter(u => u.role === 'admin')?.length || 0,
+    customerUsers: users?.filter(u => u.role === 'customer')?.length || 0,
+    salesPersons: users?.filter(u => u.role === 'salesperson')?.length || 0,
+    designers: users?.filter(u => u.role === 'designer')?.length || 0,
+    manufacturers: users?.filter(u => u.role === 'manufacturer')?.length || 0,
+    recentSignUps: users?.filter(u => {
+      const signUpDate = new Date(u.created_at);
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return signUpDate >= weekAgo;
+    })?.length || 0
+  };
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Settings & Administration</h1>
         <p className="text-muted-foreground mt-2">
-          Manage your account settings and preferences
+          Manage your system settings, users, and application configuration
         </p>
       </div>
 
-      <Tabs defaultValue="account" className="space-y-4">
-        <TabsList className="grid grid-cols-6">
-          <TabsTrigger value="account">Account</TabsTrigger>
+      {/* Quick Actions Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setShowUserManagement(true)}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">User Management</p>
+                <p className="text-2xl font-bold">{userAnalytics.totalUsers}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {userAnalytics.recentSignUps} new this week
+                </p>
+              </div>
+              <Users className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">System Settings</p>
+                <p className="text-2xl font-bold">Config</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Application settings
+                </p>
+              </div>
+              <Settings className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Security</p>
+                <p className="text-2xl font-bold">Active</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {userAnalytics.activeUsers} confirmed users
+                </p>
+              </div>
+              <Shield className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Analytics</p>
+                <p className="text-2xl font-bold">Reports</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  System insights
+                </p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="general" className="space-y-4">
+        <TabsList className="grid grid-cols-5">
+          <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
