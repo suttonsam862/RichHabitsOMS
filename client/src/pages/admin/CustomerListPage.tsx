@@ -74,6 +74,7 @@ export default function CustomerListPage() {
       
       const data = await response.json();
       console.log("Received customer data:", data);
+      console.log("Data type:", typeof data, "Is array:", Array.isArray(data));
       return data;
     }
   });
