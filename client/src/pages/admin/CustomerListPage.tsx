@@ -105,21 +105,30 @@ export default function CustomerListPage() {
   // Add customer mutation
   const addCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
+      console.log("Sending customer data:", customerData); // Debug log
+      
       const response = await fetch('/api/admin/customers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(customerData)
+        body: JSON.stringify({
+          ...customerData,
+          sendInvite: true // Enable sending invitation to the customer
+        })
       });
       
       if (!response.ok) {
-        throw new Error('Failed to add customer');
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Customer creation error:", errorData);
+        throw new Error(errorData.message || 'Failed to add customer');
       }
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Customer created successfully:", data);
+      
       // Clear form data
       setFormData({
         firstName: '',
@@ -143,10 +152,13 @@ export default function CustomerListPage() {
       // Show success toast
       toast({
         title: "Customer added",
-        description: "New customer has been added successfully",
+        description: data.inviteSent 
+          ? "New customer has been added and an invitation email was sent" 
+          : "New customer has been added successfully",
       });
     },
     onError: (error: any) => {
+      console.error("Customer creation error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to add customer",
