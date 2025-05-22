@@ -62,21 +62,27 @@ export default function CustomerListPage() {
   const queryClient = useQueryClient();
   
   // Fetch real customer data from API
-  const { data: customers, isLoading, isError } = useQuery({
+  const { data: customers, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "customers"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/customers");
+      console.log("Fetching real customers from API...");
+      const response = await fetch("/api/customers");
+      
       if (!response.ok) {
         throw new Error("Failed to fetch customers");
       }
-      return response.json();
+      
+      const data = await response.json();
+      console.log("Received customer data:", data);
+      return data;
     }
   });
 
   // We're using the new AddCustomerForm component now
   
   // Filter customers based on search term
-  const filteredCustomers = customers?.filter((customer: Customer) => {
+  const customerData = customers?.customers || [];
+  const filteredCustomers = customerData.filter((customer: Customer) => {
     const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
     const searchLower = searchTerm.toLowerCase();
     
