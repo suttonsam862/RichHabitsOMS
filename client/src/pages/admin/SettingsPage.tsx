@@ -512,32 +512,92 @@ export default function SettingsPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <Button 
-                  variant="default" 
-                  className="ml-2"
-                  onClick={() => {
-                    // Add a new user directly to the list
-                    const newUser = {
-                      id: String(users.length + 1),
-                      username: "newuser",
-                      email: "newuser@example.com",
-                      first_name: "New",
-                      last_name: "User",
-                      role: "customer"
-                    };
-                    
-                    setUsers([...users, newUser]);
-                    
-                    toast({
-                      title: "User created successfully",
-                      description: "A new user was added with default values",
-                      variant: "default",
-                    });
-                  }}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add User
-                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="default" className="ml-2">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Add User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Add New User</DialogTitle>
+                      <DialogDescription>
+                        Create a new user or send an invitation to join the system.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="invite-email" className="text-right">
+                          Email
+                        </Label>
+                        <Input 
+                          id="invite-email" 
+                          className="col-span-3" 
+                          placeholder="user@example.com" 
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="invite-role" className="text-right">
+                          Role
+                        </Label>
+                        <Select defaultValue="customer">
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Select a role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="salesperson">Salesperson</SelectItem>
+                            <SelectItem value="designer">Designer</SelectItem>
+                            <SelectItem value="manufacturer">Manufacturer</SelectItem>
+                            <SelectItem value="customer">Customer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button 
+                        onClick={() => {
+                          if (inviteEmail) {
+                            // In a real app, this would call an API to send an invitation
+                            // For demo purposes, just create a new user
+                            const newUser = {
+                              id: String(users.length + 1),
+                              username: inviteEmail.split('@')[0],
+                              email: inviteEmail,
+                              first_name: "",
+                              last_name: "",
+                              role: "customer",
+                              permissions: {
+                                customer: {
+                                  view_orders: true,
+                                  create_orders: true,
+                                  approve_designs: true,
+                                  make_payments: true,
+                                  view_order_history: true
+                                }
+                              }
+                            };
+                            
+                            setUsers([...users, newUser]);
+                            
+                            toast({
+                              title: "Invitation sent",
+                              description: `An invitation has been sent to ${inviteEmail}`,
+                              variant: "default",
+                            });
+                            
+                            setInviteEmail("");
+                          }
+                        }}
+                      >
+                        Send Invitation
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {isLoading ? (
