@@ -83,6 +83,9 @@ export default function CustomerListPage() {
   
   // Filter customers based on search term
   const customerData = customers || [];
+  console.log("Processing customer data:", customerData);
+  console.log("Customer data length:", customerData.length);
+  
   const filteredCustomers = customerData.filter((customer: Customer) => {
     const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
     const searchLower = searchTerm.toLowerCase();
