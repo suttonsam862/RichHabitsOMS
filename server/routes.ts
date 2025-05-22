@@ -1445,50 +1445,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User invitation API endpoint
+  // User setup email API endpoint
   app.post('/api/users/invite', async (req, res) => {
     try {
       const { email, firstName, lastName, role } = req.body;
       
-      if (!email || !firstName || !lastName || !role) {
+      if (!email) {
         return res.status(400).json({
           success: false,
-          message: 'Email, first name, last name, and role are required'
+          message: 'Email is required'
         });
       }
       
       // Check if user already exists
-      const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
-      const userExists = existingUser.users.some(user => user.email === email);
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers.users.find(user => user.email === email);
       
-      if (userExists) {
-        return res.status(400).json({
-          success: false,
-          message: 'A user with this email already exists'
-        });
-      }
-      
-      // Generate a secure invitation token
-      const invitationToken = Buffer.from(JSON.stringify({
-        email,
-        firstName,
-        lastName,
-        role,
-        expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
-        timestamp: Date.now()
-      })).toString('base64url');
-      
-      // Create registration URL with pre-assigned role
-      const registrationUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/register?invite=${invitationToken}`;
-      
-      // Send invitation email with registration link
-      try {
-        const emailTemplate = {
-          to: email,
-          subject: `You're invited to join our team as ${role}`,
-          text: `Hi ${firstName},
+      if (existingUser) {
+        // Send setup email for existing user
+        const setupToken = Buffer.from(JSON.stringify({
+          email,
+          userId: existingUser.id,
+          expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+          timestamp: Date.now()
+        })).toString('base64url');
+        
+        const setupUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${setupToken}`;
+        
+        try {
+          const emailTemplate = {
+            to: email,
+            subject: 'Complete Your Account Setup - ThreadCraft',
+            text: `Hi ${firstName || existingUser.user_metadata?.firstName || 'there'},
 
-You've been invited to join our team as a ${role}! 
+Your account has been created! Please complete your account setup by clicking the link below:
+${setupUrl}
+
+This link will expire in 7 days.
+
+Best regards,
+The ThreadCraft Team`,
+            html: `
+              <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+                <h2 style="color: #333;">Complete Your Account Setup</h2>
+                <p>Hi ${firstName || existingUser.user_metadata?.firstName || 'there'},</p>
+                <p>Your account has been created! Please complete your account setup to access your dashboard.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${setupUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                    Complete Setup
+                  </a>
+                </div>
+                <p style="color: #666; font-size: 14px;">
+                  If the button doesn't work, you can copy and paste this link into your browser:<br>
+                  <a href="${setupUrl}">${setupUrl}</a>
+                </p>
+                <p style="color: #666; font-size: 14px;">
+                  This link will expire in 7 days.
+                </p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p>
+              </div>
+            `
+          };
+          
+          await sendEmail(emailTemplate);
+          console.log(`Setup email sent to existing user: ${email}`);
+          
+          return res.json({
+            success: true,
+            message: `Setup email sent successfully! ${firstName || 'User'} will receive an email to complete their account setup.`
+          });
+        } catch (emailError) {
+          console.error('Error sending setup email:', emailError);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to send setup email. Please check your email configuration.'
+          });
+        }
+      } else {
+        // Create new user invitation
+        const invitationToken = Buffer.from(JSON.stringify({
+          email,
+          firstName: firstName || '',
+          lastName: lastName || '',
+          role: role || 'customer',
+          expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+          timestamp: Date.now()
+        })).toString('base64url');
+        
+        const registrationUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/register?invite=${invitationToken}`;
+        
+        try {
+          const emailTemplate = {
+            to: email,
+            subject: `You're invited to join ThreadCraft as ${role || 'team member'}`,
+            text: `Hi ${firstName || 'there'},
+
+You've been invited to join our team as a ${role || 'team member'}! 
 
 To complete your registration and set up your account, please click the link below:
 ${registrationUrl}
@@ -1496,49 +1549,48 @@ ${registrationUrl}
 This invitation will expire in 7 days.
 
 Best regards,
-The Team`,
-          html: `
-            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-              <h2 style="color: #333;">You're invited to join our team!</h2>
-              <p>Hi ${firstName},</p>
-              <p>You've been invited to join our team as a <strong>${role}</strong>!</p>
-              <p>To complete your registration and set up your account, please click the button below:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${registrationUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                  Complete Registration
-                </a>
+The ThreadCraft Team`,
+            html: `
+              <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+                <h2 style="color: #333;">You're invited to join ThreadCraft!</h2>
+                <p>Hi ${firstName || 'there'},</p>
+                <p>You've been invited to join our team as a <strong>${role || 'team member'}</strong>!</p>
+                <p>To complete your registration and set up your account, please click the button below:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${registrationUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                    Complete Registration
+                  </a>
+                </div>
+                <p style="color: #666; font-size: 14px;">
+                  If the button doesn't work, you can copy and paste this link into your browser:<br>
+                  <a href="${registrationUrl}">${registrationUrl}</a>
+                </p>
+                <p style="color: #666; font-size: 14px;">
+                  This invitation will expire in 7 days.
+                </p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p>
               </div>
-              <p style="color: #666; font-size: 14px;">
-                If the button doesn't work, you can copy and paste this link into your browser:<br>
-                <a href="${registrationUrl}">${registrationUrl}</a>
-              </p>
-              <p style="color: #666; font-size: 14px;">
-                This invitation will expire in 7 days.
-              </p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-              <p style="color: #666; font-size: 12px;">Best regards,<br>The Team</p>
-            </div>
-          `
-        };
-        
-        await sendEmail(emailTemplate);
-        console.log(`Invitation email sent to ${email} for role: ${role}`);
-      } catch (emailError) {
-        console.error('Error sending invitation email:', emailError);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to send invitation email. Please check your email configuration.'
-        });
+            `
+          };
+          
+          await sendEmail(emailTemplate);
+          console.log(`Invitation email sent to new user: ${email} for role: ${role}`);
+          
+          return res.json({
+            success: true,
+            message: `Invitation sent successfully! ${firstName || 'User'} will receive an email to complete registration.`
+          });
+        } catch (emailError) {
+          console.error('Error sending invitation email:', emailError);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to send invitation email. Please check your email configuration.'
+          });
+        }
       }
-      
-      return res.json({
-        success: true,
-        message: `Invitation sent successfully! ${firstName} will receive an email to complete registration as ${role}.`,
-        invitationToken,
-        registrationUrl
-      });
     } catch (err: any) {
-      console.error('Error sending invitation:', err);
+      console.error('Error sending setup/invitation email:', err);
       return res.status(500).json({
         success: false,
         message: 'An unexpected error occurred'
