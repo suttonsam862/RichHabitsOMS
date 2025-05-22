@@ -9,6 +9,18 @@ import adminRoutes from './routes/admin';
 import customerRoutes from './routes/customerRoutes';
 import { createClient } from '@supabase/supabase-js';
 
+// Create Supabase admin client with service key for admin operations
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co',
+  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register admin routes
   app.use('/api/admin', adminRoutes);
