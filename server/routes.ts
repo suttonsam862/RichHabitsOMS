@@ -1319,12 +1319,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Debug: Log all users and their metadata
+      console.log(`Total users found: ${data.users.length}`);
+      data.users.forEach((user, index) => {
+        console.log(`User ${index + 1}:`, {
+          id: user.id,
+          email: user.email,
+          metadata: user.user_metadata
+        });
+      });
+      
       // Filter for customers and transform to expected format
       const customers = data.users
         .filter(user => {
           // Look for users with customer role in metadata
           const metadata = user.user_metadata || {};
-          return metadata.role === 'customer';
+          const hasCustomerRole = metadata.role === 'customer';
+          console.log(`User ${user.email} has customer role:`, hasCustomerRole, 'metadata:', metadata);
+          return hasCustomerRole;
         })
         .map(user => {
           const metadata = user.user_metadata || {};
