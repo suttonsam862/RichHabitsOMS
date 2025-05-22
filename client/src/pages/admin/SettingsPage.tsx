@@ -794,54 +794,6 @@ export default function SettingsPage() {
                         ) : (
                           "Send Invitation"
                         )}
-                                  view_customer_data: true
-                                } : inviteRole === 'designer' ? {
-                                  upload_designs: true,
-                                  edit_designs: true,
-                                  view_design_library: true
-                                } : inviteRole === 'manufacturer' ? {
-                                  view_production_queue: true,
-                                  update_production_status: true,
-                                  manage_inventory: true
-                                } : {
-                                  view_orders: true,
-                                  create_orders: true,
-                                  approve_designs: true
-                                }
-                              }
-                            };
-                            
-                            setUsers([...users, newUser]);
-                            
-                            // Add to activity log
-                            const activityEntry = {
-                              id: userActivity.length + 1,
-                              user_id: "system",
-                              action: "invite_user",
-                              details: { 
-                                email: inviteEmail,
-                                role: inviteRole,
-                                invited_by: "admin"
-                              },
-                              created_at: new Date().toISOString()
-                            };
-                            
-                            setUserActivity([activityEntry, ...userActivity]);
-                            
-                            toast({
-                              title: "Invitation sent",
-                              description: `An invitation has been sent to ${inviteEmail}`,
-                              variant: "default",
-                            });
-                            
-                            setInviteEmail("");
-                            setInviteFirstName("");
-                            setInviteLastName("");
-                            setInviteRole("customer");
-                          }
-                        }}
-                      >
-                        Send Invitation
                       </Button>
                     </DialogFooter>
                   </DialogContent>
