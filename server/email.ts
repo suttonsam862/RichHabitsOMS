@@ -1,13 +1,11 @@
-// Email service abstraction
-// Uses SendGrid if API key is available, otherwise operates in mock mode
-import sgMail from '@sendgrid/mail';
+/**
+ * Email service for sending notifications
+ */
+import * as SendGrid from '@sendgrid/mail';
 
-// Setup the SendGrid mail service if API key is available
+// Initialize SendGrid if API key is available
 if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  console.log('SendGrid email service initialized with API key');
-} else {
-  console.log('No SENDGRID_API_KEY found, will use mock email service');
+  SendGrid.setApiKey(process.env.SENDGRID_API_KEY);
 }
 
 interface EmailOptions {
@@ -22,37 +20,33 @@ interface EmailOptions {
  * Send email using SendGrid if API key is available, otherwise mock
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  const { to, subject, text, html, from = 'noreply@yourclothingapp.com' } = options;
+  
+  // Check if SendGrid is configured
+  if (!process.env.SENDGRID_API_KEY) {
+    console.log('SendGrid API key not found. Email would have been sent:');
+    console.log({
+      to,
+      from,
+      subject,
+      text: text.substring(0, 100) + (text.length > 100 ? '...' : '')
+    });
+    return true; // Mock success
+  }
+  
   try {
-    // Set default from address if not provided
-    const from = options.from || 'notification@threadcraft.com';
-    
-    // If SendGrid API key is configured, use it
-    if (process.env.SENDGRID_API_KEY) {
-      const msg = {
-        to: options.to,
-        from: from,
-        subject: options.subject,
-        text: options.text,
-        html: options.html || options.text,
-      };
-      
-      const response = await sgMail.send(msg);
-      console.log(`Email sent via SendGrid to ${options.to} - Status: ${response[0].statusCode}`);
-      return true;
-    } 
-    
-    // Otherwise use mock mode
-    console.log('Email would be sent (MOCK MODE):', {
-      to: options.to,
-      from: from,
-      subject: options.subject,
-      textLength: options.text.length,
-      hasHtml: !!options.html
+    await SendGrid.send({
+      to,
+      from,
+      subject,
+      text,
+      html: html || text
     });
     
+    console.log(`Email sent successfully to ${to}`);
     return true;
-  } catch (error: any) {
-    console.error('Email service error:', error?.response?.body || error);
+  } catch (error) {
+    console.error('Failed to send email:', error);
     return false;
   }
 }
@@ -64,65 +58,62 @@ export function getCustomerInviteEmailTemplate(
   email: string,
   firstName: string,
   lastName: string,
-  inviteUrl: string,
-  message?: string
+  inviteUrl: string
 ): EmailOptions {
-  const subject = 'You\'re invited to ThreadCraft';
+  const subject = 'Welcome to Your Custom Clothing Account';
   
-  const text = `Hi ${firstName},
-  
-You've been invited to join ThreadCraft, your custom clothing management platform.
+  const text = `
+Hello ${firstName},
 
-${message ? `Message from your contact: "${message}"` : ''}
+You've been invited to create an account with our Custom Clothing Management System.
 
-Click the link below to set up your account:
+Please click the link below to set up your account:
 ${inviteUrl}
 
-This invitation link will expire in 7 days.
+This link will expire in 24 hours.
 
 If you have any questions, please contact our support team.
 
-Best regards,
-The ThreadCraft Team`;
+Thank you,
+Custom Clothing Management Team
+`;
 
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
-    .container { padding: 20px; }
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
     .header { text-align: center; margin-bottom: 30px; }
-    .logo { font-size: 24px; font-weight: bold; color: #4F46E5; }
-    .button { display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; margin: 20px 0; }
-    .footer { margin-top: 40px; font-size: 14px; color: #666; }
+    .button { display: inline-block; background-color: #4f46e5; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; }
+    .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">ThreadCraft</div>
+      <h1>Welcome to Your Custom Clothing Account</h1>
     </div>
     
-    <p>Hi ${firstName},</p>
+    <p>Hello ${firstName},</p>
     
-    <p>You've been invited to join <strong>ThreadCraft</strong>, your custom clothing management platform.</p>
+    <p>You've been invited to create an account with our Custom Clothing Management System.</p>
     
-    ${message ? `<p><em>Message from your contact:</em> "${message}"</p>` : ''}
+    <p>Please click the button below to set up your account:</p>
     
-    <p>Click the button below to set up your account:</p>
+    <p style="text-align: center; margin: 30px 0;">
+      <a href="${inviteUrl}" class="button">Set Up Your Account</a>
+    </p>
     
-    <div style="text-align: center;">
-      <a href="${inviteUrl}" class="button">Create Your Account</a>
-    </div>
-    
-    <p><small>This invitation link will expire in 7 days.</small></p>
+    <p>This link will expire in 24 hours.</p>
     
     <p>If you have any questions, please contact our support team.</p>
     
+    <p>Thank you,<br>Custom Clothing Management Team</p>
+    
     <div class="footer">
-      <p>Best regards,<br>The ThreadCraft Team</p>
+      <p>If the button doesn't work, copy and paste this link in your browser: ${inviteUrl}</p>
     </div>
   </div>
 </body>
@@ -133,7 +124,7 @@ The ThreadCraft Team`;
     to: email,
     subject,
     text,
-    html,
+    html
   };
 }
 
@@ -141,25 +132,32 @@ The ThreadCraft Team`;
  * Generate an order status change notification email
  */
 export function getOrderStatusChangeEmailTemplate(
+  email: string,
+  firstName: string,
   orderNumber: string,
-  newStatus: string,
-  customerName: string
+  status: string,
+  statusMessage: string,
+  orderDetailsUrl: string
 ): EmailOptions {
-  const subject = `Order #${orderNumber} Status Update`;
+  const subject = `Order #${orderNumber} Status Update: ${status}`;
   
-  const text = `Hi ${customerName},
+  const text = `
+Hello ${firstName},
 
-The status of your order #${orderNumber} has been updated to: ${newStatus}
+Your order #${orderNumber} status has been updated to: ${status}
 
-You can view your order details and track its progress in your customer dashboard.
+${statusMessage}
 
-Thank you for choosing ThreadCraft for your custom clothing needs.
+View your order details here: ${orderDetailsUrl}
 
-Best regards,
-The ThreadCraft Team`;
+If you have any questions, please contact our support team.
+
+Thank you,
+Custom Clothing Management Team
+`;
 
   return {
-    to: '', // This should be set when calling this function
+    to: email,
     subject,
     text
   };
@@ -169,22 +167,30 @@ The ThreadCraft Team`;
  * Generate a new message notification email
  */
 export function getNewMessageEmailTemplate(
+  email: string,
+  firstName: string,
   senderName: string,
-  messageContent: string
+  messagePreview: string,
+  threadUrl: string
 ): EmailOptions {
   const subject = `New Message from ${senderName}`;
   
-  const text = `You have received a new message from ${senderName}:
+  const text = `
+Hello ${firstName},
 
-"${messageContent}"
+You have received a new message from ${senderName}.
 
-You can reply to this message from your ThreadCraft dashboard.
+Message Preview:
+"${messagePreview}"
 
-Best regards,
-The ThreadCraft Team`;
+View and reply to this message: ${threadUrl}
+
+Thank you,
+Custom Clothing Management Team
+`;
 
   return {
-    to: '', // This should be set when calling this function
+    to: email,
     subject,
     text
   };
@@ -194,22 +200,28 @@ The ThreadCraft Team`;
  * Generate a design approval email
  */
 export function getDesignApprovalEmailTemplate(
-  orderNumber: string,
-  customerName: string
+  email: string,
+  firstName: string,
+  designName: string,
+  designerName: string,
+  designPreviewUrl: string,
+  approvalUrl: string
 ): EmailOptions {
-  const subject = `Design Ready for Review - Order #${orderNumber}`;
+  const subject = `New Design Ready for Approval: ${designName}`;
   
-  const text = `Hi ${customerName},
+  const text = `
+Hello ${firstName},
 
-Great news! The design for your order #${orderNumber} is now ready for your review and approval.
+A new design "${designName}" from ${designerName} is ready for your review and approval.
 
-Please log in to your ThreadCraft account to view and approve the design. Your feedback is important to us!
+Please review the design and provide your feedback: ${approvalUrl}
 
-Best regards,
-The ThreadCraft Design Team`;
+Thank you,
+Custom Clothing Management Team
+`;
 
   return {
-    to: '', // This should be set when calling this function
+    to: email,
     subject,
     text
   };
@@ -219,25 +231,33 @@ The ThreadCraft Design Team`;
  * Generate a payment receipt email
  */
 export function getPaymentReceiptEmailTemplate(
+  email: string,
+  firstName: string,
   orderNumber: string,
   amount: string,
-  customerName: string
+  orderItems: string[],
+  receiptUrl: string
 ): EmailOptions {
-  const subject = `Payment Receipt - Order #${orderNumber}`;
+  const subject = `Payment Receipt for Order #${orderNumber}`;
   
-  const text = `Hi ${customerName},
+  const itemsList = orderItems.map(item => `- ${item}`).join('\n');
+  
+  const text = `
+Hello ${firstName},
 
-Thank you for your payment of $${amount} for order #${orderNumber}.
+Thank you for your payment of ${amount} for order #${orderNumber}.
 
-This email serves as your receipt. Your order is now being processed.
+Order Items:
+${itemsList}
 
-Thank you for choosing ThreadCraft for your custom clothing needs.
+View and download your receipt: ${receiptUrl}
 
-Best regards,
-The ThreadCraft Team`;
+Thank you for your business,
+Custom Clothing Management Team
+`;
 
   return {
-    to: '', // This should be set when calling this function
+    to: email,
     subject,
     text
   };
