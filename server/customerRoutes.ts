@@ -1,80 +1,69 @@
+/**
+ * Customer management routes
+ */
 import { Request, Response } from 'express';
-import { supabase } from './db';
-import { getCustomerInviteEmailTemplate } from './email';
-import { sendEmail } from './email';
+import { createClient } from '@supabase/supabase-js';
+import * as EmailService from './email';
+
+// Create Supabase admin client with service role key for admin operations
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_KEY || '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 /**
  * Create a new customer in Supabase
  */
 export async function createCustomer(req: Request, res: Response) {
-  // Authorization check
-  if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
-    return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+  const {
+    firstName,
+    lastName,
+    email,
+    company,
+    phone,
+    address,
+    city,
+    state,
+    zip,
+    country,
+    sendInvite = true
+  } = req.body;
+
+  // Validate required fields
+  if (!firstName || !lastName || !email) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: firstName, lastName, and email are required'
+    });
   }
-  
-  // Log the request for debugging
-  console.log('Customer creation request received:', {
-    user: req.user?.email,
-    body: req.body
-  });
-  
+
   try {
-    // Extract and normalize field names
-    const { 
-      email, firstName, lastName, company, phone,
-      emailAddress, first_name, last_name, 
-      address, city, state, zip, country, 
-      sendInvite = true
-    } = req.body;
+    console.log('Creating customer account with email:', email);
     
-    const customerEmail = email || emailAddress;
-    const customerFirstName = firstName || first_name;
-    const customerLastName = lastName || last_name;
-    const customerCompany = company;
-    const customerPhone = phone;
+    // Generate a secure temporary password
+    const tempPassword = Math.random().toString(36).substring(2, 10) + 
+                         Math.random().toString(36).substring(2, 10);
     
-    // Validate required fields
-    if (!customerEmail || !customerFirstName || !customerLastName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email, first name, and last name are required'
-      });
-    }
-    
-    // Check if user already exists
-    const { data: existingUsers } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('email', customerEmail);
-    
-    if (existingUsers && existingUsers.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'A customer with this email already exists'
-      });
-    }
-    
-    // Generate a strong random password
-    const randomPassword = Math.random().toString(36).substring(2, 10) + 
-                         Math.random().toString(36).substring(2, 15);
-    
-    console.log(`Creating customer in Supabase Auth: ${customerEmail}`);
-    
-    // Create user in Supabase Auth
-    const { data, error } = await supabase.auth.admin.createUser({
-      email: customerEmail,
-      password: randomPassword,
-      email_confirm: true, // Auto-confirm the email
+    // Create the user in Supabase Auth using admin privileges
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
       user_metadata: {
-        first_name: customerFirstName,
-        last_name: customerLastName,
-        role: 'customer',
-        requires_password_reset: true
+        firstName,
+        lastName,
+        role: 'customer'
       }
     });
     
     if (error) {
-      console.error('Error creating customer in Supabase Auth:', error);
+      console.error('Error creating customer auth account:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to create customer account: ' + error.message
@@ -88,45 +77,41 @@ export async function createCustomer(req: Request, res: Response) {
       });
     }
     
-    // Create username from first and last name
-    const username = (customerFirstName + customerLastName).toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Generate username from first and last name
+    const username = (firstName + lastName).toLowerCase().replace(/[^a-z0-9]/g, '') + 
+                     Math.floor(Math.random() * 1000); // Add random digits for uniqueness
     
-    // Create user profile in the database
-    const profileData: Record<string, any> = {
+    // Create profile record
+    const profileData = {
       id: data.user.id,
-      username: username + Math.floor(Math.random() * 1000), // Add random number to ensure uniqueness
-      email: customerEmail,
-      first_name: customerFirstName,
-      last_name: customerLastName,
+      username,
+      first_name: firstName,
+      last_name: lastName,
+      email,
       role: 'customer',
+      company,
+      phone,
+      address,
+      city,
+      state,
+      postal_code: zip,
+      country,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      is_active: true,
-      invitation_status: sendInvite ? 'invited' : 'active'
+      is_active: true
     };
     
-    // Add optional fields if they exist
-    if (customerCompany) profileData.company = customerCompany;
-    if (customerPhone) profileData.phone = customerPhone;
-    if (address) profileData.address = address;
-    if (city) profileData.city = city;
-    if (state) profileData.state = state;
-    if (zip) profileData.postal_code = zip;
-    if (country) profileData.country = country;
-    
-    console.log('Creating customer profile with data:', profileData);
-    
-    // Create customer profile in the database
-    const { data: createdProfile, error: profileError } = await supabase
-      .from('user_profiles')
+    // Insert profile into database
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('profiles') // Use the actual table name in your Supabase
       .insert(profileData)
       .select();
     
     if (profileError) {
       console.error('Error creating customer profile:', profileError);
       
-      // Try to clean up the auth user since profile creation failed
-      await supabase.auth.admin.deleteUser(data.user.id);
+      // Clean up auth user since profile creation failed
+      await supabaseAdmin.auth.admin.deleteUser(data.user.id);
       
       return res.status(500).json({
         success: false,
@@ -134,71 +119,64 @@ export async function createCustomer(req: Request, res: Response) {
       });
     }
     
-    // Now handle invitation email if requested
+    // Handle sending invitation email if requested
     let inviteUrl = '';
     let inviteSent = false;
     
-    // Generate invitation URL base
-    const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
-    
     if (sendInvite) {
       try {
-        // Generate a recovery link through Supabase
-        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        // Generate a password reset link for the user to set their own password
+        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
           type: 'recovery',
-          email: customerEmail,
+          email: email,
         });
         
         if (linkError) {
-          console.error('Error generating recovery link:', linkError);
-          inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+          console.error('Error generating password reset link:', linkError);
         } else if (linkData?.properties?.action_link) {
           inviteUrl = linkData.properties.action_link;
           
-          // Send invitation email
-          const emailTemplate = getCustomerInviteEmailTemplate(
-            customerEmail,
-            customerFirstName,
-            customerLastName,
-            inviteUrl
-          );
-          
-          inviteSent = await sendEmail(emailTemplate);
-          console.log(`Invitation email ${inviteSent ? 'sent' : 'failed'} to ${customerEmail}`);
+          // Send invitation email with the reset link
+          try {
+            const emailTemplate = EmailService.getCustomerInviteEmailTemplate(
+              email,
+              firstName,
+              lastName,
+              inviteUrl
+            );
+            
+            inviteSent = await EmailService.sendEmail(emailTemplate);
+            console.log(`Invitation email ${inviteSent ? 'sent' : 'failed'} to ${email}`);
+          } catch (emailErr) {
+            console.error('Error sending invitation email:', emailErr);
+          }
         }
-      } catch (emailErr) {
-        console.error('Failed to send invitation email:', emailErr);
-        inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+      } catch (err) {
+        console.error('Error in invitation process:', err);
       }
-    } else {
-      // For direct creation without invite
-      inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
     }
     
-    // Log creation details
-    console.log(`Customer created: ${customerEmail}, Send invite: ${sendInvite}, Invite sent: ${inviteSent}`);
-    
-    // Return success with customer data
+    // Return success response
     return res.status(201).json({
       success: true,
       message: inviteSent 
-        ? 'Customer created and invitation email sent successfully' 
+        ? 'Customer created and invitation email sent' 
         : 'Customer created successfully',
-      customer: createdProfile && createdProfile.length > 0 ? createdProfile[0] : { 
+      customer: {
         id: data.user.id,
-        email: customerEmail,
-        first_name: customerFirstName,
-        last_name: customerLastName,
-        role: 'customer'
-      },
-      inviteUrl,
-      inviteSent
+        firstName,
+        lastName,
+        email,
+        company,
+        inviteSent
+      }
     });
+    
   } catch (err: any) {
-    console.error('Error creating customer:', err);
+    console.error('Unexpected error creating customer:', err);
     return res.status(500).json({
       success: false,
-      message: 'An unexpected error occurred: ' + (err.message || 'Unknown error')
+      message: 'Unexpected error creating customer: ' + (err.message || 'Unknown error')
     });
   }
 }

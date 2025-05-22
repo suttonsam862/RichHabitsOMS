@@ -57,7 +57,6 @@ export default function AddCustomerForm({ isOpen, onClose }: AddCustomerFormProp
       toast({
         title: "Success!",
         description: "Customer was added successfully",
-        variant: "success",
       });
       resetForm();
       onClose();
