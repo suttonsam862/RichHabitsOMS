@@ -1705,6 +1705,296 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Enhanced User Management Dialog */}
+      <Dialog open={showUserManagement} onOpenChange={setShowUserManagement}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              User Management & Analytics
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive user management with real-time analytics and editing capabilities
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* User Analytics Dashboard */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-blue-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{userAnalytics.totalUsers}</p>
+                    <p className="text-xs text-muted-foreground">Total Users</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Shield className="h-4 w-4 text-green-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{userAnalytics.adminUsers}</p>
+                    <p className="text-xs text-muted-foreground">Admins</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4 text-purple-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{userAnalytics.customerUsers}</p>
+                    <p className="text-xs text-muted-foreground">Customers</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-orange-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{userAnalytics.recentSignUps}</p>
+                    <p className="text-xs text-muted-foreground">New This Week</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Enhanced User Management Controls */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div className="flex items-center gap-2">
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search users..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              <Button variant="outline" size="sm">
+                <Filter className="mr-2 h-4 w-4" />
+                Filter
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => refetch()}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Refresh
+              </Button>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+              
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Invite User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite New User</DialogTitle>
+                    <DialogDescription>
+                      Send an invitation email to add a new team member
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="invite-email" className="text-right">
+                        Email
+                      </Label>
+                      <Input 
+                        id="invite-email" 
+                        className="col-span-3" 
+                        placeholder="user@example.com" 
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="invite-firstName" className="text-right">
+                        First Name
+                      </Label>
+                      <Input 
+                        id="invite-firstName" 
+                        className="col-span-3" 
+                        placeholder="First Name" 
+                        value={inviteFirstName}
+                        onChange={(e) => setInviteFirstName(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="invite-lastName" className="text-right">
+                        Last Name
+                      </Label>
+                      <Input 
+                        id="invite-lastName" 
+                        className="col-span-3" 
+                        placeholder="Last Name" 
+                        value={inviteLastName}
+                        onChange={(e) => setInviteLastName(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="invite-role" className="text-right">
+                        Role
+                      </Label>
+                      <Select 
+                        value={inviteRole}
+                        onValueChange={(value) => setInviteRole(value)}
+                      >
+                        <SelectTrigger className="col-span-3">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="salesperson">Salesperson</SelectItem>
+                          <SelectItem value="designer">Designer</SelectItem>
+                          <SelectItem value="manufacturer">Manufacturer</SelectItem>
+                          <SelectItem value="customer">Customer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      onClick={() => {
+                        if (inviteEmail && inviteFirstName && inviteLastName) {
+                          inviteUserMutation.mutate({
+                            email: inviteEmail,
+                            firstName: inviteFirstName,
+                            lastName: inviteLastName,
+                            role: inviteRole
+                          });
+                        }
+                      }}
+                      disabled={inviteUserMutation.isPending || !inviteEmail || !inviteFirstName || !inviteLastName}
+                    >
+                      {inviteUserMutation.isPending ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Invitation"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+
+          {/* Enhanced User Table */}
+          {isLoading ? (
+            <div className="flex justify-center p-8">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : isError ? (
+            <div className="rounded-md bg-destructive/15 p-4 text-destructive flex items-center">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              <p>Failed to load users. Please try again.</p>
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox />
+                    </TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last Sign In</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user: any) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <Checkbox />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0 h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-primary">
+                              {user.first_name?.[0] || user.email?.[0]?.toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="font-medium">
+                              {user.first_name} {user.last_name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {user.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                          {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.email_confirmed ? 'default' : 'secondary'}>
+                          {user.email_confirmed ? 'Active' : 'Pending'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {user.last_sign_in ? new Date(user.last_sign_in).toLocaleDateString() : 'Never'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
