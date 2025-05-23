@@ -164,7 +164,7 @@ export default function OrderManagePage() {
                 <SelectItem value="all">All Statuses</SelectItem>
                 {statuses.map(status => (
                   <SelectItem key={status} value={status}>
-                    {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {status.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                   </SelectItem>
                 ))}
               </SelectContent>

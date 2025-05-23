@@ -27,6 +27,8 @@ import SetupPassword from "@/pages/SetupPassword";
 import Orders from "@/pages/Orders";
 import OrderDetail from "@/pages/OrderDetail";
 import OrderEditor from "@/pages/OrderEditor";
+import OrderCreatePage from "@/pages/orders/OrderCreatePage";
+import OrderManagePage from "@/pages/orders/OrderManagePage";
 import DesignTasks from "@/pages/DesignTasks";
 import Messages from "@/pages/Messages";
 import Production from "@/pages/Production";
