@@ -56,10 +56,7 @@ export default function OrderManagePage() {
   // Filter orders based on search term and status
   const filteredOrders = orders.filter(order => {
     const matchesSearch = search === '' || 
-      order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      (order.customer?.user ? 
-        (order.customer.user.firstName + ' ' + order.customer.user.lastName).toLowerCase().includes(search.toLowerCase()) :
-        false);
+      order.orderNumber.toLowerCase().includes(search.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
@@ -222,10 +219,7 @@ export default function OrderManagePage() {
                         {order.orderNumber}
                       </TableCell>
                       <TableCell>
-                        {order.customer?.user ? 
-                          `${order.customer.user.firstName} ${order.customer.user.lastName}` :
-                          'Unknown Customer'
-                        }
+                        Customer {order.customerId}
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(order.status)}>
