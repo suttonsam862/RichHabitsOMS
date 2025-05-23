@@ -1,7 +1,7 @@
 /**
  * Debug SendGrid configuration to identify the 403 error
  */
-const SendGrid = require('@sendgrid/mail');
+import SendGrid from '@sendgrid/mail';
 
 async function debugSendGrid() {
   console.log('🔍 SendGrid Debug Test Starting...');
