@@ -8,6 +8,7 @@ import { requireAuth, requireRole } from './auth';
 import { sendEmail, getCustomerInviteEmailTemplate } from './email';
 import adminRoutes from './routes/admin';
 import customerRoutes from './routes/customerRoutes';
+import { uploadRouter } from './upload';
 import { createClient } from '@supabase/supabase-js';
 
 // Create Supabase admin client with service key for admin operations

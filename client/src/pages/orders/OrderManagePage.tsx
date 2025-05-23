@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Eye, Edit, Trash2, Plus, Search, Filter, ChevronDown, Send, Palette, Factory, CheckCircle, XCircle } from "lucide-react";
+import { Eye, Edit, Trash2, Plus, Search, Filter, ChevronDown, Send, Palette, Factory, CheckCircle, XCircle, Upload, Image } from "lucide-react";
 
 interface OrderItem {
   id?: number;
@@ -36,7 +36,7 @@ interface Order {
   notes: string;
   createdAt: string;
   items: OrderItem[];
-  logo?: string;
+  logoUrl?: string;
   companyName?: string;
 }
 
@@ -49,6 +49,7 @@ export default function OrderManagePage() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Fetch orders
   const { data: orders = [], isLoading } = useQuery<Order[]>({
@@ -122,22 +123,72 @@ export default function OrderManagePage() {
     }
   };
 
-  // Predefined logo options
-  const logoOptions = [
-    { value: 'custom-clothing', label: 'Custom Clothing Co.', color: 'from-blue-500 to-purple-600' },
-    { value: 'athletic-wear', label: 'Athletic Wear Inc.', color: 'from-green-500 to-blue-500' },
-    { value: 'fashion-forward', label: 'Fashion Forward LLC', color: 'from-pink-500 to-red-500' },
-    { value: 'premium-threads', label: 'Premium Threads', color: 'from-indigo-500 to-purple-500' },
-    { value: 'urban-style', label: 'Urban Style Co.', color: 'from-orange-500 to-yellow-500' },
-    { value: 'classic-wear', label: 'Classic Wear', color: 'from-gray-600 to-gray-800' }
-  ];
+  // Handle logo file upload
+  const handleLogoUpload = async (file: File) => {
+    if (!editingOrder) return;
+    
+    // Validate file type
+    if (!file.type.includes('webp') && !file.type.includes('image')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a WebP image file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploadingLogo(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+      formData.append('customerId', editingOrder.customerId);
+      
+      const response = await fetch('/api/upload/logo', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setEditingOrder({
+          ...editingOrder,
+          logoUrl: result.logoUrl,
+          companyName: result.companyName || editingOrder.companyName
+        });
+        
+        toast({
+          title: "Success",
+          description: "Logo uploaded successfully"
+        });
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "Could not upload logo. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   const getLogoDisplay = (order: Order) => {
-    const logoOption = logoOptions.find(option => option.value === order.logo) || logoOptions[0];
+    if (order.logoUrl) {
+      return {
+        logoUrl: order.logoUrl,
+        company: order.companyName || 'Custom Company',
+        hasImage: true
+      };
+    }
+    
+    // Fallback to initials if no logo
     return {
-      color: logoOption.color,
-      company: logoOption.label,
-      initials: order.orderNumber.slice(-3)
+      company: order.companyName || 'Custom Clothing Co.',
+      initials: order.orderNumber.slice(-3),
+      hasImage: false
     };
   };
 
@@ -253,9 +304,22 @@ export default function OrderManagePage() {
                     <tr key={order.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-3">
-                          {/* Dynamic Company Logo */}
+                          {/* Customer Logo Display */}
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${getLogoDisplay(order).color} flex items-center justify-center`}>
+                            {getLogoDisplay(order).hasImage ? (
+                              <img 
+                                src={getLogoDisplay(order).logoUrl} 
+                                alt="Customer Logo"
+                                className="h-10 w-10 rounded-lg object-cover border-2 border-gray-200"
+                                onError={(e) => {
+                                  // Fallback to initials if image fails to load
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                            ) : null}
+                            <div className={`h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center ${getLogoDisplay(order).hasImage ? 'hidden' : ''}`}>
                               <span className="text-white font-bold text-sm">
                                 {getLogoDisplay(order).initials}
                               </span>
@@ -445,42 +509,74 @@ export default function OrderManagePage() {
             <div className="space-y-6">
               {/* Logo and Company Section */}
               <div className="bg-gray-50 p-4 rounded-lg">
-                <Label className="text-lg font-semibold mb-3 block">Company Logo & Branding</Label>
+                <Label className="text-lg font-semibold mb-3 block">Customer Logo & Branding</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="logo">Company Logo</Label>
-                    <Select
-                      value={editingOrder.logo || 'custom-clothing'}
-                      onValueChange={(value) => 
-                        setEditingOrder({ ...editingOrder, logo: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {logoOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            <div className="flex items-center space-x-2">
-                              <div className={`w-6 h-6 rounded bg-gradient-to-br ${option.color} flex items-center justify-center`}>
-                                <span className="text-white text-xs font-bold">
-                                  {editingOrder.orderNumber?.slice(-2) || '00'}
-                                </span>
-                              </div>
-                              <span>{option.label}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="logoUpload">Upload Customer Logo (WebP)</Label>
+                    <div className="mt-2">
+                      <div className="flex items-center justify-center w-full">
+                        <label 
+                          htmlFor="logoUpload" 
+                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 mb-4 text-gray-500" />
+                            <p className="mb-2 text-sm text-gray-500">
+                              <span className="font-semibold">Click to upload</span> customer logo
+                            </p>
+                            <p className="text-xs text-gray-500">WebP, PNG, or JPG (MAX. 2MB)</p>
+                          </div>
+                          <input 
+                            id="logoUpload" 
+                            type="file" 
+                            className="hidden" 
+                            accept=".webp,.png,.jpg,.jpeg"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleLogoUpload(file);
+                            }}
+                            disabled={uploadingLogo}
+                          />
+                        </label>
+                      </div>
+                      {uploadingLogo && (
+                        <div className="mt-2 text-sm text-blue-600">
+                          Uploading logo...
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-3">
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <Input
+                        id="companyName"
+                        value={editingOrder.companyName || ''}
+                        onChange={(e) => 
+                          setEditingOrder({ ...editingOrder, companyName: e.target.value })
+                        }
+                        placeholder="Enter company name"
+                        className="mt-1"
+                      />
+                    </div>
                   </div>
+                  
                   <div>
-                    <Label>Preview</Label>
-                    <div className="flex items-center space-x-3 mt-2">
-                      <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${getLogoDisplay(editingOrder).color} flex items-center justify-center`}>
-                        <span className="text-white font-bold text-sm">
-                          {editingOrder.orderNumber?.slice(-3) || '000'}
-                        </span>
+                    <Label>Current Logo Preview</Label>
+                    <div className="flex items-center space-x-3 mt-2 p-3 border rounded-lg bg-white">
+                      <div className="flex-shrink-0 h-12 w-12">
+                        {getLogoDisplay(editingOrder).hasImage ? (
+                          <img 
+                            src={getLogoDisplay(editingOrder).logoUrl} 
+                            alt="Customer Logo"
+                            className="h-12 w-12 rounded-lg object-cover border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <span className="text-white font-bold text-sm">
+                              {getLogoDisplay(editingOrder).initials}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <div className="text-sm font-medium text-gray-900">
@@ -488,6 +584,9 @@ export default function OrderManagePage() {
                         </div>
                         <div className="text-sm text-gray-500">
                           {getLogoDisplay(editingOrder).company}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {getLogoDisplay(editingOrder).hasImage ? 'Custom logo uploaded' : 'Using default initials'}
                         </div>
                       </div>
                     </div>
