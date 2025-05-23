@@ -374,7 +374,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
               
               inviteSent = await sendEmail(emailTemplate);
-              console.log(`Invitation email ${inviteSent ? 'sent' : 'failed'} to ${customerEmail}`);
+              if (inviteSent) {
+                console.log(`✅ Setup email sent successfully to: ${customerEmail}`);
+              } else {
+                console.log(`❌ Setup email failed to send to: ${customerEmail} - SendGrid API key not configured`);
+              }
             } catch (moduleErr) {
               console.error('Email module not available:', moduleErr);
               // Continue without sending email
@@ -392,12 +396,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log creation details
       console.log(`Customer created: ${customerEmail}, Send invite: ${sendInvite}, Invite sent: ${inviteSent}`);
       
-      // Return success with customer data
+      // Return success with customer data and accurate email status
       return res.status(201).json({
         success: true,
         message: inviteSent 
-          ? 'Customer created and invitation email sent successfully' 
-          : 'Customer created successfully',
+          ? 'Customer created and setup email sent successfully!' 
+          : sendInvite 
+            ? 'Customer created but setup email failed to send (SendGrid API key needed)'
+            : 'Customer created successfully',
         customer: createdProfile ? createdProfile[0] : { 
           id: data.user.id,
           email: customerEmail,
