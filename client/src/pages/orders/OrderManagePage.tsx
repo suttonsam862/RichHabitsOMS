@@ -26,6 +26,7 @@ interface Order {
   id: number;
   orderNumber: string;
   status: string;
+  customerId: string;
   customer?: {
     user: {
       firstName: string;
@@ -52,11 +53,14 @@ export default function OrderManagePage() {
     queryKey: ['/api/orders'],
     queryFn: getQueryFn({ on401: 'throw' }),
   });
+
+  // Debug the data structure
+  console.log('Orders received:', orders);
   
   // Filter orders based on search term and status
   const filteredOrders = orders.filter(order => {
     const matchesSearch = search === '' || 
-      order.orderNumber.toLowerCase().includes(search.toLowerCase());
+      order.orderNumber?.toLowerCase().includes(search.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
@@ -64,7 +68,7 @@ export default function OrderManagePage() {
   });
   
   // Get unique statuses for filter dropdown
-  const statuses = Array.from(new Set(orders.map(order => order.status)));
+  const statuses = Array.from(new Set(orders.map(order => order.status).filter(Boolean)));
   
   // Calculate order totals
   const getOrderTotal = (order: Order) => {
