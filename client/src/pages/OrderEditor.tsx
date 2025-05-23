@@ -186,6 +186,27 @@ export default function OrderEditor() {
 
   // Form submission handler
   function onSubmit(data: OrderFormValues) {
+    console.log('Form submission data:', data);
+    
+    // Validate required fields
+    if (!data.customerId) {
+      toast({
+        title: 'Error',
+        description: 'Please select a customer before creating the order.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!data.orderNumber) {
+      toast({
+        title: 'Error',
+        description: 'Order number is required.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (isEditing) {
       updateOrderMutation.mutate(data);
     } else {
@@ -366,7 +387,7 @@ export default function OrderEditor() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Product Name</TableHead>
-                        <TableHead>Description</TableHead>
+                        <TableHead>Fabric Description</TableHead>
                         <TableHead>Size</TableHead>
                         <TableHead>Color</TableHead>
                         <TableHead>Quantity</TableHead>
@@ -399,7 +420,7 @@ export default function OrderEditor() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input {...field} placeholder="Description" />
+                                    <Input {...field} placeholder="Fabric description" />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
