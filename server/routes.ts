@@ -349,29 +349,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (sendInvite) {
         try {
-          // Generate a recovery link through Supabase
-          const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'recovery',
-            email: customerEmail,
+          // Generate a simple setup token for account creation
+          const setupToken = require('crypto').randomBytes(32).toString('hex');
+          
+          // Store the setup token in user metadata for verification
+          await supabase.auth.admin.updateUserById(data.user.id, {
+            user_metadata: { 
+              setup_token: setupToken,
+              setup_expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+            }
           });
           
-          if (linkError) {
-            console.error('Error generating recovery link:', linkError);
-            inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
-          } else if (linkData?.properties?.action_link) {
-            inviteUrl = linkData.properties.action_link;
+          // Create proper setup URL
+          inviteUrl = `${baseUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(customerEmail)}`;
             
-            // Send invitation email if we have the email functions available
-            try {
-              const { getCustomerInviteEmailTemplate } = require('./email');
-              const { sendEmail } = require('./email');
-              
-              const emailTemplate = getCustomerInviteEmailTemplate(
-                customerEmail,
-                customerFirstName,
-                customerLastName,
-                inviteUrl
-              );
+          // Send invitation email if we have the email functions available
+          try {
+            const { getCustomerInviteEmailTemplate } = require('./email');
+            const { sendEmail } = require('./email');
+            
+            const emailTemplate = getCustomerInviteEmailTemplate(
+              customerEmail,
+              customerFirstName,
+              customerLastName,
+              setupToken
+            );
               
               inviteSent = await sendEmail(emailTemplate);
               if (inviteSent) {
