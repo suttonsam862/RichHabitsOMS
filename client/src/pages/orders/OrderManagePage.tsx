@@ -1,272 +1,393 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { getQueryFn } from '@/lib/queryClient';
-import { Search, Plus, FileText, Eye } from 'lucide-react';
+import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Eye, Edit, Trash2, Plus, Search, Filter } from "lucide-react";
+
+interface OrderItem {
+  id?: number;
+  productName: string;
+  description: string;
+  size: string;
+  color: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
 
 interface Order {
-  id: number;
+  id: string;
   orderNumber: string;
-  status: string;
   customerId: string;
-  customer?: {
-    user: {
-      firstName: string;
-      lastName: string;
-    };
-  };
-  items: Array<{
-    productName: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }>;
-  createdAt: string;
+  status: string;
   totalAmount: number;
+  notes: string;
+  createdAt: string;
+  items: OrderItem[];
 }
 
 export default function OrderManagePage() {
-  const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  
+  const { user, role } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
   // Fetch orders
-  const { data: orders = [], isLoading, refetch } = useQuery<Order[]>({
+  const { data: orders = [], isLoading } = useQuery<Order[]>({
     queryKey: ['/api/orders'],
-    queryFn: getQueryFn({ on401: 'throw' }),
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
-  // Debug the data structure
-  console.log('Orders received:', orders);
-  
-  // Filter orders based on search term and status
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = search === '' || 
-      order.orderNumber?.toLowerCase().includes(search.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+  // Update order mutation
+  const updateOrder = useMutation({
+    mutationFn: async (orderData: Partial<Order>) => {
+      return await apiRequest("PUT", `/api/orders/${orderData.id}`, orderData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      setEditDialogOpen(false);
+      setEditingOrder(null);
+      toast({
+        title: "Success",
+        description: "Order updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error", 
+        description: "Failed to update order",
+        variant: "destructive",
+      });
+    }
   });
-  
-  // Get unique statuses for filter dropdown
-  const statuses = Array.from(new Set(orders.map(order => order.status).filter(Boolean)));
-  
-  // Calculate order totals
-  const getOrderTotal = (order: Order) => {
-    if (order.totalAmount) return order.totalAmount;
-    return order.items.reduce((total, item) => {
-      const itemTotal = typeof item.totalPrice === 'string' 
-        ? parseFloat(item.totalPrice) 
-        : item.totalPrice;
-      return total + itemTotal;
-    }, 0);
+
+  // Delete order mutation
+  const deleteOrder = useMutation({
+    mutationFn: async (orderId: string) => {
+      return await apiRequest("DELETE", `/api/orders/${orderId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      toast({
+        title: "Success",
+        description: "Order deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete order", 
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleViewOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setViewDialogOpen(true);
   };
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+  const handleEditOrder = (order: Order) => {
+    setEditingOrder({ ...order });
+    setEditDialogOpen(true);
   };
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return 'bg-gray-100 text-gray-800';
-      case 'pending_design':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'design_in_progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'design_review':
-        return 'bg-purple-100 text-purple-800';
-      case 'design_approved':
-        return 'bg-green-100 text-green-800';
-      case 'pending_production':
-        return 'bg-orange-100 text-orange-800';
-      case 'in_production':
-        return 'bg-indigo-100 text-indigo-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const handleUpdateOrder = () => {
+    if (editingOrder) {
+      updateOrder.mutate(editingOrder);
     }
   };
+
+  const handleDeleteOrder = (orderId: string) => {
+    if (window.confirm("Are you sure you want to delete this order?")) {
+      deleteOrder.mutate(orderId);
+    }
+  };
+
+  const filteredOrders = orders.filter(order =>
+    order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.status.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
-          <p className="text-gray-600 mt-2">
-            View and manage all customer orders
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
+          <p className="text-gray-600">View and manage all orders</p>
         </div>
-        <Button onClick={() => navigate('/orders/create')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create New Order
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filter Orders</CardTitle>
-          <CardDescription>
-            Search and filter orders by status or customer
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by order number or customer name..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {statuses.map(status => (
-                  <SelectItem key={status} value={status}>
-                    {status.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={() => refetch()}>
-              Refresh
-            </Button>
+        
+        <div className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search orders..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Orders Table */}
       <Card>
         <CardHeader>
           <CardTitle>Orders ({filteredOrders.length})</CardTitle>
-          <CardDescription>
-            All orders in the system
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredOrders.length === 0 ? (
+          {filteredOrders.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-500 mb-4">
-                {orders.length === 0 ? "No orders found" : "No orders match your filters"}
-              </div>
-              {orders.length === 0 && (
-                <Button onClick={() => navigate('/orders/create')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Order
-                </Button>
-              )}
+              <p className="text-gray-500">No orders found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Order Number
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Items
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
                   {filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        {order.orderNumber}
-                      </TableCell>
-                      <TableCell>
-                        Customer {order.customerId}
-                      </TableCell>
-                      <TableCell>
+                    <tr key={order.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {order.orderNumber}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <Badge className={getStatusColor(order.status)}>
-                          {order.status.replace(/_/g, ' ')}
+                          {getStatusLabel(order.status)}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(getOrderTotal(order))}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatCurrency(order.totalAmount)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(order.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {order.items?.length || 0} items
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/orders/${order.id}`)}
+                            onClick={() => handleViewOrder(order)}
+                            className="text-blue-600 hover:text-blue-900"
                           >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
+                            <Eye className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/orders/${order.id}/edit`)}
+                            onClick={() => handleEditOrder(order)}
+                            className="text-green-600 hover:text-green-900"
                           >
-                            <FileText className="h-4 w-4 mr-1" />
-                            Edit
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteOrder(order.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* View Order Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Order Details - {selectedOrder?.orderNumber}</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <Badge className={`mt-1 ${getStatusColor(selectedOrder.status)}`}>
+                    {getStatusLabel(selectedOrder.status)}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Total</Label>
+                  <p className="text-lg font-semibold">{formatCurrency(selectedOrder.totalAmount)}</p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Notes</Label>
+                <p className="mt-1 text-sm text-gray-700">{selectedOrder.notes || "No notes"}</p>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Order Items</Label>
+                <div className="mt-2 border rounded-lg overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedOrder.items?.map((item, index) => (
+                        <tr key={index}>
+                          <td className="px-4 py-2 text-sm text-gray-900">{item.productName}</td>
+                          <td className="px-4 py-2 text-sm text-gray-500">{item.size}</td>
+                          <td className="px-4 py-2 text-sm text-gray-500">{item.color}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900 text-right">{item.quantity}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.unitPrice)}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.totalPrice)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Order Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Order - {editingOrder?.orderNumber}</DialogTitle>
+          </DialogHeader>
+          {editingOrder && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={editingOrder.status}
+                    onValueChange={(value) => 
+                      setEditingOrder({ ...editingOrder, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="pending_design">Pending Design</SelectItem>
+                      <SelectItem value="design_in_progress">Design In Progress</SelectItem>
+                      <SelectItem value="design_review">Design Review</SelectItem>
+                      <SelectItem value="design_approved">Design Approved</SelectItem>
+                      <SelectItem value="pending_production">Pending Production</SelectItem>
+                      <SelectItem value="in_production">In Production</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="totalAmount">Total Amount</Label>
+                  <Input
+                    id="totalAmount"
+                    type="number"
+                    step="0.01"
+                    value={editingOrder.totalAmount}
+                    onChange={(e) => 
+                      setEditingOrder({ 
+                        ...editingOrder, 
+                        totalAmount: parseFloat(e.target.value) || 0 
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={editingOrder.notes}
+                  onChange={(e) => 
+                    setEditingOrder({ ...editingOrder, notes: e.target.value })
+                  }
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateOrder}
+                  disabled={updateOrder.isPending}
+                >
+                  {updateOrder.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

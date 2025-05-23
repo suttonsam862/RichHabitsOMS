@@ -113,6 +113,9 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 export function getStatusLabel(status: string): string {
+  if (!status || typeof status !== 'string') {
+    return 'Unknown';
+  }
   return status
     .replace(/_/g, ' ')
     .split(' ')
