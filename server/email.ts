@@ -17,36 +17,39 @@ interface EmailOptions {
 }
 
 /**
- * Send email using SendGrid if API key is available, otherwise mock
+ * Send email using SendGrid with proper error handling
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  const { to, subject, text, html, from = 'noreply@yourclothingapp.com' } = options;
+  const { to, subject, text, html, from = 'noreply@customclothing.com' } = options;
   
   // Check if SendGrid is configured
   if (!process.env.SENDGRID_API_KEY) {
-    console.log('SendGrid API key not found. Email would have been sent:');
-    console.log({
-      to,
-      from,
-      subject,
-      text: text.substring(0, 100) + (text.length > 100 ? '...' : '')
-    });
-    return true; // Mock success
+    console.log('⚠️ SendGrid API key not configured. Please add SENDGRID_API_KEY to environment variables.');
+    console.log('Email would have been sent:', { to, subject });
+    return false;
   }
   
   try {
-    await SendGrid.send({
+    const emailData = {
       to,
       from,
       subject,
       text,
-      html: html || text
-    });
+      html: html || text.replace(/\n/g, '<br>')
+    };
     
-    console.log(`Email sent successfully to ${to}`);
+    await SendGrid.send(emailData);
+    console.log(`✅ Email sent successfully to ${to}`);
     return true;
-  } catch (error) {
-    console.error('Failed to send email:', error);
+    
+  } catch (error: any) {
+    console.error('❌ Failed to send email:', error);
+    
+    if (error.response?.body?.errors) {
+      console.error('SendGrid errors:', error.response.body.errors);
+    }
+    
+    // If SendGrid fails, we should still indicate failure so the user knows
     return false;
   }
 }
@@ -58,62 +61,166 @@ export function getCustomerInviteEmailTemplate(
   email: string,
   firstName: string,
   lastName: string,
-  inviteUrl: string
+  setupToken: string
 ): EmailOptions {
-  const subject = 'Welcome to Your Custom Clothing Account';
+  const subject = '🎉 Welcome to Custom Clothing - Complete Your Account Setup';
+  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+  const setupUrl = `${baseUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
   
   const text = `
-Hello ${firstName},
+Hello ${firstName} ${lastName},
 
-You've been invited to create an account with our Custom Clothing Management System.
+Welcome to Custom Clothing! You've been invited to join our custom clothing management platform.
 
-Please click the link below to set up your account:
-${inviteUrl}
+To complete your account setup and create your password, please visit:
+${setupUrl}
 
-This link will expire in 24 hours.
+This secure link will allow you to:
+• Set your account password
+• Access your personalized dashboard  
+• Start managing your custom clothing orders
+• Track order progress in real-time
 
-If you have any questions, please contact our support team.
+IMPORTANT: This link will expire in 7 days for security reasons.
 
-Thank you,
-Custom Clothing Management Team
+If you have any questions or need assistance, please contact our support team.
+
+Best regards,
+The Custom Clothing Team
 `;
 
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Custom Clothing</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .button { display: inline-block; background-color: #4f46e5; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; }
-    .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      line-height: 1.6; 
+      color: #333; 
+      background-color: #f8fafc;
+      margin: 0;
+      padding: 20px;
+    }
+    .container { 
+      max-width: 600px; 
+      margin: 0 auto; 
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .header { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      color: white; 
+      padding: 40px 30px; 
+      text-align: center; 
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .content { 
+      padding: 40px 30px; 
+    }
+    .content h2 {
+      color: #2d3748;
+      margin-top: 0;
+      font-size: 24px;
+    }
+    .content p {
+      color: #4a5568;
+      margin-bottom: 16px;
+    }
+    .button { 
+      display: inline-block; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; 
+      padding: 16px 32px; 
+      text-decoration: none; 
+      border-radius: 8px; 
+      margin: 24px 0;
+      font-weight: 600;
+      font-size: 16px;
+      transition: transform 0.2s ease;
+    }
+    .button:hover {
+      transform: translateY(-1px);
+    }
+    .features {
+      background: #f7fafc;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .features ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #4a5568;
+    }
+    .features li {
+      margin-bottom: 8px;
+    }
+    .footer { 
+      text-align: center; 
+      padding: 20px 30px;
+      background: #f8fafc;
+      color: #718096; 
+      font-size: 14px; 
+      border-top: 1px solid #e2e8f0;
+    }
+    .warning {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      color: #c53030;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Welcome to Your Custom Clothing Account</h1>
+      <h1>🎉 Welcome to Custom Clothing!</h1>
     </div>
-    
-    <p>Hello ${firstName},</p>
-    
-    <p>You've been invited to create an account with our Custom Clothing Management System.</p>
-    
-    <p>Please click the button below to set up your account:</p>
-    
-    <p style="text-align: center; margin: 30px 0;">
-      <a href="${inviteUrl}" class="button">Set Up Your Account</a>
-    </p>
-    
-    <p>This link will expire in 24 hours.</p>
-    
-    <p>If you have any questions, please contact our support team.</p>
-    
-    <p>Thank you,<br>Custom Clothing Management Team</p>
-    
+    <div class="content">
+      <h2>Hello ${firstName} ${lastName},</h2>
+      <p>Welcome to Custom Clothing! You've been invited to join our custom clothing management platform.</p>
+      
+      <p>To complete your account setup and start using your personalized dashboard, please click the button below:</p>
+      
+      <div style="text-align: center;">
+        <a href="${setupUrl}" class="button">Complete Account Setup</a>
+      </div>
+      
+      <div class="features">
+        <p><strong>This secure link will allow you to:</strong></p>
+        <ul>
+          <li>Set your account password</li>
+          <li>Access your personalized dashboard</li>
+          <li>Start managing your custom clothing orders</li>
+          <li>Track order progress in real-time</li>
+        </ul>
+      </div>
+      
+      <div class="warning">
+        <strong>⚠️ Important:</strong> This link will expire in 7 days for security reasons. Please complete your setup soon!
+      </div>
+      
+      <p>If you have any questions or need assistance, please contact our support team.</p>
+      
+      <p>Best regards,<br><strong>The Custom Clothing Team</strong></p>
+    </div>
     <div class="footer">
-      <p>If the button doesn't work, copy and paste this link in your browser: ${inviteUrl}</p>
+      <p>This email was sent because you were invited to join Custom Clothing.</p>
+      <p>If you believe this was sent in error, please contact our support team.</p>
+      <p>Link: ${setupUrl}</p>
     </div>
   </div>
 </body>
