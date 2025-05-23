@@ -30,6 +30,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register customer routes
   app.use('/api/customers', customerRoutes);
   
+  // Register upload routes for logo files
+  app.use('/api/upload', uploadRouter);
+  
   // Admin customers API endpoint with real data
   app.get('/api/admin/customers', async (req, res) => {
     try {
