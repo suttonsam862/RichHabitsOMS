@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Eye, Edit, Trash2, Plus, Search, Filter } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Eye, Edit, Trash2, Plus, Search, Filter, ChevronDown, Send, Palette, Factory, CheckCircle, XCircle } from "lucide-react";
 
 interface OrderItem {
   id?: number;
@@ -109,8 +110,42 @@ export default function OrderManagePage() {
 
   const handleUpdateOrder = () => {
     if (editingOrder) {
-      updateOrder.mutate(editingOrder);
+      // Auto-calculate total from line items
+      const itemsTotal = editingOrder.items?.reduce((sum, item) => sum + item.totalPrice, 0) || 0;
+      const updatedOrder = {
+        ...editingOrder,
+        totalAmount: itemsTotal
+      };
+      updateOrder.mutate(updatedOrder);
     }
+  };
+
+  const handleWorkflowAction = (orderId: string, action: string) => {
+    let newStatus = '';
+    switch (action) {
+      case 'send_to_designer':
+        newStatus = 'pending_design';
+        break;
+      case 'send_to_manufacturer':
+        newStatus = 'pending_production';
+        break;
+      case 'approve_design':
+        newStatus = 'design_approved';
+        break;
+      case 'start_production':
+        newStatus = 'in_production';
+        break;
+      case 'complete_order':
+        newStatus = 'completed';
+        break;
+      case 'cancel_order':
+        newStatus = 'cancelled';
+        break;
+      default:
+        return;
+    }
+    
+    updateOrder.mutate({ id: orderId, status: newStatus });
   };
 
   const handleDeleteOrder = (orderId: string) => {
@@ -170,7 +205,7 @@ export default function OrderManagePage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Order Number
+                      Company & Order
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
@@ -184,6 +219,9 @@ export default function OrderManagePage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Items
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Workflow
+                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -193,8 +231,23 @@ export default function OrderManagePage() {
                   {filteredOrders.map((order) => (
                     <tr key={order.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {order.orderNumber}
+                        <div className="flex items-center space-x-3">
+                          {/* Company Logo */}
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                              <span className="text-white font-bold text-sm">
+                                {order.orderNumber.slice(-3)}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {order.orderNumber}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Custom Clothing Co.
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -210,6 +263,59 @@ export default function OrderManagePage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {order.items?.length || 0} items
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Workflow <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem 
+                              onClick={() => handleWorkflowAction(order.id, 'send_to_designer')}
+                              className="flex items-center"
+                            >
+                              <Palette className="mr-2 h-4 w-4" />
+                              Send to Designer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleWorkflowAction(order.id, 'approve_design')}
+                              className="flex items-center"
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Approve Design
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleWorkflowAction(order.id, 'send_to_manufacturer')}
+                              className="flex items-center"
+                            >
+                              <Factory className="mr-2 h-4 w-4" />
+                              Send to Manufacturer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleWorkflowAction(order.id, 'start_production')}
+                              className="flex items-center"
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              Start Production
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleWorkflowAction(order.id, 'complete_order')}
+                              className="flex items-center"
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                              Complete Order
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleWorkflowAction(order.id, 'cancel_order')}
+                              className="flex items-center text-red-600"
+                            >
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Cancel Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
