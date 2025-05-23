@@ -19,7 +19,8 @@ import {
   X,
   Mail,
   FileText,
-  PlusCircle
+  PlusCircle,
+  Scale
 } from "lucide-react";
 
 // Navigation items for different roles
