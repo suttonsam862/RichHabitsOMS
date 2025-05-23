@@ -310,12 +310,12 @@ export default function OrderManagePage() {
 
       {/* Edit Order Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Order - {editingOrder?.orderNumber}</DialogTitle>
           </DialogHeader>
           {editingOrder && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="status">Status</Label>
@@ -370,7 +370,172 @@ export default function OrderManagePage() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
+              {/* Line Items Editor */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-lg font-semibold">Order Items</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newItem: OrderItem = {
+                        productName: '',
+                        description: '',
+                        size: '',
+                        color: '',
+                        quantity: 1,
+                        unitPrice: 0,
+                        totalPrice: 0
+                      };
+                      setEditingOrder({
+                        ...editingOrder,
+                        items: [...(editingOrder.items || []), newItem]
+                      });
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-2 grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 uppercase">
+                    <div className="col-span-3">Product</div>
+                    <div className="col-span-2">Size</div>
+                    <div className="col-span-2">Color</div>
+                    <div className="col-span-1">Qty</div>
+                    <div className="col-span-2">Unit Price</div>
+                    <div className="col-span-1">Total</div>
+                    <div className="col-span-1">Actions</div>
+                  </div>
+                  
+                  {editingOrder.items?.map((item, index) => (
+                    <div key={index} className="px-4 py-3 grid grid-cols-12 gap-2 border-b border-gray-200 last:border-b-0">
+                      <div className="col-span-3">
+                        <Input
+                          value={item.productName}
+                          onChange={(e) => {
+                            const updatedItems = [...editingOrder.items];
+                            updatedItems[index] = { ...item, productName: e.target.value };
+                            setEditingOrder({ ...editingOrder, items: updatedItems });
+                          }}
+                          placeholder="Product name"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Select
+                          value={item.size}
+                          onValueChange={(value) => {
+                            const updatedItems = [...editingOrder.items];
+                            updatedItems[index] = { ...item, size: value };
+                            setEditingOrder({ ...editingOrder, items: updatedItems });
+                          }}
+                        >
+                          <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="Size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="YS">YS</SelectItem>
+                            <SelectItem value="YM">YM</SelectItem>
+                            <SelectItem value="YL">YL</SelectItem>
+                            <SelectItem value="AXS">AXS</SelectItem>
+                            <SelectItem value="S">S</SelectItem>
+                            <SelectItem value="M">M</SelectItem>
+                            <SelectItem value="L">L</SelectItem>
+                            <SelectItem value="XL">XL</SelectItem>
+                            <SelectItem value="2XL">2XL</SelectItem>
+                            <SelectItem value="3XL">3XL</SelectItem>
+                            <SelectItem value="4XL">4XL</SelectItem>
+                            <SelectItem value="No Sizes">No Sizes</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          value={item.color}
+                          onChange={(e) => {
+                            const updatedItems = [...editingOrder.items];
+                            updatedItems[index] = { ...item, color: e.target.value };
+                            setEditingOrder({ ...editingOrder, items: updatedItems });
+                          }}
+                          placeholder="Color"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const quantity = parseInt(e.target.value) || 1;
+                            const updatedItems = [...editingOrder.items];
+                            const totalPrice = quantity * item.unitPrice;
+                            updatedItems[index] = { ...item, quantity, totalPrice };
+                            setEditingOrder({ ...editingOrder, items: updatedItems });
+                          }}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.unitPrice}
+                          onChange={(e) => {
+                            const unitPrice = parseFloat(e.target.value) || 0;
+                            const updatedItems = [...editingOrder.items];
+                            const totalPrice = item.quantity * unitPrice;
+                            updatedItems[index] = { ...item, unitPrice, totalPrice };
+                            setEditingOrder({ ...editingOrder, items: updatedItems });
+                          }}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <div className="text-sm font-medium py-2">
+                          {formatCurrency(item.totalPrice)}
+                        </div>
+                      </div>
+                      <div className="col-span-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const updatedItems = editingOrder.items.filter((_, i) => i !== index);
+                            setEditingOrder({ ...editingOrder, items: updatedItems });
+                          }}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Order Total */}
+                <div className="flex justify-end">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">
+                        Items Total: {formatCurrency(
+                          editingOrder.items?.reduce((sum, item) => sum + item.totalPrice, 0) || 0
+                        )}
+                      </div>
+                      <div className="text-lg font-semibold">
+                        Order Total: {formatCurrency(editingOrder.totalAmount)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button 
                   variant="outline" 
                   onClick={() => setEditDialogOpen(false)}
