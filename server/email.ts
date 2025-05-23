@@ -20,7 +20,7 @@ interface EmailOptions {
  * Send email using SendGrid with proper error handling
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  const { to, subject, text, html, from = 'noreply@customclothing.com' } = options;
+  const { to, subject, text, html, from = 'samsutton@rich-habits.com' } = options;
   
   // Check if SendGrid is configured
   if (!process.env.SENDGRID_API_KEY) {

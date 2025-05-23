@@ -17,7 +17,7 @@ async function debugSendGrid() {
   try {
     const testEmail = {
       to: 'samsutton@rich-habits.com', // Your email
-      from: 'noreply@customclothing.com', // This might be the issue
+      from: 'samsutton@rich-habits.com', // Using your verified address
       subject: 'SendGrid Test Email',
       text: 'This is a test email to verify SendGrid configuration.',
       html: '<p>This is a test email to verify SendGrid configuration.</p>'
