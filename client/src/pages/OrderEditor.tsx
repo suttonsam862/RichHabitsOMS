@@ -412,9 +412,31 @@ export default function OrderEditor() {
                               name={`items.${index}.size`}
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Size" />
-                                  </FormControl>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="w-24">
+                                        <SelectValue placeholder="Size" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="YS">YS</SelectItem>
+                                      <SelectItem value="YM">YM</SelectItem>
+                                      <SelectItem value="YL">YL</SelectItem>
+                                      <SelectItem value="AXS">AXS</SelectItem>
+                                      <SelectItem value="S">S</SelectItem>
+                                      <SelectItem value="M">M</SelectItem>
+                                      <SelectItem value="L">L</SelectItem>
+                                      <SelectItem value="XL">XL</SelectItem>
+                                      <SelectItem value="2XL">2XL</SelectItem>
+                                      <SelectItem value="3XL">3XL</SelectItem>
+                                      <SelectItem value="4XL">4XL</SelectItem>
+                                      <SelectItem value="No Sizes">No Sizes</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                   <FormMessage />
                                 </FormItem>
                               )}
