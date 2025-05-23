@@ -39,7 +39,15 @@ import {
   Users, 
   UserCircle,
   RefreshCw,
-  Search
+  Search,
+  Scale,
+  Building2,
+  Shield,
+  TrendingUp,
+  UserCheck,
+  PieChart,
+  Calculator,
+  ArrowRight
 } from "lucide-react";
 
 export default function AdminOversightDashboard() {
@@ -233,22 +241,30 @@ export default function AdminOversightDashboard() {
           </div>
           
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
-            <TabsList>
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="summary">
                 <Layers className="mr-2 h-4 w-4" />
-                Summary
+                Overview
               </TabsTrigger>
-              <TabsTrigger value="orders">
+              <TabsTrigger value="workforce">
+                <UserCheck className="mr-2 h-4 w-4" />
+                Workforce
+              </TabsTrigger>
+              <TabsTrigger value="legal">
+                <Scale className="mr-2 h-4 w-4" />
+                Legal
+              </TabsTrigger>
+              <TabsTrigger value="finance">
+                <Calculator className="mr-2 h-4 w-4" />
+                Finance
+              </TabsTrigger>
+              <TabsTrigger value="operations">
                 <ShoppingBag className="mr-2 h-4 w-4" />
-                Orders Management
-              </TabsTrigger>
-              <TabsTrigger value="errors" disabled>
-                <AlertCircle className="mr-2 h-4 w-4" />
-                Errors & Logs
+                Operations
               </TabsTrigger>
             </TabsList>
             
-            {/* Summary Tab Content */}
+            {/* Overview Tab Content */}
             <TabsContent value="summary" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>
