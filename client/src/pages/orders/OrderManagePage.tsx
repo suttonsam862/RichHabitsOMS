@@ -36,6 +36,8 @@ interface Order {
   notes: string;
   createdAt: string;
   items: OrderItem[];
+  logo?: string;
+  companyName?: string;
 }
 
 export default function OrderManagePage() {
@@ -118,6 +120,25 @@ export default function OrderManagePage() {
       };
       updateOrder.mutate(updatedOrder);
     }
+  };
+
+  // Predefined logo options
+  const logoOptions = [
+    { value: 'custom-clothing', label: 'Custom Clothing Co.', color: 'from-blue-500 to-purple-600' },
+    { value: 'athletic-wear', label: 'Athletic Wear Inc.', color: 'from-green-500 to-blue-500' },
+    { value: 'fashion-forward', label: 'Fashion Forward LLC', color: 'from-pink-500 to-red-500' },
+    { value: 'premium-threads', label: 'Premium Threads', color: 'from-indigo-500 to-purple-500' },
+    { value: 'urban-style', label: 'Urban Style Co.', color: 'from-orange-500 to-yellow-500' },
+    { value: 'classic-wear', label: 'Classic Wear', color: 'from-gray-600 to-gray-800' }
+  ];
+
+  const getLogoDisplay = (order: Order) => {
+    const logoOption = logoOptions.find(option => option.value === order.logo) || logoOptions[0];
+    return {
+      color: logoOption.color,
+      company: logoOption.label,
+      initials: order.orderNumber.slice(-3)
+    };
   };
 
   const handleWorkflowAction = (orderId: string, action: string) => {
@@ -232,11 +253,11 @@ export default function OrderManagePage() {
                     <tr key={order.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-3">
-                          {/* Company Logo */}
+                          {/* Dynamic Company Logo */}
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${getLogoDisplay(order).color} flex items-center justify-center`}>
                               <span className="text-white font-bold text-sm">
-                                {order.orderNumber.slice(-3)}
+                                {getLogoDisplay(order).initials}
                               </span>
                             </div>
                           </div>
@@ -245,7 +266,7 @@ export default function OrderManagePage() {
                               {order.orderNumber}
                             </div>
                             <div className="text-sm text-gray-500">
-                              Custom Clothing Co.
+                              {getLogoDisplay(order).company}
                             </div>
                           </div>
                         </div>
@@ -422,6 +443,58 @@ export default function OrderManagePage() {
           </DialogHeader>
           {editingOrder && (
             <div className="space-y-6">
+              {/* Logo and Company Section */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <Label className="text-lg font-semibold mb-3 block">Company Logo & Branding</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="logo">Company Logo</Label>
+                    <Select
+                      value={editingOrder.logo || 'custom-clothing'}
+                      onValueChange={(value) => 
+                        setEditingOrder({ ...editingOrder, logo: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {logoOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            <div className="flex items-center space-x-2">
+                              <div className={`w-6 h-6 rounded bg-gradient-to-br ${option.color} flex items-center justify-center`}>
+                                <span className="text-white text-xs font-bold">
+                                  {editingOrder.orderNumber?.slice(-2) || '00'}
+                                </span>
+                              </div>
+                              <span>{option.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Preview</Label>
+                    <div className="flex items-center space-x-3 mt-2">
+                      <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${getLogoDisplay(editingOrder).color} flex items-center justify-center`}>
+                        <span className="text-white font-bold text-sm">
+                          {editingOrder.orderNumber?.slice(-3) || '000'}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {editingOrder.orderNumber}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {getLogoDisplay(editingOrder).company}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="status">Status</Label>
@@ -448,19 +521,16 @@ export default function OrderManagePage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="totalAmount">Total Amount</Label>
+                  <Label htmlFor="totalAmount">Total Amount (Auto-calculated)</Label>
                   <Input
                     id="totalAmount"
                     type="number"
                     step="0.01"
-                    value={editingOrder.totalAmount}
-                    onChange={(e) => 
-                      setEditingOrder({ 
-                        ...editingOrder, 
-                        totalAmount: parseFloat(e.target.value) || 0 
-                      })
-                    }
+                    value={editingOrder.items?.reduce((sum, item) => sum + item.totalPrice, 0) || 0}
+                    disabled
+                    className="bg-gray-100"
                   />
+                  <p className="text-xs text-gray-500 mt-1">This amount updates automatically from line items</p>
                 </div>
               </div>
               
