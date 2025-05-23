@@ -892,6 +892,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Order creation endpoint
+  app.post('/api/orders', requireAuth, async (req, res) => {
+    try {
+      console.log('Creating order with data:', req.body);
+      
+      const { orderNumber, customerId, status, notes, items, totalAmount } = req.body;
+      
+      // Validate required fields
+      if (!orderNumber || !customerId || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: orderNumber, customerId, and items are required'
+        });
+      }
+
+      // Create the order in Supabase
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          customer_id: customerId,
+          status: status || 'draft',
+          notes: notes || '',
+          total_amount: totalAmount || 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('Error creating order:', orderError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create order'
+        });
+      }
+
+      console.log('Order created successfully:', order);
+
+      // Create order items
+      const orderItems = items.map((item: any) => ({
+        order_id: order.id,
+        product_name: item.productName,
+        description: item.description || '',
+        size: item.size || '',
+        color: item.color || '',
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.totalPrice,
+        created_at: new Date().toISOString()
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        console.error('Error creating order items:', itemsError);
+        // Try to clean up the order if items failed
+        await supabase.from('orders').delete().eq('id', order.id);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create order items'
+        });
+      }
+
+      console.log('Order items created successfully');
+
+      return res.status(201).json({
+        success: true,
+        message: 'Order created successfully',
+        order: order
+      });
+
+    } catch (err) {
+      console.error('Unexpected error creating order:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred'
+      });
+    }
+  });
+
+  // Get all orders endpoint
+  app.get('/api/orders', requireAuth, async (req, res) => {
+    try {
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching orders:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch orders'
+        });
+      }
+
+      // Transform the data to match expected format
+      const transformedOrders = orders.map(order => ({
+        id: order.id,
+        orderNumber: order.order_number,
+        status: order.status,
+        customerId: order.customer_id,
+        notes: order.notes,
+        totalAmount: order.total_amount,
+        createdAt: order.created_at,
+        items: order.order_items.map((item: any) => ({
+          productName: item.product_name,
+          description: item.description,
+          size: item.size,
+          color: item.color,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          totalPrice: item.total_price
+        }))
+      }));
+
+      return res.json(transformedOrders);
+
+    } catch (err) {
+      console.error('Unexpected error fetching orders:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred'
+      });
+    }
+  });
+
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
