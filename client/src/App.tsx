@@ -147,7 +147,16 @@ function App() {
                   path="/orders" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
-                      <Orders />
+                      <OrderManagePage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/orders/create" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                      <OrderCreatePage />
                     </RequireAuth>
                   } 
                 />
