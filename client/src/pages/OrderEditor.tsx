@@ -281,7 +281,9 @@ export default function OrderEditor() {
                           <SelectContent>
                             {customers.map((customer: any) => (
                               <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {customer.user.firstName} {customer.user.lastName}
+                                {customer.firstName && customer.lastName 
+                                  ? `${customer.firstName} ${customer.lastName}` 
+                                  : customer.email || `Customer ${customer.id}`}
                               </SelectItem>
                             ))}
                           </SelectContent>
