@@ -309,15 +309,17 @@ export default function SettingsPage() {
 
   const users = userResponse?.users || [];
   const analytics = userResponse?.analytics || {
-    totalUsers: 0,
-    customersTotal: 0,
-    authAccountsTotal: 0,
+    totalUsers: users.length,
+    customersTotal: users.filter(u => u.role === 'customer').length,
+    authAccountsTotal: users.length,
     needsAccountCreation: 0,
-    activeAccounts: 0,
-    adminUsers: 0,
-    customerUsers: 0,
-    staffUsers: 0
+    activeAccounts: users.filter(u => u.email_confirmed).length,
+    adminUsers: users.filter(u => u.role === 'admin').length,
+    customerUsers: users.filter(u => u.role === 'customer').length,
+    staffUsers: users.filter(u => !['customer', 'admin'].includes(u.role)).length
   };
+
+  console.log('User display data:', { users: users.length, analytics });
   
   // State for user invitation dialog
   const [showInviteDialog, setShowInviteDialog] = useState(false);
