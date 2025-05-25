@@ -44,6 +44,7 @@ import AnalyticsPage from "@/pages/admin/AnalyticsPage";
 import LegalManagementPage from "@/pages/admin/LegalManagementPage";
 import CustomerInvitesPage from "@/pages/admin/CustomerInvitesPage";
 import NewOrderInquiriesPage from "@/pages/admin/NewOrderInquiriesPage";
+import ProductLibrary from "@/pages/ProductLibrary";
 
 function App() {
   return (
@@ -211,6 +212,15 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson', 'customer']}>
                       <Payments />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/product-library" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                      <ProductLibrary />
                     </RequireAuth>
                   } 
                 />

@@ -20,7 +20,8 @@ import {
   Mail,
   FileText,
   PlusCircle,
-  Scale
+  Scale,
+  Package
 } from "lucide-react";
 
 // Navigation items for different roles
@@ -28,6 +29,7 @@ const navigationItems = {
   admin: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Orders", href: "/orders", icon: ShoppingBag },
+    { name: "Product Library", href: "/product-library", icon: Package },
     { name: "Customer Invites", href: "/admin/invites", icon: Mail },
     { name: "Order Inquiries", href: "/admin/inquiries", icon: FileText },
     { name: "Users", href: "/users", icon: Users },
@@ -39,6 +41,7 @@ const navigationItems = {
   salesperson: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Orders", href: "/orders", icon: ShoppingBag },
+    { name: "Product Library", href: "/product-library", icon: Package },
     { name: "Customer Invites", href: "/admin/invites", icon: Mail },
     { name: "Order Inquiries", href: "/admin/inquiries", icon: FileText },
     { name: "Customers", href: "/customers", icon: Users },
