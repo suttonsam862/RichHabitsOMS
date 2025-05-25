@@ -29,6 +29,7 @@ import OrderDetail from "@/pages/OrderDetail";
 import OrderEditor from "@/pages/OrderEditor";
 import OrderCreatePage from "@/pages/orders/OrderCreatePage";
 import OrderManagePage from "@/pages/orders/OrderManagePage";
+import OrdersHub from "@/pages/OrdersHub";
 import DesignTasks from "@/pages/DesignTasks";
 import Messages from "@/pages/Messages";
 import Production from "@/pages/Production";
@@ -148,7 +149,7 @@ function App() {
                   path="/orders" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
-                      <OrderManagePage />
+                      <OrdersHub />
                     </RequireAuth>
                   } 
                 />
