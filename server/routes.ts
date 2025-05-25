@@ -9,6 +9,13 @@ import { sendEmail, getCustomerInviteEmailTemplate } from './email';
 import adminRoutes from './routes/admin';
 import customerRoutes from './routes/customerRoutes';
 import { uploadRouter } from './upload';
+import { 
+  getProductLibrary, 
+  getProductCategories, 
+  addProductToLibrary, 
+  copyProductToOrder, 
+  getProductPricingHistory 
+} from './productLibrary';
 import { createClient } from '@supabase/supabase-js';
 
 // Create Supabase admin client with service key for admin operations
@@ -385,7 +392,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.error('Email module not available:', moduleErr);
               // Continue without sending email
             }
-          }
         } catch (emailErr) {
           console.error('Failed to send invitation email:', emailErr);
           inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
@@ -1674,6 +1680,13 @@ The ThreadCraft Team`,
       });
     }
   });
+
+  // Product Library Routes - For salespeople to reference products and pricing
+  app.get('/api/products/library', requireAuth, getProductLibrary);
+  app.get('/api/products/categories', requireAuth, getProductCategories);
+  app.post('/api/products/library', requireAuth, requireRole(['admin', 'salesperson']), addProductToLibrary);
+  app.post('/api/products/library/:productId/copy', requireAuth, requireRole(['admin', 'salesperson']), copyProductToOrder);
+  app.get('/api/products/library/:productId/pricing-history', requireAuth, getProductPricingHistory);
 
   return httpServer;
 }
