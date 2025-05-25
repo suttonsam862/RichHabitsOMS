@@ -1742,20 +1742,38 @@ The ThreadCraft Team`,
   });
 
   // Comprehensive User Management API - Database Portal Viewer
-  app.get('/api/users', async (req: Request, res: Response) => {
-    // Use the same authentication pattern as /api/auth/me which is working
-    console.log('Checking authentication for /api/users endpoint...');
-    
-    // Check session authentication (same pattern as working endpoints)
-    if (!req.session?.auth?.user) {
-      console.log('No authenticated session found');
+  app.get('/api/users', requireAuth, async (req: Request, res: Response) => {
+    if (!req.user) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
     
-    const user = req.session.auth.user;
-    console.log('Authenticated user role:', user.role);
+    // Check for admin privileges (same pattern as /api/auth/me)
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
     
-    if (user.role !== 'admin') {
+    let userRole = req.user.role || 'customer';
+    let isAdmin = false;
+    
+    if (token) {
+      try {
+        const { data: userData, error } = await supabase.auth.getUser(token);
+        
+        if (!error && userData?.user) {
+          const isSuperAdmin = userData.user.user_metadata?.is_super_admin === true;
+          const metadataRole = userData.user.user_metadata?.role;
+          
+          if (isSuperAdmin || metadataRole === 'admin') {
+            userRole = 'admin';
+            isAdmin = true;
+            console.log('User has admin privileges from auth metadata');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user metadata:', err);
+      }
+    }
+    
+    if (!isAdmin && userRole !== 'admin') {
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
     try {
