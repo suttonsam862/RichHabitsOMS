@@ -1742,7 +1742,11 @@ The ThreadCraft Team`,
   });
 
   // Comprehensive User Management API - Database Portal Viewer
-  app.get('/api/users', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+  app.get('/api/users', authenticateRequest, async (req: Request, res: Response) => {
+    // Check if user is admin
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
     try {
       console.log('Fetching comprehensive user database...');
 
