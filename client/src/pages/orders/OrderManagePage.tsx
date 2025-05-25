@@ -113,12 +113,35 @@ export default function OrderManagePage() {
 
   const handleUpdateOrder = () => {
     if (editingOrder) {
-      // Auto-calculate total from line items
-      const itemsTotal = editingOrder.items?.reduce((sum, item) => sum + item.totalPrice, 0) || 0;
+      // Auto-calculate total from line items with proper calculations
+      const itemsTotal = editingOrder.items?.reduce((sum, item) => {
+        const lineTotal = item.quantity * item.unitPrice;
+        return sum + lineTotal;
+      }, 0) || 0;
+      
+      const tax = itemsTotal * 0.08; // 8% tax
+      const finalTotal = itemsTotal + tax;
+      
+      // Update all item totals before saving
+      const updatedItems = editingOrder.items?.map(item => ({
+        ...item,
+        totalPrice: item.quantity * item.unitPrice
+      })) || [];
+      
       const updatedOrder = {
         ...editingOrder,
-        totalAmount: itemsTotal
+        items: updatedItems,
+        totalAmount: finalTotal,
+        tax: tax
       };
+      
+      console.log('Saving order with calculated totals:', {
+        itemsTotal,
+        tax,
+        finalTotal,
+        itemCount: updatedItems.length
+      });
+      
       updateOrder.mutate(updatedOrder);
     }
   };
@@ -687,7 +710,7 @@ export default function OrderManagePage() {
                   
                   {editingOrder.items?.map((item, index) => (
                     <div key={index} className="px-4 py-3 grid grid-cols-12 gap-2 border-b border-gray-200 last:border-b-0">
-                      <div className="col-span-3">
+                      <div className="col-span-3 space-y-2">
                         <Input
                           value={item.productName}
                           onChange={(e) => {
@@ -698,34 +721,44 @@ export default function OrderManagePage() {
                           placeholder="Product name"
                           className="text-sm"
                         />
-                      </div>
-                      <div className="col-span-2">
-                        <Select
-                          value={item.size}
-                          onValueChange={(value) => {
+                        <Input
+                          value={item.description}
+                          onChange={(e) => {
                             const updatedItems = [...editingOrder.items];
-                            updatedItems[index] = { ...item, size: value };
+                            updatedItems[index] = { ...item, description: e.target.value };
                             setEditingOrder({ ...editingOrder, items: updatedItems });
                           }}
-                        >
-                          <SelectTrigger className="text-sm">
-                            <SelectValue placeholder="Size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="YS">YS</SelectItem>
-                            <SelectItem value="YM">YM</SelectItem>
-                            <SelectItem value="YL">YL</SelectItem>
-                            <SelectItem value="AXS">AXS</SelectItem>
-                            <SelectItem value="S">S</SelectItem>
-                            <SelectItem value="M">M</SelectItem>
-                            <SelectItem value="L">L</SelectItem>
-                            <SelectItem value="XL">XL</SelectItem>
-                            <SelectItem value="2XL">2XL</SelectItem>
-                            <SelectItem value="3XL">3XL</SelectItem>
-                            <SelectItem value="4XL">4XL</SelectItem>
-                            <SelectItem value="No Sizes">No Sizes</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          placeholder="Product description"
+                          className="text-sm text-gray-600"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500 font-medium mb-1">Available Sizes:</p>
+                          <div className="grid grid-cols-3 gap-1">
+                            {['YS', 'YM', 'YL', 'AXS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'No Sizes'].map((size) => (
+                              <button
+                                key={size}
+                                type="button"
+                                onClick={() => {
+                                  const updatedItems = [...editingOrder.items];
+                                  updatedItems[index] = { ...item, size };
+                                  setEditingOrder({ ...editingOrder, items: updatedItems });
+                                }}
+                                className={`text-xs px-2 py-1 rounded border transition-colors ${
+                                  item.size === size 
+                                    ? 'bg-blue-500 text-white border-blue-500' 
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                {size}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Selected: <span className="font-medium">{item.size || 'None'}</span>
+                          </p>
+                        </div>
                       </div>
                       <div className="col-span-2">
                         <Input
@@ -771,9 +804,12 @@ export default function OrderManagePage() {
                         />
                       </div>
                       <div className="col-span-1">
-                        <div className="text-sm font-medium py-2">
-                          {formatCurrency(item.totalPrice)}
+                        <div className="text-sm font-medium py-2 bg-gray-50 px-2 rounded">
+                          {formatCurrency(item.quantity * item.unitPrice)}
                         </div>
+                        <p className="text-xs text-gray-400">
+                          {item.quantity} × ${item.unitPrice}
+                        </p>
                       </div>
                       <div className="col-span-1">
                         <Button
@@ -782,7 +818,11 @@ export default function OrderManagePage() {
                           size="sm"
                           onClick={() => {
                             const updatedItems = editingOrder.items.filter((_, i) => i !== index);
-                            setEditingOrder({ ...editingOrder, items: updatedItems });
+                            setEditingOrder({ 
+                              ...editingOrder, 
+                              items: updatedItems,
+                              totalAmount: updatedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+                            });
                           }}
                           className="text-red-600 hover:text-red-800"
                         >
@@ -791,20 +831,35 @@ export default function OrderManagePage() {
                       </div>
                     </div>
                   ))}
+                  
+                  {editingOrder.items?.length === 0 && (
+                    <div className="px-4 py-8 text-center text-gray-500">
+                      <p>No items added to this order yet.</p>
+                      <p className="text-sm">Click "Add Item" to get started.</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Order Total */}
                 <div className="flex justify-end">
-                  <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
                     <div className="text-right">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-green-600">
                         Items Total: {formatCurrency(
-                          editingOrder.items?.reduce((sum, item) => sum + item.totalPrice, 0) || 0
+                          editingOrder.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0
                         )}
                       </div>
-                      <div className="text-lg font-semibold">
-                        Order Total: {formatCurrency(editingOrder.totalAmount)}
+                      <div className="text-sm text-gray-500 mt-1">
+                        Tax (8%): {formatCurrency(
+                          (editingOrder.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0) * 0.08
+                        )}
                       </div>
+                      <div className="text-lg font-bold text-green-700 border-t border-green-200 pt-2 mt-2">
+                        Order Total: {formatCurrency(
+                          (editingOrder.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0) * 1.08
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Updates automatically as you edit items</p>
                     </div>
                   </div>
                 </div>
