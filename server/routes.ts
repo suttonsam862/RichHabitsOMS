@@ -1742,9 +1742,14 @@ The ThreadCraft Team`,
   });
 
   // Comprehensive User Management API - Database Portal Viewer
-  app.get('/api/users', authenticateRequest, async (req: Request, res: Response) => {
-    // Check if user is admin
-    if (!req.user || req.user.role !== 'admin') {
+  app.get('/api/users', async (req: Request, res: Response) => {
+    // Check session-based authentication first
+    console.log('Session auth check:', req.session?.auth?.user?.role);
+    const sessionAuth = req.session?.auth;
+    if (!sessionAuth?.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+    if (sessionAuth.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
     try {
