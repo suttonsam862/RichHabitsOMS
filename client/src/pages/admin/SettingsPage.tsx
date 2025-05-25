@@ -260,8 +260,9 @@ export default function SettingsPage() {
       const data = await response.json();
       console.log("Received user data:", data);
       
-      // Transform the comprehensive database format to match frontend expectations
+      // Handle both old format (array) and new format (object with success)
       if (data.success && data.users) {
+        // New comprehensive database format
         return {
           users: data.users.map(user => ({
             id: user.id || user.customerId,
@@ -284,6 +285,21 @@ export default function SettingsPage() {
             lastLogin: user.lastLogin
           })),
           analytics: data.analytics
+        };
+      } else if (Array.isArray(data)) {
+        // Old format (direct array) - transform to new format
+        return {
+          users: data,
+          analytics: {
+            totalUsers: data.length,
+            customersTotal: data.filter(u => u.role === 'customer').length,
+            authAccountsTotal: data.length,
+            needsAccountCreation: 0,
+            activeAccounts: data.filter(u => u.email_confirmed).length,
+            adminUsers: data.filter(u => u.role === 'admin').length,
+            customerUsers: data.filter(u => u.role === 'customer').length,
+            staffUsers: data.filter(u => !['customer', 'admin'].includes(u.role)).length
+          }
         };
       }
       
@@ -722,12 +738,12 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium text-muted-foreground">User Management</p>
                 <p className="text-2xl font-bold">{analytics.totalUsers}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {analytics.needsAccounts > 0 && (
+                  {analytics.needsAccountCreation > 0 && (
                     <span className="text-orange-600 font-medium">
-                      {analytics.needsAccounts} need accounts • 
+                      {analytics.needsAccountCreation} need accounts • 
                     </span>
                   )}
-                  {analytics.recentSignUps} new this week
+                  {analytics.customerUsers} customers • {analytics.adminUsers} admins
                 </p>
               </div>
               <Users className="h-8 w-8 text-muted-foreground" />

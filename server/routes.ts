@@ -1552,50 +1552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Users API endpoint to fetch all users for user management
-  app.get('/api/users', async (req, res) => {
-    try {
-      console.log('Fetching real users from Supabase...');
-      
-      // Get all users from Supabase Auth using admin client
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-      
-      if (error) {
-        console.error('Error fetching users from Supabase Auth:', error);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Failed to retrieve users: ' + error.message 
-        });
-      }
-      
-      // Transform users to expected format
-      const users = data.users.map(user => {
-        const metadata = user.user_metadata || {};
-        return {
-          id: user.id,
-          email: user.email || '',
-          username: metadata.username || user.email?.split('@')[0] || '',
-          first_name: metadata.firstName || '',
-          last_name: metadata.lastName || '',
-          role: metadata.role || 'customer',
-          phone: metadata.phone || '',
-          company: metadata.company || '',
-          created_at: user.created_at,
-          email_confirmed: !!user.email_confirmed_at,
-          last_sign_in: user.last_sign_in_at
-        };
-      });
-      
-      console.log(`Found ${users.length} users in Supabase`);
-      return res.json(users);
-    } catch (err: any) {
-      console.error('Error fetching users:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'An unexpected error occurred'
-      });
-    }
-  });
+
 
   // User setup email API endpoint - ONLY sends emails, never creates users
   app.post('/api/users/invite', async (req, res) => {
