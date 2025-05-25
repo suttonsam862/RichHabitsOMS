@@ -264,7 +264,7 @@ export default function SettingsPage() {
   });
 
   const users = userResponse?.users || [];
-  const userAnalytics = userResponse?.analytics || {
+  const analytics = userResponse?.analytics || {
     totalUsers: 0,
     authAccounts: 0,
     customerProfiles: 0,
@@ -355,10 +355,100 @@ export default function SettingsPage() {
       });
     },
   });
+
+  // Edit user mutation - for updating user details, roles, and credentials
+  const editUserMutation = useMutation({
+    mutationFn: async (userData: { userId: string; updates: any }) => {
+      const response = await fetch(`/api/users/${userData.userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData.updates),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update user');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "User Updated Successfully",
+        description: `${data.user?.firstName || 'User'} has been updated`,
+      });
+      setShowEditDialog(false);
+      setEditingUser(null);
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  // Open edit user dialog
+  const openEditDialog = (user: any) => {
+    setEditingUser(user);
+    setEditForm({
+      email: user.email || '',
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      role: user.role || 'customer',
+      phone: user.phone || '',
+      company: user.company || '',
+      password: '',
+      resetPassword: false
+    });
+    setShowEditDialog(true);
+  };
+
+  // Save user edits
+  const saveUserEdits = () => {
+    if (!editingUser) return;
+    
+    const updates: any = {
+      email: editForm.email,
+      firstName: editForm.firstName,
+      lastName: editForm.lastName,
+      role: editForm.role,
+      phone: editForm.phone,
+      company: editForm.company
+    };
+
+    // Include password if being reset
+    if (editForm.resetPassword && editForm.password) {
+      updates.password = editForm.password;
+    }
+
+    editUserMutation.mutate({
+      userId: editingUser.id,
+      updates
+    });
+  };
   
   // State for delete dialog
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  
+  // State for user editing
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    email: '',
+    firstName: '',
+    lastName: '',
+    role: 'customer',
+    phone: '',
+    company: '',
+    password: '',
+    resetPassword: false
+  });
   
   // State for bulk actions
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -546,22 +636,7 @@ export default function SettingsPage() {
     }
   };
   
-  // Calculate user analytics
-  const userAnalytics = {
-    totalUsers: users?.length || 0,
-    activeUsers: users?.filter(u => u.email_confirmed)?.length || 0,
-    adminUsers: users?.filter(u => u.role === 'admin')?.length || 0,
-    customerUsers: users?.filter(u => u.role === 'customer')?.length || 0,
-    salesPersons: users?.filter(u => u.role === 'salesperson')?.length || 0,
-    designers: users?.filter(u => u.role === 'designer')?.length || 0,
-    manufacturers: users?.filter(u => u.role === 'manufacturer')?.length || 0,
-    recentSignUps: users?.filter(u => {
-      const signUpDate = new Date(u.created_at);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return signUpDate >= weekAgo;
-    })?.length || 0
-  };
+
 
   return (
     <div className="container mx-auto py-8">
@@ -579,9 +654,14 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">User Management</p>
-                <p className="text-2xl font-bold">{userAnalytics.totalUsers}</p>
+                <p className="text-2xl font-bold">{analytics.totalUsers}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {userAnalytics.recentSignUps} new this week
+                  {analytics.needsAccounts > 0 && (
+                    <span className="text-orange-600 font-medium">
+                      {analytics.needsAccounts} need accounts • 
+                    </span>
+                  )}
+                  {analytics.recentSignUps} new this week
                 </p>
               </div>
               <Users className="h-8 w-8 text-muted-foreground" />
@@ -941,6 +1021,170 @@ export default function SettingsPage() {
                   </DialogContent>
                 </Dialog>
               </div>
+
+              {/* User Edit Dialog */}
+              <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Edit User Account</DialogTitle>
+                    <DialogDescription>
+                      Update user information, login credentials, roles, and permissions
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="grid gap-6">
+                    {/* Basic Information */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="edit-firstName">First Name</Label>
+                        <Input
+                          id="edit-firstName"
+                          value={editForm.firstName}
+                          onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                          placeholder="First name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-lastName">Last Name</Label>
+                        <Input
+                          id="edit-lastName"
+                          value={editForm.lastName}
+                          onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                          placeholder="Last name"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email & Contact */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="edit-email">Email Address</Label>
+                        <Input
+                          id="edit-email"
+                          type="email"
+                          value={editForm.email}
+                          onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                          placeholder="user@example.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-phone">Phone Number</Label>
+                        <Input
+                          id="edit-phone"
+                          value={editForm.phone}
+                          onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                          placeholder="Phone number"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Role & Company */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="edit-role">Role & Permissions</Label>
+                        <Select 
+                          value={editForm.role}
+                          onValueChange={(value) => setEditForm({ ...editForm, role: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin - Full Access</SelectItem>
+                            <SelectItem value="salesperson">Salesperson - Orders & Customers</SelectItem>
+                            <SelectItem value="designer">Designer - Design & Production</SelectItem>
+                            <SelectItem value="manufacturer">Manufacturer - Production Only</SelectItem>
+                            <SelectItem value="customer">Customer - Order Viewing</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-company">Company</Label>
+                        <Input
+                          id="edit-company"
+                          value={editForm.company}
+                          onChange={(e) => setEditForm({ ...editForm, company: e.target.value })}
+                          placeholder="Company name"
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Password Reset Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="reset-password"
+                          checked={editForm.resetPassword}
+                          onCheckedChange={(checked) => 
+                            setEditForm({ ...editForm, resetPassword: checked as boolean })
+                          }
+                        />
+                        <Label htmlFor="reset-password" className="text-sm font-medium">
+                          Reset User Password
+                        </Label>
+                      </div>
+                      
+                      {editForm.resetPassword && (
+                        <div>
+                          <Label htmlFor="edit-password">New Password</Label>
+                          <Input
+                            id="edit-password"
+                            type="password"
+                            value={editForm.password}
+                            onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                            placeholder="Enter new password"
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Leave empty to generate a temporary password
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Account Status */}
+                    {editingUser && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Account Status</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Auth Account:</span>
+                            <span className={`ml-2 font-medium ${editingUser.hasAuthAccount ? 'text-green-600' : 'text-orange-600'}`}>
+                              {editingUser.hasAuthAccount ? 'Active' : 'Needs Creation'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Customer Profile:</span>
+                            <span className={`ml-2 font-medium ${editingUser.hasCustomerProfile ? 'text-green-600' : 'text-gray-600'}`}>
+                              {editingUser.hasCustomerProfile ? 'Linked' : 'None'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={saveUserEdits}
+                      disabled={editUserMutation.isPending || !editForm.email || !editForm.firstName}
+                    >
+                      {editUserMutation.isPending ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               
               {/* Bulk Action Confirmation Dialog */}
               <AlertDialog open={showBulkActionDialog} onOpenChange={setShowBulkActionDialog}>
@@ -2022,11 +2266,7 @@ export default function SettingsPage() {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => {
-                              // Edit user functionality
-                              setSelectedUser(user);
-                              setIsEditing(true);
-                            }}
+                            onClick={() => openEditDialog(user)}
                             disabled={false}
                           >
                             <Edit className="h-4 w-4" />

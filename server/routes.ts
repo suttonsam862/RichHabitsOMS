@@ -1956,5 +1956,95 @@ The ThreadCraft Team`,
     }
   });
 
+  // Edit user details, roles, and credentials
+  app.patch('/api/users/:userId', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { email, firstName, lastName, role, phone, company, password } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required'
+        });
+      }
+
+      console.log(`Updating user ${userId} with data:`, { email, firstName, lastName, role, phone, company });
+
+      // Update auth user metadata
+      const updateData: any = {
+        user_metadata: {
+          firstName,
+          lastName,
+          role,
+          phone,
+          company
+        }
+      };
+
+      // Update email if changed
+      if (email) {
+        updateData.email = email;
+      }
+
+      // Update password if provided
+      if (password) {
+        updateData.password = password;
+      }
+
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, updateData);
+
+      if (authError) {
+        console.error('Error updating auth user:', authError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to update user: ' + authError.message
+        });
+      }
+
+      // If user is a customer, also update customer profile
+      if (role === 'customer' && authUser.user?.user_metadata?.customerId) {
+        const { error: customerError } = await supabase
+          .from('customers')
+          .update({
+            firstName,
+            lastName,
+            email,
+            phone,
+            companyName: company
+          })
+          .eq('id', authUser.user.user_metadata.customerId);
+
+        if (customerError) {
+          console.warn('Error updating customer profile:', customerError);
+          // Don't fail the request, just log the warning
+        }
+      }
+
+      console.log(`✅ User ${userId} updated successfully`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'User updated successfully',
+        user: {
+          id: authUser.user?.id,
+          email: authUser.user?.email,
+          firstName,
+          lastName,
+          role,
+          phone,
+          company
+        }
+      });
+
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  });
+
   return httpServer;
 }
