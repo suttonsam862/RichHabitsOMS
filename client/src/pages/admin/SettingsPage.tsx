@@ -1370,10 +1370,9 @@ export default function SettingsPage() {
                         <TableHead className="w-[50px]">
                           <Checkbox 
                             checked={selectedUserIds.length === filteredUsers.length && filteredUsers.length > 0}
-                            indeterminate={selectedUserIds.length > 0 && selectedUserIds.length < filteredUsers.length}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setSelectedUserIds(filteredUsers.map(user => user.id));
+                                setSelectedUserIds(filteredUsers.map(user => user.id || user.customerId).filter(Boolean));
                               } else {
                                 setSelectedUserIds([]);
                               }
