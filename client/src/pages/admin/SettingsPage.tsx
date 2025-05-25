@@ -259,6 +259,34 @@ export default function SettingsPage() {
       
       const data = await response.json();
       console.log("Received user data:", data);
+      
+      // Transform the comprehensive database format to match frontend expectations
+      if (data.success && data.users) {
+        return {
+          users: data.users.map(user => ({
+            id: user.id || user.customerId,
+            customerId: user.customerId,
+            email: user.email,
+            first_name: user.firstName,
+            last_name: user.lastName,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            username: user.username,
+            role: user.role,
+            phone: user.phone,
+            company: user.company,
+            created_at: user.customerSince || user.accountCreated,
+            email_confirmed: user.emailVerified,
+            hasAuthAccount: user.hasAuthAccount,
+            accountStatus: user.accountStatus,
+            permissions: user.permissions,
+            profilePicture: user.profilePicture,
+            lastLogin: user.lastLogin
+          })),
+          analytics: data.analytics
+        };
+      }
+      
       return data;
     }
   });
