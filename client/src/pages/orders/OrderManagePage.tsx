@@ -20,11 +20,23 @@ interface OrderItem {
   id?: number;
   productName: string;
   description: string;
-  size: string;
   color: string;
-  quantity: number;
   unitPrice: number;
   totalPrice: number;
+  sizes: {
+    YS: number;
+    YM: number;
+    YL: number;
+    AXS: number;
+    S: number;
+    M: number;
+    L: number;
+    XL: number;
+    '2XL': number;
+    '3XL': number;
+    '4XL': number;
+    'No Sizes': number;
+  };
 }
 
 interface Order {
@@ -113,9 +125,10 @@ export default function OrderManagePage() {
 
   const handleUpdateOrder = () => {
     if (editingOrder) {
-      // Auto-calculate total from line items with proper calculations
+      // Auto-calculate total from line items with spreadsheet-style sizes
       const itemsTotal = editingOrder.items?.reduce((sum, item) => {
-        const lineTotal = item.quantity * item.unitPrice;
+        const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
+        const lineTotal = totalQuantity * item.unitPrice;
         return sum + lineTotal;
       }, 0) || 0;
       
@@ -123,10 +136,13 @@ export default function OrderManagePage() {
       const finalTotal = itemsTotal + tax;
       
       // Update all item totals before saving
-      const updatedItems = editingOrder.items?.map(item => ({
-        ...item,
-        totalPrice: item.quantity * item.unitPrice
-      })) || [];
+      const updatedItems = editingOrder.items?.map(item => {
+        const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
+        return {
+          ...item,
+          totalPrice: totalQuantity * item.unitPrice
+        };
+      }) || [];
       
       const updatedOrder = {
         ...editingOrder,
@@ -680,11 +696,23 @@ export default function OrderManagePage() {
                       const newItem: OrderItem = {
                         productName: '',
                         description: '',
-                        size: '',
                         color: '',
-                        quantity: 1,
                         unitPrice: 0,
-                        totalPrice: 0
+                        totalPrice: 0,
+                        sizes: {
+                          YS: 0,
+                          YM: 0,
+                          YL: 0,
+                          AXS: 0,
+                          S: 0,
+                          M: 0,
+                          L: 0,
+                          XL: 0,
+                          '2XL': 0,
+                          '3XL': 0,
+                          '4XL': 0,
+                          'No Sizes': 0
+                        }
                       };
                       setEditingOrder({
                         ...editingOrder,
@@ -697,140 +725,136 @@ export default function OrderManagePage() {
                   </Button>
                 </div>
 
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-2 grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 uppercase">
-                    <div className="col-span-3">Product</div>
-                    <div className="col-span-2">Size</div>
-                    <div className="col-span-2">Color</div>
-                    <div className="col-span-1">Qty</div>
-                    <div className="col-span-2">Unit Price</div>
-                    <div className="col-span-1">Total</div>
-                    <div className="col-span-1">Actions</div>
+                <div className="border rounded-lg overflow-x-auto">
+                  {/* Spreadsheet-style header */}
+                  <div className="bg-gray-50 border-b">
+                    <div className="flex min-w-max">
+                      <div className="w-48 px-3 py-2 text-xs font-medium text-gray-500 uppercase border-r">Product</div>
+                      <div className="w-32 px-3 py-2 text-xs font-medium text-gray-500 uppercase border-r">Color</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">YS</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">YM</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">YL</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">AXS</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">S</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">M</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">L</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">XL</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">2XL</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">3XL</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">4XL</div>
+                      <div className="w-20 px-3 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">Unit Price</div>
+                      <div className="w-24 px-3 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">Total</div>
+                      <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase text-center">Actions</div>
+                    </div>
                   </div>
                   
-                  {editingOrder.items?.map((item, index) => (
-                    <div key={index} className="px-4 py-3 grid grid-cols-12 gap-2 border-b border-gray-200 last:border-b-0">
-                      <div className="col-span-3 space-y-2">
-                        <Input
-                          value={item.productName}
-                          onChange={(e) => {
-                            const updatedItems = [...editingOrder.items];
-                            updatedItems[index] = { ...item, productName: e.target.value };
-                            setEditingOrder({ ...editingOrder, items: updatedItems });
-                          }}
-                          placeholder="Product name"
-                          className="text-sm"
-                        />
-                        <Input
-                          value={item.description}
-                          onChange={(e) => {
-                            const updatedItems = [...editingOrder.items];
-                            updatedItems[index] = { ...item, description: e.target.value };
-                            setEditingOrder({ ...editingOrder, items: updatedItems });
-                          }}
-                          placeholder="Product description"
-                          className="text-sm text-gray-600"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <div className="space-y-1">
-                          <p className="text-xs text-gray-500 font-medium mb-1">Available Sizes:</p>
-                          <div className="grid grid-cols-3 gap-1">
-                            {['YS', 'YM', 'YL', 'AXS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'No Sizes'].map((size) => (
-                              <button
-                                key={size}
-                                type="button"
-                                onClick={() => {
+                  {/* Spreadsheet-style rows */}
+                  {editingOrder.items?.map((item, index) => {
+                    const calculateItemTotal = () => {
+                      const totalQuantity = Object.values(item.sizes).reduce((sum, qty) => sum + qty, 0);
+                      return totalQuantity * item.unitPrice;
+                    };
+
+                    return (
+                      <div key={index} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
+                        <div className="flex min-w-max">
+                          {/* Product Name */}
+                          <div className="w-48 px-3 py-2 border-r">
+                            <Input
+                              value={item.productName}
+                              onChange={(e) => {
+                                const updatedItems = [...editingOrder.items];
+                                updatedItems[index] = { ...item, productName: e.target.value };
+                                setEditingOrder({ ...editingOrder, items: updatedItems });
+                              }}
+                              placeholder="Product name"
+                              className="text-sm border-0 p-1 h-8"
+                            />
+                          </div>
+                          
+                          {/* Color */}
+                          <div className="w-32 px-3 py-2 border-r">
+                            <Input
+                              value={item.color}
+                              onChange={(e) => {
+                                const updatedItems = [...editingOrder.items];
+                                updatedItems[index] = { ...item, color: e.target.value };
+                                setEditingOrder({ ...editingOrder, items: updatedItems });
+                              }}
+                              placeholder="Color"
+                              className="text-sm border-0 p-1 h-8"
+                            />
+                          </div>
+                          
+                          {/* Size quantity inputs */}
+                          {(['YS', 'YM', 'YL', 'AXS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'] as const).map((size) => (
+                            <div key={size} className="w-16 px-2 py-2 border-r">
+                              <Input
+                                type="number"
+                                min="0"
+                                value={item.sizes[size] || 0}
+                                onChange={(e) => {
+                                  const quantity = parseInt(e.target.value) || 0;
                                   const updatedItems = [...editingOrder.items];
-                                  updatedItems[index] = { ...item, size };
+                                  updatedItems[index] = { 
+                                    ...item, 
+                                    sizes: { ...item.sizes, [size]: quantity }
+                                  };
                                   setEditingOrder({ ...editingOrder, items: updatedItems });
                                 }}
-                                className={`text-xs px-2 py-1 rounded border transition-colors ${
-                                  item.size === size 
-                                    ? 'bg-blue-500 text-white border-blue-500' 
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                }`}
-                              >
-                                {size}
-                              </button>
-                            ))}
+                                className="text-sm border-0 p-1 h-8 text-center"
+                                placeholder="0"
+                              />
+                            </div>
+                          ))}
+                          
+                          {/* Unit Price */}
+                          <div className="w-20 px-3 py-2 border-r">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.unitPrice}
+                              onChange={(e) => {
+                                const unitPrice = parseFloat(e.target.value) || 0;
+                                const updatedItems = [...editingOrder.items];
+                                updatedItems[index] = { ...item, unitPrice };
+                                setEditingOrder({ ...editingOrder, items: updatedItems });
+                              }}
+                              className="text-sm border-0 p-1 h-8 text-center"
+                              placeholder="0.00"
+                            />
                           </div>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Selected: <span className="font-medium">{item.size || 'None'}</span>
-                          </p>
+                          
+                          {/* Total */}
+                          <div className="w-24 px-3 py-2 border-r flex items-center justify-center">
+                            <div className="text-sm font-medium">
+                              {formatCurrency(calculateItemTotal())}
+                            </div>
+                          </div>
+                          
+                          {/* Actions */}
+                          <div className="w-16 px-2 py-2 flex items-center justify-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const updatedItems = editingOrder.items.filter((_, i) => i !== index);
+                                setEditingOrder({ 
+                                  ...editingOrder, 
+                                  items: updatedItems
+                                });
+                              }}
+                              className="text-red-600 hover:text-red-800 h-6 w-6 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                      <div className="col-span-2">
-                        <Input
-                          value={item.color}
-                          onChange={(e) => {
-                            const updatedItems = [...editingOrder.items];
-                            updatedItems[index] = { ...item, color: e.target.value };
-                            setEditingOrder({ ...editingOrder, items: updatedItems });
-                          }}
-                          placeholder="Color"
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const quantity = parseInt(e.target.value) || 1;
-                            const updatedItems = [...editingOrder.items];
-                            const totalPrice = quantity * item.unitPrice;
-                            updatedItems[index] = { ...item, quantity, totalPrice };
-                            setEditingOrder({ ...editingOrder, items: updatedItems });
-                          }}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.unitPrice}
-                          onChange={(e) => {
-                            const unitPrice = parseFloat(e.target.value) || 0;
-                            const updatedItems = [...editingOrder.items];
-                            const totalPrice = item.quantity * unitPrice;
-                            updatedItems[index] = { ...item, unitPrice, totalPrice };
-                            setEditingOrder({ ...editingOrder, items: updatedItems });
-                          }}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <div className="text-sm font-medium py-2 bg-gray-50 px-2 rounded">
-                          {formatCurrency(item.quantity * item.unitPrice)}
-                        </div>
-                        <p className="text-xs text-gray-400">
-                          {item.quantity} × ${item.unitPrice}
-                        </p>
-                      </div>
-                      <div className="col-span-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const updatedItems = editingOrder.items.filter((_, i) => i !== index);
-                            setEditingOrder({ 
-                              ...editingOrder, 
-                              items: updatedItems,
-                              totalAmount: updatedItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
-                            });
-                          }}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   
                   {editingOrder.items?.length === 0 && (
                     <div className="px-4 py-8 text-center text-gray-500">
@@ -846,20 +870,29 @@ export default function OrderManagePage() {
                     <div className="text-right">
                       <div className="text-sm text-green-600">
                         Items Total: {formatCurrency(
-                          editingOrder.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0
+                          editingOrder.items?.reduce((sum, item) => {
+                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
+                            return sum + (totalQuantity * item.unitPrice);
+                          }, 0) || 0
                         )}
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
                         Tax (8%): {formatCurrency(
-                          (editingOrder.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0) * 0.08
+                          (editingOrder.items?.reduce((sum, item) => {
+                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
+                            return sum + (totalQuantity * item.unitPrice);
+                          }, 0) || 0) * 0.08
                         )}
                       </div>
                       <div className="text-lg font-bold text-green-700 border-t border-green-200 pt-2 mt-2">
                         Order Total: {formatCurrency(
-                          (editingOrder.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0) * 1.08
+                          (editingOrder.items?.reduce((sum, item) => {
+                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
+                            return sum + (totalQuantity * item.unitPrice);
+                          }, 0) || 0) * 1.08
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Updates automatically as you edit items</p>
+                      <p className="text-xs text-gray-500 mt-1">Updates automatically as you edit sizes & prices</p>
                     </div>
                   </div>
                 </div>
