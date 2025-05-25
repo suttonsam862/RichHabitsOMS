@@ -246,11 +246,11 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [showUserManagement, setShowUserManagement] = useState(false);
   
-  // Fetch real users from API
-  const { data: users, isLoading, isError, refetch } = useQuery({
+  // Fetch comprehensive user data (auth users + customers)
+  const { data: userResponse, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: async () => {
-      console.log("Fetching real users from API...");
+      console.log("Fetching comprehensive user data...");
       const response = await fetch("/api/users");
       
       if (!response.ok) {
@@ -262,6 +262,15 @@ export default function SettingsPage() {
       return data;
     }
   });
+
+  const users = userResponse?.users || [];
+  const userAnalytics = userResponse?.analytics || {
+    totalUsers: 0,
+    authAccounts: 0,
+    customerProfiles: 0,
+    needsAccounts: 0,
+    recentSignUps: 0
+  };
   
   // State for user invitation dialog
   const [showInviteDialog, setShowInviteDialog] = useState(false);
@@ -302,6 +311,40 @@ export default function SettingsPage() {
       setInviteFirstName("");
       setInviteLastName("");
       setInviteRole("customer");
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  // Create auth account for existing customer
+  const createCustomerAccountMutation = useMutation({
+    mutationFn: async (customerId: string) => {
+      const response = await fetch('/api/users/create-customer-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ customerId }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create customer account');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Customer Account Created",
+        description: `Auth account created for ${data.user?.firstName} ${data.user?.lastName}`,
+      });
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
     },
     onError: (error: Error) => {
@@ -1886,7 +1929,7 @@ export default function SettingsPage() {
                     <Button 
                       onClick={() => {
                         if (inviteEmail && inviteFirstName && inviteLastName) {
-                          inviteUserMutation.mutate({
+                          createAccountMutation.mutate({
                             email: inviteEmail,
                             firstName: inviteFirstName,
                             lastName: inviteLastName,
@@ -1894,15 +1937,15 @@ export default function SettingsPage() {
                           });
                         }
                       }}
-                      disabled={inviteUserMutation.isPending || !inviteEmail || !inviteFirstName || !inviteLastName}
+                      disabled={createAccountMutation.isPending || !inviteEmail || !inviteFirstName || !inviteLastName}
                     >
-                      {inviteUserMutation.isPending ? (
+                      {createAccountMutation.isPending ? (
                         <>
                           <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                          Sending...
+                          Creating Account...
                         </>
                       ) : (
-                        "Send Invitation"
+                        "Create Account"
                       )}
                     </Button>
                   </DialogFooter>
@@ -1980,17 +2023,13 @@ export default function SettingsPage() {
                             variant="ghost" 
                             size="sm"
                             onClick={() => {
-                              // Send individual invite email
-                              inviteUserMutation.mutate({
-                                email: user.email,
-                                firstName: user.first_name || '',
-                                lastName: user.last_name || '',
-                                role: user.role
-                              });
+                              // Edit user functionality
+                              setSelectedUser(user);
+                              setIsEditing(true);
                             }}
-                            disabled={inviteUserMutation.isPending}
+                            disabled={false}
                           >
-                            <Mail className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm">
                             <Edit className="h-4 w-4" />

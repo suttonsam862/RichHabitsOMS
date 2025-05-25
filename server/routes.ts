@@ -1784,5 +1784,177 @@ The ThreadCraft Team`,
     }
   });
 
+  // Comprehensive User Management API - Fetches all users (auth users + customer profiles)
+  app.get('/api/users', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+    try {
+      console.log('Fetching comprehensive user list...');
+
+      // Get all authenticated users from Supabase Auth
+      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (authError) {
+        console.error('Error fetching auth users:', authError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch authenticated users'
+        });
+      }
+
+      // Get all customers from the customers table
+      const { data: customers, error: customersError } = await supabase
+        .from('customers')
+        .select('*');
+
+      if (customersError) {
+        console.error('Error fetching customers:', customersError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch customers'
+        });
+      }
+
+      // Combine auth users with customer data and identify gaps
+      const combinedUsers = [];
+      const authUserEmails = new Set(authUsers.users.map(u => u.email));
+
+      // Add all authenticated users
+      for (const authUser of authUsers.users) {
+        const userMetadata = authUser.user_metadata || {};
+        const customer = customers?.find(c => c.email === authUser.email);
+        
+        combinedUsers.push({
+          id: authUser.id,
+          email: authUser.email,
+          firstName: userMetadata.firstName || customer?.firstName || '',
+          lastName: userMetadata.lastName || customer?.lastName || '',
+          role: userMetadata.role || (customer ? 'customer' : 'unknown'),
+          phone: customer?.phone || '',
+          company: customer?.companyName || '',
+          status: 'active',
+          created_at: authUser.created_at,
+          hasAuthAccount: true,
+          hasCustomerProfile: !!customer,
+          customerId: customer?.id || null
+        });
+      }
+
+      // Add customers without auth accounts (these need accounts created)
+      for (const customer of customers || []) {
+        if (!authUserEmails.has(customer.email)) {
+          combinedUsers.push({
+            id: null, // No auth account yet
+            email: customer.email,
+            firstName: customer.firstName || '',
+            lastName: customer.lastName || '',
+            role: 'customer',
+            phone: customer.phone || '',
+            company: customer.companyName || '',
+            status: 'needs_account',
+            created_at: customer.createdAt,
+            hasAuthAccount: false,
+            hasCustomerProfile: true,
+            customerId: customer.id
+          });
+        }
+      }
+
+      console.log(`Found ${combinedUsers.length} total users (${authUsers.users.length} auth accounts, ${customers?.length || 0} customer profiles)`);
+
+      return res.status(200).json({
+        success: true,
+        users: combinedUsers,
+        analytics: {
+          totalUsers: combinedUsers.length,
+          authAccounts: authUsers.users.length,
+          customerProfiles: customers?.length || 0,
+          needsAccounts: combinedUsers.filter(u => !u.hasAuthAccount).length,
+          recentSignUps: authUsers.users.filter(u => 
+            new Date(u.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          ).length
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in comprehensive user fetch:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  });
+
+  // Create auth account for existing customer
+  app.post('/api/users/create-customer-account', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+    try {
+      const { customerId, password = 'TempPassword123!' } = req.body;
+
+      if (!customerId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Customer ID is required'
+        });
+      }
+
+      // Get customer details
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+
+      if (customerError || !customer) {
+        return res.status(404).json({
+          success: false,
+          message: 'Customer not found'
+        });
+      }
+
+      // Create auth account for the customer
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: customer.email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          role: 'customer',
+          customerId: customer.id,
+          created_by_admin: true,
+          temp_password: true
+        }
+      });
+
+      if (error) {
+        console.error('Error creating customer auth account:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create auth account: ' + error.message
+        });
+      }
+
+      console.log(`✅ Auth account created for customer: ${customer.email}`);
+
+      return res.status(201).json({
+        success: true,
+        message: `Auth account created successfully for ${customer.firstName} ${customer.lastName}`,
+        user: {
+          id: data.user?.id,
+          email: customer.email,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          role: 'customer',
+          tempPassword: password
+        }
+      });
+
+    } catch (error) {
+      console.error('Error creating customer auth account:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  });
+
   return httpServer;
 }
