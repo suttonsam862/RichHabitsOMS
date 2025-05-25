@@ -119,7 +119,48 @@ export default function OrderManagePage() {
   };
 
   const handleEditOrder = (order: Order) => {
-    setEditingOrder({ ...order });
+    // Migrate old order format to new spreadsheet format if needed
+    const migratedOrder = {
+      ...order,
+      items: order.items?.map(item => {
+        // If item already has sizes structure, use it
+        if (item.sizes) {
+          return item;
+        }
+        
+        // Otherwise, migrate from old format to new sizes format
+        const migratedItem = {
+          ...item,
+          sizes: {
+            YS: 0,
+            YM: 0,
+            YL: 0,
+            AXS: 0,
+            S: 0,
+            M: 0,
+            L: 0,
+            XL: 0,
+            '2XL': 0,
+            '3XL': 0,
+            '4XL': 0,
+            'No Sizes': 0
+          }
+        };
+        
+        // If there was an old size and quantity, put it in the appropriate size
+        if ((item as any).size && (item as any).quantity) {
+          const oldSize = (item as any).size;
+          const oldQuantity = (item as any).quantity;
+          if (oldSize in migratedItem.sizes) {
+            migratedItem.sizes[oldSize as keyof typeof migratedItem.sizes] = oldQuantity;
+          }
+        }
+        
+        return migratedItem;
+      }) || []
+    };
+    
+    setEditingOrder(migratedOrder);
     setEditDialogOpen(true);
   };
 
@@ -751,8 +792,9 @@ export default function OrderManagePage() {
                   {/* Spreadsheet-style rows */}
                   {editingOrder.items?.map((item, index) => {
                     const calculateItemTotal = () => {
-                      const totalQuantity = Object.values(item.sizes).reduce((sum, qty) => sum + qty, 0);
-                      return totalQuantity * item.unitPrice;
+                      if (!item.sizes) return 0;
+                      const totalQuantity = Object.values(item.sizes).reduce((sum, qty) => sum + (qty || 0), 0);
+                      return totalQuantity * (item.unitPrice || 0);
                     };
 
                     return (
@@ -792,13 +834,17 @@ export default function OrderManagePage() {
                               <Input
                                 type="number"
                                 min="0"
-                                value={item.sizes[size] || 0}
+                                value={item.sizes?.[size] || 0}
                                 onChange={(e) => {
                                   const quantity = parseInt(e.target.value) || 0;
                                   const updatedItems = [...editingOrder.items];
+                                  const currentSizes = item.sizes || {
+                                    YS: 0, YM: 0, YL: 0, AXS: 0, S: 0, M: 0, L: 0, 
+                                    XL: 0, '2XL': 0, '3XL': 0, '4XL': 0, 'No Sizes': 0
+                                  };
                                   updatedItems[index] = { 
                                     ...item, 
-                                    sizes: { ...item.sizes, [size]: quantity }
+                                    sizes: { ...currentSizes, [size]: quantity }
                                   };
                                   setEditingOrder({ ...editingOrder, items: updatedItems });
                                 }}
@@ -871,24 +917,27 @@ export default function OrderManagePage() {
                       <div className="text-sm text-green-600">
                         Items Total: {formatCurrency(
                           editingOrder.items?.reduce((sum, item) => {
-                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
-                            return sum + (totalQuantity * item.unitPrice);
+                            if (!item.sizes) return sum;
+                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + (sizeQty || 0), 0);
+                            return sum + (totalQuantity * (item.unitPrice || 0));
                           }, 0) || 0
                         )}
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
                         Tax (8%): {formatCurrency(
                           (editingOrder.items?.reduce((sum, item) => {
-                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
-                            return sum + (totalQuantity * item.unitPrice);
+                            if (!item.sizes) return sum;
+                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + (sizeQty || 0), 0);
+                            return sum + (totalQuantity * (item.unitPrice || 0));
                           }, 0) || 0) * 0.08
                         )}
                       </div>
                       <div className="text-lg font-bold text-green-700 border-t border-green-200 pt-2 mt-2">
                         Order Total: {formatCurrency(
                           (editingOrder.items?.reduce((sum, item) => {
-                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
-                            return sum + (totalQuantity * item.unitPrice);
+                            if (!item.sizes) return sum;
+                            const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + (sizeQty || 0), 0);
+                            return sum + (totalQuantity * (item.unitPrice || 0));
                           }, 0) || 0) * 1.08
                         )}
                       </div>
