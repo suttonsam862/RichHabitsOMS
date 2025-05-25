@@ -691,7 +691,7 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium text-muted-foreground">Security</p>
                 <p className="text-2xl font-bold">Active</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {userAnalytics.activeUsers} confirmed users
+                  {analytics.authAccounts} confirmed users
                 </p>
               </div>
               <Shield className="h-8 w-8 text-muted-foreground" />
@@ -2013,7 +2013,7 @@ export default function SettingsPage() {
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-blue-500" />
                   <div>
-                    <p className="text-2xl font-bold">{userAnalytics.totalUsers}</p>
+                    <p className="text-2xl font-bold">{analytics.totalUsers}</p>
                     <p className="text-xs text-muted-foreground">Total Users</p>
                   </div>
                 </div>
@@ -2025,7 +2025,7 @@ export default function SettingsPage() {
                 <div className="flex items-center space-x-2">
                   <Shield className="h-4 w-4 text-green-500" />
                   <div>
-                    <p className="text-2xl font-bold">{userAnalytics.adminUsers}</p>
+                    <p className="text-2xl font-bold">{analytics.authAccounts}</p>
                     <p className="text-xs text-muted-foreground">Admins</p>
                   </div>
                 </div>
@@ -2037,7 +2037,7 @@ export default function SettingsPage() {
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="h-4 w-4 text-purple-500" />
                   <div>
-                    <p className="text-2xl font-bold">{userAnalytics.customerUsers}</p>
+                    <p className="text-2xl font-bold">{analytics.customerProfiles}</p>
                     <p className="text-xs text-muted-foreground">Customers</p>
                   </div>
                 </div>
@@ -2049,7 +2049,7 @@ export default function SettingsPage() {
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-orange-500" />
                   <div>
-                    <p className="text-2xl font-bold">{userAnalytics.recentSignUps}</p>
+                    <p className="text-2xl font-bold">{analytics.recentSignUps}</p>
                     <p className="text-xs text-muted-foreground">New This Week</p>
                   </div>
                 </div>

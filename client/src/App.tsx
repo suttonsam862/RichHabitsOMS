@@ -263,6 +263,15 @@ function App() {
                 />
                 
                 <Route 
+                  path="/settings" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <SettingsPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
                   path="/admin/analytics" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
