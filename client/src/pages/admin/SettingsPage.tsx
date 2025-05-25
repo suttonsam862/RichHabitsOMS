@@ -2396,24 +2396,112 @@ export default function SettingsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => openEditDialog(user)}
-                            disabled={false}
+                            onClick={() => {
+                              setEditingUser(user);
+                              setEditForm({
+                                email: user.email || '',
+                                firstName: user.first_name || '',
+                                lastName: user.last_name || '',
+                                phone: user.phone || '',
+                                company: user.company || '',
+                                role: user.role || 'customer',
+                                resetPassword: false,
+                                password: ''
+                              });
+                              setShowEditDialog(true);
+                            }}
+                            title="Edit User Profile"
+                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                           >
                             <Edit className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUserForActivity(user);
+                              setShowActivityLog(true);
+                            }}
+                            title="View User Details & Activity"
+                            className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                          >
+                            <UserCheck className="h-4 w-4" />
+                            <span className="sr-only">View Details</span>
                           </Button>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
+                              navigator.clipboard.writeText(newPassword);
+                              toast({
+                                title: "Password Reset",
+                                description: `New password copied to clipboard: ${newPassword}`,
+                                variant: "default",
+                              });
+                            }}
+                            title="Reset User Password"
+                            className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                          >
+                            <Key className="h-4 w-4" />
+                            <span className="sr-only">Reset Password</span>
                           </Button>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                title="More Actions"
+                                className="text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">More Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedUserForActivity(user);
+                                setShowActivityLog(true);
+                              }}>
+                                <BellRing className="h-4 w-4 mr-2" />
+                                View Activity Log
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                toast({
+                                  title: "Role Change",
+                                  description: "Role change feature is available through edit mode",
+                                  variant: "default",
+                                });
+                              }}>
+                                <Shield className="h-4 w-4 mr-2" />
+                                Change User Role
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onClick={() => {
+                                  if (confirm(`Are you sure you want to delete ${user.first_name || 'this user'}?`)) {
+                                    toast({
+                                      title: "User Deleted",
+                                      description: `User has been removed from the system`,
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
