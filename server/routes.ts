@@ -1743,13 +1743,19 @@ The ThreadCraft Team`,
 
   // Comprehensive User Management API - Database Portal Viewer
   app.get('/api/users', async (req: Request, res: Response) => {
-    // Check session-based authentication first
-    console.log('Session auth check:', req.session?.auth?.user?.role);
-    const sessionAuth = req.session?.auth;
-    if (!sessionAuth?.user) {
+    // Use the same authentication pattern as /api/auth/me which is working
+    console.log('Checking authentication for /api/users endpoint...');
+    
+    // Check session authentication (same pattern as working endpoints)
+    if (!req.session?.auth?.user) {
+      console.log('No authenticated session found');
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
-    if (sessionAuth.user.role !== 'admin') {
+    
+    const user = req.session.auth.user;
+    console.log('Authenticated user role:', user.role);
+    
+    if (user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
     try {
