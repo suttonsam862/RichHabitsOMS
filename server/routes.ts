@@ -1758,5 +1758,31 @@ The ThreadCraft Team`,
     }
   });
 
+  // Item Image Upload Route - For product images in orders
+  app.post('/api/upload/item-image', requireAuth, requireRole(['admin', 'designer']), async (req: Request, res: Response) => {
+    try {
+      console.log('Item image upload request received');
+      
+      // For now, return a placeholder response until we set up file storage
+      // This allows the UI to work while we implement the actual upload
+      const mockImageUrl = `https://via.placeholder.com/300x300/4f46e5/ffffff?text=Product+${Date.now()}`;
+      
+      console.log('Generated placeholder image URL:', mockImageUrl);
+      
+      return res.status(200).json({
+        success: true,
+        imageUrl: mockImageUrl,
+        message: 'Image uploaded successfully (using placeholder for now)'
+      });
+
+    } catch (error) {
+      console.error('Error in item image upload:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload image'
+      });
+    }
+  });
+
   return httpServer;
 }

@@ -23,6 +23,7 @@ interface OrderItem {
   color: string;
   unitPrice: number;
   totalPrice: number;
+  imageUrl?: string;
   sizes: {
     YS: number;
     YM: number;
@@ -62,6 +63,7 @@ export default function OrderManagePage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingItemImage, setUploadingItemImage] = useState<number | null>(null);
 
   // Fetch orders
   const { data: orders = [], isLoading } = useQuery<Order[]>({
@@ -252,6 +254,64 @@ export default function OrderManagePage() {
       });
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  // Handle item image upload
+  const handleItemImageUpload = async (file: File, itemIndex: number) => {
+    if (!editingOrder) return;
+    
+    // Validate file type
+    if (!file.type.includes('image')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (JPG, PNG, WebP)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploadingItemImage(itemIndex);
+    
+    try {
+      const formData = new FormData();
+      formData.append('itemImage', file);
+      formData.append('orderId', editingOrder.id);
+      formData.append('itemIndex', itemIndex.toString());
+      
+      const response = await fetch('/api/upload/item-image', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const updatedItems = [...editingOrder.items];
+        updatedItems[itemIndex] = { 
+          ...updatedItems[itemIndex], 
+          imageUrl: result.imageUrl 
+        };
+        
+        setEditingOrder({
+          ...editingOrder,
+          items: updatedItems
+        });
+        
+        toast({
+          title: "Success",
+          description: "Product image uploaded successfully"
+        });
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "Could not upload product image. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingItemImage(null);
     }
   };
 
@@ -772,6 +832,7 @@ export default function OrderManagePage() {
                     <div className="flex min-w-max">
                       <div className="w-48 px-3 py-2 text-xs font-medium text-gray-500 uppercase border-r">Product</div>
                       <div className="w-32 px-3 py-2 text-xs font-medium text-gray-500 uppercase border-r">Color</div>
+                      <div className="w-24 px-3 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">Image</div>
                       <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">YS</div>
                       <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">YM</div>
                       <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase border-r text-center">YL</div>
@@ -826,6 +887,45 @@ export default function OrderManagePage() {
                               placeholder="Color"
                               className="text-sm border-0 p-1 h-8"
                             />
+                          </div>
+                          
+                          {/* Product Image Upload */}
+                          <div className="w-24 px-3 py-2 border-r">
+                            <div className="flex flex-col items-center space-y-1">
+                              {item.imageUrl ? (
+                                <div className="relative group">
+                                  <img 
+                                    src={item.imageUrl} 
+                                    alt="Product"
+                                    className="w-12 h-12 object-cover rounded border cursor-pointer"
+                                    onClick={() => window.open(item.imageUrl, '_blank')}
+                                  />
+                                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                                    <Upload className="h-4 w-4 text-white" />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="w-12 h-12 border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-gray-50">
+                                  <Image className="h-4 w-4 text-gray-400" />
+                                </div>
+                              )}
+                              
+                              <label className="cursor-pointer">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleItemImageUpload(file, index);
+                                  }}
+                                  disabled={uploadingItemImage === index}
+                                />
+                                <div className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                  {uploadingItemImage === index ? 'Uploading...' : (item.imageUrl ? 'Change' : 'Upload')}
+                                </div>
+                              </label>
+                            </div>
                           </div>
                           
                           {/* Size quantity inputs */}
