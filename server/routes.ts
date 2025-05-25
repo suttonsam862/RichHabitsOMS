@@ -1784,101 +1784,151 @@ The ThreadCraft Team`,
     }
   });
 
-  // Comprehensive User Management API - Fetches all users (auth users + customer profiles)
+  // Comprehensive User Management API - Database Portal Viewer
   app.get('/api/users', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
     try {
-      console.log('Fetching comprehensive user list...');
+      console.log('Fetching comprehensive user database...');
+
+      // Get all customers from the customers table first (primary source of truth)
+      const { data: customers, error: customersError } = await supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (customersError) {
+        console.error('Error fetching customers:', customersError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch customer database: ' + customersError.message
+        });
+      }
+
+      console.log(`Found ${customers?.length || 0} customers in database`);
 
       // Get all authenticated users from Supabase Auth
       const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
       
       if (authError) {
         console.error('Error fetching auth users:', authError);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to fetch authenticated users'
-        });
+        // Continue even if auth fails - we still want to show customer data
       }
 
-      // Get all customers from the customers table
-      const { data: customers, error: customersError } = await supabase
-        .from('customers')
-        .select('*');
+      console.log(`Found ${authUsers?.users?.length || 0} auth accounts`);
 
-      if (customersError) {
-        console.error('Error fetching customers:', customersError);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to fetch customers'
-        });
-      }
+      // Create comprehensive user database view
+      const userDatabase = [];
+      const authUserEmails = new Set(authUsers?.users?.map(u => u.email) || []);
 
-      // Combine auth users with customer data and identify gaps
-      const combinedUsers = [];
-      const authUserEmails = new Set(authUsers.users.map(u => u.email));
-
-      // Add all authenticated users
-      for (const authUser of authUsers.users) {
-        const userMetadata = authUser.user_metadata || {};
-        const customer = customers?.find(c => c.email === authUser.email);
-        
-        combinedUsers.push({
-          id: authUser.id,
-          email: authUser.email,
-          firstName: userMetadata.firstName || customer?.firstName || '',
-          lastName: userMetadata.lastName || customer?.lastName || '',
-          role: userMetadata.role || (customer ? 'customer' : 'unknown'),
-          phone: customer?.phone || '',
-          company: customer?.companyName || '',
-          status: 'active',
-          created_at: authUser.created_at,
-          hasAuthAccount: true,
-          hasCustomerProfile: !!customer,
-          customerId: customer?.id || null
-        });
-      }
-
-      // Add customers without auth accounts (these need accounts created)
+      // Process all customers (every customer becomes a user record)
       for (const customer of customers || []) {
-        if (!authUserEmails.has(customer.email)) {
-          combinedUsers.push({
-            id: null, // No auth account yet
-            email: customer.email,
-            firstName: customer.firstName || '',
-            lastName: customer.lastName || '',
-            role: 'customer',
-            phone: customer.phone || '',
-            company: customer.companyName || '',
-            status: 'needs_account',
-            created_at: customer.createdAt,
-            hasAuthAccount: false,
-            hasCustomerProfile: true,
-            customerId: customer.id
+        const authUser = authUsers?.users?.find(u => u.email === customer.email);
+        const userMetadata = authUser?.user_metadata || {};
+        
+        userDatabase.push({
+          // Database fields
+          id: authUser?.id || null,
+          customerId: customer.id,
+          email: customer.email,
+          firstName: customer.firstName || '',
+          lastName: customer.lastName || '',
+          phone: customer.phone || '',
+          company: customer.companyName || '',
+          
+          // Account status fields
+          hasAuthAccount: !!authUser,
+          accountStatus: authUser ? 'active' : 'needs_creation',
+          emailVerified: authUser?.email_confirmed_at ? true : false,
+          
+          // User role and access management
+          role: userMetadata.role || 'customer',
+          permissions: {
+            canViewOrders: true,
+            canCreateOrders: userMetadata.role === 'customer',
+            canManageUsers: userMetadata.role === 'admin',
+            canAccessDesign: userMetadata.role === 'designer' || userMetadata.role === 'admin',
+            canAccessProduction: userMetadata.role === 'manufacturer' || userMetadata.role === 'admin'
+          },
+          
+          // Profile information
+          username: userMetadata.username || customer.email.split('@')[0],
+          profilePicture: userMetadata.avatar_url || null,
+          lastLogin: authUser?.last_sign_in_at || null,
+          
+          // Timestamps
+          customerSince: customer.created_at,
+          accountCreated: authUser?.created_at || null,
+          lastUpdated: authUser?.updated_at || customer.updated_at
+        });
+      }
+
+      // Add any auth users that don't have customer profiles (staff accounts)
+      for (const authUser of authUsers?.users || []) {
+        if (!customers?.find(c => c.email === authUser.email)) {
+          const userMetadata = authUser.user_metadata || {};
+          
+          userDatabase.push({
+            // Database fields
+            id: authUser.id,
+            customerId: null,
+            email: authUser.email,
+            firstName: userMetadata.firstName || '',
+            lastName: userMetadata.lastName || '',
+            phone: userMetadata.phone || '',
+            company: userMetadata.company || '',
+            
+            // Account status fields
+            hasAuthAccount: true,
+            accountStatus: 'active',
+            emailVerified: !!authUser.email_confirmed_at,
+            
+            // User role and access management
+            role: userMetadata.role || 'staff',
+            permissions: {
+              canViewOrders: true,
+              canCreateOrders: ['admin', 'salesperson'].includes(userMetadata.role),
+              canManageUsers: userMetadata.role === 'admin',
+              canAccessDesign: ['designer', 'admin'].includes(userMetadata.role),
+              canAccessProduction: ['manufacturer', 'admin'].includes(userMetadata.role)
+            },
+            
+            // Profile information
+            username: userMetadata.username || authUser.email.split('@')[0],
+            profilePicture: userMetadata.avatar_url || null,
+            lastLogin: authUser.last_sign_in_at,
+            
+            // Timestamps
+            customerSince: null,
+            accountCreated: authUser.created_at,
+            lastUpdated: authUser.updated_at
           });
         }
       }
 
-      console.log(`Found ${combinedUsers.length} total users (${authUsers.users.length} auth accounts, ${customers?.length || 0} customer profiles)`);
+      const analytics = {
+        totalUsers: userDatabase.length,
+        customersTotal: customers?.length || 0,
+        authAccountsTotal: authUsers?.users?.length || 0,
+        needsAccountCreation: userDatabase.filter(u => !u.hasAuthAccount).length,
+        activeAccounts: userDatabase.filter(u => u.accountStatus === 'active').length,
+        adminUsers: userDatabase.filter(u => u.role === 'admin').length,
+        customerUsers: userDatabase.filter(u => u.role === 'customer').length,
+        staffUsers: userDatabase.filter(u => !['customer', 'admin'].includes(u.role)).length
+      };
+
+      console.log(`Compiled user database: ${userDatabase.length} total users`);
+      console.log(`Analytics:`, analytics);
 
       return res.status(200).json({
         success: true,
-        users: combinedUsers,
-        analytics: {
-          totalUsers: combinedUsers.length,
-          authAccounts: authUsers.users.length,
-          customerProfiles: customers?.length || 0,
-          needsAccounts: combinedUsers.filter(u => !u.hasAuthAccount).length,
-          recentSignUps: authUsers.users.filter(u => 
-            new Date(u.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-          ).length
-        }
+        users: userDatabase,
+        analytics
       });
 
     } catch (error) {
-      console.error('Error in comprehensive user fetch:', error);
+      console.error('Error in user database fetch:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Failed to fetch user database'
       });
     }
   });

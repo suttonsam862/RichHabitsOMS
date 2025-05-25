@@ -266,10 +266,13 @@ export default function SettingsPage() {
   const users = userResponse?.users || [];
   const analytics = userResponse?.analytics || {
     totalUsers: 0,
-    authAccounts: 0,
-    customerProfiles: 0,
-    needsAccounts: 0,
-    recentSignUps: 0
+    customersTotal: 0,
+    authAccountsTotal: 0,
+    needsAccountCreation: 0,
+    activeAccounts: 0,
+    adminUsers: 0,
+    customerUsers: 0,
+    staffUsers: 0
   };
   
   // State for user invitation dialog
@@ -387,6 +390,41 @@ export default function SettingsPage() {
       toast({
         variant: "destructive",
         title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  // Profile picture upload mutation
+  const uploadProfilePictureMutation = useMutation({
+    mutationFn: async ({ userId, file }: { userId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append('profilePicture', file);
+      formData.append('userId', userId);
+      
+      const response = await fetch('/api/users/upload-profile-picture', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to upload profile picture');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Profile Picture Updated",
+        description: "Profile picture has been uploaded successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
         description: error.message,
       });
     },
