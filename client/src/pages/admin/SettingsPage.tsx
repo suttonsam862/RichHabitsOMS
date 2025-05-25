@@ -270,28 +270,32 @@ export default function SettingsPage() {
   const [inviteFirstName, setInviteFirstName] = useState("");
   const [inviteLastName, setInviteLastName] = useState("");
 
-  // User invitation mutation
-  const inviteUserMutation = useMutation({
-    mutationFn: async (userData: { email: string; firstName: string; lastName: string; role: string }) => {
-      const response = await fetch('/api/users/invite', {
+  // Direct account creation mutation (replaces email invitation)
+  const createAccountMutation = useMutation({
+    mutationFn: async (userData: { email: string; firstName: string; lastName: string; role: string; password?: string }) => {
+      const response = await fetch('/api/users/create-account', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify({
+          ...userData,
+          password: userData.password || 'TempPassword123!', // Temporary password for immediate access
+          createDirectly: true
+        }),
       });
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to invite user');
+        throw new Error(error.message || 'Failed to create account');
       }
       
       return response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "User Invited",
-        description: data.message,
+        title: "Account Created Successfully",
+        description: `${data.user?.firstName || 'User'} can now log in immediately with their credentials`,
       });
       setShowInviteDialog(false);
       setInviteEmail("");
@@ -797,9 +801,9 @@ export default function SettingsPage() {
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                      <DialogTitle>Add New User</DialogTitle>
+                      <DialogTitle>Create New Account</DialogTitle>
                       <DialogDescription>
-                        Create a new user or send an invitation to join the system.
+                        Create a new user account with immediate access to the system.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -862,20 +866,16 @@ export default function SettingsPage() {
                       
                       <Separator className="my-2" />
                       
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="send-invite" defaultChecked />
-                        <Label htmlFor="send-invite">Send invitation email</Label>
-                      </div>
-                      
-                      <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground">
-                        <p>The invitation will include a secure link for the user to set up their account and password.</p>
+                      <div className="bg-green-50 p-3 rounded-md text-sm text-green-700 border border-green-200">
+                        <p className="font-medium">✅ Account Creation</p>
+                        <p>The user will receive a temporary password and can log in immediately. They can change their password after first login.</p>
                       </div>
                     </div>
                     <DialogFooter>
                       <Button 
                         onClick={() => {
                           if (inviteEmail && inviteFirstName && inviteLastName) {
-                            inviteUserMutation.mutate({
+                            createAccountMutation.mutate({
                               email: inviteEmail,
                               firstName: inviteFirstName,
                               lastName: inviteLastName,
@@ -883,15 +883,15 @@ export default function SettingsPage() {
                             });
                           }
                         }}
-                        disabled={inviteUserMutation.isPending || !inviteEmail || !inviteFirstName || !inviteLastName}
+                        disabled={createAccountMutation.isPending || !inviteEmail || !inviteFirstName || !inviteLastName}
                       >
-                        {inviteUserMutation.isPending ? (
+                        {createAccountMutation.isPending ? (
                           <>
                             <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            Sending...
+                            Creating Account...
                           </>
                         ) : (
-                          "Send Invitation"
+                          "Create Account"
                         )}
                       </Button>
                     </DialogFooter>

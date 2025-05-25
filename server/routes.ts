@@ -1688,5 +1688,75 @@ The ThreadCraft Team`,
   app.post('/api/products/library/:productId/copy', requireAuth, requireRole(['admin', 'salesperson']), copyProductToOrder);
   app.get('/api/products/library/:productId/pricing-history', requireAuth, getProductPricingHistory);
 
+  // Direct Account Creation Route - Replaces email invitation system
+  app.post('/api/users/create-account', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+    try {
+      const { email, firstName, lastName, role, password = 'TempPassword123!', createDirectly = true } = req.body;
+
+      if (!email || !firstName || !lastName || !role) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email, first name, last name, and role are required'
+        });
+      }
+
+      console.log(`Creating account directly for: ${email} with role: ${role}`);
+
+      // Create user in Supabase Auth with password
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          firstName,
+          lastName,
+          role,
+          created_by_admin: true,
+          temp_password: true // Flag that user should change password
+        }
+      });
+
+      if (error) {
+        console.error('Error creating user in Supabase Auth:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create user account: ' + error.message
+        });
+      }
+
+      if (!data?.user) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create user account'
+        });
+      }
+
+      console.log(`✅ Account created successfully for: ${email}`);
+      console.log(`🔑 Temporary password: ${password}`);
+      console.log(`👤 User can now log in immediately`);
+
+      return res.status(201).json({
+        success: true,
+        message: `Account created successfully! User can log in with email: ${email} and temporary password: ${password}`,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          firstName,
+          lastName,
+          role,
+          tempPassword: password,
+          created_at: data.user.created_at
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in create-account endpoint:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  });
+
   return httpServer;
 }
