@@ -22,69 +22,55 @@ declare global {
  */
 export const authenticateRequest = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    console.log('=== Authentication Debug ===');
+    console.log('Headers:', req.headers.authorization ? 'Present' : 'Missing');
+    console.log('Session:', req.session ? 'Present' : 'Missing');
     
-    if (!authHeader) {
-      // No auth header, check for session token in cookies
-      const token = req.session?.auth?.token || null;
-      
-      if (!token) {
-        return next(); // Unauthenticated request
+    let token = null;
+    
+    // First check Authorization header
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      const [bearer, headerToken] = authHeader.split(' ');
+      if (bearer === 'Bearer' && headerToken) {
+        token = headerToken;
+        console.log('Using token from Authorization header');
       }
-
-      // Validate token with Supabase
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-      
-      if (error || !user) {
-        // Invalid or expired token
-        return next();
-      }
-      
-      // Get user profile from database
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      // Store authenticated user in request
-      req.user = {
-        id: user.id,
-        email: user.email,
-        ...profile
-      };
-      
-      return next();
     }
     
-    // Parse Bearer token
-    const [bearer, token] = authHeader.split(' ');
+    // Fallback to session token
+    if (!token && req.session?.auth?.token) {
+      token = req.session.auth.token;
+      console.log('Using token from session');
+    }
     
-    if (bearer !== 'Bearer' || !token) {
-      return next(); // Invalid auth header
+    if (!token) {
+      console.log('No token found, proceeding unauthenticated');
+      return next();
     }
     
     // Validate token with Supabase
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error || !user) {
-      // Invalid or expired token
+      console.log('Token validation failed:', error?.message || 'No user found');
       return next();
     }
     
-    // Get user profile from database
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    console.log('Token validated successfully for user:', user.email);
     
-    // Store authenticated user in request
+    // Store authenticated user in request with fallback data
     req.user = {
       id: user.id,
       email: user.email,
-      ...profile
+      role: user.user_metadata?.role || 'customer',
+      is_super_admin: user.user_metadata?.is_super_admin || false,
+      email_verified: user.user_metadata?.email_verified || user.email_confirmed_at != null,
+      // Include raw user data as fallback
+      ...user.user_metadata
     };
+    
+    console.log('User authenticated:', req.user.email, 'Role:', req.user.role);
     
     next();
   } catch (err) {

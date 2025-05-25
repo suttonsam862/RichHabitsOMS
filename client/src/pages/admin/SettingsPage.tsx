@@ -55,7 +55,8 @@ import {
   MoreHorizontal,
   Activity,
   Eye,
-  EyeOff
+  EyeOff,
+  UserCheck
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";

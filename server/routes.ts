@@ -1742,19 +1742,11 @@ The ThreadCraft Team`,
   });
 
   // Comprehensive User Management API - Database Portal Viewer
-  app.get('/api/users', async (req: Request, res: Response) => {
-    // Use same authentication pattern as working /api/auth/me endpoint
+  app.get('/api/users', authenticateRequest, requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
     console.log('=== User Management API Debug ===');
-    console.log('Request headers:', { authorization: req.headers.authorization });
-    console.log('Session data:', req.session?.auth);
+    console.log('Authenticated user:', req.user?.email, 'Role:', req.user?.role);
     
-    // Check if user is authenticated via session (same as working endpoints)
-    if (!req.session?.auth?.user) {
-      console.log('No authenticated session found');
-      return res.status(401).json({ success: false, message: 'Authentication required' });
-    }
-    
-    const user = req.session.auth.user;
+    const user = req.user;
     console.log('Authenticated user:', { id: user.id, email: user.email, role: user.role });
     
     // Check if user has admin privileges
