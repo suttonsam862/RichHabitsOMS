@@ -1742,23 +1742,28 @@ The ThreadCraft Team`,
   });
 
   // Comprehensive User Management API - Database Portal Viewer
-  app.get('/api/users', requireAuth, async (req: Request, res: Response) => {
-    if (!req.user) {
+  app.get('/api/users', async (req: Request, res: Response) => {
+    // Use same authentication pattern as working /api/auth/me endpoint
+    console.log('=== User Management API Debug ===');
+    console.log('Request headers:', { authorization: req.headers.authorization });
+    console.log('Session data:', req.session?.auth);
+    
+    // Check if user is authenticated via session (same as working endpoints)
+    if (!req.session?.auth?.user) {
+      console.log('No authenticated session found');
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
     
-    // Simplified admin check - if user made it past requireAuth and has admin in any form
-    console.log('User data:', { id: req.user.id, role: req.user.role, email: req.user.email });
+    const user = req.session.auth.user;
+    console.log('Authenticated user:', { id: user.id, email: user.email, role: user.role });
     
-    // Allow access if user has any form of admin privileges
-    const isAdminUser = req.user.role === 'admin' || req.user.role === 'super_admin';
-    
-    if (!isAdminUser) {
-      console.log('User does not have admin privileges');
+    // Check if user has admin privileges
+    if (user.role !== 'admin') {
+      console.log('User does not have admin privileges:', user.role);
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
     
-    console.log('Admin access granted for user:', req.user.email);
+    console.log('Admin access granted for:', user.email);
     try {
       console.log('Fetching comprehensive user database...');
 
