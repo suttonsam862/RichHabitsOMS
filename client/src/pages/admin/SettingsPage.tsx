@@ -19,6 +19,13 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { 
   AlertCircle, 
   BellRing, 
   Printer, 
@@ -27,12 +34,13 @@ import {
   UserPlus, 
   Search, 
   Check, 
-  X, 
+  X,
+  Key,
+  Settings,
+  Upload,
   Edit, 
-  Trash2, 
   RefreshCw,
   Users,
-  Settings,
   BarChart3,
   Download,
   Upload,
@@ -1484,32 +1492,61 @@ export default function SettingsPage() {
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end space-x-2">
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => {
-                                    setSelectedUserForActivity(user);
-                                    setShowActivityLog(true);
+                                    setSelectedUser(user);
+                                    setIsEditing(true);
                                   }}
-                                  title="View Activity"
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
                                 >
-                                  <BellRing className="h-4 w-4" />
-                                  <span className="sr-only">Activity</span>
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit Profile
                                 </Button>
+                                
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-green-600 border-green-200 hover:bg-green-50"
+                                >
+                                  <Key className="h-4 w-4 mr-1" />
+                                  Reset Password
+                                </Button>
+                                
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" className="text-gray-600 border-gray-200 hover:bg-gray-50">
+                                      <Settings className="h-4 w-4 mr-1" />
+                                      More Actions
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedUserForActivity(user);
+                                      setShowActivityLog(true);
+                                    }}>
+                                      <BellRing className="h-4 w-4 mr-2" />
+                                      View Activity Log
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Shield className="h-4 w-4 mr-2" />
+                                      Change User Role
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      Upload Profile Photo
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-red-600">
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete User Account
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      title="Edit User"
-                                      onClick={() => {
-                                        setSelectedUser(user);
-                                        setIsEditing(true);
-                                      }}
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                      <span className="sr-only">Edit</span>
-                                    </Button>
+                                    <Button style={{ display: 'none' }}>Hidden</Button>
                                   </DialogTrigger>
                                   <DialogContent className="sm:max-w-[625px]">
                                     <DialogHeader>
