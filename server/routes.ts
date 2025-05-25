@@ -1747,35 +1747,18 @@ The ThreadCraft Team`,
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
     
-    // Check for admin privileges (same pattern as /api/auth/me)
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    // Simplified admin check - if user made it past requireAuth and has admin in any form
+    console.log('User data:', { id: req.user.id, role: req.user.role, email: req.user.email });
     
-    let userRole = req.user.role || 'customer';
-    let isAdmin = false;
+    // Allow access if user has any form of admin privileges
+    const isAdminUser = req.user.role === 'admin' || req.user.role === 'super_admin';
     
-    if (token) {
-      try {
-        const { data: userData, error } = await supabase.auth.getUser(token);
-        
-        if (!error && userData?.user) {
-          const isSuperAdmin = userData.user.user_metadata?.is_super_admin === true;
-          const metadataRole = userData.user.user_metadata?.role;
-          
-          if (isSuperAdmin || metadataRole === 'admin') {
-            userRole = 'admin';
-            isAdmin = true;
-            console.log('User has admin privileges from auth metadata');
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching user metadata:', err);
-      }
-    }
-    
-    if (!isAdmin && userRole !== 'admin') {
+    if (!isAdminUser) {
+      console.log('User does not have admin privileges');
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
+    
+    console.log('Admin access granted for user:', req.user.email);
     try {
       console.log('Fetching comprehensive user database...');
 

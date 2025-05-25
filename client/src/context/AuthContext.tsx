@@ -140,16 +140,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error("Invalid response from authentication server");
       }
       
-      // Check for session with token
+      // Check for session with token (backend returns session.token)
       if (!data.session?.token) {
-        console.warn("Response missing token, using fallback structure");
-        // Try to use alternate response structure
-        if (data.token) {
-          data.session = { token: data.token };
-        } else {
-          console.error("No token found in response");
-          throw new Error("Authentication failed - no token returned");
-        }
+        console.error("No authentication token found in response");
+        console.log("Response data structure:", data);
+        throw new Error("Authentication failed - no token returned");
       }
 
       // Store token in localStorage for future auth checks

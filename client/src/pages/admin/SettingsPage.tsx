@@ -259,7 +259,21 @@ export default function SettingsPage() {
     queryKey: ["admin", "users"],
     queryFn: async () => {
       console.log("Fetching comprehensive user data...");
-      const response = await fetch("/api/users");
+      
+      // Get auth token from localStorage
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch("/api/users", {
+        headers,
+        credentials: 'include'
+      });
       
       if (!response.ok) {
         throw new Error("Failed to fetch users");
