@@ -4,7 +4,7 @@ import { WebSocketServer } from 'ws';
 import { z } from 'zod';
 import { loginSchema, registerSchema } from '../shared/schema';
 import { supabase } from './db';
-import { requireAuth, requireRole } from './auth';
+import { authenticateRequest, requireAuth, requireRole } from './auth';
 import { sendEmail, getCustomerInviteEmailTemplate } from './email';
 import adminRoutes from './routes/admin';
 import customerRoutes from './routes/customerRoutes';

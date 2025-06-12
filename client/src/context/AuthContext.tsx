@@ -149,8 +149,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       // Store token in localStorage for future auth checks
       localStorage.setItem('authToken', data.session.token);
-      if (data.session.expires) {
-        localStorage.setItem('tokenExpires', data.session.expires.toString());
+      if (data.session.expiresAt) {
+        localStorage.setItem('tokenExpires', data.session.expiresAt.toString());
       }
       
       // Update user state with authenticated user data
