@@ -24,9 +24,10 @@ import {
   Pie,
   Cell
 } from "recharts";
-import { Users, Shirt, ShoppingBag, TrendingUp, DollarSign, ClipboardList } from "lucide-react";
+import { Users, Shirt, ShoppingBag, TrendingUp, DollarSign, ClipboardList, Crown } from "lucide-react";
 
-const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
+// Rich Habits brand color palette for charts
+const RICH_COLORS = ["#00d1ff", "#00ff9f", "#ffffff", "#666666", "#333333", "#1a1a1a"];
 
 export default function AdminDashboard() {
   const { requireAuth, user } = useAuth();
@@ -43,108 +44,116 @@ export default function AdminDashboard() {
   });
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gradient-to-br from-rich-black via-gray-900 to-black">
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title="Admin Dashboard" />
+        <Header title="Rich Habits Command Center" />
         
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
-          
-          {/* Key Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-blue-100 rounded-full">
-                    <Users className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Total Users</p>
-                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.stats?.totalUsers || 0}</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-green-100 rounded-full">
-                    <ShoppingBag className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Active Orders</p>
-                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.stats?.activeOrders || 0}</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-yellow-100 rounded-full">
-                    <Shirt className="h-6 w-6 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Design Tasks</p>
-                    <h3 className="text-2xl font-bold">{isLoading ? '...' : data?.stats?.designTasks || 0}</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-purple-100 rounded-full">
-                    <DollarSign className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-                    <h3 className="text-2xl font-bold">{isLoading ? '...' : formatCurrency(data?.stats?.totalRevenue || 0)}</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <main className="flex-1 overflow-y-auto p-6 relative">
+          {/* Rich Habits dashboard header */}
+          <div className="rich-card p-6 mb-8">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 glass-panel neon-glow flex items-center justify-center">
+                <Crown className="h-6 w-6 text-neon-blue" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">ADMIN COMMAND CENTER</h1>
+                <p className="subtitle text-neon-green text-sm">Luxury Operations Dashboard</p>
+              </div>
+            </div>
           </div>
           
-          {/* Charts & Reports */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Orders by Status</CardTitle>
-                <CardDescription>Distribution of orders by current status</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  {!isLoading && data?.ordersByStatus && (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={data.ordersByStatus}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="count"
-                          nameKey="status"
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {data.ordersByStatus.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value, name) => [value, name]} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
+          {/* Rich Habits key stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="rich-card p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 glass-panel neon-glow flex items-center justify-center">
+                  <Users className="h-6 w-6 text-neon-blue" />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <p className="subtitle text-muted-foreground text-xs">Elite Members</p>
+                  <h3 className="text-2xl font-bold text-foreground">{isLoading ? '...' : (data as any)?.stats?.totalUsers || 0}</h3>
+                </div>
+              </div>
+            </div>
+            
+            <div className="rich-card p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 glass-panel neon-glow-green flex items-center justify-center">
+                  <ShoppingBag className="h-6 w-6 text-neon-green" />
+                </div>
+                <div>
+                  <p className="subtitle text-muted-foreground text-xs">Active Orders</p>
+                  <h3 className="text-2xl font-bold text-foreground">{isLoading ? '...' : (data as any)?.stats?.activeOrders || 0}</h3>
+                </div>
+              </div>
+            </div>
+            
+            <div className="rich-card p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 glass-panel neon-glow flex items-center justify-center">
+                  <Shirt className="h-6 w-6 text-neon-blue" />
+                </div>
+                <div>
+                  <p className="subtitle text-muted-foreground text-xs">Design Tasks</p>
+                  <h3 className="text-2xl font-bold text-foreground">{isLoading ? '...' : (data as any)?.stats?.designTasks || 0}</h3>
+                </div>
+              </div>
+            </div>
+            
+            <div className="rich-card p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 glass-panel neon-glow-green flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-neon-green" />
+                </div>
+                <div>
+                  <p className="subtitle text-muted-foreground text-xs">Total Revenue</p>
+                  <h3 className="text-2xl font-bold text-foreground">{isLoading ? '...' : formatCurrency((data as any)?.stats?.totalRevenue || 0)}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Rich Habits Charts & Analytics */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="rich-card p-6">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-foreground mb-2">ORDER STATUS DISTRIBUTION</h3>
+                <p className="subtitle text-neon-blue text-xs">Real-time order analytics</p>
+              </div>
+              <div className="h-80">
+                {!isLoading && (data as any)?.ordersByStatus && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={(data as any).ordersByStatus}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#00d1ff"
+                        dataKey="count"
+                        nameKey="status"
+                        label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {(data as any).ordersByStatus.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={RICH_COLORS[index % RICH_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'rgba(10, 10, 10, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '0px',
+                          color: '#f5f5f5'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
             
             <Card>
               <CardHeader>
