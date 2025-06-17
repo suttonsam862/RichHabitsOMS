@@ -22,9 +22,22 @@ declare global {
  */
 export const authenticateRequest = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('=== Authentication Debug ===');
-    console.log('Headers:', req.headers.authorization ? 'Present' : 'Missing');
-    console.log('Session:', req.session ? 'Present' : 'Missing');
+    // Skip auth middleware for static assets and non-API routes to prevent loops
+    if (req.path.startsWith('/assets/') || 
+        req.path.startsWith('/static/') ||
+        req.path.startsWith('/@') ||
+        req.path.includes('.') && !req.path.startsWith('/api/')) {
+      return next();
+    }
+
+    // Only log for API routes to reduce console spam
+    const shouldLog = req.path.startsWith('/api/');
+    
+    if (shouldLog) {
+      console.log('=== Authentication Debug ===');
+      console.log('Headers:', req.headers.authorization ? 'Present' : 'Missing');
+      console.log('Session:', req.session ? 'Present' : 'Missing');
+    }
     
     let token = null;
     
@@ -45,7 +58,9 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
     }
     
     if (!token) {
-      console.log('No token found, proceeding unauthenticated');
+      if (shouldLog) {
+        console.log('No token found, proceeding unauthenticated');
+      }
       return next();
     }
     
@@ -53,11 +68,15 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error || !user) {
-      console.log('Token validation failed:', error?.message || 'No user found');
+      if (shouldLog) {
+        console.log('Token validation failed:', error?.message || 'No user found');
+      }
       return next();
     }
     
-    console.log('Token validated successfully for user:', user.email);
+    if (shouldLog) {
+      console.log('Token validated successfully for user:', user.email);
+    }
     
     // Store authenticated user in request with fallback data
     req.user = {
@@ -70,11 +89,15 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
       ...user.user_metadata
     };
     
-    console.log('User authenticated:', req.user.email, 'Role:', req.user.role);
+    if (shouldLog) {
+      console.log('User authenticated:', req.user.email, 'Role:', req.user.role);
+    }
     
     next();
   } catch (err) {
-    console.error('Authentication error:', err);
+    if (shouldLog) {
+      console.error('Authentication error:', err);
+    }
     next();
   }
 };

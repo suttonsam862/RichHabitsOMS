@@ -108,9 +108,6 @@ app.use(session({
   rolling: true // Refresh session with each request to prevent expiration
 }));
 
-// Add authentication middleware
-app.use(authenticateRequest);
-
 // Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
@@ -154,6 +151,9 @@ app.use((req, res, next) => {
     } else {
       console.log("Supabase connection verified successfully");
     }
+    
+    // Add authentication middleware before API routes
+    app.use('/api', authenticateRequest);
     
     // Register API routes first
     const server = await registerRoutes(app);
