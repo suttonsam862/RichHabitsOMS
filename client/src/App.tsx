@@ -40,6 +40,8 @@ import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
 import AdminOversightDashboard from "@/pages/AdminOversightDashboard";
 // CustomerList is already imported via CustomerListPage
 import CustomerListPage from "@/pages/admin/CustomerListPage";
+import CustomerDetailsPage from "@/pages/admin/CustomerDetailsPage";
+import CustomerEditPage from "@/pages/admin/CustomerEditPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
 import AnalyticsPage from "@/pages/admin/AnalyticsPage";
 import LegalManagementPage from "@/pages/admin/LegalManagementPage";
@@ -249,6 +251,24 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin']}>
                       <CustomerListPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/customers/:customerId" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <CustomerDetailsPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/customers/edit/:customerId" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <CustomerEditPage />
                     </RequireAuth>
                   } 
                 />
