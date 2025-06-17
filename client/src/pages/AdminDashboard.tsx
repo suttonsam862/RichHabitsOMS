@@ -155,77 +155,87 @@ export default function AdminDashboard() {
               </div>
             </div>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Revenue</CardTitle>
-                <CardDescription>Revenue trend over the last 6 months</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  {!isLoading && data?.monthlyRevenue && (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data.monthlyRevenue}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip formatter={(value) => formatCurrency(value)} />
-                        <Bar dataKey="revenue" fill="#3B82F6" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="rich-card p-6">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-foreground mb-2">REVENUE ANALYTICS</h3>
+                <p className="subtitle text-neon-green text-xs">6-month performance metrics</p>
+              </div>
+              <div className="h-80">
+                {!isLoading && (data as any)?.monthlyRevenue && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={(data as any).monthlyRevenue}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                      <XAxis 
+                        dataKey="month" 
+                        tick={{ fill: '#f5f5f5', fontSize: 12 }}
+                        axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+                      />
+                      <YAxis 
+                        tick={{ fill: '#f5f5f5', fontSize: 12 }}
+                        axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+                      />
+                      <Tooltip 
+                        formatter={(value: any) => [formatCurrency(value), 'Revenue']}
+                        contentStyle={{
+                          backgroundColor: 'rgba(10, 10, 10, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '0px',
+                          color: '#f5f5f5'
+                        }}
+                      />
+                      <Bar dataKey="revenue" fill="#00ff9f" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
           </div>
           
-          {/* Recent Orders */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Recent Orders</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="py-3 px-4 text-left">Order #</th>
-                      <th className="py-3 px-4 text-left">Customer</th>
-                      <th className="py-3 px-4 text-left">Date</th>
-                      <th className="py-3 px-4 text-left">Amount</th>
-                      <th className="py-3 px-4 text-left">Status</th>
+          {/* Rich Habits Recent Orders */}
+          <div className="rich-card p-6">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-foreground mb-2">RECENT ORDERS</h3>
+              <p className="subtitle text-neon-blue text-xs">Latest luxury orders</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-glass-border">
+                    <th className="py-4 px-4 text-left subtitle text-neon-blue text-xs">Order #</th>
+                    <th className="py-4 px-4 text-left subtitle text-neon-blue text-xs">Customer</th>
+                    <th className="py-4 px-4 text-left subtitle text-neon-blue text-xs">Date</th>
+                    <th className="py-4 px-4 text-left subtitle text-neon-blue text-xs">Amount</th>
+                    <th className="py-4 px-4 text-left subtitle text-neon-blue text-xs">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-muted-foreground">Loading...</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={5} className="py-4 text-center text-gray-500">Loading...</td>
+                  ) : (data as any)?.recentOrders?.length ? (
+                    (data as any).recentOrders.map((order: any) => (
+                      <tr key={order.id} className="border-b border-glass-border/50 hover:bg-glass-panel/30 transition-colors">
+                        <td className="py-4 px-4 text-foreground font-medium">{order.orderNumber}</td>
+                        <td className="py-4 px-4 text-foreground">{order.customerName}</td>
+                        <td className="py-4 px-4 text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</td>
+                        <td className="py-4 px-4 text-neon-green font-bold">{formatCurrency(order.totalAmount)}</td>
+                        <td className="py-4 px-4">
+                          <span className={`px-2 py-1 text-xs subtitle glass-panel neon-glow ${getStatusColor(order.status)}`}>
+                            {order.status.replace(/_/g, ' ')}
+                          </span>
+                        </td>
                       </tr>
-                    ) : data?.recentOrders?.length ? (
-                      data.recentOrders.map((order: any) => (
-                        <tr key={order.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4">{order.orderNumber}</td>
-                          <td className="py-3 px-4">{order.customerName}</td>
-                          <td className="py-3 px-4">{new Date(order.createdAt).toLocaleDateString()}</td>
-                          <td className="py-3 px-4">{formatCurrency(order.totalAmount)}</td>
-                          <td className="py-3 px-4">
-                            <Badge className={getStatusColor(order.status)}>
-                              {order.status.replace(/_/g, ' ')}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="py-4 text-center text-gray-500">No recent orders found</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-muted-foreground">No recent orders found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </main>
       </div>
     </div>
