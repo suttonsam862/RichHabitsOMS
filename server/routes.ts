@@ -1536,6 +1536,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get individual customer details
+  app.get('/api/customers/:customerId', authenticateRequest, requireAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const { customerId } = req.params;
+      console.log(`Fetching customer details for ID: ${customerId}`);
+      
+      // Get user from Supabase Auth
+      const { data, error } = await supabaseAdmin.auth.admin.getUserById(customerId);
+      
+      if (error) {
+        console.error('Error fetching customer from Supabase Auth:', error);
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Customer not found' 
+        });
+      }
+      
+      if (!data.user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Customer not found' 
+        });
+      }
+      
+      const user = data.user;
+      const metadata = user.user_metadata || {};
+      
+      // Check if user is a customer
+      if (metadata.role !== 'customer') {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Access denied - not a customer account' 
+        });
+      }
+      
+      // Transform to expected format
+      const customer = {
+        id: user.id,
+        firstName: metadata.firstName || '',
+        lastName: metadata.lastName || '',
+        email: user.email || '',
+        phone: metadata.phone || '',
+        company: metadata.company || '',
+        address: metadata.address || '',
+        city: metadata.city || '',
+        state: metadata.state || '',
+        zip: metadata.zip || '',
+        country: metadata.country || '',
+        orders: 0,
+        spent: '$0.00',
+        lastOrder: null,
+        status: user.email_confirmed_at ? 'active' : 'pending',
+        created_at: user.created_at
+      };
+      
+      console.log(`Customer ${customerId} details retrieved successfully`);
+      return res.json(customer);
+    } catch (err: any) {
+      console.error('Error fetching customer details:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch customer details: ' + (err.message || 'Unknown error')
+      });
+    }
+  });
+
+  // Update customer details
+  app.patch('/api/customers/:customerId', authenticateRequest, requireAuth, requireRole(['admin']), async (req, res) => {
+    try {
+      const { customerId } = req.params;
+      const { firstName, lastName, email, phone, company, address, city, state, zip, country, status } = req.body;
+      
+      console.log(`Updating customer ${customerId}`);
+      
+      // Update user metadata in Supabase Auth
+      const updateData: any = {
+        user_metadata: {
+          firstName,
+          lastName,
+          phone,
+          company,
+          address,
+          city,
+          state,
+          zip,
+          country,
+          role: 'customer'
+        }
+      };
+      
+      // Update email if changed
+      if (email) {
+        updateData.email = email;
+      }
+      
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.updateUserById(customerId, updateData);
+      
+      if (authError) {
+        console.error('Error updating customer:', authError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to update customer: ' + authError.message
+        });
+      }
+      
+      console.log(`Customer ${customerId} updated successfully`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Customer updated successfully',
+        customer: {
+          id: authUser.user?.id,
+          firstName,
+          lastName,
+          email: authUser.user?.email,
+          phone,
+          company,
+          address,
+          city,
+          state,
+          zip,
+          country,
+          status
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  });
+
   // Setup WebSockets
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
