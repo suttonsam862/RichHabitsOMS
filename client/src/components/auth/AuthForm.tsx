@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Mail, Lock, User, Building, UserCheck, Loader2, AlertCircle, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, Building, Shield, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 
 import {
   Form,
@@ -140,50 +140,54 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg border border-gray-100">
-      <CardHeader className="pb-6">
-        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-          <UserCheck className="h-6 w-6 text-primary" />
+    <div className="w-full">
+      {/* Rich Habits glassmorphism auth header */}
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 mx-auto mb-4 glass-panel neon-glow flex items-center justify-center">
+          <Shield className="h-8 w-8 text-neon-blue" />
         </div>
-        <CardTitle className="text-2xl font-bold text-center">
-          {type === "login" ? "Welcome Back" : "Create Your Account"}
-        </CardTitle>
-        <CardDescription className="text-center pt-1.5">
+        <h2 className="text-2xl font-bold text-foreground mb-2">
+          {type === "login" ? "SECURE ACCESS" : "JOIN THE ELITE"}
+        </h2>
+        <p className="subtitle text-neon-blue text-sm">
           {type === "login" 
-            ? "Sign in to access your clothing orders and designs" 
-            : "Join our custom clothing platform to start creating"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+            ? "Rich Habits Authentication" 
+            : "Exclusive Membership Portal"}
+        </p>
+      </div>
+      {/* Rich Habits glassmorphism form container */}
+      <div className="space-y-6">
         {error && (
-          <Alert variant="destructive" className="mb-6 animate-fadeIn">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle className="ml-2">Authentication Error</AlertTitle>
-            <AlertDescription className="ml-6 mt-2">{error}</AlertDescription>
-          </Alert>
+          <div className="glass-panel border-red-500/50 p-4 animate-pulse">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <span className="subtitle text-red-400 text-xs">AUTHENTICATION ERROR</span>
+            </div>
+            <p className="text-red-300 text-sm mt-2">{error}</p>
+          </div>
         )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-sm font-medium">Email Address</FormLabel>
+                <FormItem className="space-y-3">
+                  <FormLabel className="subtitle text-foreground text-xs">Email Access</FormLabel>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <Mail className="h-4 w-4 text-gray-400" />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none z-10">
+                      <Mail className="h-4 w-4 text-neon-blue" />
                     </div>
                     <FormControl>
                       <Input 
-                        placeholder="your.email@example.com" 
-                        className="pl-10 h-10 focus:ring-2 focus:ring-primary/20" 
+                        placeholder="elite.member@rich-habits.com" 
+                        className="rich-input pl-12 h-12 text-foreground placeholder:text-muted-foreground" 
                         {...field}
                       />
                     </FormControl>
                   </div>
-                  <FormMessage className="text-xs font-medium text-red-500 ml-1" />
+                  <FormMessage className="text-xs text-red-400 ml-1" />
                 </FormItem>
               )}
             />
@@ -217,25 +221,22 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
               control={form.control}
               name="password"
               render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <FormLabel className="text-sm font-medium">Password</FormLabel>
-                    {/* Removed forgot password for now as it requires additional Supabase Auth setup */}
-                  </div>
+                <FormItem className="space-y-3">
+                  <FormLabel className="subtitle text-foreground text-xs">Security Code</FormLabel>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <Lock className="h-4 w-4 text-gray-400" />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none z-10">
+                      <Lock className="h-4 w-4 text-neon-blue" />
                     </div>
                     <FormControl>
                       <Input 
                         type="password" 
-                        placeholder="••••••••" 
-                        className="pl-10 h-10 focus:ring-2 focus:ring-primary/20" 
+                        placeholder="••••••••••••" 
+                        className="rich-input pl-12 h-12 text-foreground placeholder:text-muted-foreground" 
                         {...field} 
                       />
                     </FormControl>
                   </div>
-                  <FormMessage className="text-xs font-medium text-red-500 ml-1" />
+                  <FormMessage className="text-xs text-red-400 ml-1" />
                 </FormItem>
               )}
             />
@@ -341,51 +342,57 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
 
             <Button 
               type="submit" 
-              className="w-full h-11 mt-6 font-medium shadow-sm transition-all hover:shadow-md"
+              className="btn-primary w-full h-14 mt-8 text-sm"
               disabled={isLoading}
             >
               {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {type === "login" ? "Signing in..." : "Creating account..."}
+                <span className="flex items-center justify-center gap-3">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="subtitle">
+                    {type === "login" ? "Authenticating..." : "Processing..."}
+                  </span>
                 </span>
               ) : (
-                <span className="flex items-center justify-center gap-2">
-                  {type === "login" ? "Sign In" : "Create Account"}
-                  <ArrowRight className="h-4 w-4" />
+                <span className="flex items-center justify-center gap-3">
+                  <span className="subtitle">
+                    {type === "login" ? "Access Portal" : "Join Elite"}
+                  </span>
+                  <ArrowRight className="h-5 w-5" />
                 </span>
               )}
             </Button>
           </form>
         </Form>
-      </CardContent>
-      <CardFooter className="flex justify-center border-t pt-6 pb-6">
-        <p className="text-sm text-gray-600">
-          {type === "login" ? (
-            <>
-              Don't have an account?{" "}
-              <Button 
-                variant="link" 
-                className="p-0 font-medium text-primary hover:text-primary/80" 
-                onClick={() => setLocation("/register")}
-              >
-                Register
-              </Button>
-            </>
-          ) : (
-            <>
-              Already have an account?{" "}
-              <Button 
-                variant="link" 
-                className="p-0 font-medium text-primary hover:text-primary/80" 
-                onClick={() => setLocation("/login")}
-              >
-                Sign In
-              </Button>
-            </>
-          )}
-        </p>
-      </CardFooter>
-    </Card>
+        
+        {/* Rich Habits footer navigation */}
+        <div className="text-center pt-8 border-t border-glass-border">
+          <p className="text-muted-foreground text-sm">
+            {type === "login" ? (
+              <>
+                <span>New to Rich Habits?</span>{" "}
+                <button 
+                  type="button"
+                  className="text-neon-blue hover:text-neon-green transition-colors subtitle text-sm underline" 
+                  onClick={() => setLocation("/register")}
+                >
+                  Request Membership
+                </button>
+              </>
+            ) : (
+              <>
+                <span>Already a member?</span>{" "}
+                <button 
+                  type="button"
+                  className="text-neon-blue hover:text-neon-green transition-colors subtitle text-sm underline" 
+                  onClick={() => setLocation("/login")}
+                >
+                  Member Access
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

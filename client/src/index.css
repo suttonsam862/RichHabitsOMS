@@ -1,51 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-      --background: 0 0% 100%;
---foreground: 20 14.3% 4.1%;
---muted: 60 4.8% 95.9%;
---muted-foreground: 25 5.3% 44.7%;
---popover: 0 0% 100%;
---popover-foreground: 20 14.3% 4.1%;
---card: 0 0% 100%;
---card-foreground: 20 14.3% 4.1%;
---border: 20 5.9% 90%;
---input: 20 5.9% 90%;
---primary: 207 90% 54%;
---primary-foreground: 211 100% 99%;
---secondary: 60 4.8% 95.9%;
---secondary-foreground: 24 9.8% 10%;
---accent: 60 4.8% 95.9%;
---accent-foreground: 24 9.8% 10%;
---destructive: 0 84.2% 60.2%;
---destructive-foreground: 60 9.1% 97.8%;
---ring: 20 14.3% 4.1%;
---radius: 0.5rem;
-  }
-  .dark {
-      --background: 240 10% 3.9%;
---foreground: 0 0% 98%;
---muted: 240 3.7% 15.9%;
---muted-foreground: 240 5% 64.9%;
---popover: 240 10% 3.9%;
---popover-foreground: 0 0% 98%;
---card: 240 10% 3.9%;
---card-foreground: 0 0% 98%;
---border: 240 3.7% 15.9%;
---input: 240 3.7% 15.9%;
---primary: 207 90% 54%;
---primary-foreground: 211 100% 99%;
---secondary: 240 3.7% 15.9%;
---secondary-foreground: 0 0% 98%;
---accent: 240 3.7% 15.9%;
---accent-foreground: 0 0% 98%;
---destructive: 0 62.8% 30.6%;
---destructive-foreground: 0 0% 98%;
---ring: 240 4.9% 83.9%;
---radius: 0.5rem;
-  }
+  /* Rich Habits Blackout Glassmorphism Theme */
+  --background: 0 0% 6%; /* Deep black background #0f0f0f */
+  --foreground: 0 0% 96%; /* Off-white text #f5f5f5 */
+  --muted: 0 0% 10%; /* Dark muted elements */
+  --muted-foreground: 0 0% 65%; /* Muted text */
+  --popover: 0 0% 4%; /* Darker popover background */
+  --popover-foreground: 0 0% 96%;
+  --card: 0 0% 4%; /* Glass panel base */
+  --card-foreground: 0 0% 96%;
+  --border: 0 0% 20%; /* Subtle borders */
+  --input: 0 0% 8%; /* Input backgrounds */
+  --primary: 195 100% 50%; /* Neon blue #00d1ff */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 15%; /* Secondary elements */
+  --secondary-foreground: 0 0% 96%;
+  --accent: 166 100% 50%; /* Neon green #00ff9f */
+  --accent-foreground: 0 0% 6%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 195 100% 50%; /* Focus ring neon blue */
+  --radius: 0rem; /* Sharp edges, no rounded corners */
+  
+  /* Rich Habits Custom Properties */
+  --glass-panel: rgba(10, 10, 10, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --neon-blue: #00d1ff;
+  --neon-green: #00ff9f;
+  --rich-black: #0a0a0a;
+}
 
 @layer base {
   * {
@@ -53,6 +40,121 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    color: hsl(var(--foreground));
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Rich Habits Typography Hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .subtitle {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+}
+
+@layer components {
+  /* Rich Habits Glassmorphism Components */
+  .glass-panel {
+    background: var(--glass-panel);
+    backdrop-filter: blur(8px) brightness(0.2);
+    border: 1px solid var(--glass-border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass-panel::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
+    transform: translateX(-100%) rotate(25deg);
+    animation: glintMove 3s infinite;
+    pointer-events: none;
+  }
+
+  @keyframes glintMove {
+    to { 
+      transform: translateX(100%) rotate(25deg); 
+    }
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 8px rgba(0, 209, 255, 0.6);
+  }
+
+  .neon-glow-green {
+    box-shadow: 0 0 8px rgba(0, 255, 159, 0.6);
+  }
+
+  /* Rich Habits Button Styles */
+  .btn-primary {
+    @apply glass-panel neon-glow;
+    background: linear-gradient(135deg, var(--neon-blue), rgba(0, 209, 255, 0.8));
+    color: var(--rich-black);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 16px rgba(0, 209, 255, 0.8);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    @apply glass-panel;
+    border: 2px solid var(--neon-blue);
+    color: var(--neon-blue);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+  }
+
+  .btn-secondary:hover {
+    @apply neon-glow;
+    background: rgba(0, 209, 255, 0.1);
+  }
+
+  /* Rich Habits Card Styles */
+  .rich-card {
+    @apply glass-panel;
+    transition: all 0.3s ease;
+  }
+
+  .rich-card:hover {
+    @apply neon-glow;
+    transform: translateY(-2px);
+  }
+
+  /* Rich Habits Input Styles */
+  .rich-input {
+    @apply glass-panel;
+    background: rgba(20, 20, 20, 0.8);
+    border: 1px solid var(--glass-border);
+    color: hsl(var(--foreground));
+    transition: all 0.3s ease;
+  }
+
+  .rich-input:focus {
+    @apply neon-glow;
+    border-color: var(--neon-blue);
+    outline: none;
   }
 }

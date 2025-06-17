@@ -1,0 +1,130 @@
+# ThreadCraft - Custom Clothing Order Management System
+
+## Overview
+
+ThreadCraft is a comprehensive full-stack web application designed for managing custom clothing orders from initial client intake to final delivery. The system provides role-based access control, order lifecycle management, design workflow coordination, production tracking, and integrated payment processing.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React.js with TypeScript for type safety
+- **UI Components**: Tailwind CSS with shadcn/ui component library
+- **State Management**: TanStack React Query for server state management
+- **Build Tool**: Vite for fast development and optimized production builds
+- **Authentication**: Supabase Auth integration with custom middleware
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js framework
+- **Language**: TypeScript with ES modules
+- **Database ORM**: Drizzle ORM for type-safe database interactions
+- **Authentication**: Supabase Auth with custom session management
+- **File Handling**: Local file system with configurable cloud storage support
+
+### Data Storage Solutions
+- **Primary Database**: PostgreSQL via Supabase
+- **Authentication**: Supabase Auth service
+- **Session Storage**: Configurable between PostgreSQL and memory store
+- **File Storage**: Local filesystem with uploads directory structure
+- **Schema Management**: Drizzle Kit for migrations and schema synchronization
+
+## Key Components
+
+### Authentication and Authorization
+- **Multi-role System**: Admin, Salesperson, Designer, Manufacturer, Customer roles
+- **Supabase Integration**: Leverages Supabase Auth for user management
+- **Row Level Security**: Database-level access control for data protection
+- **Session Management**: Express sessions with PostgreSQL or memory store backup
+
+### Order Management System
+- **Status Workflow**: Draft → Design → Production → Completion pipeline
+- **Order Tracking**: Comprehensive order lifecycle with status transitions
+- **Customer Management**: Integrated customer profiles with contact information
+- **Order Items**: Detailed product specifications with pricing
+
+### Design Workflow
+- **Task Assignment**: Design tasks allocated to specific designers
+- **File Management**: Upload and version control for design assets
+- **Approval Process**: Review and approval workflow for design submissions
+- **Status Tracking**: Real-time updates on design progress
+
+### Production Management
+- **Manufacturing Tasks**: Production assignments with progress tracking
+- **Resource Allocation**: Manufacturer assignment and workload distribution
+- **Quality Control**: Task status management through production pipeline
+
+### Payment Processing
+- **Stripe Integration**: Secure payment handling with Stripe APIs
+- **Customer Management**: Stripe customer ID tracking for repeat transactions
+- **Payment Status**: Comprehensive payment lifecycle tracking
+
+## Data Flow
+
+### User Authentication Flow
+1. User login via Supabase Auth
+2. Token validation and user profile retrieval
+3. Role-based access control enforcement
+4. Session establishment with secure cookie management
+
+### Order Processing Flow
+1. Customer order creation (draft status)
+2. Salesperson review and design task assignment
+3. Designer file upload and approval workflow
+4. Production task creation and manufacturer assignment
+5. Manufacturing progress tracking
+6. Order completion and customer notification
+
+### File Upload Flow
+1. Secure file upload to local storage
+2. Database record creation with file metadata
+3. Access control validation for file retrieval
+4. Optional cloud storage migration capability
+
+## External Dependencies
+
+### Third-Party Services
+- **Supabase**: Authentication, database hosting, and real-time features
+- **Stripe**: Payment processing and customer management
+- **SendGrid**: Email notification service (optional)
+- **QuickBooks**: Accounting integration (optional)
+
+### Core Dependencies
+- **@supabase/supabase-js**: Supabase client library
+- **@stripe/stripe-js**: Stripe payment integration
+- **drizzle-orm**: Type-safe database ORM
+- **express-session**: Session management
+- **bcrypt**: Password hashing
+- **multer**: File upload handling
+
+## Deployment Strategy
+
+### Environment Configuration
+- **Development**: Local Vite dev server with hot reloading
+- **Production**: Compiled assets with Express static serving
+- **Database**: Supabase PostgreSQL with connection pooling
+- **Sessions**: PostgreSQL-backed sessions for production scalability
+
+### Build Process
+1. Frontend compilation via Vite
+2. Backend TypeScript compilation via ESBuild
+3. Asset optimization and bundling
+4. Database schema synchronization via Drizzle
+
+### Infrastructure Requirements
+- Node.js 18+ runtime environment
+- PostgreSQL database (via Supabase)
+- SSL/TLS certificate for production
+- File storage capability (local or cloud)
+
+### Security Considerations
+- Environment variable management for sensitive credentials
+- Row Level Security policies for data access control
+- CSRF protection for form submissions
+- Secure file upload validation
+- Rate limiting for authentication endpoints
+
+## Changelog
+- June 17, 2025. Initial setup
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
