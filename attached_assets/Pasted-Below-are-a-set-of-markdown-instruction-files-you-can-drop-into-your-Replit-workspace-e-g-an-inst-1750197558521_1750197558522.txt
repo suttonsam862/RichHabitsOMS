@@ -1,0 +1,229 @@
+Below are a set of markdown instruction files you can drop into your Replit workspace (e.g. an `instructions/` folder). They’ll give your AI agent clear, company‑specific guidance for writing code, debugging, styling UI, handling errors, and overall workflow. Feel free to tweak further.
+
+---
+
+## 1. agent-guidelines.md
+
+```markdown
+# Agent Guidelines for Rich Habits Replit Assistant
+
+## 1. Focus on Direct Implementation
+- **Action‑Oriented:** When given a task, implement changes directly. Only ask clarifying questions if critical details are missing.
+- **Commit Style:** Write clear, concise commit messages, prefixed with `[RH]`, e.g. `[RH] Add error boundary to OrderForm`.
+- **Branching:** For each feature or bugfix, create a new branch named `feature/<short-description>` or `bugfix/<short-description>`.
+
+## 2. Company Context
+- **Business:** Rich Habits is an affordable luxury sportswear brand focused on custom team gear and event promotions.
+- **Aesthetic:** Dark, wealthy vibe; deep greys, blacks, dark browns, with subtle neon blue/green accents.
+- **Tone:** Professional but friendly; code comments should be in plain English and to the point.
+
+## 3. Organization
+- **Folder Structure:**
+  - `src/components/` for React UI
+  - `src/utils/` for helper functions
+  - `styles/` for global CSS/Tailwind config
+  - `instructions/` for these markdown guides
+
+## 4. Communication
+- When a change is complete, post a summary in Slack #dev-updates, including links to commits and any screenshots.
+```
+
+---
+
+## 2. coding-standards.md
+
+````markdown
+# Coding Standards
+
+## JavaScript/TypeScript
+- **ESLint & Prettier:** All files must pass lint & format on save (`npm run lint && npm run format`).
+- **Naming:** Use `camelCase` for variables/functions, `PascalCase` for components & classes.
+- **Imports:** Alphabetical order, grouped by external, internal, styles:
+  ```js
+  import React from 'react';
+  import _ from 'lodash';
+
+  import { Card } from '@/components/ui';
+  import { formatDate } from '@/utils/date';
+
+  import './MyComponent.css';
+````
+
+## CSS / Tailwind
+
+* **Utility‑First:** Favor Tailwind classes; only add custom CSS for complex selectors.
+* **Naming:** BEM style when writing custom CSS: `.btn--primary`, `.card__header`.
+
+## Comments & Documentation
+
+* **JSDoc:** Exported functions/components should have a one‑sentence JSDoc comment.
+* **TODOs:** Prefix with `// TODO(RH): <your note>`.
+
+````
+
+---
+
+## 3. debugging-process.md
+```markdown
+# Debugging Process
+
+1. **Reproduce:** Verify the bug in local environment.
+2. **Isolate:** Comment out or mock external dependencies to narrow down.
+3. **Inspect:** Use breakpoints & `console.log` to trace variable values.
+4. **Test:** Write a failing unit or integration test capturing the issue.
+5. **Fix:** Implement the minimal change and rerun tests.
+6. **Review:** Ensure no regressions; run full test suite & manual smoke test.
+7. **Document:** Add a short note under `docs/CHANGELOG.md` saying what was fixed.
+````
+
+---
+
+## 4. ui-preferences.md
+
+````markdown
+# UI/UX Guidelines for Rich Habits
+
+## Aesthetic: Blackout Glassmorphism, Sharp & Luxurious
+- **Backdrop:** Deep opaque black (`rgba(0,0,0,0.85)`) layered behind semi-transparent panels.
+- **Glass Panels:** Frosted, near-black glass effect with crisp, straight edges—no curves. Think beveled rectangles and rhombus shapes.
+  - CSS: `backdrop-filter: blur(8px) brightness(0.2); border: 1px solid rgba(255,255,255,0.1);`
+- **Accents:** Slick white gleam animations that sweep across edges (use CSS gradients + keyframe glints).
+  - Example: 
+    ```css
+    .glint::before {
+      content: '';
+      position: absolute; top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
+      transform: translateX(-100%) rotate(25deg);
+      animation: glintMove 2s infinite;
+    }
+    @keyframes glintMove {
+      to { transform: translateX(100%) rotate(25deg); }
+    }
+    ```
+- **Color Palette:**
+  - Panels: `rgba(10,10,10,0.6)`
+  - Borders & Text: `#ffffff` (off-white)
+  - Highlight Glow: subtle neon-blue outer glow (`box-shadow: 0 0 8px rgba(0,209,255,0.6)`).
+
+## Typography & Icons
+```markdown
+# Fonts & Lettering
+
+## Heading Font: Rogbold
+- **Usage:** Main headings and key titles.
+- **Style:** Tall, narrow letterforms for a commanding presence.
+- **Examples:** Page titles, section headers, banner text.
+
+## Subtitle Font: Poppins Semi-Bold
+- **Usage:** Subheadings, button labels, highlighted text.
+- **Spacing:** Increased letter-spacing (`tracking-[0.1em]` or `letter-spacing: 0.1em;`) for an open, luxurious feel.
+- **Case:** UPPERCASE for subtitles to enhance impact.
+
+## Body Font: Inter
+- **Usage:** Paragraph text, form labels, general UI copy.
+- **Style:** Medium weight, normal letter-spacing for readability.
+````
+
+```
+markdown
+# UI/UX Guidelines for Rich Habits
+
+## Color Palette
+- **Primary Background:** `#1a1a1a` (dark grey)
+- **Accent:** `#00d1ff` (neon blue), `#00ff9f` (neon green)
+- **Text:** `#f5f5f5` (off‑white)
+
+## Typography
+- **Font Family:** `Inter, sans-serif`
+- **Headings:** Font‑weight 600+, sizes `xl` to `4xl`.
+- **Body:** Font‑weight 400, size `base`.
+
+## Layout & Spacing
+- **Grid:** Use 8px increment spacing (`p-4`, `m-2`, etc.).
+- **Cards:** Rounded corners `2xl`, soft shadows (`shadow-md`).
+- **Buttons:** Clear hierarchy:
+  - Primary: filled accent, uppercase text
+  - Secondary: outline with accent border
+
+## Accessibility
+- Ensure 4.5:1 contrast for text.
+- All interactive elements must have focus states (e.g., `ring-2 ring-accent`).
+```
+
+---
+
+## 5. error-handling.md
+
+````markdown
+# Error Handling & Reporting
+
+## General Patterns
+- **Try/Catch:** Wrap async operations; log context with module and action.
+- **Error Boundaries:** In React, use for UI components to catch rendering errors.
+- **User Feedback:** Display friendly messages; avoid leaking internals.
+
+## Logging
+- **Client:** `console.error('[RH][Module]', error, { context });`
+- **Server:** Integrate with Sentry, include metadata (`userId`, `promptId`).
+
+## AI Conversation Logging & Resilience
+- **Prompt Tracking:** Assign each AI prompt a unique `promptId` and log the full prompt sent, along with timestamp and context tags (e.g. `feature:name`, `bugfix:order-form`).
+- **Response Validation:** After receiving GPT output, automatically scan for required sections or keywords. If missing, flag as `incompleteResponse` and attach missing-fields in the log entry.
+- **Error Handler:** On `incompleteResponse` or runtime errors in handling AI text, capture:
+  - `promptId`
+  - Original prompt
+  - GPT reply
+  - Detected missing elements
+  - Client state snapshot (e.g. current component props)
+- **Automated Retry:** For missing details, resend a refined prompt to GPT asking only for the omitted sections, appending `// NOTE: please include <missing_sections>`.
+- **Audit Log:** Persist logs in a JSONL file (e.g. `logs/ai-conversations.log`) with entries:
+  ```json
+  {
+    "timestamp": "2025-06-17T13:45:00Z",
+    "promptId": "abc123",
+    "type": "gpt_request",
+    "content": "<full prompt text>",
+    "contextTags": ["ui-update","client:OrderForm"]
+  }
+````
+
+* **Visibility:** Surface recent AI errors in Slack #dev-updates with links to log entries and recommended retry actions.
+
+````
+```markdown
+# Error Handling & Reporting
+
+## Try/Catch Patterns
+- Wrap async code in `try/catch`; in React components use Error Boundaries.
+
+```js
+async function fetchData() {
+  try {
+    const res = await api.get('/orders');
+    return res.data;
+  } catch (error) {
+    logError(error, { module: 'OrderService' });
+    throw new Error('Failed to fetch orders');
+  }
+}
+````
+
+## Logging
+
+* **Client:** Use `console.error` with context tags, e.g. `console.error('[RH][OrderForm]', err)`.
+* **Server:** Send errors to Sentry with metadata (`userId`, `requestId`).
+
+## User Feedback
+
+* Show user‑friendly messages: `Something went wrong. Please try again later.`
+* Avoid exposing raw error details in UI.
+
+```
+
+---
+
+*Drop these files into your Replit `instructions/` folder and point your AI agent’s config to reference them before each run.*
+
+```
