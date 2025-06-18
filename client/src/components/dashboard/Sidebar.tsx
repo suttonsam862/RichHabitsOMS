@@ -99,40 +99,45 @@ export function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }: Sideba
 
   return (
     <>
-      {/* Mobile sidebar backdrop */}
+      {/* Rich Habits mobile sidebar backdrop */}
       {mobileOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-gray-800 bg-opacity-70 md:hidden"
+          className="fixed inset-0 z-40 bg-black bg-opacity-90 md:hidden backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Rich Habits glassmorphism sidebar */}
       <aside 
         className={cn(
-          "w-64 bg-gray-900 text-white fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0",
+          "w-64 glass-panel border-r border-glass-border fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Shirt className="h-6 w-6" />
-            <span className="text-xl font-semibold">ThreadCraft</span>
+        <div className="p-6 border-b border-glass-border flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 glass-panel neon-glow flex items-center justify-center">
+              <Shirt className="h-5 w-5 text-neon-blue" />
+            </div>
+            <div>
+              <span className="text-lg font-bold text-foreground">RICH HABITS</span>
+              <div className="subtitle text-neon-green text-xs">ThreadCraft</div>
+            </div>
           </div>
           <button 
-            className="md:hidden text-gray-400 hover:text-white" 
+            className="md:hidden text-muted-foreground hover:text-neon-blue transition-colors" 
             onClick={() => setMobileOpen(false)}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="py-4">
-          <div className="px-4 mb-3 text-gray-400 uppercase text-xs font-semibold">
-            Navigation
+        <div className="py-6">
+          <div className="px-6 mb-4">
+            <span className="subtitle text-neon-blue text-xs">Elite Navigation</span>
           </div>
 
-          <nav className="space-y-1">
+          <nav className="space-y-2 px-3">
             {items.map((item: { 
               name: string; 
               href: string; 
@@ -141,28 +146,34 @@ export function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }: Sideba
               <Link href={item.href} key={item.name}>
                 <a 
                   className={cn(
-                    "flex items-center px-4 py-2 text-gray-300 hover:bg-gray-800 group",
-                    location === item.href && "bg-gray-800 text-white"
+                    "flex items-center px-4 py-3 text-foreground hover:bg-glass-panel/50 group transition-all duration-200 mx-2",
+                    location === item.href && "glass-panel neon-glow text-neon-blue"
                   )}
                 >
-                  <item.icon className="w-5 h-5 mr-3" />
-                  <span>{item.name}</span>
+                  <item.icon className={cn(
+                    "w-5 h-5 mr-3 transition-colors",
+                    location === item.href ? "text-neon-blue" : "text-muted-foreground group-hover:text-neon-green"
+                  )} />
+                  <span className={cn(
+                    "subtitle text-sm",
+                    location === item.href ? "text-neon-blue" : "text-foreground group-hover:text-neon-green"
+                  )}>{item.name}</span>
                 </a>
               </Link>
             ))}
           </nav>
         </div>
 
-        {/* Role switcher for demo (admin only) */}
+        {/* Rich Habits role switcher for demo (admin only) */}
         {isAdmin && (
-          <div className="px-4 py-2 border-t border-gray-800">
+          <div className="px-6 py-4 border-t border-glass-border">
             <div className="mb-4">
-              <label htmlFor="role-selector" className="block text-sm font-medium text-gray-400 mb-1">
-                Switch Role (Demo)
+              <label htmlFor="role-selector" className="subtitle text-neon-green text-xs block mb-2">
+                Admin Role Switch
               </label>
               <select 
                 id="role-selector" 
-                className="bg-gray-800 text-white rounded px-3 py-2 w-full text-sm"
+                className="rich-input w-full text-sm py-2 px-3"
                 onChange={(e) => {
                   // In a real app, this would be an API call to switch roles
                   console.log("Role switch:", e.target.value);
