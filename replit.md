@@ -124,7 +124,21 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 
 ## Changelog
 - June 17, 2025. Initial setup
+- June 17, 2025. Implemented Rich Habits blackout glassmorphism theme across core components
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, sharp edges, luxury branding.
+
+## Recent Changes
+
+### Rich Habits Theme Implementation (June 17, 2025)
+- Updated global CSS with blackout glassmorphism foundation
+- Refactored login page and authentication forms with luxury branding
+- Enhanced admin dashboard with command center aesthetics
+- Applied glassmorphism to sidebar navigation and header components
+- Updated core UI components (Button, Card, Input) with theme variants
+- Implemented neon accent colors (#00d1ff blue, #00ff9f green)
+- Added Poppins and Inter font integration for luxury typography
+- Created glass panel effects with white gleam animations
