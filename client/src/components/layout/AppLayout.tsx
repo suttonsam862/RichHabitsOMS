@@ -195,17 +195,17 @@ export function AppLayout() {
             </nav>
           </div>
 
-          <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
+          <div className="flex-shrink-0 flex border-t border-glass-border p-4">
             <div className="flex items-center flex-1">
               <div>
-                <Avatar className="h-10 w-10 rounded-full border-2 border-primary/20">
+                <Avatar className="h-10 w-10 border-2 border-neon-blue/30">
                   <AvatarImage src="" alt={fullName} />
-                  <AvatarFallback className="bg-primary/10 text-primary">{getInitials(fullName)}</AvatarFallback>
+                  <AvatarFallback className="glass-panel text-neon-blue">{getInitials(fullName)}</AvatarFallback>
                 </Avatar>
               </div>
               <div className="ml-3 truncate">
-                <p className="text-sm font-medium text-gray-700">{fullName}</p>
-                <p className="text-xs font-medium text-primary capitalize">{user.role}</p>
+                <p className="text-sm font-medium text-foreground">{fullName}</p>
+                <p className="text-xs font-medium text-neon-blue capitalize">{user.role}</p>
               </div>
               <TooltipProvider>
                 <Tooltip>
@@ -314,7 +314,7 @@ export function AppLayout() {
 
       {/* Main content */}
       <div className="sm:pl-64 flex flex-col flex-1">
-        <main className="flex-1 p-4 sm:p-6">
+        <main className="flex-1 p-4 sm:p-6 bg-gradient-to-br from-rich-black via-gray-900 to-black">
           <Outlet />
         </main>
       </div>
