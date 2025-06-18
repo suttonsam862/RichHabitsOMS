@@ -35,14 +35,22 @@ import {
   UserPlus, 
   FileText, 
   Trash2,
-  Users 
+  Users,
+  Eye
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import AddCustomerForm from "./AddCustomerForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Customer {
-  id: number;
+  id: number | string;
   name?: string;
   email?: string;
   company?: string;
@@ -53,13 +61,27 @@ interface Customer {
   firstName?: string;
   lastName?: string;
   userId?: number;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  created_at?: string;
 }
 
 export default function CustomerListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
+  const [isViewCustomerDialogOpen, setIsViewCustomerDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const handleViewCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsViewCustomerDialogOpen(true);
+  };
   
   // Fetch real customer data from API
   const { data: customers, isLoading, isError, refetch } = useQuery({
@@ -199,6 +221,10 @@ export default function CustomerListPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleViewCustomer(customer)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Customer
+                            </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Mail className="mr-2 h-4 w-4" />
                               Send Email
@@ -250,6 +276,128 @@ export default function CustomerListPage() {
         isOpen={isAddCustomerDialogOpen} 
         onClose={() => setIsAddCustomerDialogOpen(false)} 
       />
+
+      {/* View Customer Dialog */}
+      <Dialog open={isViewCustomerDialogOpen} onOpenChange={setIsViewCustomerDialogOpen}>
+        <DialogContent className="rich-card max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-neon-blue flex items-center">
+              <Eye className="mr-2 h-5 w-5" />
+              Customer Details
+            </DialogTitle>
+            <DialogDescription className="subtitle text-neon-green">
+              Complete customer information and account details
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedCustomer && (
+            <div className="space-y-6 mt-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b border-glass-border pb-2">
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Full Name</label>
+                    <p className="text-foreground font-medium">
+                      {selectedCustomer.firstName} {selectedCustomer.lastName}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Email Address</label>
+                    <p className="text-foreground">{selectedCustomer.email || "Not provided"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Company</label>
+                    <p className="text-foreground">{selectedCustomer.company || "Not provided"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Phone</label>
+                    <p className="text-foreground">{selectedCustomer.phone || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b border-glass-border pb-2">
+                  Address Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Street Address</label>
+                    <p className="text-foreground">{selectedCustomer.address || "Not provided"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">City</label>
+                    <p className="text-foreground">{selectedCustomer.city || "Not provided"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">State</label>
+                    <p className="text-foreground">{selectedCustomer.state || "Not provided"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">ZIP Code</label>
+                    <p className="text-foreground">{selectedCustomer.zip || "Not provided"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Country</label>
+                    <p className="text-foreground">{selectedCustomer.country || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Summary */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b border-glass-border pb-2">
+                  Account Summary
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="glass-panel p-4 text-center">
+                    <p className="subtitle text-muted-foreground text-xs">Total Orders</p>
+                    <p className="text-2xl font-bold text-neon-blue">{selectedCustomer.orders || 0}</p>
+                  </div>
+                  <div className="glass-panel p-4 text-center">
+                    <p className="subtitle text-muted-foreground text-xs">Total Spent</p>
+                    <p className="text-2xl font-bold text-neon-green">{selectedCustomer.spent || "$0.00"}</p>
+                  </div>
+                  <div className="glass-panel p-4 text-center">
+                    <p className="subtitle text-muted-foreground text-xs">Status</p>
+                    <Badge className="mt-1">{selectedCustomer.status || "Active"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Details */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b border-glass-border pb-2">
+                  Account Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Customer ID</label>
+                    <p className="text-foreground font-mono text-sm">{selectedCustomer.id}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Last Order</label>
+                    <p className="text-foreground">{selectedCustomer.lastOrder || "No orders yet"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Account Created</label>
+                    <p className="text-foreground">
+                      {selectedCustomer.created_at 
+                        ? new Date(selectedCustomer.created_at).toLocaleDateString()
+                        : "Unknown"
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
