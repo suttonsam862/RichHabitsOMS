@@ -50,7 +50,7 @@ export default function AdminDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header title="Rich Habits Command Center" />
         
-        <main className="flex-1 overflow-y-auto p-6 relative">
+        <main className="flex-1 overflow-y-auto p-6 relative bg-gradient-to-br from-rich-black via-gray-900 to-black">
           {/* Rich Habits dashboard header */}
           <div className="rich-card p-6 mb-8">
             <div className="flex items-center space-x-4">

@@ -130,7 +130,7 @@ export function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-rich-black via-gray-900 to-black">
       {/* Mobile menu button */}
       <div className="fixed z-40 top-4 left-4 sm:hidden">
         <Button
@@ -145,11 +145,11 @@ export function AppLayout() {
       {/* Sidebar for desktop */}
       <div className="hidden sm:fixed sm:inset-y-0 sm:flex sm:flex-col sm:w-64 sm:z-50">
         {/* Sidebar component */}
-        <div className="flex flex-col flex-grow bg-white shadow-lg border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
+        <div className="flex flex-col flex-grow rich-card border-r border-glass-border pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4 mb-5">
             <div className="flex items-center">
-              <div className="w-8 h-8 mr-2 bg-primary rounded-md flex items-center justify-center text-white font-bold">CC</div>
-              <h1 className="text-xl font-bold text-primary">Custom Clothing</h1>
+              <div className="w-8 h-8 mr-2 glass-panel neon-glow flex items-center justify-center text-neon-blue font-bold">CC</div>
+              <h1 className="text-xl font-bold text-neon-blue">Custom Clothing</h1>
             </div>
           </div>
 
@@ -163,9 +163,9 @@ export function AppLayout() {
                         to={item.href}
                         className={cn(
                           item.current
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-primary',
-                          'group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors duration-150'
+                            ? 'glass-panel neon-glow text-neon-blue'
+                            : 'text-foreground hover:glass-panel hover:text-neon-blue',
+                          'group flex items-center px-3 py-2.5 text-sm font-medium transition-all duration-150'
                         )}
                       >
                         <item.icon
