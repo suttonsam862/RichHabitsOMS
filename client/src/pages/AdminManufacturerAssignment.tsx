@@ -51,10 +51,14 @@ export default function AdminManufacturerAssignment() {
   });
 
   // Fetch manufacturers
-  const { data: manufacturers = [], isLoading: isLoadingManufacturers } = useQuery({
+  const { data: manufacturersData, isLoading: isLoadingManufacturers } = useQuery({
     queryKey: ['/api/users', 'manufacturer'],
     queryFn: () => apiRequest('GET', '/api/users?role=manufacturer').then(res => res.json()),
   });
+
+  // Safely extract manufacturers array
+  const manufacturers = Array.isArray(manufacturersData) ? manufacturersData : 
+                       (manufacturersData?.users && Array.isArray(manufacturersData.users)) ? manufacturersData.users : [];
 
   // Assign manufacturer mutation
   const assignManufacturerMutation = useMutation({
@@ -190,13 +194,19 @@ export default function AdminManufacturerAssignment() {
                   <SelectValue placeholder="Select a manufacturer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {manufacturers.map((manufacturer: any) => (
-                    <SelectItem key={manufacturer.id} value={manufacturer.id.toString()}>
-                      {manufacturer.firstName && manufacturer.lastName 
-                        ? `${manufacturer.firstName} ${manufacturer.lastName}` 
-                        : manufacturer.username}
-                    </SelectItem>
-                  ))}
+                  {isLoadingManufacturers ? (
+                    <SelectItem value="" disabled>Loading manufacturers...</SelectItem>
+                  ) : manufacturers.length === 0 ? (
+                    <SelectItem value="" disabled>No manufacturers available</SelectItem>
+                  ) : (
+                    manufacturers.map((manufacturer: any) => (
+                      <SelectItem key={manufacturer.id} value={manufacturer.id.toString()}>
+                        {manufacturer.firstName && manufacturer.lastName 
+                          ? `${manufacturer.firstName} ${manufacturer.lastName}` 
+                          : manufacturer.username}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
