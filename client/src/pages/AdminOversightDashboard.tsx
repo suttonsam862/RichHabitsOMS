@@ -91,17 +91,23 @@ export default function AdminOversightDashboard() {
   });
 
   // Fetch users by role for filters and assignment
-  const { data: salesPersons, isLoading: isSalesPersonsLoading } = useQuery({
+  const { data: salesPersonsResponse, isLoading: isSalesPersonsLoading } = useQuery({
     queryKey: ['/api/users', 'salesperson'],
     queryFn: async () => (await apiRequest('GET', '/api/users?role=salesperson')).json(),
     enabled: !!user && user.role === 'admin',
   });
 
-  const { data: manufacturers, isLoading: isManufacturersLoading } = useQuery({
+  // Extract salesPersons array from the API response
+  const salesPersons = salesPersonsResponse?.users || salesPersonsResponse || [];
+
+  const { data: manufacturersResponse, isLoading: isManufacturersLoading } = useQuery({
     queryKey: ['/api/users', 'manufacturer'],
     queryFn: async () => (await apiRequest('GET', '/api/users?role=manufacturer')).json(),
     enabled: !!user && user.role === 'admin',
   });
+
+  // Extract manufacturers array from the API response
+  const manufacturers = manufacturersResponse?.users || manufacturersResponse || [];
 
   // Mutations for admin actions
   const assignManufacturerMutation = useMutation({
