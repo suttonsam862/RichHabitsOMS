@@ -16,7 +16,8 @@ import {
   UserCheck,
   Bell,
   DollarSign,
-  ChevronRight
+  ChevronRight,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -100,6 +101,13 @@ export function AppLayout() {
       href: '/admin/oversight',
       icon: BarChart,
       current: location.pathname === '/admin/oversight',
+      roles: ['admin'],
+    },
+    {
+      name: 'Catalog',
+      href: '/admin/catalog',
+      icon: Package,
+      current: location.pathname === '/admin/catalog',
       roles: ['admin'],
     },
     // Customer Management entry removed as it was redundant

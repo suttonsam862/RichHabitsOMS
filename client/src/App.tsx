@@ -248,6 +248,15 @@ function App() {
                 />
                 
                 <Route 
+                  path="/admin/catalog" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <CatalogPage />
+                    </RequireAuth>
+                  } 
+                />
+                
+                <Route 
                   path="/admin/customers" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
