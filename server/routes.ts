@@ -16,6 +16,13 @@ import {
   copyProductToOrder, 
   getProductPricingHistory 
 } from './productLibrary';
+import { 
+  getCatalogItems,
+  createCatalogItem,
+  updateCatalogItem,
+  deleteCatalogItem,
+  getCatalogItem
+} from './catalogRoutes';
 import { createClient } from '@supabase/supabase-js';
 
 // Create Supabase admin client with service key for admin operations
@@ -2200,6 +2207,13 @@ The ThreadCraft Team`,
       });
     }
   });
+
+  // Catalog management routes
+  app.get('/api/catalog', authenticateRequest, requireAuth, requireRole(['admin']), getCatalogItems);
+  app.post('/api/catalog', authenticateRequest, requireAuth, requireRole(['admin']), createCatalogItem);
+  app.get('/api/catalog/:id', authenticateRequest, requireAuth, requireRole(['admin']), getCatalogItem);
+  app.put('/api/catalog/:id', authenticateRequest, requireAuth, requireRole(['admin']), updateCatalogItem);
+  app.delete('/api/catalog/:id', authenticateRequest, requireAuth, requireRole(['admin']), deleteCatalogItem);
 
   return httpServer;
 }
