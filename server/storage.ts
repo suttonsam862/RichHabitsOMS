@@ -11,7 +11,7 @@ import {
   inventory,
   activityLogs,
   userSettings
-} from "@shared/schema";
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, sql, inArray, like } from "drizzle-orm";
 import { hash, compare } from "bcrypt";

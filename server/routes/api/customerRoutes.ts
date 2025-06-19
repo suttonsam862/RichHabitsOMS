@@ -3,7 +3,7 @@
  */
 import { Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import * as EmailService from './email';
+import { sendEmail, getCustomerInviteEmailTemplate } from '../../email';
 
 // Create Supabase admin client with service role key for admin operations
 const supabaseAdmin = createClient(
@@ -138,14 +138,14 @@ export async function createCustomer(req: Request, res: Response) {
           
           // Send invitation email with the reset link
           try {
-            const emailTemplate = EmailService.getCustomerInviteEmailTemplate(
+            const emailTemplate = getCustomerInviteEmailTemplate(
               email,
               firstName,
               lastName,
               inviteUrl
             );
             
-            inviteSent = await EmailService.sendEmail(emailTemplate);
+            inviteSent = await sendEmail(emailTemplate);
             console.log(`Invitation email ${inviteSent ? 'sent' : 'failed'} to ${email}`);
           } catch (emailErr) {
             console.error('Error sending invitation email:', emailErr);

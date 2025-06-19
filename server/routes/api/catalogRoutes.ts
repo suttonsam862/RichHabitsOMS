@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { supabase } from './db';
+import { supabase } from '../../db';
 
 export interface CatalogItem {
   id?: string;

@@ -95,9 +95,7 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
     
     next();
   } catch (err) {
-    if (shouldLog) {
-      console.error('Authentication error:', err);
-    }
+    console.error('Authentication error:', err);
     next();
   }
 };

@@ -2,7 +2,7 @@
  * Product Library System - For salespeople to reference products and pricing
  */
 import { Request, Response } from 'express';
-import { supabase } from './db';
+import { supabase } from '../../db';
 
 // Get all products from library with optional filtering
 export async function getProductLibrary(req: Request, res: Response) {
