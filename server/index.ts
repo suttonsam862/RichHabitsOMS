@@ -5,7 +5,7 @@ import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase, testSupabaseConnection } from "./db"; // Import from our new db.ts file
-import { authenticateRequest } from "./auth"; // Import our new auth middleware
+import { authenticateRequest } from "./routes/auth/auth"; // Import our new auth middleware
 import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";

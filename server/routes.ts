@@ -4,10 +4,10 @@ import { WebSocketServer } from 'ws';
 import { z } from 'zod';
 import { loginSchema, registerSchema } from '../shared/schema';
 import { supabase } from './db';
-import { authenticateRequest, requireAuth, requireRole } from './auth';
+import { authenticateRequest, requireAuth, requireRole } from './routes/auth/auth';
 import { sendEmail, getCustomerInviteEmailTemplate } from './email';
-import adminRoutes from './routes/admin';
-import customerRoutes from './routes/customerRoutes';
+import adminRoutes from './routes/admin/admin';
+import { createCustomer } from './routes/api/customerRoutes';
 import { uploadRouter } from './upload';
 import { 
   getProductLibrary, 
@@ -15,14 +15,14 @@ import {
   addProductToLibrary, 
   copyProductToOrder, 
   getProductPricingHistory 
-} from './productLibrary';
+} from './routes/api/productLibrary';
 import { 
   getCatalogItems,
   createCatalogItem,
   updateCatalogItem,
   deleteCatalogItem,
   getCatalogItem
-} from './catalogRoutes';
+} from './routes/api/catalogRoutes';
 import { createClient } from '@supabase/supabase-js';
 
 // Create Supabase admin client with service key for admin operations
@@ -41,8 +41,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register admin routes
   app.use('/api/admin', adminRoutes);
   
-  // Register customer routes
-  app.use('/api/customers', customerRoutes);
+  // Register customer creation endpoint
+  app.post('/api/customers', requireAuth, requireRole(['admin']), createCustomer);
   
   // Register upload routes for logo files
   app.use('/api/upload', uploadRouter);

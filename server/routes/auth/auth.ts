@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { supabase } from './db';
+import { supabase } from '../../db';
 
 // Custom interface to extend Express Request and Session
 declare global {
