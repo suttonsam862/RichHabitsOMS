@@ -31,7 +31,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   useEffect(() => {
     // Close sidebar on route change on mobile
     setSidebarOpen(false);
@@ -94,13 +94,6 @@ export function AppLayout() {
       href: '/manufacturer-assignment',
       icon: UserCheck,
       current: location.pathname === '/manufacturer-assignment',
-      roles: ['admin'],
-    },
-    {
-      name: 'Admin Oversight',
-      href: '/admin/oversight',
-      icon: BarChart,
-      current: location.pathname === '/admin/oversight',
       roles: ['admin'],
     },
     {

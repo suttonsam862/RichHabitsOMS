@@ -37,7 +37,7 @@ import Payments from "@/pages/Payments";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
 import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
-import AdminOversightDashboard from "@/pages/AdminOversightDashboard";
+
 // CustomerList is already imported via CustomerListPage
 import CustomerListPage from "@/pages/admin/CustomerListPage";
 import CustomerDetailsPage from "@/pages/admin/CustomerDetailsPage";
@@ -238,14 +238,7 @@ function App() {
                   } 
                 />
                 
-                <Route 
-                  path="/admin/oversight" 
-                  element={
-                    <RequireAuth allowedRoles={['admin']}>
-                      <AdminOversightDashboard />
-                    </RequireAuth>
-                  } 
-                />
+                
                 
                 <Route 
                   path="/admin/catalog" 
