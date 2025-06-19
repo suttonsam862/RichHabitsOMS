@@ -171,4 +171,13 @@
     border-color: var(--neon-blue);
     outline: none;
   }
+
+  /* Dialog content should not move on hover */
+  [role="dialog"] .glass-panel:hover {
+    transform: none !important;
+  }
+
+  [role="dialog"] .glass-panel::before {
+    display: none !important;
+  }
 }

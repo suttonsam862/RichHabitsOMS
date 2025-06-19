@@ -279,7 +279,7 @@ export default function CustomerListPage() {
 
       {/* View Customer Dialog */}
       <Dialog open={isViewCustomerDialogOpen} onOpenChange={setIsViewCustomerDialogOpen}>
-        <DialogContent className="rich-card max-w-2xl">
+        <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border max-w-2xl" style={{ transform: 'none !important' }}>
           <DialogHeader>
             <DialogTitle className="text-neon-blue flex items-center">
               <Eye className="mr-2 h-5 w-5" />
