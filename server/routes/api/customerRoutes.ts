@@ -102,7 +102,7 @@ export async function createCustomer(req: Request, res: Response) {
     };
     
     // Insert profile into database
-    const { data: profileData, error: profileError } = await supabaseAdmin
+    const { data: insertedProfile, error: profileError } = await supabaseAdmin
       .from('profiles') // Use the actual table name in your Supabase
       .insert(profileData)
       .select();

@@ -133,6 +133,15 @@ Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, s
 
 ## Recent Changes
 
+### Project Refactoring and Organization (June 19, 2025)
+- Consolidated root-level scripts into organized directories (`scripts/admin/`, `scripts/database/`, `scripts/setup/`)
+- Removed duplicate dashboard components and established single source of truth in `client/src/pages/dashboard/`
+- Cleaned up backup files (.bak, .old, .new) and moved to archive directories
+- Organized server route files into logical groupings (`server/routes/api/`, `server/routes/auth/`, `server/routes/admin/`)
+- Archived debugging files from attached_assets to reduce project clutter
+- Created comprehensive scripts documentation and usage guidelines
+- Established redirect components for legacy dashboard paths to maintain routing compatibility
+
 ### Rich Habits Theme Implementation (June 17, 2025)
 - Updated global CSS with blackout glassmorphism foundation
 - Refactored login page and authentication forms with luxury branding

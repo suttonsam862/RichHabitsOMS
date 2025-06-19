@@ -232,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Customer creation request received:', {
       user: req.user?.email,
       body: req.body,
-      sendInvite: req.body.sendInvite
+      shouldSendInvite: req.body.shouldSendInvite
     });
     
     try {
@@ -244,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.body;
       
       // Determine if we should send an invitation email
-      const shouldSendInvite = req.body.sendInvite === true || req.query.sendInvite === 'true';
+      const shouldSendInvite = req.body.shouldSendInvite === true || req.query.shouldSendInvite === 'true';
       
       // Normalize field names
       const customerEmail = email || emailAddress;
@@ -322,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         is_active: true,
-        invitation_status: sendInvite ? 'invited' : 'active'
+        invitation_status: shouldSendInvite ? 'invited' : 'active'
       };
       
       // Add optional fields if they exist
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate invitation URL base
       const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
       
-      if (sendInvite) {
+      if (shouldSendInvite) {
         try {
           // Generate a simple setup token for account creation
           const setupToken = require('crypto').randomBytes(32).toString('hex');
@@ -409,14 +409,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log creation details
-      console.log(`Customer created: ${customerEmail}, Send invite: ${sendInvite}, Invite sent: ${inviteSent}`);
+      console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}, Invite sent: ${inviteSent}`);
       
       // Return success with customer data and accurate email status
       return res.status(201).json({
         success: true,
         message: inviteSent 
           ? 'Customer created and setup email sent successfully!' 
-          : sendInvite 
+          : shouldSendInvite 
             ? 'Customer created but setup email failed to send (SendGrid API key needed)'
             : 'Customer created successfully',
         customer: createdProfile ? createdProfile[0] : { 
@@ -431,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // If sending invite, generate a recovery link through Supabase
-      if (sendInvite) {
+      if (shouldSendInvite) {
         try {
           const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
             type: 'recovery',
@@ -454,7 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log creation details
-      console.log(`Customer created: ${customerEmail}, Send invite: ${sendInvite}`);
+      console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}`);
       console.log(`Source: ${req.get('Referer') || 'Unknown'}, Created by: ${req.user?.id || 'Unknown'}`);
       
       // Store in customer metadata whether this was created via invitation
@@ -463,9 +463,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await supabase.auth.admin.updateUserById(data.user.id, {
           user_metadata: {
             ...data.user.user_metadata,
-            created_via: sendInvite ? 'invitation' : 'direct_creation',
+            created_via: shouldSendInvite ? 'invitation' : 'direct_creation',
             created_by: req.user?.id || null,
-            requires_verification: !sendInvite
+            requires_verification: !shouldSendInvite
           }
         });
       } catch (metaErr) {
@@ -475,7 +475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return success with customer data and appropriate invite information
       return res.status(201).json({
         success: true,
-        message: sendInvite 
+        message: shouldSendInvite 
           ? 'Customer created and invite will be sent' 
           : 'Customer created successfully',
         customer: createdProfile ? createdProfile[0] : { 
@@ -485,8 +485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           last_name: customerLastName
         },
         inviteUrl: inviteUrl,
-        inviteSent: sendInvite,
-        requiresVerification: !sendInvite
+        inviteSent: shouldSendInvite,
+        requiresVerification: !shouldSendInvite
       });
     } catch (err: any) {
       console.error('Error creating customer:', err);
@@ -598,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ success: false, message: 'Insufficient permissions' });
       }
       
-      const { email, username, firstName, lastName, role, permissions, password, sendInvite } = req.body;
+      const { email, username, firstName, lastName, role, permissions, password, shouldSendInvite } = req.body;
       
       // Validate required fields
       if (!email || !username || !role) {
@@ -623,7 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate a random password if not provided and sending invite
-      const userPassword = password || (sendInvite ? Math.random().toString(36).slice(-10) : null);
+      const userPassword = password || (shouldSendInvite ? Math.random().toString(36).slice(-10) : null);
       
       if (!userPassword) {
         return res.status(400).json({
@@ -636,13 +636,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
         email,
         password: userPassword,
-        email_confirm: !sendInvite, // Don't auto-confirm if sending invitation
+        email_confirm: !shouldSendInvite, // Don't auto-confirm if sending invitation
         user_metadata: {
           role,
           first_name: firstName,
           last_name: lastName,
           username,
-          requires_password_reset: sendInvite
+          requires_password_reset: shouldSendInvite
         }
       });
       
@@ -668,8 +668,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           last_login: null,
-          is_active: !sendInvite, // Set to inactive if sending invite
-          invitation_status: sendInvite ? 'pending' : 'completed'
+          is_active: !shouldSendInvite, // Set to inactive if sending invite
+          invitation_status: shouldSendInvite ? 'pending' : 'completed'
         })
         .select()
         .single();
@@ -694,7 +694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             created_by: req.user?.id || 'system',
             created_at: new Date().toISOString(),
             role,
-            invitation_sent: sendInvite
+            invitation_sent: shouldSendInvite
           },
           created_at: new Date().toISOString(),
           ip_address: req.ip || 'unknown'
@@ -706,7 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Send invitation email if requested
-      if (sendInvite) {
+      if (shouldSendInvite) {
         try {
           // Create a setup token
           const { data: setupToken, error: tokenError } = await supabase
@@ -754,7 +754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(201).json({ 
         success: true, 
-        message: sendInvite ? 'User invited successfully' : 'User created successfully',
+        message: shouldSendInvite ? 'User invited successfully' : 'User created successfully',
         user: profile
       });
     } catch (err) {
