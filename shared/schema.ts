@@ -259,6 +259,9 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type CatalogItem = typeof catalogItems.$inferSelect;
 export type InsertCatalogItem = z.infer<typeof insertCatalogItemSchema>;
 
+export type User = typeof userProfiles.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserProfileSchema>;
+
 // Login schema for validation
 export const loginSchema = z.object({
   email: z.string().email(),

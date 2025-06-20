@@ -48,10 +48,10 @@ export async function createCatalogItem(req: Request, res: Response) {
       basePrice,
       sku,
       status = 'active',
-      imageUrl,
+      baseImageUrl,
       tags = [],
       specifications = {}
-    } = req.body as CatalogItem;
+    } = req.body;
 
     console.log('Creating new catalog item:', { name, sku, category });
 

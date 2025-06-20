@@ -9,7 +9,7 @@ import type {
   ProductionTask, InsertProductionTask,
   Message, InsertMessage,
   Payment, InsertPayment
-} from "@shared/schema";
+} from "../shared/schema";
 import { IStorage } from './storage';
 import { hash, compare } from 'bcrypt';
 

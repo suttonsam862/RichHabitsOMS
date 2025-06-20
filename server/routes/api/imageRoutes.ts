@@ -219,7 +219,7 @@ router.delete('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sa
     }
 
     // Extract filename from URL and delete file
-    const filename = extractFilenameFromUrl(orderItem.custom_image_url);
+    const filename = extractFilenameFromUrl(orderItem.custom_image_url as string);
     if (filename) {
       deleteImageFile(filename, 'order-item');
     }
