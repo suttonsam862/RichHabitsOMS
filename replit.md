@@ -133,7 +133,7 @@ Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, s
 
 ## Recent Changes
 
-### Enhanced Catalog Management System (June 20, 2025)
+### Enhanced Catalog Management System with Persistent Storage (June 20, 2025)
 - Removed description field from catalog add item form per user requirements
 - Implemented dynamic category dropdown with "Add Category" option for real-time category management
 - Added sport selection dropdown with "All Around Item" default and "Add Sport" option
@@ -143,6 +143,10 @@ Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, s
 - Created auto-generated SKU system with regenerate functionality using pattern: CATEGORY-NAME-TIMESTAMP-RANDOM
 - Added responsive dialog management for adding new categories and sports
 - Updated schema to support new fields: sport, unitCost, etaDays, preferredManufacturerId
+- Created persistent database storage for categories and sports with dedicated tables (catalog_categories, catalog_sports)
+- Built API endpoints for managing categories and sports: GET/POST /api/catalog-options/categories and /api/catalog-options/sports
+- Implemented database initialization with default categories and sports data
+- Connected frontend to database-driven dropdown options instead of hardcoded arrays
 
 ### Efficient Image Upload System (June 20, 2025)
 - Implemented comprehensive image upload system for catalog items and order line items
