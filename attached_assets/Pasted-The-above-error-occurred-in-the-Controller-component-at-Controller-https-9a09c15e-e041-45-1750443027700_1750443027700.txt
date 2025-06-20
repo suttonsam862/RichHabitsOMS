@@ -1,0 +1,40 @@
+The above error occurred in the <Controller> component:
+
+    at Controller (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-4BFJKWC4.js?v=4649c984:298:35)
+    at FormField (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/ui/form.tsx:33:6)
+    at form
+    at FormProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-4BFJKWC4.js?v=4649c984:102:11)
+    at div
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-D7OHDVF4.js?v=4649c984:42:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DMVO2ZXQ.js?v=4649c984:61:7
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=4649c984:79:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=4649c984:56:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-D7OHDVF4.js?v=4649c984:42:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-UOGLMISE.js?v=4649c984:29:5
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-IGFKPT4C.js?v=4649c984:235:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-IGFKPT4C.js?v=4649c984:158:58
+    at Presence (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LUE5KDWX.js?v=4649c984:24:11)
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-IGFKPT4C.js?v=4649c984:149:64
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=4649c984:79:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=4649c984:56:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-D7OHDVF4.js?v=4649c984:42:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DMVO2ZXQ.js?v=4649c984:260:22
+    at Presence (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LUE5KDWX.js?v=4649c984:24:11)
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=4649c984:38:15)
+    at DialogPortal (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-IGFKPT4C.js?v=4649c984:111:11)
+    at _c3 (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/ui/dialog.tsx:52:12)
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=4649c984:38:15)
+    at Dialog (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-IGFKPT4C.js?v=4649c984:52:5)
+    at div
+    at div
+    at div
+    at CatalogPage (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/pages/admin/CatalogPage.tsx:133:39)
+    at RequireAuth (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/auth/RequireAuth.tsx:20:31)
+    at RenderedRoute (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=4649c984:5449:26)
+    at Outlet (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=4649c984:6116:26)
+    at main
+    at div
+    at div
+    at AppLayout (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/layout/AppLayout.tsx:45:28)
+    at RenderedRoute…
+manufacturers.map is not a function
