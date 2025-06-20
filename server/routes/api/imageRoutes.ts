@@ -15,7 +15,7 @@ const router = Router();
 router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'designer']), handleCatalogImageUpload, async (req: Request, res: Response) => {
   try {
     const { catalogItemId } = req.params;
-    
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -58,15 +58,62 @@ router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'desig
 
   } catch (error) {
     console.error('Error uploading catalog image:', error);
-    
-    // Clean up uploaded file on error
-    if (req.file) {
-      deleteImageFile(req.file.filename, 'catalog');
-    }
-    
     return res.status(500).json({
       success: false,
-      message: 'Internal server error during image upload'
+      message: 'Failed to upload image'
+    });
+  }
+});
+
+// Upload measurement chart for catalog item
+router.post('/catalog/:catalogItemId/measurement', requireAuth, requireRole(['admin', 'designer']), handleCatalogImageUpload, async (req: Request, res: Response) => {
+  try {
+    const { catalogItemId } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No measurement chart file provided'
+      });
+    }
+
+    // Generate image URL
+    const imageUrl = getImageUrl(req.file.filename, 'catalog');
+
+    // Update catalog item with new measurement chart URL
+    const { data: updatedItem, error } = await supabase
+      .from('catalog_items')
+      .update({ 
+        measurement_chart_url: imageUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', catalogItemId)
+      .select()
+      .single();
+
+    if (error) {
+      // Clean up uploaded file if database update fails
+      deleteImageFile(req.file.filename, 'catalog');
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update catalog item with measurement chart'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Measurement chart uploaded successfully',
+      data: {
+        catalogItem: updatedItem,
+        imageUrl: imageUrl,
+        filename: req.file.filename
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading measurement chart:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to upload measurement chart'
     });
   }
 });
@@ -75,7 +122,7 @@ router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'desig
 router.post('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'salesperson', 'designer']), handleOrderItemImageUpload, async (req: Request, res: Response) => {
   try {
     const { orderItemId } = req.params;
-    
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -117,12 +164,12 @@ router.post('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sale
 
   } catch (error) {
     console.error('Error uploading order item image:', error);
-    
+
     // Clean up uploaded file on error
     if (req.file) {
       deleteImageFile(req.file.filename, 'order-item');
     }
-    
+
     return res.status(500).json({
       success: false,
       message: 'Internal server error during image upload'

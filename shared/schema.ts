@@ -110,6 +110,9 @@ export const catalogItems = pgTable('catalog_items', {
   sku: text('sku').notNull().unique(),
   status: text('status').notNull().default('active'), // active, inactive, discontinued
   baseImageUrl: text('base_image_url'), // Base product image
+  measurementChartUrl: text('measurement_chart_url'), // Measurement chart/template image
+  hasMeasurements: boolean('has_measurements').default(false),
+  measurementInstructions: text('measurement_instructions'), // Text instructions for measurements
   etaDays: text('eta_days').notNull().default('7'), // Expected production time in days
   preferredManufacturerId: uuid('preferred_manufacturer_id').references(() => userProfiles.id),
   tags: jsonb('tags').default([]),

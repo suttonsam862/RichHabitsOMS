@@ -95,6 +95,9 @@ const catalogItemSchema = z.object({
   sku: z.string().min(1, "SKU is required"),
   status: z.enum(['active', 'inactive', 'discontinued']).default('active'),
   imageUrl: z.string().url().optional().or(z.literal("")),
+  measurementChartUrl: z.string().url().optional().or(z.literal("")),
+  hasMeasurements: z.boolean().default(false),
+  measurementInstructions: z.string().optional(),
   etaDays: z.string().min(1, "ETA is required"),
   preferredManufacturerId: z.string().optional(),
   tags: z.string().optional(),
@@ -170,6 +173,9 @@ export default function CatalogPage() {
       sku: "",
       status: "active",
       imageUrl: "",
+      measurementChartUrl: "",
+      hasMeasurements: false,
+      measurementInstructions: "",
       etaDays: "7",
       preferredManufacturerId: "",
       tags: "",
@@ -224,8 +230,8 @@ export default function CatalogPage() {
 
   // Add item mutation
   const addItemMutation = useMutation({
-    mutationFn: async (data: CatalogItemForm & { _uploadFile?: File }) => {
-      const { _uploadFile, ...itemData } = data;
+    mutationFn: async (data: CatalogItemForm & { _uploadFile?: File; _uploadMeasurementFile?: File }) => {
+      const { _uploadFile, _uploadMeasurementFile, ...itemData } = data;
       
       const payload = {
         ...itemData,
@@ -248,7 +254,7 @@ export default function CatalogPage() {
       
       const result = await response.json();
       
-      // If there's a file to upload, upload it now
+      // Upload product image if provided
       if (_uploadFile && result.item?.id) {
         const formData = new FormData();
         formData.append('image', _uploadFile);
@@ -259,7 +265,22 @@ export default function CatalogPage() {
         });
         
         if (!uploadResponse.ok) {
-          console.warn("Image upload failed, but item was created successfully");
+          console.warn("Product image upload failed, but item was created successfully");
+        }
+      }
+      
+      // Upload measurement chart if provided
+      if (_uploadMeasurementFile && result.item?.id) {
+        const formData = new FormData();
+        formData.append('image', _uploadMeasurementFile);
+        
+        const uploadResponse = await fetch(`/api/images/catalog/${result.item.id}/measurement`, {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          console.warn("Measurement chart upload failed, but item was created successfully");
         }
       }
       
@@ -269,11 +290,16 @@ export default function CatalogPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
       setIsAddItemDialogOpen(false);
       form.reset();
-      // Clear the file input
+      // Clear the file inputs
       const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
+      const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
       if (fileInput) {
         fileInput.value = '';
         (fileInput as any).selectedFile = null;
+      }
+      if (measurementInput) {
+        measurementInput.value = '';
+        (measurementInput as any).selectedMeasurementFile = null;
       }
       toast({
         title: "Success",
@@ -320,19 +346,23 @@ export default function CatalogPage() {
   };
 
   const onSubmit = async (data: CatalogItemForm) => {
-    // Check if a file was selected
+    // Check if files were selected
     const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
+    const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
     const selectedFile = (fileInput as any)?.selectedFile;
+    const selectedMeasurementFile = (measurementInput as any)?.selectedMeasurementFile;
 
-    if (selectedFile) {
-      // Create item first, then upload image
+    if (selectedFile || selectedMeasurementFile) {
+      // Create item first, then upload files
       addItemMutation.mutate({
         ...data,
-        imageUrl: "", // Clear URL since we're uploading a file
-        _uploadFile: selectedFile // Pass file for later upload
+        imageUrl: selectedFile ? "" : data.imageUrl, // Clear URL if uploading file
+        measurementChartUrl: selectedMeasurementFile ? "" : data.measurementChartUrl,
+        _uploadFile: selectedFile,
+        _uploadMeasurementFile: selectedMeasurementFile
       });
     } else {
-      // Normal submission with URL
+      // Normal submission with URLs
       addItemMutation.mutate(data);
     }
   };
@@ -717,6 +747,103 @@ export default function CatalogPage() {
                     )}
                   />
 
+                  {/* Measurement Section */}
+                  <div className="space-y-4 border-t border-glass-border pt-4">
+                    <h3 className="text-lg font-medium text-neon-blue">Measurement Settings</h3>
+                    
+                    <FormField
+                      control={form.control}
+                      name="hasMeasurements"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border border-glass-border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Requires Measurements</FormLabel>
+                            <FormDescription>
+                              Check this if the item requires custom measurements from customers
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <input
+                              type="checkbox"
+                              checked={field.value}
+                              onChange={field.onChange}
+                              className="accent-neon-blue"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {form.watch("hasMeasurements") && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="measurementChartUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="subtitle text-muted-foreground text-xs">Measurement Chart</FormLabel>
+                              <FormControl>
+                                <div className="space-y-3">
+                                  <Input {...field} className="rich-input" placeholder="Measurement chart URL (optional)" />
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>OR</span>
+                                  </div>
+                                  <div className="border-2 border-dashed border-glass-border rounded-lg p-4 text-center hover:border-neon-blue/50 transition-colors">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      id="measurement-chart-upload"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          field.onChange("");
+                                          (e.target as any).selectedMeasurementFile = file;
+                                        }
+                                      }}
+                                    />
+                                    <label htmlFor="measurement-chart-upload" className="cursor-pointer">
+                                      <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                                      <p className="text-sm text-muted-foreground">
+                                        Upload measurement chart/template
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        PNG, JPG, WebP up to 5MB
+                                      </p>
+                                    </label>
+                                  </div>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="measurementInstructions"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="subtitle text-muted-foreground text-xs">Measurement Instructions</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  {...field} 
+                                  className="rich-input"
+                                  rows={4}
+                                  placeholder="Enter detailed instructions for taking measurements..."
+                                />
+                              </FormControl>
+                              <FormDescription className="subtitle text-muted-foreground text-xs">
+                                Provide clear instructions for customers on how to take measurements
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                  </div>
+
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-4">
                     <Button 
                       type="button" 
@@ -896,94 +1023,6 @@ export default function CatalogPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Add Category Dialog */}
-      <Dialog open={showAddCategory} onOpenChange={setShowAddCategory}>
-        <DialogContent className="rich-card max-w-md">
-          <DialogHeader>
-            <DialogTitle className="rich-heading">Add New Category</DialogTitle>
-            <DialogDescription>
-              Enter a new product category to add to the dropdown list.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="Enter category name"
-              className="rich-input"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  addNewCategory();
-                }
-              }}
-            />
-            <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowAddCategory(false);
-                  setNewCategory("");
-                }}
-                className="btn-secondary"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={addNewCategory}
-                disabled={!newCategory.trim()}
-                className="btn-primary"
-              >
-                Add Category
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Sport Dialog */}
-      <Dialog open={showAddSport} onOpenChange={setShowAddSport}>
-        <DialogContent className="rich-card max-w-md">
-          <DialogHeader>
-            <DialogTitle className="rich-heading">Add New Sport</DialogTitle>
-            <DialogDescription>
-              Enter a new sport to add to the dropdown list.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              value={newSport}
-              onChange={(e) => setNewSport(e.target.value)}
-              placeholder="Enter sport name"
-              className="rich-input"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  addNewSport();
-                }
-              }}
-            />
-            <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowAddSport(false);
-                  setNewSport("");
-                }}
-                className="btn-secondary"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={addNewSport}
-                disabled={!newSport.trim()}
-                className="btn-primary"
-              >
-                Add Sport
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
