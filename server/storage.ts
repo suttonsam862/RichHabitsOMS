@@ -1,5 +1,5 @@
 import { 
-  users, type User, type InsertUser,
+  userProfiles, type UserProfile, type InsertUserProfile,
   customers, type Customer, type InsertCustomer,
   orders, type Order, type InsertOrder,
   orderItems, type OrderItem, type InsertOrderItem,
