@@ -4,7 +4,7 @@ import pgSession from "connect-pg-simple";
 import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { supabase, testSupabaseConnection } from "./db"; // Import from our new db.ts file
+import { supabase, testSupabaseConnection, closeConnections } from "./db";
 import { authenticateRequest } from "./routes/auth/auth"; // Import our new auth middleware
 import crypto from "crypto";
 import path from "path";
@@ -184,13 +184,28 @@ app.use((req, res, next) => {
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
     const port = 5000;
-    server.listen({
+    const httpServer = server.listen({
       port,
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
       log(`serving on port ${port}`);
     });
+
+    // Graceful shutdown for scaling events
+    const shutdown = async (signal: string) => {
+      console.log(`${signal} received, shutting down gracefully`);
+      httpServer.close(() => {
+        console.log('HTTP server closed');
+        closeConnections().then(() => {
+          process.exit(0);
+        });
+      });
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    
   } catch (error) {
     console.error("Failed to start application:", error);
     process.exit(1);

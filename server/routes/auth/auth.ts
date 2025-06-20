@@ -20,6 +20,10 @@ declare global {
 /**
  * Authenticate requests using Supabase Auth
  */
+// Cache for user sessions to reduce DB calls
+const userCache = new Map<string, { user: any; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export const authenticateRequest = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Skip auth middleware for static assets and non-API routes to prevent loops

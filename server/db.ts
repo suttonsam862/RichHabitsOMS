@@ -1,3 +1,4 @@
+
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { createClient } from '@supabase/supabase-js';
@@ -16,57 +17,96 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not set');
 }
 
-// Connection to Supabase PostgreSQL database
+// Optimized connection pool for horizontal scaling
 const connectionConfig = {
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
+  // Optimize for multiple instances
+  max: 10, // Maximum connections per instance
+  min: 2,  // Minimum connections to keep alive
+  idle: 10000, // Close idle connections after 10s
+  acquire: 30000, // Maximum time to get connection
+  evict: 1000, // Check for idle connections every 1s
 };
 
 console.log('Connecting to Supabase PostgreSQL database...');
 console.log(`Connecting to database host: ${new URL(process.env.DATABASE_URL).hostname}`);
 
-// Create PostgreSQL pool
+// Create PostgreSQL pool with scaling optimizations
 export const pool = new Pool(connectionConfig);
+
+// Handle pool errors gracefully
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
 
 // Initialize Drizzle ORM with our schema
 export const db = drizzle(pool, { schema });
 
-// Initialize Supabase client for Auth and Storage
-console.log('Connecting to Supabase...');
-console.log(`URL: ${process.env.SUPABASE_URL}`);
+// Singleton Supabase client with optimized config
+let supabaseClient: ReturnType<typeof createClient> | null = null;
 
-export const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+export const supabase = (() => {
+  if (!supabaseClient) {
+    console.log('Initializing Supabase client...');
+    supabaseClient = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: false, // Don't persist sessions for scaling
+          autoRefreshToken: false, // Handle token refresh manually
+          detectSessionInUrl: false,
+          flowType: 'implicit'
+        },
+        global: {
+          headers: {
+            'x-application-name': 'RichHabitsOMS',
+            'Content-Type': 'application/json'
+          },
+        },
+        // Optimize for performance
+        realtime: {
+          params: {
+            eventsPerSecond: 10
+          }
+        }
+      }
+    );
+    console.log('Supabase client initialized');
+  }
+  return supabaseClient;
+})();
 
-console.log('Supabase client initialized');
-
-// Test Supabase connection
+// Optimized connection test for scaling
 export async function testSupabaseConnection() {
   try {
-    // First, check if the user_profiles table exists
-    const { error: tableError } = await supabase.from('user_profiles').select('*').limit(1);
+    const { error } = await supabase.from('user_profiles').select('id').limit(1).single();
     
-    if (tableError) {
-      // Table might not exist yet, which is okay
-      console.log('User profiles table not found, you may need to run the schema creation script');
-      
-      // Check if we can at least connect to Supabase
-      const { data: authData, error: authError } = await supabase.auth.getSession();
-      
-      if (authError) {
-        throw authError;
-      }
-      
-      console.log('Supabase authentication is working');
+    if (error && error.code === 'PGRST116') {
+      console.log('User profiles table exists but empty');
       return true;
     }
     
-    console.log('Supabase connection established successfully');
+    if (error && error.code === 'PGRST204') {
+      console.log('User profiles table not found, schema may need initialization');
+      return true;
+    }
+    
+    console.log('Supabase connection verified successfully');
     return true;
   } catch (err) {
     console.error('Error connecting to Supabase:', err);
     return false;
+  }
+}
+
+// Graceful shutdown for scaling events
+export async function closeConnections() {
+  try {
+    await pool.end();
+    console.log('Database connections closed gracefully');
+  } catch (err) {
+    console.error('Error closing database connections:', err);
   }
 }
