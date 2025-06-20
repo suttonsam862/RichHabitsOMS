@@ -1,4 +1,10 @@
 import { Request, Response, Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
+import { v4 as uuidv4 } from 'uuid';
+import { db } from '../../db';
+import { activityLogs } from '../../../shared/schema';
 import { supabase } from '../../db';
 import { 
   handleCatalogImageUpload, 

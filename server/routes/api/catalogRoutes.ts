@@ -10,7 +10,7 @@ import { deleteImageFile, extractFilenameFromUrl } from '../../imageUpload';
 export async function getCatalogItems(req: Request, res: Response) {
   try {
     console.log('Fetching catalog items from Supabase...');
-    
+
     const { data: items, error } = await supabase
       .from('catalog_items')
       .select('*')

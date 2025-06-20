@@ -1,4 +1,3 @@
-
 import { Router, Request, Response } from 'express';
 import { testSupabaseConnection } from '../db';
 
@@ -8,7 +7,7 @@ const router = Router();
 router.get('/health', async (req: Request, res: Response) => {
   try {
     const dbConnected = await testSupabaseConnection();
-    
+
     const health = {
       status: 'ok',
       timestamp: new Date().toISOString(),
