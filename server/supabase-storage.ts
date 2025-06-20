@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './db';
 import type {
   User, InsertUser,
   Customer, InsertCustomer,

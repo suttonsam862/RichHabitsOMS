@@ -1,20 +1,8 @@
 import { Request, Response } from 'express';
 import { supabase } from '../../db';
-
-export interface CatalogItem {
-  id?: string;
-  name: string;
-  description?: string;
-  category: string;
-  basePrice: number;
-  sku: string;
-  status: 'active' | 'inactive' | 'discontinued';
-  imageUrl?: string;
-  tags?: string[];
-  specifications?: Record<string, any>;
-  created_at?: string;
-  updated_at?: string;
-}
+import { CatalogItem, InsertCatalogItem } from '../../../shared/schema';
+import { requireAuth, requireRole } from '../auth/auth';
+import { deleteImageFile, extractFilenameFromUrl } from '../../imageUpload';
 
 /**
  * Get all catalog items

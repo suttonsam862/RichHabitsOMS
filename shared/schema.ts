@@ -88,6 +88,7 @@ export const orders = pgTable('orders', {
 export const orderItems = pgTable('order_items', {
   id: uuid('id').primaryKey().defaultRandom(),
   orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  catalogItemId: uuid('catalog_item_id').references(() => catalogItems.id),
   productName: text('product_name').notNull(),
   description: text('description'),
   size: text('size'),
@@ -95,6 +96,23 @@ export const orderItems = pgTable('order_items', {
   quantity: decimal('quantity').notNull().default('1'),
   unitPrice: decimal('unit_price').notNull(),
   totalPrice: decimal('total_price').notNull(),
+  customImageUrl: text('custom_image_url'), // Custom image for this specific order item
+});
+
+// Catalog items table
+export const catalogItems = pgTable('catalog_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  description: text('description'),
+  category: text('category').notNull(),
+  basePrice: decimal('base_price').notNull(),
+  sku: text('sku').notNull().unique(),
+  status: text('status').notNull().default('active'), // active, inactive, discontinued
+  baseImageUrl: text('base_image_url'), // Base product image
+  tags: jsonb('tags').default([]),
+  specifications: jsonb('specifications').default({}),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 // Design tasks
@@ -208,6 +226,7 @@ export const insertDesignFileSchema = createInsertSchema(designFiles).omit({ id:
 export const insertProductionTaskSchema = createInsertSchema(productionTasks).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, readAt: true, emailSent: true });
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCatalogItemSchema = createInsertSchema(catalogItems).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Define types for inserting and selecting
 export type UserProfile = typeof userProfiles.$inferSelect;
@@ -236,6 +255,9 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+export type CatalogItem = typeof catalogItems.$inferSelect;
+export type InsertCatalogItem = z.infer<typeof insertCatalogItemSchema>;
 
 // Login schema for validation
 export const loginSchema = z.object({
