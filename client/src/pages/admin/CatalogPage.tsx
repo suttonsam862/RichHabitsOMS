@@ -71,12 +71,15 @@ import {
 interface CatalogItem {
   id: string;
   name: string;
-  description?: string;
   category: string;
+  sport: string;
   basePrice: number;
+  unitCost: number;
   sku: string;
   status: 'active' | 'inactive' | 'discontinued';
   imageUrl?: string;
+  etaDays: string;
+  preferredManufacturerId?: string;
   tags?: string[];
   specifications?: Record<string, any>;
   created_at?: string;
@@ -85,12 +88,15 @@ interface CatalogItem {
 
 const catalogItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
   category: z.string().min(1, "Category is required"),
+  sport: z.string().min(1, "Sport is required"),
   basePrice: z.number().min(0, "Price must be positive"),
+  unitCost: z.number().min(0, "Unit cost must be positive"),
   sku: z.string().min(1, "SKU is required"),
   status: z.enum(['active', 'inactive', 'discontinued']).default('active'),
   imageUrl: z.string().url().optional().or(z.literal("")),
+  etaDays: z.string().min(1, "ETA is required"),
+  preferredManufacturerId: z.string().optional(),
   tags: z.string().optional(),
   specifications: z.string().optional(),
 });
@@ -114,7 +120,7 @@ const generateSKU = (category: string, name: string): string => {
 
 type CatalogItemForm = z.infer<typeof catalogItemSchema>;
 
-const categories = [
+const initialCategories = [
   "T-Shirts",
   "Hoodies", 
   "Polo Shirts",
@@ -125,10 +131,31 @@ const categories = [
   "Custom",
 ];
 
+const initialSports = [
+  "All Around Item",
+  "Basketball",
+  "Football",
+  "Soccer", 
+  "Baseball",
+  "Tennis",
+  "Golf",
+  "Swimming",
+  "Running",
+  "Cycling",
+  "Volleyball",
+  "Hockey",
+];
+
 export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [categories, setCategories] = useState(initialCategories);
+  const [sports, setSports] = useState(initialSports);
+  const [newCategory, setNewCategory] = useState("");
+  const [newSport, setNewSport] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [showAddSport, setShowAddSport] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -136,12 +163,15 @@ export default function CatalogPage() {
     resolver: zodResolver(catalogItemSchema),
     defaultValues: {
       name: "",
-      description: "",
       category: "",
+      sport: "All Around Item",
       basePrice: 0,
+      unitCost: 0,
       sku: "",
       status: "active",
       imageUrl: "",
+      etaDays: "7",
+      preferredManufacturerId: "",
       tags: "",
       specifications: "",
     },
@@ -175,6 +205,18 @@ export default function CatalogPage() {
       const response = await fetch("/api/catalog");
       if (!response.ok) {
         throw new Error("Failed to fetch catalog items");
+      }
+      return response.json();
+    }
+  });
+
+  // Fetch manufacturers
+  const { data: manufacturers = [] } = useQuery({
+    queryKey: ["admin", "manufacturers"],
+    queryFn: async () => {
+      const response = await fetch("/api/users?role=manufacturer");
+      if (!response.ok) {
+        throw new Error("Failed to fetch manufacturers");
       }
       return response.json();
     }
@@ -362,15 +404,121 @@ export default function CatalogPage() {
                     />
                   </div>
 
+                  {/* Sport Selection with Add Option */}
                   <FormField
                     control={form.control}
-                    name="description"
+                    name="sport"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="subtitle text-muted-foreground text-xs">Description</FormLabel>
+                        <FormLabel className="subtitle text-muted-foreground text-xs">Sport</FormLabel>
+                        <Select value={field.value} onValueChange={(value) => {
+                          if (value === "add-new-sport") {
+                            setShowAddSport(true);
+                          } else {
+                            field.onChange(value);
+                          }
+                        }}>
+                          <FormControl>
+                            <SelectTrigger className="rich-input">
+                              <SelectValue placeholder="Select sport" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {sports.map((sport) => (
+                              <SelectItem key={sport} value={sport}>
+                                {sport}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="add-new-sport" className="text-neon-blue font-medium">
+                              + Add Sport
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Unit Cost Field */}
+                  <FormField
+                    control={form.control}
+                    name="unitCost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="subtitle text-muted-foreground text-xs">Unit Cost</FormLabel>
                         <FormControl>
-                          <Textarea {...field} className="rich-input" placeholder="Enter product description" />
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              type="number"
+                              step="0.01"
+                              className="rich-input pl-8" 
+                              placeholder="0.00"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            />
+                            <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                              <span className="text-neon-green text-sm">$</span>
+                            </div>
+                          </div>
                         </FormControl>
+                        <FormDescription className="subtitle text-muted-foreground text-xs">
+                          Cost for profit/loss calculations
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* ETA Field */}
+                  <FormField
+                    control={form.control}
+                    name="etaDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="subtitle text-muted-foreground text-xs">ETA (Days)</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              type="number"
+                              className="rich-input pr-12" 
+                              placeholder="7"
+                            />
+                            <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                              <span className="text-muted-foreground text-xs">days</span>
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormDescription className="subtitle text-muted-foreground text-xs">
+                          Expected production time
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Preferred Manufacturer */}
+                  <FormField
+                    control={form.control}
+                    name="preferredManufacturerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="subtitle text-muted-foreground text-xs">Preferred Manufacturer</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="rich-input">
+                              <SelectValue placeholder="Select manufacturer (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">No preference</SelectItem>
+                            {manufacturers.map((manufacturer: any) => (
+                              <SelectItem key={manufacturer.id} value={manufacturer.id}>
+                                {manufacturer.firstName} {manufacturer.lastName} - {manufacturer.company || 'No Company'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
