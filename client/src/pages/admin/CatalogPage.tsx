@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { 
   Card, 
@@ -95,6 +95,23 @@ const catalogItemSchema = z.object({
   specifications: z.string().optional(),
 });
 
+// Auto-generate unique SKU with improved pattern
+const generateSKU = (category: string, name: string): string => {
+  // Get category prefix (first 2-3 letters)
+  const categoryPrefix = category.replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
+  
+  // Get name prefix (first 2-3 letters)
+  const namePrefix = name.replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase() || 'ITM';
+  
+  // Generate sequential number based on timestamp
+  const timestamp = Date.now().toString().slice(-6);
+  
+  // Generate random alphanumeric suffix (shorter for readability)
+  const randomSuffix = Math.random().toString(36).substring(2, 5).toUpperCase();
+  
+  return `${categoryPrefix}-${namePrefix}-${timestamp}-${randomSuffix}`;
+};
+
 type CatalogItemForm = z.infer<typeof catalogItemSchema>;
 
 const categories = [
@@ -129,6 +146,27 @@ export default function CatalogPage() {
       specifications: "",
     },
   });
+
+  // Auto-generate SKU when name and category change
+  const watchedName = form.watch("name");
+  const watchedCategory = form.watch("category");
+
+  useEffect(() => {
+    if (watchedName && watchedCategory) {
+      const autoSKU = generateSKU(watchedCategory, watchedName);
+      form.setValue("sku", autoSKU);
+    }
+  }, [watchedName, watchedCategory, form]);
+
+  // Function to manually regenerate SKU
+  const regenerateSKU = () => {
+    const name = form.getValues("name");
+    const category = form.getValues("category");
+    if (name && category) {
+      const newSKU = generateSKU(category, name);
+      form.setValue("sku", newSKU);
+    }
+  };
 
   // Fetch catalog items
   const { data: catalogItems, isLoading, isError, refetch } = useQuery({
@@ -249,10 +287,25 @@ export default function CatalogPage() {
                       name="sku"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="subtitle text-muted-foreground text-xs">SKU</FormLabel>
+                          <FormLabel className="subtitle text-muted-foreground text-xs">
+                            SKU (Auto-generated)
+                          </FormLabel>
                           <FormControl>
-                            <Input {...field} className="rich-input" placeholder="Enter SKU" />
+                            <div className="relative">
+                              <Input 
+                                {...field} 
+                                className="rich-input bg-muted/20" 
+                                placeholder="Auto-generated when name and category are filled"
+                                readOnly
+                              />
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                                <Package className="h-4 w-4 text-neon-green" />
+                              </div>
+                            </div>
                           </FormControl>
+                          <FormDescription className="subtitle text-muted-foreground text-xs">
+                            SKU is automatically generated based on category and product name
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
