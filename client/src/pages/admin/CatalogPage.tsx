@@ -228,6 +228,32 @@ export default function CatalogPage() {
     }
   });
 
+  // Fetch categories from database
+  const { data: dbCategories = [], refetch: refetchCategories } = useQuery({
+    queryKey: ["admin", "catalog-categories"],
+    queryFn: async () => {
+      const response = await fetch("/api/catalog-options/categories");
+      if (!response.ok) {
+        throw new Error("Failed to fetch categories");
+      }
+      const result = await response.json();
+      return result.categories || [];
+    }
+  });
+
+  // Fetch sports from database
+  const { data: dbSports = [], refetch: refetchSports } = useQuery({
+    queryKey: ["admin", "catalog-sports"],
+    queryFn: async () => {
+      const response = await fetch("/api/catalog-options/sports");
+      if (!response.ok) {
+        throw new Error("Failed to fetch sports");
+      }
+      const result = await response.json();
+      return result.sports || [];
+    }
+  });
+
   // Add item mutation
   const addItemMutation = useMutation({
     mutationFn: async (data: CatalogItemForm & { _uploadFile?: File; _uploadMeasurementFile?: File }) => {
@@ -315,11 +341,33 @@ export default function CatalogPage() {
     },
   });
 
-  // Add new category handler
-  const addNewCategory = () => {
-    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      const updatedCategories = [...categories, newCategory.trim()];
-      setCategories(updatedCategories);
+  // Combine database categories with local state as fallback
+  const allCategories = dbCategories.length > 0 ? dbCategories.map(cat => cat.name) : categories;
+  
+  // Combine database sports with local state as fallback
+  const allSports = dbSports.length > 0 ? dbSports.map(sport => sport.name) : sports;
+
+  // Add new category handler with database persistence
+  const addNewCategory = async () => {
+    if (!newCategory.trim()) return;
+    
+    try {
+      const response = await fetch("/api/catalog-options/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newCategory.trim() }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to add category");
+      }
+
+      // Refresh categories from database
+      await refetchCategories();
+      
       form.setValue("category", newCategory.trim());
       setNewCategory("");
       setShowAddCategory(false);
@@ -327,20 +375,50 @@ export default function CatalogPage() {
         title: "Success",
         description: `Category "${newCategory.trim()}" added successfully`,
       });
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add category",
+        variant: "destructive",
+      });
     }
   };
 
-  // Add new sport handler
-  const addNewSport = () => {
-    if (newSport.trim() && !sports.includes(newSport.trim())) {
-      const updatedSports = [...sports, newSport.trim()];
-      setSports(updatedSports);
+  // Add new sport handler with database persistence
+  const addNewSport = async () => {
+    if (!newSport.trim()) return;
+    
+    try {
+      const response = await fetch("/api/catalog-options/sports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newSport.trim() }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to add sport");
+      }
+
+      // Refresh sports from database
+      await refetchSports();
+      
       form.setValue("sport", newSport.trim());
       setNewSport("");
       setShowAddSport(false);
       toast({
         title: "Success",
         description: `Sport "${newSport.trim()}" added successfully`,
+      });
+    } catch (error) {
+      console.error("Error adding sport:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add sport",
+        variant: "destructive",
       });
     }
   };
@@ -490,7 +568,7 @@ export default function CatalogPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {sports.map((sport) => (
+                            {allSports.map((sport) => (
                               <SelectItem key={sport} value={sport}>
                                 {sport}
                               </SelectItem>
@@ -610,7 +688,7 @@ export default function CatalogPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rich-card">
-                              {categories.map((category) => (
+                              {allCategories.map((category) => (
                                 <SelectItem key={category} value={category}>{category}</SelectItem>
                               ))}
                               <SelectItem value="add-new-category" className="text-neon-blue font-medium">

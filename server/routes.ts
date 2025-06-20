@@ -2220,5 +2220,8 @@ The ThreadCraft Team`,
   // Image upload routes
   app.use('/api/images', authenticateRequest, imageRoutes);
 
+  // Catalog options routes (categories and sports)
+  app.use('/api/catalog-options', authenticateRequest, catalogOptionsRoutes);
+
   return httpServer;
 }
