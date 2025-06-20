@@ -162,6 +162,8 @@ router.delete('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'des
       deleteImageFile(filename, 'catalog');
     }
 
+export default router;
+
     // Update catalog item to remove image URL
     const { error: updateError } = await supabase
       .from('catalog_items')

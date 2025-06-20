@@ -182,13 +182,16 @@ export default function CatalogPage() {
 
   // Add item mutation
   const addItemMutation = useMutation({
-    mutationFn: async (data: CatalogItemForm) => {
+    mutationFn: async (data: CatalogItemForm & { _uploadFile?: File }) => {
+      const { _uploadFile, ...itemData } = data;
+      
       const payload = {
-        ...data,
-        tags: data.tags ? data.tags.split(",").map(tag => tag.trim()) : [],
-        specifications: data.specifications ? JSON.parse(data.specifications) : {},
+        ...itemData,
+        tags: itemData.tags ? itemData.tags.split(",").map(tag => tag.trim()) : [],
+        specifications: itemData.specifications ? JSON.parse(itemData.specifications) : {},
       };
       
+      // Create the catalog item first
       const response = await fetch("/api/catalog", {
         method: "POST",
         headers: {
@@ -201,12 +204,35 @@ export default function CatalogPage() {
         throw new Error("Failed to add catalog item");
       }
       
-      return response.json();
+      const result = await response.json();
+      
+      // If there's a file to upload, upload it now
+      if (_uploadFile && result.item?.id) {
+        const formData = new FormData();
+        formData.append('image', _uploadFile);
+        
+        const uploadResponse = await fetch(`/api/images/catalog/${result.item.id}`, {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          console.warn("Image upload failed, but item was created successfully");
+        }
+      }
+      
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
       setIsAddItemDialogOpen(false);
       form.reset();
+      // Clear the file input
+      const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+        (fileInput as any).selectedFile = null;
+      }
       toast({
         title: "Success",
         description: "Catalog item added successfully",
@@ -221,8 +247,22 @@ export default function CatalogPage() {
     },
   });
 
-  const onSubmit = (data: CatalogItemForm) => {
-    addItemMutation.mutate(data);
+  const onSubmit = async (data: CatalogItemForm) => {
+    // Check if a file was selected
+    const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
+    const selectedFile = (fileInput as any)?.selectedFile;
+
+    if (selectedFile) {
+      // Create item first, then upload image
+      addItemMutation.mutate({
+        ...data,
+        imageUrl: "", // Clear URL since we're uploading a file
+        _uploadFile: selectedFile // Pass file for later upload
+      });
+    } else {
+      // Normal submission with URL
+      addItemMutation.mutate(data);
+    }
   };
 
   // Filter items
@@ -411,9 +451,40 @@ export default function CatalogPage() {
                       name="imageUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="subtitle text-muted-foreground text-xs">Image URL</FormLabel>
+                          <FormLabel className="subtitle text-muted-foreground text-xs">Product Image</FormLabel>
                           <FormControl>
-                            <Input {...field} className="rich-input" placeholder="https://..." />
+                            <div className="space-y-3">
+                              <Input {...field} className="rich-input" placeholder="Image URL (optional)" />
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>OR</span>
+                              </div>
+                              <div className="border-2 border-dashed border-glass-border rounded-lg p-4 text-center hover:border-neon-blue/50 transition-colors">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  id="catalog-image-upload"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      // Clear URL field if file is selected
+                                      field.onChange("");
+                                      // Store file for upload after item creation
+                                      (e.target as any).selectedFile = file;
+                                    }
+                                  }}
+                                />
+                                <label htmlFor="catalog-image-upload" className="cursor-pointer">
+                                  <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                                  <p className="text-sm text-muted-foreground">
+                                    Click to upload an image file
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    PNG, JPG, WebP up to 5MB
+                                  </p>
+                                </label>
+                              </div>
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

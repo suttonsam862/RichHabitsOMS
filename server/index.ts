@@ -38,7 +38,7 @@ let pgStoreEnabled = false;
 const canConnectToPg = (() => {
   try {
     if (!process.env.DATABASE_URL) return false;
-    
+
     // Parse the URL to check if it's a valid PostgreSQL URL
     const dbUrl = new URL(process.env.DATABASE_URL);
     return dbUrl.protocol === 'postgres:' || dbUrl.protocol === 'postgresql:';
@@ -144,19 +144,33 @@ app.use((req, res, next) => {
     // Verify Supabase connection
     console.log("Checking database initialization state with Supabase client...");
     const connected = await testSupabaseConnection();
-    
+
     if (!connected) {
       console.warn("Supabase connection failed. Please check your environment variables and database setup.");
       console.log("Will continue and retry connection as needed");
     } else {
       console.log("Supabase connection verified successfully");
     }
-    
+
     // Add authentication middleware before API routes
     app.use('/api', authenticateRequest);
-    
+
     // Register API routes first
     const server = await registerRoutes(app);
+
+    // Import route handlers
+import authRoutes from './routes/auth/auth';
+import customerRoutes from './routes/api/customerRoutes';
+import catalogRoutes from './routes/api/catalogRoutes';
+import imageRoutes from './routes/api/imageRoutes';
+import healthRoutes from './routes/health';
+
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/catalog', catalogRoutes);
+app.use('/api/images', imageRoutes);
+app.use('/api/health', healthRoutes);
 
     // Error handling middleware for API routes
     app.use("/api", (err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -172,9 +186,13 @@ app.use((req, res, next) => {
     } else {
       serveStatic(app);
     }
-    
+
     app.use(express.static(path.resolve(__dirname, "../client/dist")));
-    
+    // Serve static files
+app.use(express.static('client/dist'));
+app.use('/uploads', express.static('uploads')); // Serve uploaded images
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
     // Catch-all route should be last
     app.get("*", (req, res) => {
       res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
@@ -205,7 +223,7 @@ app.use((req, res, next) => {
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
-    
+
   } catch (error) {
     console.error("Failed to start application:", error);
     process.exit(1);
