@@ -79,12 +79,18 @@ export async function createCatalogItem(req: Request, res: Response) {
 
     const newItem = {
       name,
-      description: description || null,
       category,
+      sport: req.body.sport || 'All Around Item',
       base_price: Number(basePrice),
+      unit_cost: Number(req.body.unitCost || 0),
       sku,
       status,
       base_image_url: baseImageUrl || null,
+      measurement_chart_url: req.body.measurementChartUrl || null,
+      has_measurements: Boolean(req.body.hasMeasurements),
+      measurement_instructions: req.body.measurementInstructions || null,
+      eta_days: req.body.etaDays || '7',
+      preferred_manufacturer_id: req.body.preferredManufacturerId || null,
       tags: tags || [],
       specifications: specifications || {}
     };

@@ -217,16 +217,38 @@ export default function CatalogPage() {
   });
 
   // Fetch manufacturers
-  const { data: manufacturers = [] } = useQuery({
+  const { data: manufacturersData, isError: manufacturersError } = useQuery({
     queryKey: ["admin", "manufacturers"],
     queryFn: async () => {
       const response = await fetch("/api/users?role=manufacturer");
       if (!response.ok) {
         throw new Error("Failed to fetch manufacturers");
       }
-      return response.json();
-    }
+      const result = await response.json();
+      return result;
+    },
+    retry: 1,
+    staleTime: 5 * 60 * 1000 // 5 minutes
   });
+
+  // Safe fallback for manufacturers data
+  const manufacturers = React.useMemo(() => {
+    if (manufacturersError || !manufacturersData) {
+      console.warn('Manufacturers data not available:', manufacturersError);
+      return [];
+    }
+    
+    // Handle both array response and object with users property
+    if (Array.isArray(manufacturersData)) {
+      return manufacturersData;
+    }
+    
+    if (manufacturersData.users && Array.isArray(manufacturersData.users)) {
+      return manufacturersData.users;
+    }
+    
+    return [];
+  }, [manufacturersData, manufacturersError]);
 
   // Fetch categories from database
   const { data: dbCategories = [], refetch: refetchCategories } = useQuery({
