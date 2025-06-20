@@ -24,6 +24,7 @@ import {
   getCatalogItem
 } from './routes/api/catalogRoutes';
 import imageRoutes from './routes/api/imageRoutes';
+import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import { createClient } from '@supabase/supabase-js';
 
 // Create Supabase admin client with service key for admin operations
