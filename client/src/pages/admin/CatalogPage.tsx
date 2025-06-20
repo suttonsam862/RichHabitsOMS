@@ -352,18 +352,24 @@ export default function CatalogPage() {
     const selectedFile = (fileInput as any)?.selectedFile;
     const selectedMeasurementFile = (measurementInput as any)?.selectedMeasurementFile;
 
+    // Convert 'none' back to empty string for manufacturer preference
+    const processedData = {
+      ...data,
+      preferredManufacturerId: data.preferredManufacturerId === 'none' ? '' : data.preferredManufacturerId
+    };
+
     if (selectedFile || selectedMeasurementFile) {
       // Create item first, then upload files
       addItemMutation.mutate({
-        ...data,
-        imageUrl: selectedFile ? "" : data.imageUrl, // Clear URL if uploading file
-        measurementChartUrl: selectedMeasurementFile ? "" : data.measurementChartUrl,
+        ...processedData,
+        imageUrl: selectedFile ? "" : processedData.imageUrl, // Clear URL if uploading file
+        measurementChartUrl: selectedMeasurementFile ? "" : processedData.measurementChartUrl,
         _uploadFile: selectedFile,
         _uploadMeasurementFile: selectedMeasurementFile
       });
     } else {
       // Normal submission with URLs
-      addItemMutation.mutate(data);
+      addItemMutation.mutate(processedData);
     }
   };
 
@@ -571,7 +577,7 @@ export default function CatalogPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No preference</SelectItem>
+                            <SelectItem value="none">No preference</SelectItem>
                             {manufacturers.map((manufacturer: any) => (
                               <SelectItem key={manufacturer.id} value={manufacturer.id}>
                                 {manufacturer.firstName} {manufacturer.lastName} - {manufacturer.company || 'No Company'}
