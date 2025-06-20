@@ -2216,5 +2216,8 @@ The ThreadCraft Team`,
   app.put('/api/catalog/:id', authenticateRequest, requireAuth, requireRole(['admin']), updateCatalogItem);
   app.delete('/api/catalog/:id', authenticateRequest, requireAuth, requireRole(['admin']), deleteCatalogItem);
 
+  // Image upload routes
+  app.use('/api/images', authenticateRequest, imageRoutes);
+
   return httpServer;
 }

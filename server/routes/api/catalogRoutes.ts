@@ -84,7 +84,7 @@ export async function createCatalogItem(req: Request, res: Response) {
       base_price: Number(basePrice),
       sku,
       status,
-      image_url: imageUrl || null,
+      base_image_url: baseImageUrl || null,
       tags: tags || [],
       specifications: specifications || {}
     };
