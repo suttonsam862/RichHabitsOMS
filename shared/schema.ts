@@ -103,12 +103,15 @@ export const orderItems = pgTable('order_items', {
 export const catalogItems = pgTable('catalog_items', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
-  description: text('description'),
   category: text('category').notNull(),
+  sport: text('sport').notNull().default('All Around Item'),
   basePrice: decimal('base_price').notNull(),
+  unitCost: decimal('unit_cost').notNull().default('0'),
   sku: text('sku').notNull().unique(),
   status: text('status').notNull().default('active'), // active, inactive, discontinued
   baseImageUrl: text('base_image_url'), // Base product image
+  etaDays: text('eta_days').notNull().default('7'), // Expected production time in days
+  preferredManufacturerId: uuid('preferred_manufacturer_id').references(() => userProfiles.id),
   tags: jsonb('tags').default([]),
   specifications: jsonb('specifications').default({}),
   createdAt: timestamp('created_at').defaultNow(),

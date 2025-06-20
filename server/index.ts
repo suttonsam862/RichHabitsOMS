@@ -158,20 +158,6 @@ app.use((req, res, next) => {
     // Register API routes first
     const server = await registerRoutes(app);
 
-    // Import route handlers
-import authRoutes from './routes/auth/auth';
-import customerRoutes from './routes/api/customerRoutes';
-import catalogRoutes from './routes/api/catalogRoutes';
-import imageRoutes from './routes/api/imageRoutes';
-import healthRoutes from './routes/health';
-
-// Mount routes
-app.use('/api/auth', authRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/catalog', catalogRoutes);
-app.use('/api/images', imageRoutes);
-app.use('/api/health', healthRoutes);
-
     // Error handling middleware for API routes
     app.use("/api", (err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -191,7 +177,7 @@ app.use('/api/health', healthRoutes);
     // Serve static files
 app.use(express.static('client/dist'));
 app.use('/uploads', express.static('uploads')); // Serve uploaded images
-    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    // API documentation route (swagger disabled for now)
 
     // Catch-all route should be last
     app.get("*", (req, res) => {
