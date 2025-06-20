@@ -294,11 +294,21 @@ export default function CatalogPage() {
                             <div className="relative">
                               <Input 
                                 {...field} 
-                                className="rich-input bg-muted/20" 
+                                className="rich-input bg-muted/20 pr-16" 
                                 placeholder="Auto-generated when name and category are filled"
                                 readOnly
                               />
-                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:bg-neon-blue/20"
+                                  onClick={regenerateSKU}
+                                  disabled={!watchedName || !watchedCategory}
+                                >
+                                  <RefreshCw className="h-3 w-3 text-neon-blue" />
+                                </Button>
                                 <Package className="h-4 w-4 text-neon-green" />
                               </div>
                             </div>
