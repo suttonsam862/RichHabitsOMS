@@ -222,6 +222,22 @@ export const userSettings = pgTable('user_settings', {
   preferences: jsonb('preferences').default({}),
 });
 
+// Catalog categories
+export const catalogCategories = pgTable('catalog_categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Catalog sports
+export const catalogSports = pgTable('catalog_sports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // Create insert schemas
 export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({ createdAt: true, stripeCustomerId: true });
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, createdAt: true });
@@ -233,6 +249,8 @@ export const insertProductionTaskSchema = createInsertSchema(productionTasks).om
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, readAt: true, emailSent: true });
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCatalogItemSchema = createInsertSchema(catalogItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCatalogCategorySchema = createInsertSchema(catalogCategories).omit({ id: true, createdAt: true });
+export const insertCatalogSportSchema = createInsertSchema(catalogSports).omit({ id: true, createdAt: true });
 
 // Define types for inserting and selecting
 export type UserProfile = typeof userProfiles.$inferSelect;
@@ -264,6 +282,12 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
 export type CatalogItem = typeof catalogItems.$inferSelect;
 export type InsertCatalogItem = z.infer<typeof insertCatalogItemSchema>;
+
+export type CatalogCategory = typeof catalogCategories.$inferSelect;
+export type InsertCatalogCategory = z.infer<typeof insertCatalogCategorySchema>;
+
+export type CatalogSport = typeof catalogSports.$inferSelect;
+export type InsertCatalogSport = z.infer<typeof insertCatalogSportSchema>;
 
 export type User = typeof userProfiles.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserProfileSchema>;
