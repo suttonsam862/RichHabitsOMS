@@ -824,11 +824,9 @@ export default function CatalogPage() {
                           )}
                           <div>
                             <div className="font-medium text-foreground">{item.name}</div>
-                            {item.description && (
-                              <div className="text-xs text-muted-foreground truncate max-w-xs">
-                                {item.description}
-                              </div>
-                            )}
+                            <div className="text-xs text-muted-foreground">
+                              {item.sport} • ETA: {item.etaDays} days
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -898,6 +896,94 @@ export default function CatalogPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Category Dialog */}
+      <Dialog open={showAddCategory} onOpenChange={setShowAddCategory}>
+        <DialogContent className="rich-card max-w-md">
+          <DialogHeader>
+            <DialogTitle className="rich-heading">Add New Category</DialogTitle>
+            <DialogDescription>
+              Enter a new product category to add to the dropdown list.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              placeholder="Enter category name"
+              className="rich-input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  addNewCategory();
+                }
+              }}
+            />
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowAddCategory(false);
+                  setNewCategory("");
+                }}
+                className="btn-secondary"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={addNewCategory}
+                disabled={!newCategory.trim()}
+                className="btn-primary"
+              >
+                Add Category
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Sport Dialog */}
+      <Dialog open={showAddSport} onOpenChange={setShowAddSport}>
+        <DialogContent className="rich-card max-w-md">
+          <DialogHeader>
+            <DialogTitle className="rich-heading">Add New Sport</DialogTitle>
+            <DialogDescription>
+              Enter a new sport to add to the dropdown list.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={newSport}
+              onChange={(e) => setNewSport(e.target.value)}
+              placeholder="Enter sport name"
+              className="rich-input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  addNewSport();
+                }
+              }}
+            />
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowAddSport(false);
+                  setNewSport("");
+                }}
+                className="btn-secondary"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={addNewSport}
+                disabled={!newSport.trim()}
+                className="btn-primary"
+              >
+                Add Sport
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
