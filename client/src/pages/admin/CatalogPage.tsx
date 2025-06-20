@@ -289,6 +289,36 @@ export default function CatalogPage() {
     },
   });
 
+  // Add new category handler
+  const addNewCategory = () => {
+    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
+      const updatedCategories = [...categories, newCategory.trim()];
+      setCategories(updatedCategories);
+      form.setValue("category", newCategory.trim());
+      setNewCategory("");
+      setShowAddCategory(false);
+      toast({
+        title: "Success",
+        description: `Category "${newCategory.trim()}" added successfully`,
+      });
+    }
+  };
+
+  // Add new sport handler
+  const addNewSport = () => {
+    if (newSport.trim() && !sports.includes(newSport.trim())) {
+      const updatedSports = [...sports, newSport.trim()];
+      setSports(updatedSports);
+      form.setValue("sport", newSport.trim());
+      setNewSport("");
+      setShowAddSport(false);
+      toast({
+        title: "Success",
+        description: `Sport "${newSport.trim()}" added successfully`,
+      });
+    }
+  };
+
   const onSubmit = async (data: CatalogItemForm) => {
     // Check if a file was selected
     const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
@@ -531,7 +561,13 @@ export default function CatalogPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="subtitle text-muted-foreground text-xs">Category</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select value={field.value} onValueChange={(value) => {
+                            if (value === "add-new-category") {
+                              setShowAddCategory(true);
+                            } else {
+                              field.onChange(value);
+                            }
+                          }}>
                             <FormControl>
                               <SelectTrigger className="rich-input">
                                 <SelectValue placeholder="Select category" />
@@ -541,6 +577,9 @@ export default function CatalogPage() {
                               {categories.map((category) => (
                                 <SelectItem key={category} value={category}>{category}</SelectItem>
                               ))}
+                              <SelectItem value="add-new-category" className="text-neon-blue font-medium">
+                                + Add Category
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
