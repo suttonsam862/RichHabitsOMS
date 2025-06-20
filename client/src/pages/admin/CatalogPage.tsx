@@ -216,7 +216,7 @@ export default function CatalogPage() {
                 Add Item
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border max-w-2xl">
+            <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw]">
               <DialogHeader>
                 <DialogTitle className="text-neon-blue flex items-center">
                   <Package className="mr-2 h-5 w-5" />
@@ -228,8 +228,8 @@ export default function CatalogPage() {
               </DialogHeader>
               
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <FormField
                       control={form.control}
                       name="name"
@@ -319,7 +319,7 @@ export default function CatalogPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <FormField
                       control={form.control}
                       name="status"
@@ -396,7 +396,7 @@ export default function CatalogPage() {
                     )}
                   />
 
-                  <div className="flex justify-end space-x-4">
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-4">
                     <Button 
                       type="button" 
                       variant="outline" 

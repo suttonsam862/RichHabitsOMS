@@ -180,4 +180,57 @@
   [role="dialog"] .glass-panel::before {
     display: none !important;
   }
+
+  /* Responsive Dialog Auto-Resizing */
+  [data-radix-dialog-content] {
+    @apply max-h-[95vh] w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw] xl:w-[60vw];
+    @apply overflow-y-auto overflow-x-hidden;
+    @apply mx-auto my-4 sm:my-8;
+    max-width: min(90vw, 800px);
+  }
+
+  /* Ensure dialog forms are responsive */
+  [data-radix-dialog-content] form {
+    @apply space-y-3 sm:space-y-4;
+    @apply p-1 sm:p-2;
+  }
+
+  /* Mobile-first dialog sizing */
+  @media (max-width: 640px) {
+    [data-radix-dialog-content] {
+      @apply w-[98vw] max-h-[90vh] m-1;
+    }
+    
+    [data-radix-dialog-content] .grid {
+      @apply grid-cols-1 gap-3;
+    }
+    
+    [data-radix-dialog-content] .flex {
+      @apply flex-col gap-2;
+    }
+  }
+
+  /* Tablet and larger screens */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    [data-radix-dialog-content] {
+      @apply w-[85vw] max-h-[88vh];
+      max-width: 700px;
+    }
+  }
+
+  /* Desktop screens */
+  @media (min-width: 1025px) {
+    [data-radix-dialog-content] {
+      @apply w-[70vw] max-h-[85vh];
+      max-width: 800px;
+    }
+  }
+
+  /* Large desktop screens */
+  @media (min-width: 1280px) {
+    [data-radix-dialog-content] {
+      @apply w-[60vw] max-h-[80vh];
+      max-width: 900px;
+    }
+  }
 }
