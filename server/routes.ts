@@ -1987,7 +1987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`Found ${customers?.length || 0} customers in database`);
+      console.log('Found', customers?.length || 0, 'customers in database');
 
       // Get all authenticated users from Supabase Auth
       const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
@@ -1997,7 +1997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue even if auth fails - we still want to show customer data
       }
 
-      console.log(`Found ${authUsers?.users?.length || 0} auth accounts`);
+      console.log('Found', authUsers?.users?.length || 0, 'auth accounts');
 
       // Create comprehensive user database view
       const userDatabase = [];
@@ -2099,8 +2099,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         staffUsers: userDatabase.filter(u => !['customer', 'admin'].includes(u.role)).length
       };
 
-      console.log(`Compiled user database: ${userDatabase.length} total users`);
-      console.log(`Analytics:`, analytics);
+      console.log('Compiled user database:', userDatabase.length, 'total users');
+      console.log('Analytics:', analytics);
 
       return res.status(200).json({
         success: true,
@@ -2166,11 +2166,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`✅ Auth account created for customer: ${customer.email}`);
+      console.log('Auth account created for customer:', customer.email);
 
       return res.status(201).json({
         success: true,
-        message: `Auth account created successfully for ${customer.firstName} ${customer.lastName}`,
+        message: 'Auth account created successfully for ' + customer.firstName + ' ' + customer.lastName,
         user: {
           id: data.user?.id,
           email: customer.email,
@@ -2203,7 +2203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`Updating user ${userId} with data:`, { email, firstName, lastName, role, phone, company });
+      console.log('Updating user', userId, 'with data:', { email, firstName, lastName, role, phone, company });
 
       // Update auth user metadata
       const updateData: any = {
@@ -2255,7 +2255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log(`✅ User ${userId} updated successfully`);
+      console.log('User', userId, 'updated successfully');
 
       return res.status(200).json({
         success: true,
