@@ -26,19 +26,28 @@ export default function Register() {
   useEffect(() => {
     const inviteToken = searchParams.get('invite');
     if (inviteToken) {
-      try {
-        const decodedData = JSON.parse(Buffer.from(inviteToken, 'base64url').toString());
-        
-        // Check if invitation has expired
-        if (decodedData.expires && Date.now() > decodedData.expires) {
-          setInvitationError('This invitation has expired. Please contact your administrator for a new invitation.');
-          return;
-        }
-        
-        setInvitationData(decodedData);
-      } catch (error) {
-        setInvitationError('Invalid invitation link. Please check the URL or contact your administrator.');
-      }
+      // Verify invitation with server
+      fetch(`/api/invitations/verify/${inviteToken}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            setInvitationData({
+              email: data.invitation.email,
+              firstName: data.invitation.firstName,
+              lastName: data.invitation.lastName,
+              role: data.invitation.role,
+              expires: new Date(data.invitation.expiresAt).getTime(),
+              timestamp: Date.now(),
+              token: inviteToken
+            });
+          } else {
+            setInvitationError(data.message || 'Invalid invitation link.');
+          }
+        })
+        .catch(error => {
+          console.error('Error verifying invitation:', error);
+          setInvitationError('Failed to verify invitation. Please check your connection and try again.');
+        });
     }
   }, [searchParams]);
 

@@ -61,19 +61,19 @@ export function getCustomerInviteEmailTemplate(
   email: string,
   firstName: string,
   lastName: string,
-  setupToken: string
+  invitationToken: string
 ): EmailOptions {
-  const subject = '🎉 Welcome to Custom Clothing - Complete Your Account Setup';
-  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
-  const setupUrl = `${baseUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
+  const subject = '🎉 Welcome to ThreadCraft - Complete Your Account Setup';
+  const baseUrl = process.env.BASE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}` || 'http://localhost:5000';
+  const registerUrl = `${baseUrl}/register?invite=${invitationToken}`;
   
   const text = `
 Hello ${firstName} ${lastName},
 
-Welcome to Custom Clothing! You've been invited to join our custom clothing management platform.
+Welcome to ThreadCraft! You've been invited to join our custom clothing management platform.
 
 To complete your account setup and create your password, please visit:
-${setupUrl}
+${registerUrl}
 
 This secure link will allow you to:
 • Set your account password
@@ -86,7 +86,7 @@ IMPORTANT: This link will expire in 7 days for security reasons.
 If you have any questions or need assistance, please contact our support team.
 
 Best regards,
-The Custom Clothing Team
+The ThreadCraft Team
 `;
 
   const html = `
@@ -196,7 +196,7 @@ The Custom Clothing Team
       <p>To complete your account setup and start using your personalized dashboard, please click the button below:</p>
       
       <div style="text-align: center;">
-        <a href="${setupUrl}" class="button">Complete Account Setup</a>
+        <a href="${registerUrl}" class="button">Complete Account Setup</a>
       </div>
       
       <div class="features">
@@ -220,7 +220,7 @@ The Custom Clothing Team
     <div class="footer">
       <p>This email was sent because you were invited to join Custom Clothing.</p>
       <p>If you believe this was sent in error, please contact our support team.</p>
-      <p>Link: ${setupUrl}</p>
+      <p>Link: ${registerUrl}</p>
     </div>
   </div>
 </body>

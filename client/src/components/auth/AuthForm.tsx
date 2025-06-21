@@ -61,6 +61,87 @@ const registerSchema = z.object({
 export function AuthForm({ type, invitationData }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const form = useForm<AuthFormData>({
+    resolver: zodResolver(authSchema),
+    defaultValues: {
+      email: invitationData?.email || '',
+      username: '',
+      firstName: invitationData?.firstName || '',
+      lastName: invitationData?.lastName || '',
+      password: '',
+      confirmPassword: ''
+    }
+  });
+
+  const onSubmit = async (data: AuthFormData) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (type === 'register') {
+        // Handle invitation-based registration
+        if (invitationData) {
+          const response = await fetch('/api/auth/register-with-invitation', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...data,
+              invitationToken: invitationData.token,
+              role: invitationData.role
+            }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.message || 'Registration failed');
+          }
+
+          // Auto-login after successful registration
+          const loginResult = await login(data.email, data.password);
+          if (loginResult.success) {
+            navigate(`/dashboard/${invitationData.role}`);
+          } else {
+            throw new Error('Registration successful but login failed. Please try logging in manually.');
+          }
+        } else {
+          // Regular registration
+          const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.message || 'Registration failed');
+          }
+
+          navigate('/login');
+        }
+      } else {
+        // Login
+        const result = await login(data.email, data.password);
+        if (!result.success) {
+          throw new Error(result.message || 'Login failed');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [_, setLocation] = useLocation();
   const { login, register } = useAuth();

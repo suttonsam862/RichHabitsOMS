@@ -42,18 +42,18 @@ const supabaseAdmin = createClient(
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register admin routes
   app.use('/api/admin', adminRoutes);
-  
+
   // Register customer creation endpoint
   app.post('/api/customers', requireAuth, requireRole(['admin']), createCustomer);
-  
+
   // Register upload routes for logo files
   app.use('/api/upload', uploadRouter);
-  
+
   // Admin customers API endpoint with real data
   app.get('/api/admin/customers', async (req, res) => {
     try {
       console.log('Fetching real customers from Supabase...');
-      
+
       // Create a Supabase admin client to access all users
       const serviceClient = createClient(
         process.env.SUPABASE_URL || '',
@@ -65,10 +65,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       );
-      
+
       // Get all users from Auth
       const { data, error } = await serviceClient.auth.admin.listUsers();
-      
+
       if (error) {
         console.error('Error fetching customers from Supabase Auth:', error);
         return res.status(500).json({ 
@@ -76,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to retrieve customers: ' + error.message 
         });
       }
-      
+
       // Filter for customers and transform to expected format
       const customers = data.users
         .filter(user => {
@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             created_at: user.created_at
           };
         });
-      
+
       console.log(`Found ${customers.length} customers in Supabase`);
       return res.json({ success: true, customers });
     } catch (err) {
@@ -110,13 +110,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Temporary routes for customer invites functionality
   app.get('/api/admin/invites', requireAuth, async (req, res) => {
     if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
-    
+
     // Generate sample invite data (in production, this would come from database)
     const sampleInvites = [
       {
@@ -144,24 +144,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
       }
     ];
-    
+
     return res.json(sampleInvites);
   });
-  
+
   app.post('/api/admin/invite', requireAuth, async (req, res) => {
     if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
-    
+
     const { email, firstName, lastName, company, message } = req.body;
-    
+
     // Generate a unique token
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    
+
     // Create the invitation URL
     const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
     const inviteUrl = `${baseUrl}/register?invite=${token}`;
-    
+
     // In production, this would be saved to the database
     const invite = {
       id: Date.now(),
@@ -177,32 +177,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
+
     return res.status(201).json({
       success: true,
       message: 'Invitation created successfully',
       invite
     });
   });
-  
+
   app.delete('/api/admin/invites/:id', requireAuth, async (req, res) => {
     if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
-    
+
     // In production, this would delete from the database
     return res.json({
       success: true,
       message: 'Invitation deleted successfully'
     });
   });
-  
+
   // Customer management routes
   app.get('/api/admin/customers', requireAuth, async (req, res) => {
     if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
-    
+
     try {
       // Get users from user_profiles table where role is customer
       const { data: profiles, error } = await supabase
@@ -222,21 +222,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
     }
   });
-  
+
   // Create new customer
   app.post('/api/admin/customers', requireAuth, async (req, res) => {
     // Authorization check
     if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
-    
+
     // Log the request for debugging
     console.log('Customer creation request received:', {
       user: req.user?.email,
       body: req.body,
       shouldSendInvite: req.body.shouldSendInvite
     });
-    
+
     try {
       // Handle different field naming conventions from different forms
       const { 
@@ -244,17 +244,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emailAddress, first_name, last_name, 
         address, city, state, zip, country 
       } = req.body;
-      
+
       // Determine if we should send an invitation email
       const shouldSendInvite = req.body.shouldSendInvite === true || req.query.shouldSendInvite === 'true';
-      
+
       // Normalize field names
       const customerEmail = email || emailAddress;
       const customerFirstName = firstName || first_name;
       const customerLastName = lastName || last_name;
       const customerCompany = company;
       const customerPhone = phone;
-      
+
       // Validate required fields
       if (!customerEmail || !customerFirstName || !customerLastName) {
         return res.status(400).json({
@@ -262,26 +262,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Email, first name, and last name are required'
         });
       }
-      
+
       // Check if user already exists
       const { data: existingUsers } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('email', customerEmail);
-      
+
       if (existingUsers && existingUsers.length > 0) {
         return res.status(400).json({
           success: false,
           message: 'A customer with this email already exists'
         });
       }
-      
+
       // Generate a strong random password (will be reset by user during invitation flow)
       const randomPassword = Math.random().toString(36).substring(2, 10) + 
                            Math.random().toString(36).substring(2, 15);
-      
+
       console.log(`Creating customer in Supabase Auth: ${customerEmail}`);
-      
+
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.admin.createUser({
         email: customerEmail,
@@ -294,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requires_password_reset: true
         }
       });
-      
+
       if (error) {
         console.error('Error creating customer in Supabase Auth:', error);
         return res.status(500).json({
@@ -302,17 +302,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to create customer account: ' + error.message
         });
       }
-      
+
       if (!data?.user) {
         return res.status(500).json({
           success: false,
           message: 'Unknown error creating customer account'
         });
       }
-      
+
       // Create username from first and last name
       const username = (customerFirstName + customerLastName).toLowerCase().replace(/[^a-z0-9]/g, '');
-      
+
       // Create profile data
       const profileData: Record<string, any> = {
         id: data.user.id,
@@ -326,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         is_active: true,
         invitation_status: shouldSendInvite ? 'invited' : 'active'
       };
-      
+
       // Add optional fields if they exist
       if (customerCompany) profileData.company = customerCompany;
       if (customerPhone) profileData.phone = customerPhone;
@@ -335,39 +335,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (state) profileData.state = state;
       if (zip) profileData.postal_code = zip;
       if (country) profileData.country = country;
-      
+
       console.log('Creating customer profile with data:', profileData);
-      
+
       // Create customer profile in the database
       const { data: createdProfile, error: profileError } = await supabase
         .from('user_profiles')
         .insert(profileData)
         .select();
-      
+
       if (profileError) {
         console.error('Error creating customer profile:', profileError);
-        
+
         // Try to clean up the auth user since profile creation failed
         await supabase.auth.admin.deleteUser(data.user.id);
-        
+
         return res.status(500).json({
           success: false,
           message: 'Failed to create customer profile: ' + profileError.message
         });
       }
-      
+
       // Now handle invitation email if requested
       let inviteUrl = '';
       let inviteSent = false;
-      
+
       // Generate invitation URL base
       const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
-      
+
       if (shouldSendInvite) {
         try {
           // Generate a simple setup token for account creation
           const setupToken = require('crypto').randomBytes(32).toString('hex');
-          
+
           // Store the setup token in user metadata for verification
           await supabase.auth.admin.updateUserById(data.user.id, {
             user_metadata: { 
@@ -375,22 +375,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               setup_expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
             }
           });
-          
+
           // Create proper setup URL
           inviteUrl = `${baseUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(customerEmail)}`;
-            
+
           // Send invitation email if we have the email functions available
           try {
             const { getCustomerInviteEmailTemplate } = require('./email');
             const { sendEmail } = require('./email');
-            
+
             const emailTemplate = getCustomerInviteEmailTemplate(
               customerEmail,
               customerFirstName,
               customerLastName,
               setupToken
             );
-              
+
               inviteSent = await sendEmail(emailTemplate);
               if (inviteSent) {
                 console.log(`✅ Setup email sent successfully to: ${customerEmail}`);
@@ -409,10 +409,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For direct creation without invite
         inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
       }
-      
+
       // Log creation details
       console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}, Invite sent: ${inviteSent}`);
-      
+
       // Return success with customer data and accurate email status
       return res.status(201).json({
         success: true,
@@ -431,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inviteUrl,
         inviteSent
       });
-      
+
       // If sending invite, generate a recovery link through Supabase
       if (shouldSendInvite) {
         try {
@@ -439,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'recovery',
             email: customerEmail,
           });
-          
+
           if (linkError) {
             console.error('Error generating recovery link:', linkError);
           } else if (linkData?.properties?.action_link) {
@@ -454,11 +454,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For direct creation without invite
         inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
       }
-      
+
       // Log creation details
       console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}`);
       console.log(`Source: ${req.get('Referer') || 'Unknown'}, Created by: ${req.user?.id || 'Unknown'}`);
-      
+
       // Store in customer metadata whether this was created via invitation
       try {
         // Update user metadata to include creation method
@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (metaErr) {
         console.warn('Could not update user metadata:', metaErr);
       }
-      
+
       // Return success with customer data and appropriate invite information
       return res.status(201).json({
         success: true,
@@ -498,23 +498,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Send verification link to an existing customer
   app.post('/api/admin/customers/:id/send-verification', requireAuth, async (req, res) => {
     if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
       return res.status(403).json({ success: false, message: 'Insufficient permissions' });
     }
-    
+
     try {
       const userId = req.params.id;
-      
+
       // Get the customer's data
       const { data: customer, error: customerError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
-      
+
       if (customerError || !customer) {
         console.error('Error finding customer:', customerError);
         return res.status(404).json({
@@ -522,13 +522,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Customer not found'
         });
       }
-      
+
       // Generate a password reset token through Supabase Auth
       const { data, error } = await supabase.auth.admin.generateLink({
         type: 'recovery',
         email: customer.email,
       });
-      
+
       if (error) {
         console.error('Error generating recovery link:', error);
         return res.status(500).json({
@@ -536,20 +536,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to generate invite link: ' + error.message
         });
       }
-      
+
       // Get the recovery link
       const recoveryLink = data?.properties?.action_link;
-      
+
       if (!recoveryLink) {
         return res.status(500).json({
           success: false,
           message: 'Failed to generate recovery link'
         });
       }
-      
+
       // In a real implementation, we would send this link via email
       console.log(`Invite link for ${customer.email} generated: ${recoveryLink}`);
-      
+
       // Return success
       return res.json({
         success: true,
@@ -564,7 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // API endpoint to get all users for the User Management tab
   app.get('/api/admin/users', async (req, res) => {
     try {
@@ -572,7 +572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user?.role !== 'admin') {
         return res.status(403).json({ success: false, message: 'Insufficient permissions' });
       }
-      
+
       // Get users from user_profiles table
       const { data: profiles, error } = await supabase
         .from('user_profiles')
@@ -591,7 +591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
     }
   });
-  
+
   // API endpoint to create a new user
   app.post('/api/admin/users', async (req, res) => {
     try {
@@ -599,9 +599,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user?.role !== 'admin') {
         return res.status(403).json({ success: false, message: 'Insufficient permissions' });
       }
-      
+
       const { email, username, firstName, lastName, role, permissions, password, shouldSendInvite } = req.body;
-      
+
       // Validate required fields
       if (!email || !username || !role) {
         return res.status(400).json({ 
@@ -609,31 +609,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Email, username, and role are required' 
         });
       }
-      
+
       // Check if user already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('email', email)
         .single();
-        
+
       if (existingUser) {
         return res.status(400).json({ 
           success: false, 
           message: 'User with this email already exists' 
         });
       }
-      
+
       // Generate a random password if not provided and sending invite
       const userPassword = password || (shouldSendInvite ? Math.random().toString(36).slice(-10) : null);
-      
+
       if (!userPassword) {
         return res.status(400).json({
           success: false,
           message: 'Password is required when not sending an invitation'
         });
       }
-      
+
       // Create user in Supabase Auth
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
         email,
@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requires_password_reset: shouldSendInvite
         }
       });
-      
+
       if (authError) {
         console.error('Error creating user in Supabase Auth:', authError);
         return res.status(500).json({ 
@@ -655,7 +655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to create user' 
         });
       }
-      
+
       // Create user profile in database
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
@@ -675,7 +675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .select()
         .single();
-        
+
       if (profileError) {
         console.error('Error creating user profile:', profileError);
         // Try to clean up the auth user if profile creation failed
@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to create user profile' 
         });
       }
-      
+
       // Create an activity log for user creation
       const { error: activityError } = await supabase
         .from('user_activity_logs')
@@ -701,12 +701,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           created_at: new Date().toISOString(),
           ip_address: req.ip || 'unknown'
         });
-        
+
       if (activityError) {
         console.error('Error creating activity log:', activityError);
         // Don't fail the entire request for activity log errors
       }
-      
+
       // Send invitation email if requested
       if (shouldSendInvite) {
         try {
@@ -721,7 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
             .select()
             .single();
-            
+
           if (tokenError) {
             console.error('Error creating setup token:', tokenError);
           } else {
@@ -744,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 </div>
               `
             });
-            
+
             if (!emailResult) {
               console.error('Error sending invitation email');
             }
@@ -753,7 +753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Error in invitation email process:', emailErr);
         }
       }
-      
+
       return res.status(201).json({ 
         success: true, 
         message: shouldSendInvite ? 'User invited successfully' : 'User created successfully',
@@ -767,7 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // API endpoint to update a user
   app.patch('/api/admin/users/:id', async (req, res) => {
     try {
@@ -775,24 +775,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user?.role !== 'admin') {
         return res.status(403).json({ success: false, message: 'Insufficient permissions' });
       }
-      
+
       const { id } = req.params;
       const { email, username, firstName, lastName, role, permissions, password } = req.body;
-      
+
       // Update user metadata in Supabase Auth if needed
       if (role || firstName || lastName || username) {
         const userMetadata: any = {};
-        
+
         if (role) userMetadata.role = role;
         if (firstName) userMetadata.first_name = firstName;
         if (lastName) userMetadata.last_name = lastName;
         if (username) userMetadata.username = username;
-        
+
         const { error: authError } = await supabase.auth.admin.updateUserById(
           id,
           { user_metadata: userMetadata }
         );
-        
+
         if (authError) {
           console.error('Error updating user in Supabase Auth:', authError);
           return res.status(500).json({ 
@@ -801,14 +801,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Update password if provided
       if (password) {
         const { error: passwordError } = await supabase.auth.admin.updateUserById(
           id,
           { password }
         );
-        
+
         if (passwordError) {
           console.error('Error updating user password:', passwordError);
           return res.status(500).json({ 
@@ -817,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Update user profile in database
       const updates: any = {};
       if (email) updates.email = email;
@@ -827,14 +827,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (role) updates.role = role;
       if (permissions) updates.permissions = permissions;
       updates.updated_at = new Date().toISOString();
-      
+
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .update(updates)
         .eq('id', id)
         .select()
         .single();
-        
+
       if (profileError) {
         console.error('Error updating user profile:', profileError);
         return res.status(500).json({ 
@@ -842,7 +842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to update user profile' 
         });
       }
-      
+
       return res.json({ 
         success: true, 
         message: 'User updated successfully',
@@ -856,7 +856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // API endpoint to delete a user
   app.delete('/api/admin/users/:id', async (req, res) => {
     try {
@@ -864,26 +864,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.user?.role !== 'admin') {
         return res.status(403).json({ success: false, message: 'Insufficient permissions' });
       }
-      
+
       const { id } = req.params;
-      
+
       // Check if user exists
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
         .select('*')
+        ```text
         .eq('id', id)
         .single();
-        
+
       if (!existingUser) {
         return res.status(404).json({ 
           success: false, 
           message: 'User not found' 
         });
       }
-      
+
       // Delete user from Supabase Auth
       const { error: authError } = await supabase.auth.admin.deleteUser(id);
-      
+
       if (authError) {
         console.error('Error deleting user from Supabase Auth:', authError);
         return res.status(500).json({ 
@@ -891,13 +892,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to delete user authentication data' 
         });
       }
-      
+
       // Delete user profile from database
       const { error: profileError } = await supabase
         .from('user_profiles')
         .delete()
         .eq('id', id);
-        
+
       if (profileError) {
         console.error('Error deleting user profile:', profileError);
         return res.status(500).json({ 
@@ -905,7 +906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to delete user profile' 
         });
       }
-      
+
       return res.json({ 
         success: true, 
         message: 'User deleted successfully' 
@@ -918,14 +919,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   // Order creation endpoint
   app.post('/api/orders', requireAuth, async (req, res) => {
     try {
       console.log('Creating order with data:', req.body);
-      
+
       const { orderNumber, customerId, status, notes, items, totalAmount } = req.body;
-      
+
       // Validate required fields
       if (!orderNumber || !customerId || !items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({
@@ -1055,15 +1056,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
   });
-  
+
+  // Invitation routes
+  app.post('/api/invitations/send', async (req, res) => {
+    // Import the function dynamically to avoid circular dependencies
+    const { sendUserInvitation } = await import('./routes/api/customerRoutes');
+    return sendUserInvitation(req, res);
+  });
+
+  app.get('/api/invitations/verify/:token', async (req, res) => {
+    const { verifyInvitation } = await import('./routes/api/customerRoutes');
+    return verifyInvitation(req, res);
+  });
+
+  // Registration with invitation
+  app.post('/api/auth/register-with-invitation', async (req, res) => {
+    try {
+      const { email, password, username, firstName, lastName, invitationToken, role } = req.body;
+
+      // Verify invitation
+      const { data: invitation, error: inviteError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('invitation_token', invitationToken)
+        .eq('status', 'pending')
+        .single();
+
+      if (inviteError || !invitation) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired invitation'
+        });
+      }
+
+      // Check expiration
+      if (new Date() > new Date(invitation.expires_at)) {
+        await supabase
+          .from('user_invitations')
+          .update({ status: 'expired' })
+          .eq('invitation_token', invitationToken);
+
+        return res.status(400).json({
+          success: false,
+          message: 'Invitation has expired'
+        });
+      }
+
+      // Create user in Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            firstName,
+            lastName,
+            role,
+            username
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Supabase Auth signup error:', error);
+        return res.status(500).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      // Mark invitation as accepted
+      await supabase
+        .from('user_invitations')
+        .update({ 
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+          user_id: data.user?.id
+        })
+        .eq('invitation_token', invitationToken);
+
+      console.log(`✅ User registered successfully with invitation: ${email}`);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Registration successful',
+        user: {
+          id: data.user?.id,
+          email: data.user?.email,
+          role
+        }
+      });
+
+    } catch (error) {
+      console.error('Registration with invitation error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Registration failed'
+      });
+    }
+  });
+
   // Special endpoint to create a test user for Sam Sutton (temporary, for testing)
   app.post('/api/create-sam-test-user', async (req, res) => {
     try {
       const email = 'suttonsam862@gmail.com';
       const password = 'TestPassword123!';
-      
+
       // Check if user already exists
       // Use a query that works with the current Supabase API
       const { data: existingUsers, error: lookupError } = await supabase
@@ -1071,9 +1174,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select('id')
         .eq('email', email)
         .limit(1);
-      
+
       const existingUser = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
-      
+
       if (existingUser) {
         return res.json({
           success: true,
@@ -1081,7 +1184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: { id: existingUser.id, email }
         });
       }
-      
+
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.admin.createUser({
         email,
@@ -1093,7 +1196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: 'customer'
         }
       });
-      
+
       if (error) {
         console.error('Error creating test user:', error);
         return res.status(500).json({
@@ -1101,14 +1204,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to create test user: ' + error.message
         });
       }
-      
+
       if (!data?.user) {
         return res.status(500).json({
           success: false,
           message: 'Unknown error creating test user'
         });
       }
-      
+
       // Create user profile
       const { error: profileError } = await supabase
         .from('user_profiles')
@@ -1127,7 +1230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           postal_code: '35209',
           country: 'United States'
         });
-      
+
       if (profileError) {
         console.error('Error creating test user profile:', profileError);
         return res.status(500).json({
@@ -1135,15 +1238,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to create test user profile: ' + profileError.message
         });
       }
-      
+
       // Generate a password reset link
       const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
         type: 'recovery',
         email,
       });
-      
+
       const recoveryLink = linkData?.properties?.action_link;
-      
+
       return res.json({
         success: true,
         message: 'Test user created successfully',
@@ -1165,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Validate request body
       const result = loginSchema.safeParse(req.body);
-      
+
       if (!result.success) {
         return res.status(400).json({ 
           success: false, 
@@ -1173,17 +1276,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: result.error.format()
         });
       }
-      
+
       const { email, password } = result.data;
-      
+
       console.log(`Attempting login for user: ${email}`);
-      
+
       // Authenticate user through Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      
+
       if (error) {
         console.error('Supabase Auth login error:', error);
         return res.status(401).json({ 
@@ -1191,7 +1294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Invalid login credentials'
         });
       }
-      
+
       if (!data?.user || !data?.session) {
         console.error('Missing user or session data from Supabase Auth');
         return res.status(401).json({ 
@@ -1199,34 +1302,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Authentication error'
         });
       }
-      
+
       console.log(`User authenticated successfully: ${data.user.id}`);
-      
+
       // Check if the user has role in metadata first (this has priority)
       const userMetadataRole = data.user.user_metadata?.role;
       const isSuperAdmin = data.user.user_metadata?.is_super_admin === true;
-      
+
       console.log('User metadata from Supabase Auth:', data.user.user_metadata);
-      
+
       // Get user profile data
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', data.user.id)
         .single();
-      
+
       let userProfile = profileData;
       let userRole = userMetadataRole || (profileData?.role || 'customer');
-      
+
       // If user is marked as super admin in metadata, ensure role is admin
       if (isSuperAdmin) {
         userRole = 'admin';
         console.log('User is a super admin, setting role to admin');
       }
-      
+
       if (profileError) {
         console.warn('Could not fetch user profile, creating minimal profile');
-        
+
         // Profile doesn't exist, create it - use the role from metadata if available
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
@@ -1238,7 +1341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: data.user.user_metadata?.lastName
           })
           .select();
-        
+
         if (createError) {
           console.error('Error creating user profile:', createError);
         } else {
@@ -1246,7 +1349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userProfile = newProfile[0];
         }
       }
-      
+
       // Store session in cookie
       if (req.session) {
         req.session.auth = {
@@ -1258,7 +1361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         };
       }
-      
+
       // Return user data and session
       return res.status(200).json({
         success: true,
@@ -1291,7 +1394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Validate request body
       const result = registerSchema.safeParse(req.body);
-      
+
       if (!result.success) {
         return res.status(400).json({ 
           success: false, 
@@ -1299,16 +1402,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: result.error.format()
         });
       }
-      
+
       const { email, password, username, firstName, lastName, role, phone, company } = result.data;
-      
+
       // Check if username is already taken
       const { data: existingUsers, error: usernameCheckError } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('username', username)
         .limit(1);
-      
+
       if (usernameCheckError) {
         console.error('Error checking username:', usernameCheckError);
         return res.status(500).json({
@@ -1316,14 +1419,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Error checking username availability'
         });
       }
-      
+
       if (existingUsers && existingUsers.length > 0) {
         return res.status(400).json({
           success: false,
           message: 'Username is already taken'
         });
       }
-      
+
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -1336,7 +1439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       });
-      
+
       if (error) {
         console.error('Supabase Auth signup error:', error);
         return res.status(400).json({ 
@@ -1344,14 +1447,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: error.message
         });
       }
-      
+
       if (!data?.user) {
         return res.status(500).json({ 
           success: false, 
           message: 'Error creating user'
         });
       }
-      
+
       // Create user profile
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
@@ -1365,12 +1468,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           company
         })
         .select();
-      
+
       if (profileError) {
         console.error('Error creating profile:', profileError);
         // Continue anyway as the Auth user was created
       }
-      
+
       // Return success
       return res.status(201).json({
         success: true,
@@ -1394,25 +1497,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get token from session or auth header
       const token = req.session?.auth?.token || req.headers.authorization?.split(' ')[1];
-      
+
       if (token) {
         // Sign out with Supabase Auth
         const { error } = await supabase.auth.signOut({
           scope: 'global'
         });
-        
+
         if (error) {
           console.error('Error signing out:', error);
         }
       }
-      
+
       // Clear session
       req.session.destroy(err => {
         if (err) {
           console.error('Error destroying session:', err);
         }
       });
-      
+
       return res.status(200).json({
         success: true,
         message: 'Logged out successfully'
@@ -1434,23 +1537,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Not authenticated'
       });
     }
-    
+
     // Get the latest user data from Supabase Auth to check metadata
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-    
+
     let isSuperAdmin = false;
     let userRole = req.user.role || 'customer';
-    
+
     if (token) {
       try {
         const { data: userData, error } = await supabase.auth.getUser(token);
-        
+
         if (!error && userData?.user) {
           // Check for super admin flag in metadata
           isSuperAdmin = userData.user.user_metadata?.is_super_admin === true;
           const metadataRole = userData.user.user_metadata?.role;
-          
+
           // If user is super admin or has admin role in metadata, set role to admin
           if (isSuperAdmin || metadataRole === 'admin') {
             userRole = 'admin';
@@ -1461,7 +1564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error fetching user metadata:', err);
       }
     }
-    
+
     // Format the user data to match what the frontend expects
     return res.json({
       success: true,
@@ -1481,10 +1584,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/customers', async (req, res) => {
     try {
       console.log('Fetching real customers from Supabase...');
-      
+
       // Get all users from Supabase Auth using admin client
       const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-      
+
       if (error) {
         console.error('Error fetching customers from Supabase Auth:', error);
         return res.status(500).json({ 
@@ -1492,7 +1595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to retrieve customers: ' + error.message 
         });
       }
-      
+
       // Debug: Log all users and their metadata
       console.log(`Total users found: ${data.users.length}`);
       data.users.forEach((user, index) => {
@@ -1502,7 +1605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           metadata: user.user_metadata
         });
       });
-      
+
       // Filter for customers and transform to expected format
       const customers = data.users
         .filter(user => {
@@ -1533,7 +1636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             created_at: user.created_at
           };
         });
-      
+
       console.log(`Found ${customers.length} customers in Supabase`);
       return res.json(customers);
     } catch (err: any) {
@@ -1550,10 +1653,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { customerId } = req.params;
       console.log(`Fetching customer details for ID: ${customerId}`);
-      
+
       // Get user from Supabase Auth
       const { data, error } = await supabaseAdmin.auth.admin.getUserById(customerId);
-      
+
       if (error) {
         console.error('Error fetching customer from Supabase Auth:', error);
         return res.status(404).json({ 
@@ -1561,17 +1664,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Customer not found' 
         });
       }
-      
+
       if (!data.user) {
         return res.status(404).json({ 
           success: false, 
           message: 'Customer not found' 
         });
       }
-      
+
       const user = data.user;
       const metadata = user.user_metadata || {};
-      
+
       // Check if user is a customer
       if (metadata.role !== 'customer') {
         return res.status(403).json({ 
@@ -1579,7 +1682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Access denied - not a customer account' 
         });
       }
-      
+
       // Transform to expected format
       const customer = {
         id: user.id,
@@ -1599,7 +1702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: user.email_confirmed_at ? 'active' : 'pending',
         created_at: user.created_at
       };
-      
+
       console.log(`Customer ${customerId} details retrieved successfully`);
       return res.json(customer);
     } catch (err: any) {
@@ -1616,9 +1719,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { customerId } = req.params;
       const { firstName, lastName, email, phone, company, address, city, state, zip, country, status } = req.body;
-      
+
       console.log(`Updating customer ${customerId}`);
-      
+
       // Update user metadata in Supabase Auth
       const updateData: any = {
         user_metadata: {
@@ -1634,14 +1737,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: 'customer'
         }
       };
-      
+
       // Update email if changed
       if (email) {
         updateData.email = email;
       }
-      
+
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.updateUserById(customerId, updateData);
-      
+
       if (authError) {
         console.error('Error updating customer:', authError);
         return res.status(500).json({
@@ -1649,9 +1752,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to update customer: ' + authError.message
         });
       }
-      
+
       console.log(`Customer ${customerId} updated successfully`);
-      
+
       return res.status(200).json({
         success: true,
         message: 'Customer updated successfully',
@@ -1670,7 +1773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status
         }
       });
-      
+
     } catch (error) {
       console.error('Error updating customer:', error);
       res.status(500).json({
@@ -1683,14 +1786,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup WebSockets
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
+
   wss.on('connection', (ws) => {
     console.log('WebSocket connection established');
-    
+
     ws.on('message', (message) => {
       console.log('Received message:', message.toString());
     });
-    
+
     ws.on('close', () => {
       console.log('WebSocket connection closed');
     });
@@ -1702,14 +1805,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/users/invite', async (req, res) => {
     try {
       const { email, firstName, lastName, role } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({
           success: false,
           message: 'Email is required'
         });
       }
-      
+
       // Simply send setup email - no user creation
       const setupToken = Buffer.from(JSON.stringify({
         email,
@@ -1719,9 +1822,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
         timestamp: Date.now()
       })).toString('base64url');
-      
+
       const setupUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${setupToken}`;
-      
+
       try {
         const emailTemplate = {
           to: email,
@@ -1758,10 +1861,10 @@ The ThreadCraft Team`,
             </div>
           `
         };
-        
+
         await sendEmail(emailTemplate);
         console.log(`Setup email sent to: ${email}`);
-        
+
         return res.json({
           success: true,
           message: `Setup email sent successfully! ${firstName || 'User'} will receive an email to complete their account setup.`
@@ -1863,13 +1966,13 @@ The ThreadCraft Team`,
   app.post('/api/upload/item-image', requireAuth, requireRole(['admin', 'designer']), async (req: Request, res: Response) => {
     try {
       console.log('Item image upload request received');
-      
+
       // For now, return a placeholder response until we set up file storage
       // This allows the UI to work while we implement the actual upload
       const mockImageUrl = `https://via.placeholder.com/300x300/4f46e5/ffffff?text=Product+${Date.now()}`;
-      
+
       console.log('Generated placeholder image URL:', mockImageUrl);
-      
+
       return res.status(200).json({
         success: true,
         imageUrl: mockImageUrl,
@@ -1889,16 +1992,16 @@ The ThreadCraft Team`,
   app.get('/api/users', authenticateRequest, requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
     console.log('=== User Management API Debug ===');
     console.log('Authenticated user:', req.user?.email, 'Role:', req.user?.role);
-    
+
     const user = req.user;
     console.log('Authenticated user:', { id: user.id, email: user.email, role: user.role });
-    
+
     // Check if user has admin privileges
     if (user.role !== 'admin') {
       console.log('User does not have admin privileges:', user.role);
       return res.status(403).json({ success: false, message: 'Admin access required' });
     }
-    
+
     console.log('Admin access granted for:', user.email);
     try {
       console.log('Fetching comprehensive user database...');
@@ -1921,7 +2024,7 @@ The ThreadCraft Team`,
 
       // Get all authenticated users from Supabase Auth
       const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-      
+
       if (authError) {
         console.error('Error fetching auth users:', authError);
         // Continue even if auth fails - we still want to show customer data
@@ -1937,7 +2040,7 @@ The ThreadCraft Team`,
       for (const customer of customers || []) {
         const authUser = authUsers?.users?.find(u => u.email === customer.email);
         const userMetadata = authUser?.user_metadata || {};
-        
+
         userDatabase.push({
           // Database fields
           id: authUser?.id || null,
@@ -1947,12 +2050,12 @@ The ThreadCraft Team`,
           lastName: customer.lastName || '',
           phone: customer.phone || '',
           company: customer.companyName || '',
-          
+
           // Account status fields
           hasAuthAccount: !!authUser,
           accountStatus: authUser ? 'active' : 'needs_creation',
           emailVerified: authUser?.email_confirmed_at ? true : false,
-          
+
           // User role and access management
           role: userMetadata.role || 'customer',
           permissions: {
@@ -1962,12 +2065,12 @@ The ThreadCraft Team`,
             canAccessDesign: userMetadata.role === 'designer' || userMetadata.role === 'admin',
             canAccessProduction: userMetadata.role === 'manufacturer' || userMetadata.role === 'admin'
           },
-          
+
           // Profile information
           username: userMetadata.username || customer.email.split('@')[0],
           profilePicture: userMetadata.avatar_url || null,
           lastLogin: authUser?.last_sign_in_at || null,
-          
+
           // Timestamps
           customerSince: customer.created_at,
           accountCreated: authUser?.created_at || null,
@@ -1979,7 +2082,7 @@ The ThreadCraft Team`,
       for (const authUser of authUsers?.users || []) {
         if (!customers?.find(c => c.email === authUser.email)) {
           const userMetadata = authUser.user_metadata || {};
-          
+
           userDatabase.push({
             // Database fields
             id: authUser.id,
@@ -1989,12 +2092,12 @@ The ThreadCraft Team`,
             lastName: userMetadata.lastName || '',
             phone: userMetadata.phone || '',
             company: userMetadata.company || '',
-            
+
             // Account status fields
             hasAuthAccount: true,
             accountStatus: 'active',
             emailVerified: !!authUser.email_confirmed_at,
-            
+
             // User role and access management
             role: userMetadata.role || 'staff',
             permissions: {
@@ -2004,12 +2107,12 @@ The ThreadCraft Team`,
               canAccessDesign: ['designer', 'admin'].includes(userMetadata.role),
               canAccessProduction: ['manufacturer', 'admin'].includes(userMetadata.role)
             },
-            
+
             // Profile information
             username: userMetadata.username || authUser.email.split('@')[0],
             profilePicture: userMetadata.avatar_url || null,
             lastLogin: authUser.last_sign_in_at,
-            
+
             // Timestamps
             customerSince: null,
             accountCreated: authUser.created_at,

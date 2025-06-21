@@ -4,8 +4,202 @@
 import { Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, getCustomerInviteEmailTemplate } from '../../email';
+import crypto from 'crypto';
 
 // Create Supabase admin client with service role key for admin operations
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
+/**
+ * Send invitation to a new user
+ */
+export async function sendUserInvitation(req: Request, res: Response) {
+  const { email, firstName, lastName, role = 'customer' } = req.body;
+
+  // Validate required fields
+  if (!email || !firstName || !lastName) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email, first name, and last name are required'
+    });
+  }
+
+  // Validate role
+  const validRoles = ['customer', 'salesperson', 'designer', 'manufacturer', 'admin'];
+  if (!validRoles.includes(role)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid role specified'
+    });
+  }
+
+  try {
+    console.log(`Creating invitation for ${email} with role: ${role}`);
+
+    // Check if user already exists
+    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    
+    if (existingUser.user) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email already exists'
+      });
+    }
+
+    // Generate invitation token with expiration (7 days)
+    const invitationToken = crypto.randomBytes(32).toString('base64url');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Create invitation data
+    const invitationData = {
+      email,
+      firstName,
+      lastName,
+      role,
+      token: invitationToken,
+      expires: expiresAt.getTime(),
+      timestamp: Date.now()
+    };
+
+    // Store invitation in Supabase (we'll create a table for this)
+    const { error: inviteError } = await supabaseAdmin
+      .from('user_invitations')
+      .insert({
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role,
+        invitation_token: invitationToken,
+        expires_at: expiresAt.toISOString(),
+        created_at: new Date().toISOString(),
+        status: 'pending'
+      });
+
+    if (inviteError) {
+      console.error('Error storing invitation:', inviteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create invitation'
+      });
+    }
+
+    // Generate invitation URL
+    const baseUrl = process.env.BASE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    const inviteUrl = `${baseUrl}/register?invite=${invitationToken}`;
+
+    // Send invitation email
+    const emailTemplate = getCustomerInviteEmailTemplate(
+      email,
+      firstName,
+      lastName,
+      invitationToken
+    );
+
+    const emailSent = await sendEmail(emailTemplate);
+
+    if (!emailSent) {
+      console.log('Email service not configured, but invitation created');
+    }
+
+    console.log(`✅ Invitation created for ${email}`);
+    console.log(`📧 Invitation URL: ${inviteUrl}`);
+
+    return res.status(201).json({
+      success: true,
+      message: `Invitation sent successfully to ${email}`,
+      invitation: {
+        email,
+        firstName,
+        lastName,
+        role,
+        inviteUrl: emailSent ? undefined : inviteUrl, // Only include URL if email failed
+        expiresAt: expiresAt.toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating invitation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create invitation'
+    });
+  }
+}
+
+/**
+ * Verify invitation token and get invitation details
+ */
+export async function verifyInvitation(req: Request, res: Response) {
+  const { token } = req.params;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invitation token is required'
+    });
+  }
+
+  try {
+    // Get invitation from database
+    const { data: invitation, error } = await supabaseAdmin
+      .from('user_invitations')
+      .select('*')
+      .eq('invitation_token', token)
+      .eq('status', 'pending')
+      .single();
+
+    if (error || !invitation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid or expired invitation token'
+      });
+    }
+
+    // Check if invitation has expired
+    const now = new Date();
+    const expiresAt = new Date(invitation.expires_at);
+    
+    if (now > expiresAt) {
+      // Mark as expired
+      await supabaseAdmin
+        .from('user_invitations')
+        .update({ status: 'expired' })
+        .eq('invitation_token', token);
+
+      return res.status(400).json({
+        success: false,
+        message: 'This invitation has expired. Please contact your administrator for a new invitation.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      invitation: {
+        email: invitation.email,
+        firstName: invitation.first_name,
+        lastName: invitation.last_name,
+        role: invitation.role,
+        expiresAt: invitation.expires_at
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying invitation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to verify invitation'
+    });
+  }
+}
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_KEY || '',
