@@ -1819,51 +1819,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: Date.now()
       })).toString('base64url');
 
-      const setupUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${setupToken}`;
+      const setupUrl = (process.env.REPLIT_DEV_DOMAIN || 'localhost:5000') + '/setup?token=' + setupToken;
 
       try {
         const emailTemplate = {
           to: email,
           subject: 'Complete Your Account Setup - ThreadCraft',
-          text: `Hi ${firstName || 'there'},
-
-You've been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:
-${setupUrl}
-
-This link will expire in 7 days.
-
-Best regards,
-The ThreadCraft Team`,
-          html: `
-            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-              <h2 style="color: #333;">Complete Your Account Setup</h2>
-              <p>Hi ${firstName || 'there'},</p>
-              <p>You've been invited to complete your account setup for ThreadCraft!</p>
-              <p>Please click the button below to access your dashboard:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${setupUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                  Complete Setup
-                </a>
-              </div>
-              <p style="color: #666; font-size: 14px;">
-                If the button doesn't work, you can copy and paste this link into your browser:<br>
-                <a href="${setupUrl}">${setupUrl}</a>
-              </p>
-              <p style="color: #666; font-size: 14px;">
-                This link will expire in 7 days.
-              </p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-              <p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p>
-            </div>
-          `
+          text: 'Hi ' + (firstName || 'there') + ',\n\nYou\'ve been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:\n' + setupUrl + '\n\nThis link will expire in 7 days.\n\nBest regards,\nThe ThreadCraft Team',
+          html: '<div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;"><h2 style="color: #333;">Complete Your Account Setup</h2><p>Hi ' + (firstName || 'there') + ',</p><p>You\'ve been invited to complete your account setup for ThreadCraft!</p><p>Please click the button below to access your dashboard:</p><div style="text-align: center; margin: 30px 0;"><a href="' + setupUrl + '" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Complete Setup</a></div><p style="color: #666; font-size: 14px;">If the button doesn\'t work, you can copy and paste this link into your browser:<br><a href="' + setupUrl + '">' + setupUrl + '</a></p><p style="color: #666; font-size: 14px;">This link will expire in 7 days.</p><hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;"><p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p></div>'
         };
 
         await sendEmail(emailTemplate);
-        console.log(`Setup email sent to: ${email}`);
+        console.log('Setup email sent to:', email);
 
         return res.json({
           success: true,
-          message: `Setup email sent successfully! ${firstName || 'User'} will receive an email to complete their account setup.`
+          message: 'Setup email sent successfully! ' + (firstName || 'User') + ' will receive an email to complete their account setup.'
         });
       } catch (emailError) {
         console.error('Error sending setup email:', emailError);
@@ -1900,7 +1871,7 @@ The ThreadCraft Team`,
         });
       }
 
-      console.log(`Creating account directly for: ${email} with role: ${role}`);
+      console.log('Creating account directly for:', email, 'with role:', role);
 
       // Create user in Supabase Auth with password
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -1931,13 +1902,13 @@ The ThreadCraft Team`,
         });
       }
 
-      console.log(`✅ Account created successfully for: ${email}`);
-      console.log(`🔑 Temporary password: ${password}`);
-      console.log(`👤 User can now log in immediately`);
+      console.log('Account created successfully for:', email);
+      console.log('Temporary password:', password);
+      console.log('User can now log in immediately');
 
       return res.status(201).json({
         success: true,
-        message: `Account created successfully! User can log in with email: ${email} and temporary password: ${password}`,
+        message: 'Account created successfully! User can log in with email: ' + email + ' and temporary password: ' + password,
         user: {
           id: data.user.id,
           email: data.user.email,
@@ -1965,7 +1936,7 @@ The ThreadCraft Team`,
 
       // For now, return a placeholder response until we set up file storage
       // This allows the UI to work while we implement the actual upload
-      const mockImageUrl = `https://via.placeholder.com/300x300/4f46e5/ffffff?text=Product+${Date.now()}`;
+      const mockImageUrl = 'https://via.placeholder.com/300x300/4f46e5/ffffff?text=Product+' + Date.now();
 
       console.log('Generated placeholder image URL:', mockImageUrl);
 
