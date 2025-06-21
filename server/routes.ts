@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
 
-      console.log(`Found ${customers.length} customers in Supabase`);
+      console.log('Found', customers.length, 'customers in Supabase');
       return res.json({ success: true, customers });
     } catch (err) {
       console.error('Error fetching customers:', err);
@@ -159,8 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
     // Create the invitation URL
-    const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
-    const inviteUrl = `${baseUrl}/register?invite=${token}`;
+    const baseUrl = process.env.APP_URL || ('http://' + (req.headers.host || 'localhost:5000'));
+    const inviteUrl = baseUrl + '/register?invite=' + token;
 
     // In production, this would be saved to the database
     const invite = {
@@ -280,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const randomPassword = Math.random().toString(36).substring(2, 10) + 
                            Math.random().toString(36).substring(2, 15);
 
-      console.log(`Creating customer in Supabase Auth: ${customerEmail}`);
+      console.log('Creating customer in Supabase Auth:', customerEmail);
 
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.admin.createUser({
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let inviteSent = false;
 
       // Generate invitation URL base
-      const baseUrl = process.env.APP_URL || `http://${req.headers.host || 'localhost:5000'}`;
+      const baseUrl = process.env.APP_URL || ('http://' + (req.headers.host || 'localhost:5000'));
 
       if (shouldSendInvite) {
         try {
@@ -729,20 +729,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const emailResult = await sendEmail({
               to: email,
               subject: 'Invitation to Custom Clothing Order Management System',
-              text: `Hello ${firstName || ''},\n\nYou have been invited to the Custom Clothing Order Management System as a ${role}. Please click the link below to set up your account:\n\nhttp://localhost:5000/setup-account?token=${setupToken.token}\n\nThis link will expire in 7 days.\n\nRegards,\nAdmin Team`,
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                  <h2 style="color: #333;">Welcome to Custom Clothing Order Management</h2>
-                  <p>Hello ${firstName || ''},</p>
-                  <p>You have been invited to join the Custom Clothing Order Management System as a <strong>${role}</strong>.</p>
-                  <div style="margin: 25px 0;">
-                    <a href="http://localhost:5000/setup-account?token=${setupToken.token}" style="background-color: #4a90e2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Account</a>
-                  </div>
-                  <p>This link will expire in 7 days.</p>
-                  <p>If you didn't expect this invitation, please ignore this email.</p>
-                  <p>Regards,<br>Admin Team</p>
-                </div>
-              `
+              text: 'Hello ' + (firstName || '') + ',\n\nYou have been invited to the Custom Clothing Order Management System as a ' + role + '. Please click the link below to set up your account:\n\nhttp://localhost:5000/setup-account?token=' + setupToken.token + '\n\nThis link will expire in 7 days.\n\nRegards,\nAdmin Team',
+              html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">' +
+                '<h2 style="color: #333;">Welcome to Custom Clothing Order Management</h2>' +
+                '<p>Hello ' + (firstName || '') + ',</p>' +
+                '<p>You have been invited to join the Custom Clothing Order Management System as a <strong>' + role + '</strong>.</p>' +
+                '<div style="margin: 25px 0;">' +
+                '<a href="http://localhost:5000/setup-account?token=' + setupToken.token + '" style="background-color: #4a90e2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Account</a>' +
+                '</div>' +
+                '<p>This link will expire in 7 days.</p>' +
+                '<p>If you didn\'t expect this invitation, please ignore this email.</p>' +
+                '<p>Regards,<br>Admin Team</p>' +
+                '</div>'
             });
 
             if (!emailResult) {
