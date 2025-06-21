@@ -1009,10 +1009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { data: orders, error } = await supabase
         .from('orders')
-        .select(`
-          *,
-          order_items (*)
-        `)
+        .select('*, order_items (*)')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1140,7 +1137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .eq('invitation_token', invitationToken);
 
-      console.log(`✅ User registered successfully with invitation: ${email}`);
+      console.log('User registered successfully with invitation:', email);
 
       return res.status(201).json({
         success: true,
@@ -1279,7 +1276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { email, password } = result.data;
 
-      console.log(`Attempting login for user: ${email}`);
+      console.log('Attempting login for user:', email);
 
       // Authenticate user through Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
