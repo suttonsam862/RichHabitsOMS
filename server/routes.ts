@@ -1608,7 +1608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Look for users with customer role in metadata
           const metadata = user.user_metadata || {};
           const hasCustomerRole = metadata.role === 'customer';
-          console.log(`User ${user.email} has customer role:`, hasCustomerRole, 'metadata:', metadata);
+          console.log('User', user.email, 'has customer role:', hasCustomerRole, 'metadata:', metadata);
           return hasCustomerRole;
         })
         .map(user => {
@@ -1633,7 +1633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
 
-      console.log(`Found ${customers.length} customers in Supabase`);
+      console.log('Found', customers.length, 'customers in Supabase');
       return res.json(customers);
     } catch (err: any) {
       console.error('Error fetching customers:', err);
@@ -1648,7 +1648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/customers/:customerId', authenticateRequest, requireAuth, requireRole(['admin']), async (req, res) => {
     try {
       const { customerId } = req.params;
-      console.log(`Fetching customer details for ID: ${customerId}`);
+      console.log('Fetching customer details for ID:', customerId);
 
       // Get user from Supabase Auth
       const { data, error } = await supabaseAdmin.auth.admin.getUserById(customerId);
@@ -1699,7 +1699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created_at: user.created_at
       };
 
-      console.log(`Customer ${customerId} details retrieved successfully`);
+      console.log('Customer', customerId, 'details retrieved successfully');
       return res.json(customer);
     } catch (err: any) {
       console.error('Error fetching customer details:', err);
@@ -1716,7 +1716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { customerId } = req.params;
       const { firstName, lastName, email, phone, company, address, city, state, zip, country, status } = req.body;
 
-      console.log(`Updating customer ${customerId}`);
+      console.log('Updating customer', customerId);
 
       // Update user metadata in Supabase Auth
       const updateData: any = {
@@ -1749,7 +1749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`Customer ${customerId} updated successfully`);
+      console.log('Customer', customerId, 'updated successfully');
 
       return res.status(200).json({
         success: true,
