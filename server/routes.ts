@@ -1300,7 +1300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`User authenticated successfully: ${data.user.id}`);
+      console.log('User authenticated successfully:', data.user.id);
 
       // Check if the user has role in metadata first (this has priority)
       const userMetadataRole = data.user.user_metadata?.role;
@@ -1594,9 +1594,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Debug: Log all users and their metadata
-      console.log(`Total users found: ${data.users.length}`);
+      console.log('Total users found:', data.users.length);
       data.users.forEach((user, index) => {
-        console.log(`User ${index + 1}:`, {
+        console.log('User', index + 1, ':', {
           id: user.id,
           email: user.email,
           metadata: user.user_metadata
@@ -1609,7 +1609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Look for users with customer role in metadata
           const metadata = user.user_metadata || {};
           const hasCustomerRole = metadata.role === 'customer';
-          console.log(`User ${user.email} has customer role:`, hasCustomerRole, 'metadata:', metadata);
+          console.log('User', user.email, 'has customer role:', hasCustomerRole, 'metadata:', metadata);
           return hasCustomerRole;
         })
         .map(user => {
@@ -1634,7 +1634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
 
-      console.log(`Found ${customers.length} customers in Supabase`);
+      console.log('Found', customers.length, 'customers in Supabase');
       return res.json(customers);
     } catch (err: any) {
       console.error('Error fetching customers:', err);
@@ -1649,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/customers/:customerId', authenticateRequest, requireAuth, requireRole(['admin']), async (req, res) => {
     try {
       const { customerId } = req.params;
-      console.log(`Fetching customer details for ID: ${customerId}`);
+      console.log('Fetching customer details for ID:', customerId);
 
       // Get user from Supabase Auth
       const { data, error } = await supabaseAdmin.auth.admin.getUserById(customerId);
