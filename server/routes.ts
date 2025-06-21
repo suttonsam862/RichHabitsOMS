@@ -377,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           // Create proper setup URL
-          inviteUrl = `${baseUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(customerEmail)}`;
+          inviteUrl = baseUrl + '/setup-password?token=' + setupToken + '&email=' + encodeURIComponent(customerEmail);
 
           // Send invitation email if we have the email functions available
           try {
@@ -393,9 +393,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               inviteSent = await sendEmail(emailTemplate);
               if (inviteSent) {
-                console.log(`✅ Setup email sent successfully to: ${customerEmail}`);
+                console.log('✅ Setup email sent successfully to:', customerEmail);
               } else {
-                console.log(`❌ Setup email failed to send to: ${customerEmail} - SendGrid API key not configured`);
+                console.log('❌ Setup email failed to send to:', customerEmail, '- SendGrid API key not configured');
               }
             } catch (moduleErr) {
               console.error('Email module not available:', moduleErr);
@@ -403,15 +403,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
         } catch (emailErr) {
           console.error('Failed to send invitation email:', emailErr);
-          inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+          inviteUrl = baseUrl + '/login?email=' + encodeURIComponent(customerEmail);
         }
       } else {
         // For direct creation without invite
-        inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+        inviteUrl = baseUrl + '/login?email=' + encodeURIComponent(customerEmail);
       }
 
       // Log creation details
-      console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}, Invite sent: ${inviteSent}`);
+      console.log('Customer created:', customerEmail, 'Send invite:', shouldSendInvite, 'Invite sent:', inviteSent);
 
       // Return success with customer data and accurate email status
       return res.status(201).json({
@@ -448,16 +448,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (linkErr) {
           console.error('Failed to generate invite link:', linkErr);
           // Don't fail the overall request if just the link generation fails
-          inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+          inviteUrl = baseUrl + '/login?email=' + encodeURIComponent(customerEmail);
         }
       } else {
         // For direct creation without invite
-        inviteUrl = `${baseUrl}/login?email=${encodeURIComponent(customerEmail)}`;
+        inviteUrl = baseUrl + '/login?email=' + encodeURIComponent(customerEmail);
       }
 
       // Log creation details
-      console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}`);
-      console.log(`Source: ${req.get('Referer') || 'Unknown'}, Created by: ${req.user?.id || 'Unknown'}`);
+      console.log('Customer created:', customerEmail, 'Send invite:', shouldSendInvite);
+      console.log('Source:', req.get('Referer') || 'Unknown', 'Created by:', req.user?.id || 'Unknown');
 
       // Store in customer metadata whether this was created via invitation
       try {
@@ -548,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // In a real implementation, we would send this link via email
-      console.log(`Invite link for ${customer.email} generated: ${recoveryLink}`);
+      console.log('Invite link for', customer.email, 'generated:', recoveryLink);
 
       // Return success
       return res.json({
@@ -868,7 +868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user exists
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
-```text
+        .select('*')
         .eq('id', id)
         .single();
 
