@@ -1008,10 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { data: orders, error } = await supabase
         .from('orders')
-        .select(`
-          *,
-          order_items (*)
-        `)
+        .select('*, order_items (*)')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1139,7 +1136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .eq('invitation_token', invitationToken);
 
-      console.log(`✅ User registered successfully with invitation: ${email}`);
+      console.log('User registered successfully with invitation:', email);
 
       return res.status(201).json({
         success: true,
@@ -1278,7 +1275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { email, password } = result.data;
 
-      console.log(`Attempting login for user: ${email}`);
+      console.log('Attempting login for user:', email);
 
       // Authenticate user through Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -1302,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`User authenticated successfully: ${data.user.id}`);
+      console.log('User authenticated successfully:', data.user.id);
 
       // Check if the user has role in metadata first (this has priority)
       const userMetadataRole = data.user.user_metadata?.role;
@@ -1596,9 +1593,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Debug: Log all users and their metadata
-      console.log(`Total users found: ${data.users.length}`);
+      console.log('Total users found:', data.users.length);
       data.users.forEach((user, index) => {
-        console.log(`User ${index + 1}:`, {
+        console.log('User', index + 1, ':', {
           id: user.id,
           email: user.email,
           metadata: user.user_metadata
