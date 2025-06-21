@@ -1700,7 +1700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created_at: user.created_at
       };
 
-      console.log(`Customer ${customerId} details retrieved successfully`);
+      console.log('Customer', customerId, 'details retrieved successfully');
       return res.json(customer);
     } catch (err: any) {
       console.error('Error fetching customer details:', err);
@@ -1717,7 +1717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { customerId } = req.params;
       const { firstName, lastName, email, phone, company, address, city, state, zip, country, status } = req.body;
 
-      console.log(`Updating customer ${customerId}`);
+      console.log('Updating customer', customerId);
 
       // Update user metadata in Supabase Auth
       const updateData: any = {
@@ -1750,7 +1750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`Customer ${customerId} updated successfully`);
+      console.log('Customer', customerId, 'updated successfully');
 
       return res.status(200).json({
         success: true,
@@ -1820,43 +1820,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: Date.now()
       })).toString('base64url');
 
-      const setupUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${setupToken}`;
+      const setupUrl = (process.env.REPLIT_DEV_DOMAIN || 'localhost:5000') + '/setup?token=' + setupToken;
 
       try {
         const emailTemplate = {
           to: email,
           subject: 'Complete Your Account Setup - ThreadCraft',
-          text: `Hi ${firstName || 'there'},
-
-You've been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:
-${setupUrl}
-
-This link will expire in 7 days.
-
-Best regards,
-The ThreadCraft Team`,
-          html: `
-            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-              <h2 style="color: #333;">Complete Your Account Setup</h2>
-              <p>Hi ${firstName || 'there'},</p>
-              <p>You've been invited to complete your account setup for ThreadCraft!</p>
-              <p>Please click the button below to access your dashboard:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${setupUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                  Complete Setup
-                </a>
-              </div>
-              <p style="color: #666; font-size: 14px;">
-                If the button doesn't work, you can copy and paste this link into your browser:<br>
-                <a href="${setupUrl}">${setupUrl}</a>
-              </p>
-              <p style="color: #666; font-size: 14px;">
-                This link will expire in 7 days.
-              </p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-              <p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p>
-            </div>
-          `
+          text: 'Hi ' + (firstName || 'there') + ',\n\nYou\'ve been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:\n' + setupUrl + '\n\nThis link will expire in 7 days.\n\nBest regards,\nThe ThreadCraft Team',
+          html: '<div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;"><h2 style="color: #333;">Complete Your Account Setup</h2><p>Hi ' + (firstName || 'there') + ',</p><p>You\'ve been invited to complete your account setup for ThreadCraft!</p><p>Please click the button below to access your dashboard:</p><div style="text-align: center; margin: 30px 0;"><a href="' + setupUrl + '" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Complete Setup</a></div><p style="color: #666; font-size: 14px;">If the button doesn\'t work, you can copy and paste this link into your browser:<br><a href="' + setupUrl + '">' + setupUrl + '</a></p><p style="color: #666; font-size: 14px;">This link will expire in 7 days.</p><hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;"><p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p></div>'
         };
 
         await sendEmail(emailTemplate);
