@@ -2116,6 +2116,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create auth account for existing customer
+  // Create manufacturer account
+  app.post('/api/users/create-manufacturer', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+    const { firstName, lastName, email, company, phone, specialties } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'First name, last name, and email are required'
+      });
+    }
+
+    try {
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('auth.users')
+        .select('email')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      }
+
+      // Generate temporary password
+      const tempPassword = Math.random().toString(36).substring(2, 12);
+
+      // Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        user_metadata: {
+          firstName,
+          lastName,
+          role: 'manufacturer',
+          company: company || '',
+          phone: phone || '',
+          specialties: specialties || ''
+        },
+        email_confirm: true
+      });
+
+      if (authError) {
+        console.error('Auth creation error:', authError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create user account: ' + authError.message
+        });
+      }
+
+      // Create profile in user_profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: authData.user.id,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          role: 'manufacturer',
+          company: company || null,
+          phone: phone || null,
+          metadata: {
+            specialties: specialties || '',
+            created_by: req.user?.id,
+            created_at: new Date().toISOString()
+          }
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        // Clean up auth user if profile creation fails
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create user profile: ' + profileError.message
+        });
+      }
+
+      console.log('✅ Manufacturer created successfully:', email);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Manufacturer created successfully',
+        user: {
+          id: authData.user.id,
+          email,
+          firstName,
+          lastName,
+          role: 'manufacturer',
+          company,
+          phone,
+          specialties
+        }
+      });
+
+    } catch (error: any) {
+      console.error('Error creating manufacturer:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create manufacturer: ' + error.message
+      });
+    }
+  });
+
   app.post('/api/users/create-customer-account', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
     try {
       const { customerId, password = 'TempPassword123!' } = req.body;

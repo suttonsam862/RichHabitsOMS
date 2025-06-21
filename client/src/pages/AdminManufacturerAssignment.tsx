@@ -45,6 +45,15 @@ export default function AdminManufacturerAssignment() {
   const { toast } = useToast();
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<string>('');
+  const [showAddManufacturerDialog, setShowAddManufacturerDialog] = useState(false);
+  const [newManufacturerData, setNewManufacturerData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    company: '',
+    phone: '',
+    specialties: ''
+  });
 
   // Fetch orders ready for production assignment
   const { data: orders = [], isLoading: isLoadingOrders } = useQuery({
@@ -61,6 +70,40 @@ export default function AdminManufacturerAssignment() {
   // Safely extract manufacturers array
   const manufacturers = Array.isArray(manufacturersData) ? manufacturersData : 
                        (manufacturersData?.users && Array.isArray(manufacturersData.users)) ? manufacturersData.users : [];
+
+  // Add manufacturer mutation
+  const addManufacturerMutation = useMutation({
+    mutationFn: async (manufacturerData: typeof newManufacturerData) => {
+      const response = await apiRequest('POST', '/api/users/create-manufacturer', {
+        ...manufacturerData,
+        role: 'manufacturer'
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users', 'manufacturer'] });
+      toast({
+        title: 'Manufacturer Added',
+        description: 'New manufacturer has been created successfully',
+      });
+      setShowAddManufacturerDialog(false);
+      setNewManufacturerData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        company: '',
+        phone: '',
+        specialties: ''
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Failed to Add Manufacturer',
+        description: error.message || 'Failed to create new manufacturer',
+        variant: 'destructive'
+      });
+    },
+  });
 
   // Assign manufacturer mutation
   const assignManufacturerMutation = useMutation({
@@ -102,6 +145,20 @@ export default function AdminManufacturerAssignment() {
       orderId: selectedOrderId,
       manufacturerId: parseInt(selectedManufacturerId)
     });
+  };
+
+  // Handle adding new manufacturer
+  const handleAddManufacturer = () => {
+    if (!newManufacturerData.firstName || !newManufacturerData.lastName || !newManufacturerData.email) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in first name, last name, and email',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    addManufacturerMutation.mutate(newManufacturerData);
   };
 
   const isLoading = isLoadingOrders || isLoadingManufacturers;
@@ -198,16 +255,31 @@ export default function AdminManufacturerAssignment() {
                 <SelectContent>
                   {isLoadingManufacturers ? (
                     <SelectItem value="" disabled>Loading manufacturers...</SelectItem>
-                  ) : manufacturers.length === 0 ? (
-                    <SelectItem value="" disabled>No manufacturers available</SelectItem>
                   ) : (
-                    manufacturers.map((manufacturer: any) => (
-                      <SelectItem key={manufacturer.id} value={manufacturer.id.toString()}>
-                        {manufacturer.firstName && manufacturer.lastName 
-                          ? `${manufacturer.firstName} ${manufacturer.lastName}` 
-                          : manufacturer.username}
+                    <>
+                      <SelectItem 
+                        value="add-new-manufacturer" 
+                        className="text-cyan-400 hover:text-cyan-300 font-medium"
+                        onSelect={() => setShowAddManufacturerDialog(true)}
+                      >
+                        <div className="flex items-center">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add New Manufacturer
+                        </div>
                       </SelectItem>
-                    ))
+                      {manufacturers.length === 0 ? (
+                        <SelectItem value="" disabled>No manufacturers available</SelectItem>
+                      ) : (
+                        manufacturers.map((manufacturer: any) => (
+                          <SelectItem key={manufacturer.id} value={manufacturer.id.toString()}>
+                            {manufacturer.firstName && manufacturer.lastName 
+                              ? `${manufacturer.firstName} ${manufacturer.lastName}` 
+                              : manufacturer.username}
+                            {manufacturer.company && ` (${manufacturer.company})`}
+                          </SelectItem>
+                        ))
+                      )}
+                    </>
                   )}
                 </SelectContent>
               </Select>
@@ -228,6 +300,123 @@ export default function AdminManufacturerAssignment() {
                   Assigning...
                 </>
               ) : 'Assign Manufacturer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Manufacturer Dialog */}
+      <Dialog open={showAddManufacturerDialog} onOpenChange={setShowAddManufacturerDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Manufacturer</DialogTitle>
+            <DialogDescription>
+              Create a new manufacturer profile for production assignments
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={newManufacturerData.firstName}
+                  onChange={(e) => setNewManufacturerData(prev => ({
+                    ...prev,
+                    firstName: e.target.value
+                  }))}
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={newManufacturerData.lastName}
+                  onChange={(e) => setNewManufacturerData(prev => ({
+                    ...prev,
+                    lastName: e.target.value
+                  }))}
+                  placeholder="Enter last name"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newManufacturerData.email}
+                onChange={(e) => setNewManufacturerData(prev => ({
+                  ...prev,
+                  email: e.target.value
+                }))}
+                placeholder="Enter email address"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="company">Company</Label>
+              <Input
+                id="company"
+                value={newManufacturerData.company}
+                onChange={(e) => setNewManufacturerData(prev => ({
+                  ...prev,
+                  company: e.target.value
+                }))}
+                placeholder="Enter company name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={newManufacturerData.phone}
+                onChange={(e) => setNewManufacturerData(prev => ({
+                  ...prev,
+                  phone: e.target.value
+                }))}
+                placeholder="Enter phone number"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="specialties">Specialties</Label>
+              <Textarea
+                id="specialties"
+                value={newManufacturerData.specialties}
+                onChange={(e) => setNewManufacturerData(prev => ({
+                  ...prev,
+                  specialties: e.target.value
+                }))}
+                placeholder="Enter manufacturing specialties (e.g., embroidery, screen printing, etc.)"
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddManufacturerDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddManufacturer} 
+              disabled={addManufacturerMutation.isPending}
+            >
+              {addManufacturerMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Manufacturer
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
