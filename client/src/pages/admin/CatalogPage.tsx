@@ -104,6 +104,102 @@ const catalogItemSchema = z.object({
   specifications: z.string().optional(),
 });
 
+// Image Upload Area Component
+interface ImageUploadAreaProps {
+  inputId: string;
+  onFileSelect: (file: File) => void;
+  uploadText?: string;
+}
+
+const ImageUploadArea: React.FC<ImageUploadAreaProps> = ({ 
+  inputId, 
+  onFileSelect, 
+  uploadText = "Click to upload an image file" 
+}) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      onFileSelect(file);
+      
+      // Create preview URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedFile(null);
+    setPreviewUrl("");
+    const fileInput = document.getElementById(inputId) as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+      (fileInput as any).selectedFile = null;
+      (fileInput as any).selectedMeasurementFile = null;
+    }
+  };
+
+  return (
+    <div className="border-2 border-dashed border-glass-border rounded-lg overflow-hidden hover:border-neon-blue/50 transition-colors">
+      {previewUrl ? (
+        <div className="relative">
+          <img 
+            src={previewUrl} 
+            alt="Preview" 
+            className="w-full h-32 object-cover"
+          />
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+            <div className="flex gap-2">
+              <label htmlFor={inputId} className="cursor-pointer">
+                <Button size="sm" variant="secondary">
+                  Change Image
+                </Button>
+              </label>
+              <Button 
+                size="sm" 
+                variant="destructive" 
+                onClick={clearSelection}
+              >
+                Remove
+              </Button>
+            </div>
+          </div>
+          <div className="p-2 bg-rich-black/90">
+            <p className="text-xs text-neon-green font-medium truncate">
+              {selectedFile?.name}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {selectedFile && (selectedFile.size / 1024 / 1024).toFixed(2)}MB
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 text-center">
+          <label htmlFor={inputId} className="cursor-pointer block">
+            <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {uploadText}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              PNG, JPG, WebP up to 5MB
+            </p>
+          </label>
+        </div>
+      )}
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        id={inputId}
+        onChange={handleFileChange}
+      />
+    </div>
+  );
+};
+
 // Auto-generate unique SKU with improved pattern
 const generateSKU = (category: string, name: string): string => {
   // Get category prefix (first 2-3 letters)
@@ -781,32 +877,16 @@ export default function CatalogPage() {
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <span>OR</span>
                               </div>
-                              <div className="border-2 border-dashed border-glass-border rounded-lg p-4 text-center hover:border-neon-blue/50 transition-colors">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  id="catalog-image-upload"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      // Clear URL field if file is selected
-                                      field.onChange("");
-                                      // Store file for upload after item creation
-                                      (e.target as any).selectedFile = file;
-                                    }
-                                  }}
-                                />
-                                <label htmlFor="catalog-image-upload" className="cursor-pointer">
-                                  <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                                  <p className="text-sm text-muted-foreground">
-                                    Click to upload an image file
-                                  </p>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    PNG, JPG, WebP up to 5MB
-                                  </p>
-                                </label>
-                              </div>
+                              <ImageUploadArea
+                                inputId="catalog-image-upload"
+                                onFileSelect={(file) => {
+                                  field.onChange("");
+                                  const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
+                                  if (fileInput) {
+                                    (fileInput as any).selectedFile = file;
+                                  }
+                                }}
+                              />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -894,30 +974,17 @@ export default function CatalogPage() {
                                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     <span>OR</span>
                                   </div>
-                                  <div className="border-2 border-dashed border-glass-border rounded-lg p-4 text-center hover:border-neon-blue/50 transition-colors">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      id="measurement-chart-upload"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          field.onChange("");
-                                          (e.target as any).selectedMeasurementFile = file;
-                                        }
-                                      }}
-                                    />
-                                    <label htmlFor="measurement-chart-upload" className="cursor-pointer">
-                                      <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                                      <p className="text-sm text-muted-foreground">
-                                        Upload measurement chart/template
-                                      </p>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        PNG, JPG, WebP up to 5MB
-                                      </p>
-                                    </label>
-                                  </div>
+                                  <ImageUploadArea
+                                    inputId="measurement-chart-upload"
+                                    onFileSelect={(file) => {
+                                      field.onChange("");
+                                      const fileInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
+                                      if (fileInput) {
+                                        (fileInput as any).selectedMeasurementFile = file;
+                                      }
+                                    }}
+                                    uploadText="Upload measurement chart/template"
+                                  />
                                 </div>
                               </FormControl>
                               <FormMessage />
