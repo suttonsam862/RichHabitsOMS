@@ -1,8 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, Router } from 'express';
 import { supabase } from '../../db';
 import { CatalogItem, InsertCatalogItem } from '../../../shared/schema';
 import { requireAuth, requireRole } from '../auth/auth';
 import { deleteImageFile, extractFilenameFromUrl } from '../../imageUpload';
+
+const router = Router();
 
 /**
  * Get all catalog items
@@ -256,3 +258,12 @@ export async function getCatalogItem(req: Request, res: Response) {
     });
   }
 }
+
+// Configure routes
+router.get('/', requireAuth, requireRole(['admin']), getCatalogItems);
+router.post('/', requireAuth, requireRole(['admin']), createCatalogItem);
+router.get('/:id', requireAuth, requireRole(['admin']), getCatalogItem);
+router.put('/:id', requireAuth, requireRole(['admin']), updateCatalogItem);
+router.delete('/:id', requireAuth, requireRole(['admin']), deleteCatalogItem);
+
+export default router;

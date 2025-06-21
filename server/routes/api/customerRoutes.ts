@@ -1,10 +1,13 @@
 /**
  * Customer management routes
  */
-import { Request, Response } from 'express';
+import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, getCustomerInviteEmailTemplate } from '../../email';
+import { requireAuth, requireRole } from '../auth/auth';
 import crypto from 'crypto';
+
+const router = Router();
 
 // Create Supabase admin client with service role key for admin operations
 const supabaseAdmin = createClient(
@@ -365,3 +368,10 @@ export async function createCustomer(req: Request, res: Response) {
     });
   }
 }
+
+// Configure routes
+router.post('/invite', requireAuth, requireRole(['admin']), sendUserInvitation);
+router.get('/verify/:token', verifyInvitation);
+router.post('/', requireAuth, requireRole(['admin']), createCustomer);
+
+export default router;
