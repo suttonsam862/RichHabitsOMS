@@ -23,7 +23,7 @@ async function initializeCatalogOptions() {
     // Default sports
     const defaultSports = [
       'All Around Item', 'Basketball', 'Football', 'Soccer', 'Baseball',
-      'Tennis', 'Golf', 'Swimming', 'Running', 'Cycling', 'Volleyball', 'Hockey'
+      'Tennis', 'Golf', 'Swimming', 'Running', 'Cycling', 'Volleyball', 'Hockey', 'Wrestling'
     ];
 
     // Insert categories using Supabase client
