@@ -1831,11 +1831,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
 
         await sendEmail(emailTemplate);
-        console.log(`Setup email sent to: ${email}`);
+        console.log('Setup email sent to:', email);
 
         return res.json({
           success: true,
-          message: `Setup email sent successfully! ${firstName || 'User'} will receive an email to complete their account setup.`
+          message: 'Setup email sent successfully! ' + (firstName || 'User') + ' will receive an email to complete their account setup.'
         });
       } catch (emailError) {
         console.error('Error sending setup email:', emailError);
@@ -1872,7 +1872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`Creating account directly for: ${email} with role: ${role}`);
+      console.log('Creating account directly for:', email, 'with role:', role);
 
       // Create user in Supabase Auth with password
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -1903,13 +1903,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`✅ Account created successfully for: ${email}`);
-      console.log(`🔑 Temporary password: ${password}`);
-      console.log(`👤 User can now log in immediately`);
+      console.log('Account created successfully for:', email);
+      console.log('Temporary password:', password);
+      console.log('User can now log in immediately');
 
       return res.status(201).json({
         success: true,
-        message: `Account created successfully! User can log in with email: ${email} and temporary password: ${password}`,
+        message: 'Account created successfully! User can log in with email: ' + email + ' and temporary password: ' + password,
         user: {
           id: data.user.id,
           email: data.user.email,
@@ -1937,7 +1937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For now, return a placeholder response until we set up file storage
       // This allows the UI to work while we implement the actual upload
-      const mockImageUrl = `https://via.placeholder.com/300x300/4f46e5/ffffff?text=Product+${Date.now()}`;
+      const mockImageUrl = 'https://via.placeholder.com/300x300/4f46e5/ffffff?text=Product+' + Date.now();
 
       console.log('Generated placeholder image URL:', mockImageUrl);
 
