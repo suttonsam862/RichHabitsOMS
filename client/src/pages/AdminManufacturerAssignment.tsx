@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UserCheck } from 'lucide-react';
+import { Loader2, UserCheck, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
@@ -37,6 +37,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AdminManufacturerAssignment() {
   const queryClient = useQueryClient();

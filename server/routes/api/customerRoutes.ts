@@ -200,16 +200,7 @@ export async function verifyInvitation(req: Request, res: Response) {
     });
   }
 }
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_KEY || '',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+
 
 /**
  * Create a new customer in Supabase
