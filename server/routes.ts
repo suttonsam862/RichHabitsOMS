@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
 
-      console.log('Found', customers.length, 'customers in Supabase');
+      console.log(`Found ${customers.length} customers in Supabase`);
       return res.json({ success: true, customers });
     } catch (err) {
       console.error('Error fetching customers:', err);
@@ -280,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const randomPassword = Math.random().toString(36).substring(2, 10) + 
                            Math.random().toString(36).substring(2, 15);
 
-      console.log('Creating customer in Supabase Auth:', customerEmail);
+      console.log(`Creating customer in Supabase Auth: ${customerEmail}`);
 
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.admin.createUser({
@@ -393,9 +393,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               inviteSent = await sendEmail(emailTemplate);
               if (inviteSent) {
-                console.log('✅ Setup email sent successfully to:', customerEmail);
+                console.log(`✅ Setup email sent successfully to: ${customerEmail}`);
               } else {
-                console.log('❌ Setup email failed to send to:', customerEmail, '- SendGrid API key not configured');
+                console.log(`❌ Setup email failed to send to: ${customerEmail} - SendGrid API key not configured`);
               }
             } catch (moduleErr) {
               console.error('Email module not available:', moduleErr);
@@ -411,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log creation details
-      console.log('Customer created:', customerEmail, ', Send invite:', shouldSendInvite, ', Invite sent:', inviteSent);
+      console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}, Invite sent: ${inviteSent}`);
 
       // Return success with customer data and accurate email status
       return res.status(201).json({
@@ -456,8 +456,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log creation details
-      console.log('Customer created:', customerEmail, ', Send invite:', shouldSendInvite);
-      console.log('Source:', req.get('Referer') || 'Unknown', ', Created by:', req.user?.id || 'Unknown');
+      console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}`);
+      console.log(`Source: ${req.get('Referer') || 'Unknown'}, Created by: ${req.user?.id || 'Unknown'}`);
 
       // Store in customer metadata whether this was created via invitation
       try {
@@ -548,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // In a real implementation, we would send this link via email
-      console.log('Invite link for', customer.email, 'generated:', recoveryLink);
+      console.log(`Invite link for ${customer.email} generated: ${recoveryLink}`);
 
       // Return success
       return res.json({
@@ -729,18 +729,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const emailResult = await sendEmail({
               to: email,
               subject: 'Invitation to Custom Clothing Order Management System',
-              text: 'Hello ' + (firstName || '') + ',\n\nYou have been invited to the Custom Clothing Order Management System as a ' + role + '. Please click the link below to set up your account:\n\nhttp://localhost:5000/setup-account?token=' + setupToken.token + '\n\nThis link will expire in 7 days.\n\nRegards,\nAdmin Team',
-              html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">' +
-                    '<h2 style="color: #333;">Welcome to Custom Clothing Order Management</h2>' +
-                    '<p>Hello ' + (firstName || '') + ',</p>' +
-                    '<p>You have been invited to join the Custom Clothing Order Management System as a <strong>' + role + '</strong>.</p>' +
-                    '<div style="margin: 25px 0;">' +
-                    '<a href="http://localhost:5000/setup-account?token=' + setupToken.token + '" style="background-color: #4a90e2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Account</a>' +
-                    '</div>' +
-                    '<p>This link will expire in 7 days.</p>' +
-                    '<p>If you didn\'t expect this invitation, please ignore this email.</p>' +
-                    '<p>Regards,<br>Admin Team</p>' +
-                    '</div>'
+              text: `Hello ${firstName || ''},\n\nYou have been invited to the Custom Clothing Order Management System as a ${role}. Please click the link below to set up your account:\n\nhttp://localhost:5000/setup-account?token=${setupToken.token}\n\nThis link will expire in 7 days.\n\nRegards,\nAdmin Team`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                  <h2 style="color: #333;">Welcome to Custom Clothing Order Management</h2>
+                  <p>Hello ${firstName || ''},</p>
+                  <p>You have been invited to join the Custom Clothing Order Management System as a <strong>${role}</strong>.</p>
+                  <div style="margin: 25px 0;">
+                    <a href="http://localhost:5000/setup-account?token=${setupToken.token}" style="background-color: #4a90e2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Account</a>
+                  </div>
+                  <p>This link will expire in 7 days.</p>
+                  <p>If you didn't expect this invitation, please ignore this email.</p>
+                  <p>Regards,<br>Admin Team</p>
+                </div>
+              `
             });
 
             if (!emailResult) {
@@ -868,7 +870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user exists
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
-        .select('*')
+```text
         .eq('id', id)
         .single();
 
@@ -1006,7 +1008,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { data: orders, error } = await supabase
         .from('orders')
-        .select('*, order_items (*)')
+        .select(`
+          *,
+          order_items (*)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1134,7 +1139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .eq('invitation_token', invitationToken);
 
-      console.log('User registered successfully with invitation:', email);
+      console.log(`✅ User registered successfully with invitation: ${email}`);
 
       return res.status(201).json({
         success: true,
@@ -1273,7 +1278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { email, password } = result.data;
 
-      console.log('Attempting login for user:', email);
+      console.log(`Attempting login for user: ${email}`);
 
       // Authenticate user through Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -1297,7 +1302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('User authenticated successfully:', data.user.id);
+      console.log(`User authenticated successfully: ${data.user.id}`);
 
       // Check if the user has role in metadata first (this has priority)
       const userMetadataRole = data.user.user_metadata?.role;
@@ -1591,9 +1596,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Debug: Log all users and their metadata
-      console.log('Total users found:', data.users.length);
+      console.log(`Total users found: ${data.users.length}`);
       data.users.forEach((user, index) => {
-        console.log('User', index + 1, ':', {
+        console.log(`User ${index + 1}:`, {
           id: user.id,
           email: user.email,
           metadata: user.user_metadata
@@ -1606,7 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Look for users with customer role in metadata
           const metadata = user.user_metadata || {};
           const hasCustomerRole = metadata.role === 'customer';
-          console.log('User', user.email, 'has customer role:', hasCustomerRole, 'metadata:', metadata);
+          console.log(`User ${user.email} has customer role:`, hasCustomerRole, 'metadata:', metadata);
           return hasCustomerRole;
         })
         .map(user => {
@@ -1631,7 +1636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
 
-      console.log('Found', customers.length, 'customers in Supabase');
+      console.log(`Found ${customers.length} customers in Supabase`);
       return res.json(customers);
     } catch (err: any) {
       console.error('Error fetching customers:', err);
@@ -1646,7 +1651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/customers/:customerId', authenticateRequest, requireAuth, requireRole(['admin']), async (req, res) => {
     try {
       const { customerId } = req.params;
-      console.log('Fetching customer details for ID:', customerId);
+      console.log(`Fetching customer details for ID: ${customerId}`);
 
       // Get user from Supabase Auth
       const { data, error } = await supabaseAdmin.auth.admin.getUserById(customerId);
@@ -1697,7 +1702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created_at: user.created_at
       };
 
-      console.log('Customer', customerId, 'details retrieved successfully');
+      console.log(`Customer ${customerId} details retrieved successfully`);
       return res.json(customer);
     } catch (err: any) {
       console.error('Error fetching customer details:', err);
@@ -1714,7 +1719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { customerId } = req.params;
       const { firstName, lastName, email, phone, company, address, city, state, zip, country, status } = req.body;
 
-      console.log('Updating customer', customerId);
+      console.log(`Updating customer ${customerId}`);
 
       // Update user metadata in Supabase Auth
       const updateData: any = {
@@ -1747,7 +1752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('Customer', customerId, 'updated successfully');
+      console.log(`Customer ${customerId} updated successfully`);
 
       return res.status(200).json({
         success: true,
@@ -1817,22 +1822,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: Date.now()
       })).toString('base64url');
 
-      const setupUrl = (process.env.REPLIT_DEV_DOMAIN || 'localhost:5000') + '/setup?token=' + setupToken;
+      const setupUrl = `${process.env.REPLIT_DEV_DOMAIN || 'localhost:5000'}/setup?token=${setupToken}`;
 
       try {
         const emailTemplate = {
           to: email,
           subject: 'Complete Your Account Setup - ThreadCraft',
-          text: 'Hi ' + (firstName || 'there') + ',\n\nYou\'ve been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:\n' + setupUrl + '\n\nThis link will expire in 7 days.\n\nBest regards,\nThe ThreadCraft Team',
-          html: '<div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;"><h2 style="color: #333;">Complete Your Account Setup</h2><p>Hi ' + (firstName || 'there') + ',</p><p>You\'ve been invited to complete your account setup for ThreadCraft!</p><p>Please click the button below to access your dashboard:</p><div style="text-align: center; margin: 30px 0;"><a href="' + setupUrl + '" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Complete Setup</a></div><p style="color: #666; font-size: 14px;">If the button doesn\'t work, you can copy and paste this link into your browser:<br><a href="' + setupUrl + '">' + setupUrl + '</a></p><p style="color: #666; font-size: 14px;">This link will expire in 7 days.</p><hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;"><p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p></div>'
+          text: `Hi ${firstName || 'there'},
+
+You've been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:
+${setupUrl}
+
+This link will expire in 7 days.
+
+Best regards,
+The ThreadCraft Team`,
+          html: `
+            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+              <h2 style="color: #333;">Complete Your Account Setup</h2>
+              <p>Hi ${firstName || 'there'},</p>
+              <p>You've been invited to complete your account setup for ThreadCraft!</p>
+              <p>Please click the button below to access your dashboard:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${setupUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Complete Setup
+                </a>
+              </div>
+              <p style="color: #666; font-size: 14px;">
+                If the button doesn't work, you can copy and paste this link into your browser:<br>
+                <a href="${setupUrl}">${setupUrl}</a>
+              </p>
+              <p style="color: #666; font-size: 14px;">
+                This link will expire in 7 days.
+              </p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+              <p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p>
+            </div>
+          `
         };
 
         await sendEmail(emailTemplate);
-        console.log('Setup email sent to:', email);
+        console.log(`Setup email sent to: ${email}`);
 
         return res.json({
           success: true,
-          message: 'Setup email sent successfully! ' + (firstName || 'User') + ' will receive an email to complete their account setup.'
+          message: `Setup email sent successfully! ${firstName || 'User'} will receive an email to complete their account setup.`
         });
       } catch (emailError) {
         console.error('Error sending setup email:', emailError);
@@ -1869,7 +1903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('Creating account directly for:', email, 'with role:', role);
+      console.log(`Creating account directly for: ${email} with role: ${role}`);
 
       // Create user in Supabase Auth with password
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -1900,13 +1934,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('Account created successfully for:', email);
-      console.log('Temporary password:', password);
-      console.log('User can now log in immediately');
+      console.log(`✅ Account created successfully for: ${email}`);
+      console.log(`🔑 Temporary password: ${password}`);
+      console.log(`👤 User can now log in immediately`);
 
       return res.status(201).json({
         success: true,
-        message: 'Account created successfully! User can log in with email: ' + email + ' and temporary password: ' + password,
+        message: `Account created successfully! User can log in with email: ${email} and temporary password: ${password}`,
         user: {
           id: data.user.id,
           email: data.user.email,
@@ -1934,7 +1968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For now, return a placeholder response until we set up file storage
       // This allows the UI to work while we implement the actual upload
-      const mockImageUrl = 'https://via.placeholder.com/300x300/4f46e5/ffffff?text=Product+' + Date.now();
+      const mockImageUrl = `https://via.placeholder.com/300x300/4f46e5/ffffff?text=Product+${Date.now()}`;
 
       console.log('Generated placeholder image URL:', mockImageUrl);
 
@@ -1985,7 +2019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('Found', customers?.length || 0, 'customers in database');
+      console.log(`Found ${customers?.length || 0} customers in database`);
 
       // Get all authenticated users from Supabase Auth
       const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
@@ -1995,7 +2029,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue even if auth fails - we still want to show customer data
       }
 
-      console.log('Found', authUsers?.users?.length || 0, 'auth accounts');
+      console.log(`Found ${authUsers?.users?.length || 0} auth accounts`);
 
       // Create comprehensive user database view
       const userDatabase = [];
@@ -2097,8 +2131,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         staffUsers: userDatabase.filter(u => !['customer', 'admin'].includes(u.role)).length
       };
 
-      console.log('Compiled user database:', userDatabase.length, 'total users');
-      console.log('Analytics:', analytics);
+      console.log(`Compiled user database: ${userDatabase.length} total users`);
+      console.log(`Analytics:`, analytics);
 
       return res.status(200).json({
         success: true,
@@ -2116,115 +2150,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create auth account for existing customer
-  // Create manufacturer account
-  app.post('/api/users/create-manufacturer', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
-    const { firstName, lastName, email, company, phone, specialties } = req.body;
-
-    // Validate required fields
-    if (!firstName || !lastName || !email) {
-      return res.status(400).json({
-        success: false,
-        message: 'First name, last name, and email are required'
-      });
-    }
-
-    try {
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('auth.users')
-        .select('email')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'User with this email already exists'
-        });
-      }
-
-      // Generate temporary password
-      const tempPassword = Math.random().toString(36).substring(2, 12);
-
-      // Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        user_metadata: {
-          firstName,
-          lastName,
-          role: 'manufacturer',
-          company: company || '',
-          phone: phone || '',
-          specialties: specialties || ''
-        },
-        email_confirm: true
-      });
-
-      if (authError) {
-        console.error('Auth creation error:', authError);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to create user account: ' + authError.message
-        });
-      }
-
-      // Create profile in user_profiles table
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: authData.user.id,
-          email,
-          first_name: firstName,
-          last_name: lastName,
-          role: 'manufacturer',
-          company: company || null,
-          phone: phone || null,
-          metadata: {
-            specialties: specialties || '',
-            created_by: req.user?.id,
-            created_at: new Date().toISOString()
-          }
-        })
-        .select()
-        .single();
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        // Clean up auth user if profile creation fails
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to create user profile: ' + profileError.message
-        });
-      }
-
-      console.log('✅ Manufacturer created successfully:', email);
-
-      return res.status(201).json({
-        success: true,
-        message: 'Manufacturer created successfully',
-        user: {
-          id: authData.user.id,
-          email,
-          firstName,
-          lastName,
-          role: 'manufacturer',
-          company,
-          phone,
-          specialties
-        }
-      });
-
-    } catch (error: any) {
-      console.error('Error creating manufacturer:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create manufacturer: ' + error.message
-      });
-    }
-  });
-
   app.post('/api/users/create-customer-account', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
     try {
       const { customerId, password = 'TempPassword123!' } = req.body;
@@ -2273,11 +2198,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('✅ Auth account created for customer:', customer.email);
+      console.log(`✅ Auth account created for customer: ${customer.email}`);
 
       return res.status(201).json({
         success: true,
-        message: 'Auth account created successfully for ' + customer.firstName + ' ' + customer.lastName,
+        message: `Auth account created successfully for ${customer.firstName} ${customer.lastName}`,
         user: {
           id: data.user?.id,
           email: customer.email,
@@ -2310,7 +2235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('Updating user', userId, 'with data:', { email, firstName, lastName, role, phone, company });
+      console.log(`Updating user ${userId} with data:`, { email, firstName, lastName, role, phone, company });
 
       // Update auth user metadata
       const updateData: any = {
@@ -2362,7 +2287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log('✅ User', userId, 'updated successfully');
+      console.log(`✅ User ${userId} updated successfully`);
 
       return res.status(200).json({
         success: true,
@@ -2386,6 +2311,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Import routes
+  const healthRoutes = (await import('./routes/health')).default;
+  const catalogRoutes = (await import('./routes/api/catalogRoutes')).default;
+  const catalogOptionsRoutes = (await import('./routes/api/catalogOptionsRoutes')).default;
+  const customerRoutes = (await import('./routes/api/customerRoutes')).default;
+  const imageRoutes = (await import('./routes/api/imageRoutes')).default;
+  const invitationRoutes = (await import('./routes/api/invitationRoutes')).default;
+
+// Use imported routes
+  app.use('/api/health', healthRoutes);
+  app.use('/api/catalog', catalogRoutes);
+  app.use('/api/catalog-options', catalogOptionsRoutes);
+  app.use('/api/customers', customerRoutes);
+  app.use('/api/images', imageRoutes);
+  app.use('/api', invitationRoutes);
 
   // Catalog management routes
   app.get('/api/catalog', authenticateRequest, requireAuth, requireRole(['admin']), getCatalogItems);
