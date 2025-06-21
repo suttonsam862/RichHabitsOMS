@@ -280,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const randomPassword = Math.random().toString(36).substring(2, 10) + 
                            Math.random().toString(36).substring(2, 15);
 
-      console.log(`Creating customer in Supabase Auth: ${customerEmail}`);
+      console.log('Creating customer in Supabase Auth:', customerEmail);
 
       // Create user in Supabase Auth
       const { data, error } = await supabase.auth.admin.createUser({
@@ -393,9 +393,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               inviteSent = await sendEmail(emailTemplate);
               if (inviteSent) {
-                console.log(`✅ Setup email sent successfully to: ${customerEmail}`);
+                console.log('✅ Setup email sent successfully to:', customerEmail);
               } else {
-                console.log(`❌ Setup email failed to send to: ${customerEmail} - SendGrid API key not configured`);
+                console.log('❌ Setup email failed to send to:', customerEmail, '- SendGrid API key not configured');
               }
             } catch (moduleErr) {
               console.error('Email module not available:', moduleErr);
@@ -411,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log creation details
-      console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}, Invite sent: ${inviteSent}`);
+      console.log('Customer created:', customerEmail, ', Send invite:', shouldSendInvite, ', Invite sent:', inviteSent);
 
       // Return success with customer data and accurate email status
       return res.status(201).json({
@@ -456,8 +456,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log creation details
-      console.log(`Customer created: ${customerEmail}, Send invite: ${shouldSendInvite}`);
-      console.log(`Source: ${req.get('Referer') || 'Unknown'}, Created by: ${req.user?.id || 'Unknown'}`);
+      console.log('Customer created:', customerEmail, ', Send invite:', shouldSendInvite);
+      console.log('Source:', req.get('Referer') || 'Unknown', ', Created by:', req.user?.id || 'Unknown');
 
       // Store in customer metadata whether this was created via invitation
       try {
@@ -548,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // In a real implementation, we would send this link via email
-      console.log(`Invite link for ${customer.email} generated: ${recoveryLink}`);
+      console.log('Invite link for', customer.email, 'generated:', recoveryLink);
 
       // Return success
       return res.json({
@@ -729,20 +729,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const emailResult = await sendEmail({
               to: email,
               subject: 'Invitation to Custom Clothing Order Management System',
-              text: `Hello ${firstName || ''},\n\nYou have been invited to the Custom Clothing Order Management System as a ${role}. Please click the link below to set up your account:\n\nhttp://localhost:5000/setup-account?token=${setupToken.token}\n\nThis link will expire in 7 days.\n\nRegards,\nAdmin Team`,
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                  <h2 style="color: #333;">Welcome to Custom Clothing Order Management</h2>
-                  <p>Hello ${firstName || ''},</p>
-                  <p>You have been invited to join the Custom Clothing Order Management System as a <strong>${role}</strong>.</p>
-                  <div style="margin: 25px 0;">
-                    <a href="http://localhost:5000/setup-account?token=${setupToken.token}" style="background-color: #4a90e2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Account</a>
-                  </div>
-                  <p>This link will expire in 7 days.</p>
-                  <p>If you didn't expect this invitation, please ignore this email.</p>
-                  <p>Regards,<br>Admin Team</p>
-                </div>
-              `
+              text: 'Hello ' + (firstName || '') + ',\n\nYou have been invited to the Custom Clothing Order Management System as a ' + role + '. Please click the link below to set up your account:\n\nhttp://localhost:5000/setup-account?token=' + setupToken.token + '\n\nThis link will expire in 7 days.\n\nRegards,\nAdmin Team',
+              html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">' +
+                    '<h2 style="color: #333;">Welcome to Custom Clothing Order Management</h2>' +
+                    '<p>Hello ' + (firstName || '') + ',</p>' +
+                    '<p>You have been invited to join the Custom Clothing Order Management System as a <strong>' + role + '</strong>.</p>' +
+                    '<div style="margin: 25px 0;">' +
+                    '<a href="http://localhost:5000/setup-account?token=' + setupToken.token + '" style="background-color: #4a90e2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Set Up Your Account</a>' +
+                    '</div>' +
+                    '<p>This link will expire in 7 days.</p>' +
+                    '<p>If you didn\'t expect this invitation, please ignore this email.</p>' +
+                    '<p>Regards,<br>Admin Team</p>' +
+                    '</div>'
             });
 
             if (!emailResult) {
@@ -871,7 +869,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { data: existingUser, error: checkError } = await supabase
         .from('user_profiles')
         .select('*')
-        ```text
         .eq('id', id)
         .single();
 
