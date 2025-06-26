@@ -18,7 +18,7 @@ const supabase = createClient(
 );
 
 async function createCatalogOptionsTables() {
-  console.log('Setting up catalog options tables...');
+  console.log('Creating catalog options tables via direct SQL...');
   
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -26,147 +26,115 @@ async function createCatalogOptionsTables() {
   }
 
   try {
-    // Create catalog_categories table
+    // Create categories table with direct SQL
     console.log('Creating catalog_categories table...');
-    const { error: categoriesError } = await supabase.rpc('exec', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS catalog_categories (
-          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-          name VARCHAR(100) UNIQUE NOT NULL,
-          is_active BOOLEAN DEFAULT TRUE,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-        
-        CREATE INDEX IF NOT EXISTS idx_catalog_categories_name ON catalog_categories(name);
-        CREATE INDEX IF NOT EXISTS idx_catalog_categories_active ON catalog_categories(is_active);
-      `
-    });
-
-    if (categoriesError) {
-      console.log('Trying direct table creation approach...');
+    const createCategoriesSQL = `
+      CREATE TABLE IF NOT EXISTS catalog_categories (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
       
-      // Alternative approach: Insert sample data and let the table be created
+      CREATE INDEX IF NOT EXISTS idx_catalog_categories_name ON catalog_categories(name);
+      CREATE INDEX IF NOT EXISTS idx_catalog_categories_active ON catalog_categories(is_active);
+    `;
+
+    const { error: categoriesTableError } = await supabase.rpc('exec_sql', { sql: createCategoriesSQL });
+    
+    if (categoriesTableError) {
+      console.log('RPC failed, trying direct table creation...');
+      // Alternative: Create by inserting data first
       const { error: insertCatError } = await supabase
         .from('catalog_categories')
-        .upsert([
-          { name: 'T-Shirts', is_active: true },
-          { name: 'Hoodies', is_active: true },
-          { name: 'Polo Shirts', is_active: true },
-          { name: 'Jackets', is_active: true },
-          { name: 'Pants', is_active: true },
-          { name: 'Shorts', is_active: true },
-          { name: 'Accessories', is_active: true },
-          { name: 'Custom', is_active: true }
-        ], { onConflict: 'name' });
-
-      if (insertCatError) {
-        console.error('Failed to create/populate categories table:', insertCatError.message);
-      } else {
-        console.log('✅ Categories table created and populated successfully');
+        .upsert([{ name: 'T-Shirts', is_active: true }]);
+        
+      if (insertCatError && insertCatError.code === '42P01') {
+        console.error('Table catalog_categories does not exist and cannot be created automatically');
+        console.log('Please create the table manually in Supabase SQL editor with this query:');
+        console.log(createCategoriesSQL);
       }
     } else {
-      console.log('✅ Categories table structure created');
-      
-      // Insert default categories
-      const { error: insertError } = await supabase
-        .from('catalog_categories')
-        .upsert([
-          { name: 'T-Shirts', is_active: true },
-          { name: 'Hoodies', is_active: true },
-          { name: 'Polo Shirts', is_active: true },
-          { name: 'Jackets', is_active: true },
-          { name: 'Pants', is_active: true },
-          { name: 'Shorts', is_active: true },
-          { name: 'Accessories', is_active: true },
-          { name: 'Custom', is_active: true }
-        ], { onConflict: 'name' });
-        
-      if (!insertError) {
-        console.log('✅ Default categories inserted');
-      }
+      console.log('✅ Categories table created successfully');
     }
 
-    // Create catalog_sports table
+    // Create sports table with direct SQL
     console.log('Creating catalog_sports table...');
-    const { error: sportsError } = await supabase.rpc('exec', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS catalog_sports (
-          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-          name VARCHAR(100) UNIQUE NOT NULL,
-          is_active BOOLEAN DEFAULT TRUE,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-        
-        CREATE INDEX IF NOT EXISTS idx_catalog_sports_name ON catalog_sports(name);
-        CREATE INDEX IF NOT EXISTS idx_catalog_sports_active ON catalog_sports(is_active);
-      `
-    });
-
-    if (sportsError) {
-      console.log('Trying direct table creation approach for sports...');
+    const createSportsSQL = `
+      CREATE TABLE IF NOT EXISTS catalog_sports (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
       
-      // Alternative approach: Insert sample data and let the table be created
+      CREATE INDEX IF NOT EXISTS idx_catalog_sports_name ON catalog_sports(name);
+      CREATE INDEX IF NOT EXISTS idx_catalog_sports_active ON catalog_sports(is_active);
+    `;
+
+    const { error: sportsTableError } = await supabase.rpc('exec_sql', { sql: createSportsSQL });
+    
+    if (sportsTableError) {
+      console.log('RPC failed, trying direct table creation...');
+      // Alternative: Create by inserting data first
       const { error: insertSportError } = await supabase
         .from('catalog_sports')
-        .upsert([
-          { name: 'All Around Item', is_active: true },
-          { name: 'Basketball', is_active: true },
-          { name: 'Football', is_active: true },
-          { name: 'Soccer', is_active: true },
-          { name: 'Baseball', is_active: true },
-          { name: 'Tennis', is_active: true },
-          { name: 'Golf', is_active: true },
-          { name: 'Swimming', is_active: true },
-          { name: 'Running', is_active: true },
-          { name: 'Cycling', is_active: true },
-          { name: 'Volleyball', is_active: true },
-          { name: 'Hockey', is_active: true }
-        ], { onConflict: 'name' });
-
-      if (insertSportError) {
-        console.error('Failed to create/populate sports table:', insertSportError.message);
-      } else {
-        console.log('✅ Sports table created and populated successfully');
+        .upsert([{ name: 'Basketball', is_active: true }]);
+        
+      if (insertSportError && insertSportError.code === '42P01') {
+        console.error('Table catalog_sports does not exist and cannot be created automatically');
+        console.log('Please create the table manually in Supabase SQL editor with this query:');
+        console.log(createSportsSQL);
       }
     } else {
-      console.log('✅ Sports table structure created');
+      console.log('✅ Sports table created successfully');
+    }
+
+    // Now seed the data
+    console.log('Seeding default categories...');
+    const defaultCategories = [
+      'T-Shirts', 'Hoodies', 'Polo Shirts', 'Jackets', 
+      'Pants', 'Shorts', 'Accessories', 'Custom'
+    ];
+
+    for (const categoryName of defaultCategories) {
+      const { error } = await supabase
+        .from('catalog_categories')
+        .upsert({ name: categoryName, is_active: true }, { onConflict: 'name' });
       
-      // Insert default sports
-      const { error: insertError } = await supabase
-        .from('catalog_sports')
-        .upsert([
-          { name: 'All Around Item', is_active: true },
-          { name: 'Basketball', is_active: true },
-          { name: 'Football', is_active: true },
-          { name: 'Soccer', is_active: true },
-          { name: 'Baseball', is_active: true },
-          { name: 'Tennis', is_active: true },
-          { name: 'Golf', is_active: true },
-          { name: 'Swimming', is_active: true },
-          { name: 'Running', is_active: true },
-          { name: 'Cycling', is_active: true },
-          { name: 'Volleyball', is_active: true },
-          { name: 'Hockey', is_active: true }
-        ], { onConflict: 'name' });
-        
-      if (!insertError) {
-        console.log('✅ Default sports inserted');
+      if (error) {
+        console.warn(`Failed to insert category ${categoryName}:`, error.message);
       }
     }
 
-    // Verify tables exist and have data
+    console.log('Seeding default sports...');
+    const defaultSports = [
+      'All Around Item', 'Basketball', 'Football', 'Soccer', 'Baseball',
+      'Tennis', 'Golf', 'Swimming', 'Running', 'Cycling', 'Volleyball', 'Hockey'
+    ];
+
+    for (const sportName of defaultSports) {
+      const { error } = await supabase
+        .from('catalog_sports')
+        .upsert({ name: sportName, is_active: true }, { onConflict: 'name' });
+      
+      if (error) {
+        console.warn(`Failed to insert sport ${sportName}:`, error.message);
+      }
+    }
+
+    // Verify setup
     console.log('\nVerifying table setup...');
 
     const { data: categories, error: catError } = await supabase
       .from('catalog_categories')
       .select('*')
-      .limit(5);
+      .limit(3);
 
     if (!catError && categories && categories.length > 0) {
       console.log(`✅ catalog_categories verified (${categories.length} categories found)`);
-      console.log('Sample categories:', categories.map(c => c.name).slice(0, 3).join(', '));
     } else {
       console.error('❌ catalog_categories verification failed:', catError?.message);
     }
@@ -174,19 +142,46 @@ async function createCatalogOptionsTables() {
     const { data: sports, error: sportError } = await supabase
       .from('catalog_sports')
       .select('*')
-      .limit(5);
+      .limit(3);
 
     if (!sportError && sports && sports.length > 0) {
       console.log(`✅ catalog_sports verified (${sports.length} sports found)`);
-      console.log('Sample sports:', sports.map(s => s.name).slice(0, 3).join(', '));
     } else {
       console.error('❌ catalog_sports verification failed:', sportError?.message);
     }
 
-    console.log('\n🎉 Catalog options tables setup completed successfully!');
+    console.log('\n🎉 Catalog options setup completed!');
 
   } catch (error) {
     console.error('Setup error:', error.message);
+    
+    // Provide manual setup instructions
+    console.log('\n📋 Manual Setup Instructions:');
+    console.log('If automatic setup failed, please run these SQL commands in your Supabase SQL editor:');
+    console.log('\n-- Create Categories Table');
+    console.log(`CREATE TABLE IF NOT EXISTS catalog_categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(100) UNIQUE NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_categories_name ON catalog_categories(name);
+CREATE INDEX IF NOT EXISTS idx_catalog_categories_active ON catalog_categories(is_active);`);
+
+    console.log('\n-- Create Sports Table');
+    console.log(`CREATE TABLE IF NOT EXISTS catalog_sports (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(100) UNIQUE NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_sports_name ON catalog_sports(name);
+CREATE INDEX IF NOT EXISTS idx_catalog_sports_active ON catalog_sports(is_active);`);
+
     process.exit(1);
   }
 }
