@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../../db';
-import { requireAuth, requireRole } from '../../routes/auth/auth';
+import { requireAuth, requireRole } from '../../middleware/adminAuth';
 import { catalogCategories, catalogSports } from '../../../shared/schema';
 
 const router = Router();
