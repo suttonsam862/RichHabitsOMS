@@ -124,7 +124,7 @@ const ImageUploadArea: React.FC<ImageUploadAreaProps> = ({
     if (file) {
       setSelectedFile(file);
       onFileSelect(file);
-      
+
       // Create preview URL
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
@@ -204,16 +204,16 @@ const ImageUploadArea: React.FC<ImageUploadAreaProps> = ({
 const generateSKU = (category: string, name: string): string => {
   // Get category prefix (first 2-3 letters)
   const categoryPrefix = category.replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
-  
+
   // Get name prefix (first 2-3 letters)
   const namePrefix = name.replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase() || 'ITM';
-  
+
   // Generate sequential number based on timestamp
   const timestamp = Date.now().toString().slice(-6);
-  
+
   // Generate random alphanumeric suffix (shorter for readability)
   const randomSuffix = Math.random().toString(36).substring(2, 5).toUpperCase();
-  
+
   return `${categoryPrefix}-${namePrefix}-${timestamp}-${randomSuffix}`;
 };
 
@@ -249,8 +249,38 @@ export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [categories, setCategories] = useState(initialCategories);
-  const [sports, setSports] = useState(initialSports);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [sports, setSports] = useState<string[]>([]);
+
+  // Fetch categories and sports from API
+  useEffect(() => {
+    const fetchCatalogOptions = async () => {
+      try {
+        const [categoriesRes, sportsRes] = await Promise.all([
+          fetch('/api/catalog-options/categories', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          }),
+          fetch('/api/catalog-options/sports', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          })
+        ]);
+
+        if (categoriesRes.ok) {
+          const categoriesData = await categoriesRes.json();
+          setCategories(categoriesData.categories.map((cat: any) => cat.name));
+        }
+
+        if (sportsRes.ok) {
+          const sportsData = await sportsRes.json();
+          setSports(sportsData.sports.map((sport: any) => sport.name));
+        }
+      } catch (error) {
+        console.error('Error fetching catalog options:', error);
+      }
+    };
+
+    fetchCatalogOptions();
+  }, []);
   const [newCategory, setNewCategory] = useState("");
   const [newSport, setNewSport] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -326,16 +356,16 @@ export default function CatalogPage() {
       console.warn('Manufacturers data not available:', manufacturersError);
       return [];
     }
-    
+
     // Handle both array response and object with users property
     if (Array.isArray(manufacturersData)) {
       return manufacturersData;
     }
-    
+
     if (manufacturersData.users && Array.isArray(manufacturersData.users)) {
       return manufacturersData.users;
     }
-    
+
     return [];
   }, [manufacturersData, manufacturersError]);
 
@@ -348,7 +378,7 @@ export default function CatalogPage() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch("/api/catalog-options/categories", {
         headers,
         credentials: "include"
@@ -370,7 +400,7 @@ export default function CatalogPage() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch("/api/catalog-options/sports", {
         headers,
         credentials: "include"
@@ -387,13 +417,13 @@ export default function CatalogPage() {
   const addItemMutation = useMutation({
     mutationFn: async (data: CatalogItemForm & { _uploadFile?: File; _uploadMeasurementFile?: File }) => {
       const { _uploadFile, _uploadMeasurementFile, ...itemData } = data;
-      
+
       const payload = {
         ...itemData,
         tags: itemData.tags ? itemData.tags.split(",").map(tag => tag.trim()) : [],
         specifications: itemData.specifications ? JSON.parse(itemData.specifications) : {},
       };
-      
+
       // Create the catalog item first
       const response = await fetch("/api/catalog", {
         method: "POST",
@@ -402,43 +432,43 @@ export default function CatalogPage() {
         },
         body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to add catalog item");
       }
-      
+
       const result = await response.json();
-      
+
       // Upload product image if provided
       if (_uploadFile && result.item?.id) {
         const formData = new FormData();
         formData.append('image', _uploadFile);
-        
+
         const uploadResponse = await fetch(`/api/images/catalog/${result.item.id}`, {
           method: "POST",
           body: formData,
         });
-        
+
         if (!uploadResponse.ok) {
           console.warn("Product image upload failed, but item was created successfully");
         }
       }
-      
+
       // Upload measurement chart if provided
       if (_uploadMeasurementFile && result.item?.id) {
         const formData = new FormData();
         formData.append('image', _uploadMeasurementFile);
-        
+
         const uploadResponse = await fetch(`/api/images/catalog/${result.item.id}/measurement`, {
           method: "POST",
           body: formData,
         });
-        
+
         if (!uploadResponse.ok) {
           console.warn("Measurement chart upload failed, but item was created successfully");
         }
       }
-      
+
       return result;
     },
     onSuccess: () => {
@@ -472,14 +502,14 @@ export default function CatalogPage() {
 
   // Combine database categories with local state as fallback
   const allCategories = dbCategories.length > 0 ? dbCategories.map(cat => cat.name) : categories;
-  
+
   // Combine database sports with local state as fallback
   const allSports = dbSports.length > 0 ? dbSports.map(sport => sport.name) : sports;
 
   // Add new category handler with database persistence
   const addNewCategory = async () => {
     if (!newCategory.trim()) return;
-    
+
     try {
       const token = localStorage.getItem('authToken');
       const headers: HeadersInit = {
@@ -488,7 +518,7 @@ export default function CatalogPage() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch("/api/catalog-options/categories", {
         method: "POST",
         headers,
@@ -503,7 +533,7 @@ export default function CatalogPage() {
 
       // Refresh categories from database
       await refetchCategories();
-      
+
       form.setValue("category", newCategory.trim());
       setNewCategory("");
       setShowAddCategory(false);
@@ -524,7 +554,7 @@ export default function CatalogPage() {
   // Add new sport handler with database persistence
   const addNewSport = async () => {
     if (!newSport.trim()) return;
-    
+
     try {
       const token = localStorage.getItem('authToken');
       const headers: HeadersInit = {
@@ -533,7 +563,7 @@ export default function CatalogPage() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch("/api/catalog-options/sports", {
         method: "POST",
         headers,
@@ -548,7 +578,7 @@ export default function CatalogPage() {
 
       // Refresh sports from database
       await refetchSports();
-      
+
       form.setValue("sport", newSport.trim());
       setNewSport("");
       setShowAddSport(false);
@@ -563,6 +593,56 @@ export default function CatalogPage() {
         description: error.message || "Failed to add sport",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleAddSport = async (sportName: string) => {
+    try {
+      console.log('Adding sport:', sportName);
+
+      const response = await fetch('/api/catalog-options/sports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ name: sportName })
+      });
+
+      if (response.ok) {
+        setSports(prev => [...prev, sportName]);
+        console.log('Sport added successfully');
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to add sport:', errorData.message);
+      }
+    } catch (error) {
+      console.error('Error adding sport:', error);
+    }
+  };
+
+  const handleAddCategory = async (categoryName: string) => {
+    try {
+      console.log('Adding category:', categoryName);
+
+      const response = await fetch('/api/catalog-options/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ name: categoryName })
+      });
+
+      if (response.ok) {
+        setCategories(prev => [...prev, categoryName]);
+        console.log('Category added successfully');
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to add category:', errorData.message);
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
     }
   };
 
@@ -600,9 +680,9 @@ export default function CatalogPage() {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.category.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
 
@@ -633,7 +713,7 @@ export default function CatalogPage() {
                   Add a new item to the product catalog
                 </DialogDescription>
               </DialogHeader>
-              
+
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -650,7 +730,7 @@ export default function CatalogPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="sku"
@@ -901,8 +981,7 @@ export default function CatalogPage() {
                           <FormControl>
                             <div className="space-y-3">
                               <Input {...field} className="rich-input" placeholder="Image URL (optional)" />
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>OR</span>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground                                <span>OR</span>
                               </div>
                               <ImageUploadArea
                                 inputId="catalog-image-upload"
@@ -963,7 +1042,7 @@ export default function CatalogPage() {
                   {/* Measurement Section */}
                   <div className="space-y-4 border-t border-glass-border pt-4">
                     <h3 className="text-lg font-medium text-neon-blue">Measurement Settings</h3>
-                    
+
                     <FormField
                       control={form.control}
                       name="hasMeasurements"
@@ -1158,7 +1237,7 @@ export default function CatalogPage() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       <Card className="rich-card">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">

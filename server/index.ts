@@ -139,6 +139,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Import API routes
+import catalogRoutes from './routes/api/catalogRoutes';
+import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
+import customerRoutes from './routes/api/customerRoutes';
+import imageRoutes from './routes/api/imageRoutes';
+
 (async () => {
   try {
     // Verify Supabase connection
@@ -157,6 +163,12 @@ app.use((req, res, next) => {
 
     // Register API routes first
     const server = await registerRoutes(app);
+
+    // Register catalog routes
+    app.use('/api/catalog', catalogRoutes);
+    app.use('/api/catalog-options', catalogOptionsRoutes);
+    app.use('/api/customers', customerRoutes);
+    app.use('/api/images', imageRoutes);
 
     // Error handling middleware for API routes
     app.use("/api", (err: any, _req: Request, res: Response, _next: NextFunction) => {
