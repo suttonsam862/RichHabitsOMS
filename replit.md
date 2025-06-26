@@ -133,6 +133,13 @@ Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, s
 
 ## Recent Changes
 
+### Fixed SKU Field Usability in Catalog Management (June 21, 2025)
+- Removed read-only restriction from SKU input field in catalog add item form
+- Made SKU field fully editable allowing custom SKU entry
+- Converted auto-generation from automatic to manual trigger via refresh button
+- Updated field label and description to reflect new editable behavior
+- Maintained auto-generation functionality as optional feature for user convenience
+
 ### Enhanced Catalog Management System with Persistent Storage (June 20, 2025)
 - Removed description field from catalog add item form per user requirements
 - Implemented dynamic category dropdown with "Add Category" option for real-time category management

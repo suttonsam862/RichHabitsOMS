@@ -279,16 +279,9 @@ export default function CatalogPage() {
     },
   });
 
-  // Auto-generate SKU when name and category change
+  // Watch name and category for manual SKU generation
   const watchedName = form.watch("name");
   const watchedCategory = form.watch("category");
-
-  useEffect(() => {
-    if (watchedName && watchedCategory) {
-      const autoSKU = generateSKU(watchedCategory, watchedName);
-      form.setValue("sku", autoSKU);
-    }
-  }, [watchedName, watchedCategory, form]);
 
   // Function to manually regenerate SKU
   const regenerateSKU = () => {
@@ -632,15 +625,14 @@ export default function CatalogPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="subtitle text-muted-foreground text-xs">
-                            SKU (Auto-generated)
+                            SKU
                           </FormLabel>
                           <FormControl>
                             <div className="relative">
                               <Input 
                                 {...field} 
-                                className="rich-input bg-muted/20 pr-16" 
-                                placeholder="Auto-generated when name and category are filled"
-                                readOnly
+                                className="rich-input pr-16" 
+                                placeholder="Enter SKU or use auto-generate"
                               />
                               <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
                                 <Button
@@ -650,6 +642,7 @@ export default function CatalogPage() {
                                   className="h-6 w-6 p-0 hover:bg-neon-blue/20"
                                   onClick={regenerateSKU}
                                   disabled={!watchedName || !watchedCategory}
+                                  title="Auto-generate SKU"
                                 >
                                   <RefreshCw className="h-3 w-3 text-neon-blue" />
                                 </Button>
@@ -658,7 +651,7 @@ export default function CatalogPage() {
                             </div>
                           </FormControl>
                           <FormDescription className="subtitle text-muted-foreground text-xs">
-                            SKU is automatically generated based on category and product name
+                            Enter your own SKU or click the refresh button to auto-generate
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
