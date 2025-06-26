@@ -313,13 +313,65 @@ export default function CatalogPage() {
   const watchedName = form.watch("name");
   const watchedCategory = form.watch("category");
 
-  // Function to manually regenerate SKU
-  const regenerateSKU = () => {
+  // Function to manually regenerate SKU with uniqueness check
+  const regenerateSKU = async () => {
     const name = form.getValues("name");
     const category = form.getValues("category");
-    if (name && category) {
+    if (!name || !category) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter product name and select category first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      let newSKU = generateSKU(category, name);
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      // Check if SKU already exists and regenerate if needed
+      while (attempts < maxAttempts) {
+        const response = await fetch(`/api/catalog/check-sku?sku=${encodeURIComponent(newSKU)}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (!result.exists) {
+            // SKU is unique, use it
+            form.setValue("sku", newSKU);
+            toast({
+              title: "SKU Generated",
+              description: `Generated unique SKU: ${newSKU}`,
+            });
+            return;
+          }
+        }
+
+        // SKU exists, generate a new one
+        attempts++;
+        newSKU = generateSKU(category, name);
+      }
+
+      // If we couldn't generate a unique SKU after max attempts
+      toast({
+        title: "SKU Generation Failed", 
+        description: "Could not generate a unique SKU. Please enter one manually.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error('Error generating SKU:', error);
+      // Fallback to basic generation without uniqueness check
       const newSKU = generateSKU(category, name);
       form.setValue("sku", newSKU);
+      toast({
+        title: "SKU Generated",
+        description: `Generated SKU: ${newSKU} (uniqueness not verified)`,
+      });
     }
   };
 

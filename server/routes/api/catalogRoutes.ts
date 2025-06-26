@@ -259,9 +259,54 @@ export async function getCatalogItem(req: Request, res: Response) {
   }
 }
 
+/**
+ * Check if SKU already exists
+ */
+export async function checkSKUExists(req: Request, res: Response) {
+  try {
+    const { sku } = req.query;
+
+    if (!sku) {
+      return res.status(400).json({
+        success: false,
+        message: 'SKU parameter is required'
+      });
+    }
+
+    console.log('Checking SKU existence:', sku);
+
+    const { data: existingItem, error } = await supabase
+      .from('catalog_items')
+      .select('id')
+      .eq('sku', sku)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('Error checking SKU:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to check SKU',
+        error: error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      exists: !!existingItem
+    });
+  } catch (error) {
+    console.error('SKU check error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
 // Configure routes
 router.get('/', requireAuth, requireRole(['admin']), getCatalogItems);
 router.post('/', requireAuth, requireRole(['admin']), createCatalogItem);
+router.get('/check-sku', requireAuth, requireRole(['admin']), checkSKUExists);
 router.get('/:id', requireAuth, requireRole(['admin']), getCatalogItem);
 router.put('/:id', requireAuth, requireRole(['admin']), updateCatalogItem);
 router.delete('/:id', requireAuth, requireRole(['admin']), deleteCatalogItem);
