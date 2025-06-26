@@ -659,36 +659,38 @@ export default function CatalogPage() {
                     />
                   </div>
 
-                  {/* Sport Selection with Add Option */}
+                  {/* Sport Selection with Add Button */}
                   <FormField
                     control={form.control}
                     name="sport"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="subtitle text-muted-foreground text-xs">Sport</FormLabel>
-                        <Select value={field.value} onValueChange={(value) => {
-                          if (value === "add-new-sport") {
-                            setShowAddSport(true);
-                          } else {
-                            field.onChange(value);
-                          }
-                        }}>
-                          <FormControl>
-                            <SelectTrigger className="rich-input">
-                              <SelectValue placeholder="Select sport" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {allSports.map((sport) => (
-                              <SelectItem key={sport} value={sport}>
-                                {sport}
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="add-new-sport" className="text-neon-blue font-medium">
-                              + Add Sport
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="rich-input flex-1">
+                                <SelectValue placeholder="Select sport" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {allSports.map((sport) => (
+                                <SelectItem key={sport} value={sport}>
+                                  {sport}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAddSport(true)}
+                            className="px-3 whitespace-nowrap"
+                          >
+                            + Add Sport
+                          </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1032,6 +1034,98 @@ export default function CatalogPage() {
           </Dialog>
         </div>
       </div>
+
+      {/* Add Category Dialog */}
+      <Dialog open={showAddCategory} onOpenChange={setShowAddCategory}>
+        <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border">
+          <DialogHeader>
+            <DialogTitle className="text-neon-blue">Add New Category</DialogTitle>
+            <DialogDescription className="subtitle text-neon-green">
+              Create a new product category
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              placeholder="Enter category name"
+              className="rich-input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addNewCategory();
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowAddCategory(false);
+                  setNewCategory("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={addNewCategory}
+                disabled={!newCategory.trim()}
+                className="btn-primary"
+              >
+                Add Category
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Sport Dialog */}
+      <Dialog open={showAddSport} onOpenChange={setShowAddSport}>
+        <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border">
+          <DialogHeader>
+            <DialogTitle className="text-neon-blue">Add New Sport</DialogTitle>
+            <DialogDescription className="subtitle text-neon-green">
+              Create a new sport category
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              value={newSport}
+              onChange={(e) => setNewSport(e.target.value)}
+              placeholder="Enter sport name"
+              className="rich-input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addNewSport();
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowAddSport(false);
+                  setNewSport("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={addNewSport}
+                disabled={!newSport.trim()}
+                className="btn-primary"
+              >
+                Add Sport
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <Card className="rich-card">
         <CardContent className="pt-6">
