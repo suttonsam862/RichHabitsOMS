@@ -381,7 +381,12 @@ export default function CatalogPage() {
   const { data: catalogItems, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "catalog"],
     queryFn: async () => {
-      const response = await fetch("/api/catalog");
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      const response = await fetch("/api/catalog", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch catalog items");
       }
@@ -393,7 +398,12 @@ export default function CatalogPage() {
   const { data: manufacturersData, isError: manufacturersError } = useQuery({
     queryKey: ["admin", "manufacturers"],
     queryFn: async () => {
-      const response = await fetch("/api/users?role=manufacturer");
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      const response = await fetch("/api/users?role=manufacturer", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch manufacturers");
       }
@@ -478,11 +488,14 @@ export default function CatalogPage() {
         specifications: itemData.specifications ? JSON.parse(itemData.specifications) : {},
       };
 
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+
       // Create the catalog item first
       const response = await fetch("/api/catalog", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -500,6 +513,9 @@ export default function CatalogPage() {
 
         const uploadResponse = await fetch(`/api/images/catalog/${result.item.id}`, {
           method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
           body: formData,
         });
 
@@ -515,6 +531,9 @@ export default function CatalogPage() {
 
         const uploadResponse = await fetch(`/api/images/catalog/${result.item.id}/measurement`, {
           method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
           body: formData,
         });
 
