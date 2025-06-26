@@ -343,7 +343,16 @@ export default function CatalogPage() {
   const { data: dbCategories = [], refetch: refetchCategories } = useQuery({
     queryKey: ["admin", "catalog-categories"],
     queryFn: async () => {
-      const response = await fetch("/api/catalog-options/categories");
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch("/api/catalog-options/categories", {
+        headers,
+        credentials: "include"
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch categories");
       }
@@ -356,7 +365,16 @@ export default function CatalogPage() {
   const { data: dbSports = [], refetch: refetchSports } = useQuery({
     queryKey: ["admin", "catalog-sports"],
     queryFn: async () => {
-      const response = await fetch("/api/catalog-options/sports");
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch("/api/catalog-options/sports", {
+        headers,
+        credentials: "include"
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch sports");
       }
@@ -463,11 +481,18 @@ export default function CatalogPage() {
     if (!newCategory.trim()) return;
     
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch("/api/catalog-options/categories", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
+        credentials: "include",
         body: JSON.stringify({ name: newCategory.trim() }),
       });
 
@@ -501,11 +526,18 @@ export default function CatalogPage() {
     if (!newSport.trim()) return;
     
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch("/api/catalog-options/sports", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
+        credentials: "include",
         body: JSON.stringify({ name: newSport.trim() }),
       });
 
