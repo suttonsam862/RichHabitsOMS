@@ -333,9 +333,11 @@ export default function CatalogPage() {
 
       // Check if SKU already exists and regenerate if needed
       while (attempts < maxAttempts) {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         const response = await fetch(`/api/catalog/check-sku?sku=${encodeURIComponent(newSKU)}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
         });
 
