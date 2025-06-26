@@ -1,70 +1,89 @@
 
-import { supabase } from '../../server/db.ts';
+import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Create Supabase client with service role key for admin operations
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
 async function createCatalogOptionsTables() {
-  console.log('Creating catalog options tables...');
+  console.log('Connecting to Supabase with service role key...');
+  
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    process.exit(1);
+  }
 
   try {
-    // Read the SQL file
+    console.log('Reading SQL file...');
     const sqlPath = path.join(__dirname, 'create-catalog-options-tables.sql');
     const sql = fs.readFileSync(sqlPath, 'utf8');
 
-    // Split SQL into individual statements and execute them
-    const statements = sql.split(';').filter(stmt => stmt.trim().length > 0);
+    console.log('Executing SQL to create missing tables...');
+    
+    // Execute the complete SQL as one statement
+    const { data, error } = await supabase.rpc('exec_sql', {
+      sql: sql
+    });
 
-    for (const statement of statements) {
-      const trimmedStatement = statement.trim();
-      if (trimmedStatement) {
-        console.log(`Executing: ${trimmedStatement.substring(0, 50)}...`);
-
-        const { error } = await supabase.rpc('exec_sql', {
-          sql: trimmedStatement
-        });
-
-        if (error) {
-          console.error(`Error executing statement: ${error.message}`);
-          // Try direct query as fallback
-          const { error: queryError } = await supabase
-            .from('_sql_query')
-            .select('*')
-            .eq('query', trimmedStatement);
-
-          if (queryError) {
-            console.warn(`Both exec_sql and direct query failed for: ${trimmedStatement.substring(0, 50)}...`);
-          }
-        }
+    if (error) {
+      console.error('Error executing SQL:', error.message);
+      // Try direct SQL execution as fallback
+      console.log('Trying alternative approach...');
+      
+      const { error: directError } = await supabase
+        .from('catalog_categories')
+        .select('id')
+        .limit(1);
+        
+      if (directError && directError.code === 'PGRST204') {
+        console.log('Tables do not exist, need to create them manually...');
+        // Tables don't exist, continue with manual creation
       }
+    } else {
+      console.log('Database tables created successfully!');
     }
 
     // Verify tables were created
-    console.log('\nVerifying table creation...');
+    console.log('Verifying table creation...');
 
     const { data: categories, error: catError } = await supabase
       .from('catalog_categories')
-      .select('count')
+      .select('id')
       .limit(1);
 
     if (!catError) {
       console.log('✅ catalog_categories table verified');
     } else {
-      console.error('❌ catalog_categories table not found:', catError.message);
+      console.error('Error verifying table catalog_categories:', catError.message);
     }
 
     const { data: sports, error: sportError } = await supabase
       .from('catalog_sports')
-      .select('count')
+      .select('id')
       .limit(1);
 
     if (!sportError) {
       console.log('✅ catalog_sports table verified');
     } else {
-      console.error('❌ catalog_sports table not found:', sportError.message);
+      console.error('Error verifying table catalog_sports:', sportError.message);
     }
 
   } catch (error) {
