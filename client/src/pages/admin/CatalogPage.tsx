@@ -256,12 +256,15 @@ export default function CatalogPage() {
   useEffect(() => {
     const fetchCatalogOptions = async () => {
       try {
+        const token = localStorage.getItem('authToken');
         const [categoriesRes, sportsRes] = await Promise.all([
           fetch('/api/catalog-options/categories', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
           }),
           fetch('/api/catalog-options/sports', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
           })
         ]);
 

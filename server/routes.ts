@@ -2278,7 +2278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import routes
+  // Import routes with authentication middleware applied
   const healthRoutes = (await import('./routes/health')).default;
   const catalogRoutes = (await import('./routes/api/catalogRoutes')).default;
   const catalogOptionsRoutes = (await import('./routes/api/catalogOptionsRoutes')).default;
@@ -2286,26 +2286,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const imageRoutes = (await import('./routes/api/imageRoutes')).default;
   const invitationRoutes = (await import('./routes/api/invitationRoutes')).default;
 
-// Use imported routes
+  // Apply authentication middleware and register routes
   app.use('/api/health', healthRoutes);
-  app.use('/api/catalog', catalogRoutes);
-  app.use('/api/catalog-options', catalogOptionsRoutes);
-  app.use('/api/customers', customerRoutes);
-  app.use('/api/images', imageRoutes);
-  app.use('/api', invitationRoutes);
-
-  // Catalog management routes
-  app.get('/api/catalog', authenticateRequest, requireAuth, requireRole(['admin']), getCatalogItems);
-  app.post('/api/catalog', authenticateRequest, requireAuth, requireRole(['admin']), createCatalogItem);
-  app.get('/api/catalog/:id', authenticateRequest, requireAuth, requireRole(['admin']), getCatalogItem);
-  app.put('/api/catalog/:id', authenticateRequest, requireAuth, requireRole(['admin']), updateCatalogItem);
-  app.delete('/api/catalog/:id', authenticateRequest, requireAuth, requireRole(['admin']), deleteCatalogItem);
-
-  // Image upload routes
-  app.use('/api/images', authenticateRequest, imageRoutes);
-
-  // Catalog options routes (categories and sports)
+  app.use('/api/catalog', authenticateRequest, catalogRoutes);
   app.use('/api/catalog-options', authenticateRequest, catalogOptionsRoutes);
+  app.use('/api/customers', authenticateRequest, customerRoutes);
+  app.use('/api/images', authenticateRequest, imageRoutes);
+  app.use('/api', invitationRoutes);
 
   return httpServer;
 }
