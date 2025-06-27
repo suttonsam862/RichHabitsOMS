@@ -147,6 +147,17 @@ Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, s
 - Updated React Query integration to handle authentication errors gracefully
 - Ensured authentication state persists across page refreshes and browser sessions
 
+### Implemented Custom Role-Based Page Visibility System (June 27, 2025)
+- Created two custom role users with tailored page access permissions
+- Carter Vail (cartervail@rich-habits.com) - customer_catalog_manager role with access to Customers and Catalog pages
+- Charlie Reeves (charliereeves@rich-habits.com) - catalog_manager role with access to Catalog page only
+- Extended authentication context to support custom role metadata (customRole, visiblePages)
+- Updated server authentication to pass custom role data from Supabase user metadata to frontend
+- Implemented hasPageAccess function for granular page visibility control
+- Modified navigation filtering to use custom role-based access instead of static role arrays
+- Verified complete functionality with successful logins and proper navigation restrictions
+- Both users can authenticate and see only their assigned pages in the navigation menu
+
 ### Fixed SKU Field Usability in Catalog Management (June 21, 2025)
 - Removed read-only restriction from SKU input field in catalog add item form
 - Made SKU field fully editable allowing custom SKU entry

@@ -1373,7 +1373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
-      // Return user data and session
+      // Return user data and session with custom role metadata
       return res.status(200).json({
         success: true,
         message: 'Login successful',
@@ -1384,6 +1384,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: profileData?.firstName || data.user.user_metadata?.firstName,
           lastName: profileData?.lastName || data.user.user_metadata?.lastName,
           role: userRole,
+          customRole: data.user.user_metadata?.customRole,
+          visiblePages: data.user.user_metadata?.visiblePages || [],
           isSuperAdmin: isSuperAdmin
         },
         session: {
