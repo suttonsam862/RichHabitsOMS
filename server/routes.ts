@@ -32,7 +32,7 @@ import session from 'express-session';
 import bodyParser from 'body-parser';
 
 // Auth routes
-import authRoutes from './routes/auth/auth';
+import { authenticateRequest, requireAuth, requireRole } from './routes/auth/auth';
 
 // API routes
 import catalogRoutesRefactored from './routes/api/catalogRoutes';

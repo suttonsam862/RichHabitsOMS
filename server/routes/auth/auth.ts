@@ -133,3 +133,10 @@ export const requireRole = (roles: string | string[]) => {
     next();
   };
 };
+
+// Default export for backward compatibility
+export default {
+  authenticateRequest,
+  requireAuth,
+  requireRole
+};
