@@ -340,7 +340,7 @@ export default function CatalogPage() {
       // Check if SKU already exists and regenerate if needed
       while (attempts < maxAttempts) {
         const token = localStorage.getItem('authToken');
-        
+
         try {
           const response = await fetch(`/api/catalog/check-sku?sku=${encodeURIComponent(newSKU)}`, {
             headers: {
@@ -370,7 +370,7 @@ export default function CatalogPage() {
         attempts++;
         const extraRandom = Math.random().toString(36).substring(2, 4).toUpperCase();
         newSKU = generateSKU(category, name) + extraRandom;
-        
+
         // Add small delay to prevent rapid requests
         await new Promise(resolve => setTimeout(resolve, 100));
       }
@@ -401,14 +401,14 @@ export default function CatalogPage() {
       if (!token) {
         throw new Error("No authentication token");
       }
-      
+
       const response = await fetch("/api/catalog", {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('authToken');
@@ -417,7 +417,7 @@ export default function CatalogPage() {
         }
         throw new Error(`Failed to fetch catalog items: ${response.statusText}`);
       }
-      
+
       return response.json();
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -434,7 +434,7 @@ export default function CatalogPage() {
       if (!token) {
         throw new Error("No authentication token");
       }
-      
+
       const response = await fetch("/api/users?role=manufacturer", {
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -442,14 +442,14 @@ export default function CatalogPage() {
         },
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error("Authentication failed");
         }
         throw new Error(`Failed to fetch manufacturers: ${response.statusText}`);
       }
-      
+
       const result = await response.json();
       return result;
     },
@@ -593,11 +593,11 @@ export default function CatalogPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
       setIsAddItemDialogOpen(false);
       form.reset();
-      
+
       // Clear the file inputs and preview states
       const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
       const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
-      
+
       // Clear file inputs and custom properties
       [fileInput, measurementInput].forEach(input => {
         if (input) {
@@ -989,7 +989,8 @@ export default function CatalogPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="subtitle text-muted-foreground text-xs">ETA (Days)</FormLabel>
-                        <FormControl>
+                        <previous_generation>```text
+<FormControl>
                           <div className="relative">
                             <Input 
                               {...field} 

@@ -383,7 +383,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (shouldSendInvite) {
         try {
           // Generate a simple setup token for account creation
-          const setupToken = require('crypto').randomBytes(32).toString('hex');
+          const crypto = await import('crypto');
+          const setupToken = crypto.randomBytes(32).toString('hex');
 
           // Store the setup token in user metadata for verification
           await supabase.auth.admin.updateUserById(data.user.id, {
@@ -398,8 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Send invitation email if we have the email functions available
           try {
-            const { getCustomerInviteEmailTemplate } = require('./email');
-            const { sendEmail } = require('./email');
+            const { getCustomerInviteEmailTemplate, sendEmail } = await import('./email');
 
             const emailTemplate = getCustomerInviteEmailTemplate(
               customerEmail,
