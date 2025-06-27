@@ -7,7 +7,7 @@ import { deleteImageFile, extractFilenameFromUrl } from '../../imageUpload';
 const router = Router();
 
 /**
- * Get all catalog items
+ * Get all catalog items with proper data transformation
  */
 export async function getCatalogItems(req: Request, res: Response) {
   try {
@@ -27,8 +27,30 @@ export async function getCatalogItems(req: Request, res: Response) {
       });
     }
 
-    console.log(`Found ${items?.length || 0} catalog items`);
-    return res.json(items || []);
+    // Transform database snake_case to camelCase for frontend
+    const transformedItems = (items || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      sport: item.sport,
+      basePrice: parseFloat(item.base_price) || 0,
+      unitCost: parseFloat(item.unit_cost) || 0,
+      sku: item.sku,
+      status: item.status,
+      imageUrl: item.base_image_url,
+      measurementChartUrl: item.measurement_chart_url,
+      hasMeasurements: item.has_measurements,
+      measurementInstructions: item.measurement_instructions,
+      etaDays: item.eta_days,
+      preferredManufacturerId: item.preferred_manufacturer_id,
+      tags: item.tags || [],
+      specifications: item.specifications || {},
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    }));
+
+    console.log(`Found ${transformedItems.length} catalog items`);
+    return res.json(transformedItems);
   } catch (error) {
     console.error('Catalog fetch error:', error);
     return res.status(500).json({ 

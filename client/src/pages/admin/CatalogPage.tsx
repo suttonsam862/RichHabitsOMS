@@ -381,21 +381,37 @@ export default function CatalogPage() {
     }
   };
 
-  // Fetch catalog items
+  // Fetch catalog items with optimized query
   const { data: catalogItems, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "catalog"],
     queryFn: async () => {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error("No authentication token");
+      }
+      
       const response = await fetch("/api/catalog", {
         headers: {
           "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
+      
       if (!response.ok) {
-        throw new Error("Failed to fetch catalog items");
+        if (response.status === 401) {
+          localStorage.removeItem('authToken');
+          window.location.href = '/login';
+          throw new Error("Authentication failed");
+        }
+        throw new Error(`Failed to fetch catalog items: ${response.statusText}`);
       }
+      
       return response.json();
-    }
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
   });
 
   // Fetch manufacturers

@@ -22,9 +22,15 @@ router.get('/categories', requireAuth, async (req, res) => {
       });
     }
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      categories: categories || []
+      data: {
+        categories: categories || []
+      },
+      meta: {
+        total: categories?.length || 0,
+        timestamp: new Date().toISOString()
+      }
     });
   } catch (error) {
     console.error('Error in get categories route:', error);
@@ -111,9 +117,15 @@ router.get('/sports', requireAuth, async (req, res) => {
       });
     }
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      sports: sports || []
+      data: {
+        sports: sports || []
+      },
+      meta: {
+        total: sports?.length || 0,
+        timestamp: new Date().toISOString()
+      }
     });
   } catch (error) {
     console.error('Error in get sports route:', error);

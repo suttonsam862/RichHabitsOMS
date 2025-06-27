@@ -1,8 +1,55 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
+
+// Memory storage for processing
+const storage = multer.memoryStorage();
+
+// Image processing utility
+export const processImage = async (
+  buffer: Buffer, 
+  filename: string, 
+  options: { width?: number; height?: number; quality?: number } = {}
+): Promise<{ buffer: Buffer; filename: string }> => {
+  const { width = 800, height = 800, quality = 80 } = options;
+
+  const processedBuffer = await sharp(buffer)
+    .resize(width, height, { 
+      fit: 'inside', 
+      withoutEnlargement: true 
+    })
+    .jpeg({ quality })
+    .toBuffer();
+
+  const processedFilename = filename.replace(/\.[^/.]+$/, '.jpg');
+
+  return { buffer: processedBuffer, filename: processedFilename };
+};
+
+// Optimized file size limits and validation
+export const fileFilter = (req: any, file: any, cb: any) => {
+  const allowedTypes = /jpeg|jpg|png|webp/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Only image files (JPEG, PNG, WebP) are allowed'));
+  }
+};
+
+// Scalable storage with automatic cleanup
+const createUploadPath = (type: string): string => {
+  const uploadPath = path.join(process.cwd(), 'uploads', type);
+  if (!fs.existsSync(uploadPath)) {
+    fs.mkdirSync(uploadPath, { recursive: true });
+  }
+  return uploadPath;
+};
 
 // Create upload directories if they don't exist
 const uploadDirs = {
@@ -16,19 +63,6 @@ Object.values(uploadDirs).forEach(dir => {
     fs.mkdirSync(dir, { recursive: true });
   }
 });
-
-// File filter for images only
-const imageFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = /jpeg|jpg|png|webp/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
-
-  if (extname && mimetype) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Only image files (JPEG, JPG, PNG, WebP) are allowed'));
-  }
-};
 
 // Generate unique filename
 const generateFileName = (originalname: string): string => {
@@ -61,7 +95,7 @@ const orderItemStorage = multer.diskStorage({
 // Create multer instances
 export const catalogImageUpload = multer({
   storage: catalogStorage,
-  fileFilter: imageFilter,
+  fileFilter: fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
     files: 1
@@ -70,7 +104,7 @@ export const catalogImageUpload = multer({
 
 export const orderItemImageUpload = multer({
   storage: orderItemStorage,
-  fileFilter: imageFilter,
+  fileFilter: fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
     files: 1

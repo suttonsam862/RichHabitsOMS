@@ -26,6 +26,26 @@ import {
 import imageRoutes from './routes/api/imageRoutes';
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import { createClient } from '@supabase/supabase-js';
+import express from 'express';
+import cors from 'cors';
+import session from 'express-session';
+import bodyParser from 'body-parser';
+
+// Auth routes
+import authRoutes from './routes/auth/auth';
+
+// API routes
+import catalogRoutesRefactored from './routes/api/catalogRoutes';
+import catalogOptionsRoutesRefactored from './routes/api/catalogOptionsRoutes';
+import customerRoutesRefactored from './routes/api/customerRoutes';
+import imageRoutesRefactored from './routes/api/imageRoutes';
+import invitationRoutesRefactored from './routes/api/invitationRoutes';
+
+// Admin routes
+import adminRoutesRefactored from './routes/admin/admin';
+
+// Health check
+import healthRoutesRefactored from './routes/health';
 
 // Create Supabase admin client with service key for admin operations
 const supabaseAdmin = createClient(
@@ -2278,21 +2298,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import routes with authentication middleware applied
-  const healthRoutes = (await import('./routes/health')).default;
-  const catalogRoutes = (await import('./routes/api/catalogRoutes')).default;
-  const catalogOptionsRoutes = (await import('./routes/api/catalogOptionsRoutes')).default;
-  const customerRoutes = (await import('./routes/api/customerRoutes')).default;
-  const imageRoutes = (await import('./routes/api/imageRoutes')).default;
-  const invitationRoutes = (await import('./routes/api/invitationRoutes')).default;
+  const router = express.Router();
 
-  // Apply authentication middleware and register routes
-  app.use('/api/health', healthRoutes);
-  app.use('/api/catalog', authenticateRequest, catalogRoutes);
-  app.use('/api/catalog-options', authenticateRequest, catalogOptionsRoutes);
-  app.use('/api/customers', authenticateRequest, customerRoutes);
-  app.use('/api/images', authenticateRequest, imageRoutes);
-  app.use('/api', invitationRoutes);
+  // Middleware
+  router.use(cors({
+    origin: true,
+    credentials: true
+  }));
+
+  router.use(bodyParser.json({ limit: '10mb' }));
+  router.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Configure session
+  router.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
+
+  // Health check (no auth required)
+  router.use('/health', healthRoutesRefactored);
+
+  // Auth routes (no auth required)
+  router.use('/api/auth', authRoutes);
+
+  // API routes (auth required)
+  router.use('/api/catalog-options', catalogOptionsRoutesRefactored);
+  router.use('/api/catalog', catalogRoutesRefactored);
+  router.use('/api/customers', customerRoutesRefactored);
+  router.use('/api/images', imageRoutesRefactored);
+  router.use('/api/invitations', invitationRoutesRefactored);
+
+  // Admin routes (admin auth required)
+  router.use('/api/admin', adminRoutesRefactored);
+
+  // 404 handler
+  router.use('*', (req, res) => {
+    res.status(404).json({ 
+      success: false, 
+      message: `Route ${req.originalUrl} not found` 
+    });
+  });
+
+  // Error handler
+  router.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Route error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    });
+  });
+
+  app.use('/', router);
 
   return httpServer;
 }
