@@ -133,6 +133,9 @@ const ImageUploadArea: React.FC<ImageUploadAreaProps> = ({
 
   const clearSelection = () => {
     setSelectedFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setPreviewUrl("");
     const fileInput = document.getElementById(inputId) as HTMLInputElement;
     if (fileInput) {
@@ -337,30 +340,39 @@ export default function CatalogPage() {
       // Check if SKU already exists and regenerate if needed
       while (attempts < maxAttempts) {
         const token = localStorage.getItem('authToken');
-        const response = await fetch(`/api/catalog/check-sku?sku=${encodeURIComponent(newSKU)}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include'
-        });
+        
+        try {
+          const response = await fetch(`/api/catalog/check-sku?sku=${encodeURIComponent(newSKU)}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+          });
 
-        if (response.ok) {
-          const result = await response.json();
-          if (!result.exists) {
-            // SKU is unique, use it
-            form.setValue("sku", newSKU);
-            toast({
-              title: "SKU Generated",
-              description: `Generated unique SKU: ${newSKU}`,
-            });
-            return;
+          if (response.ok) {
+            const result = await response.json();
+            if (!result.exists) {
+              // SKU is unique, use it
+              form.setValue("sku", newSKU);
+              toast({
+                title: "SKU Generated",
+                description: `Generated unique SKU: ${newSKU}`,
+              });
+              return;
+            }
           }
+        } catch (error) {
+          console.warn('SKU check failed, continuing with generation:', error);
         }
 
-        // SKU exists, generate a new one
+        // SKU exists or check failed, generate a new one with more randomness
         attempts++;
-        newSKU = generateSKU(category, name);
+        const extraRandom = Math.random().toString(36).substring(2, 4).toUpperCase();
+        newSKU = generateSKU(category, name) + extraRandom;
+        
+        // Add small delay to prevent rapid requests
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       // If we couldn't generate a unique SKU after max attempts
@@ -415,23 +427,36 @@ export default function CatalogPage() {
   });
 
   // Fetch manufacturers
-  const { data: manufacturersData, isError: manufacturersError } = useQuery({
+  const { data: manufacturersData, isError: manufacturersError, isLoading: manufacturersLoading } = useQuery({
     queryKey: ["admin", "manufacturers"],
     queryFn: async () => {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error("No authentication token");
+      }
+      
       const response = await fetch("/api/users?role=manufacturer", {
         headers: {
           "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
+        credentials: 'include'
       });
+      
       if (!response.ok) {
-        throw new Error("Failed to fetch manufacturers");
+        if (response.status === 401) {
+          throw new Error("Authentication failed");
+        }
+        throw new Error(`Failed to fetch manufacturers: ${response.statusText}`);
       }
+      
       const result = await response.json();
       return result;
     },
-    retry: 1,
-    staleTime: 5 * 60 * 1000 // 5 minutes
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false
   });
 
   // Safe fallback for manufacturers data
@@ -568,17 +593,29 @@ export default function CatalogPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
       setIsAddItemDialogOpen(false);
       form.reset();
-      // Clear the file inputs
+      
+      // Clear the file inputs and preview states
       const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
       const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = '';
-        (fileInput as any).selectedFile = null;
-      }
-      if (measurementInput) {
-        measurementInput.value = '';
-        (measurementInput as any).selectedMeasurementFile = null;
-      }
+      
+      // Clear file inputs and custom properties
+      [fileInput, measurementInput].forEach(input => {
+        if (input) {
+          input.value = '';
+          (input as any).selectedFile = null;
+          (input as any).selectedMeasurementFile = null;
+        }
+      });
+
+      // Force re-render of ImageUploadArea components by clearing their state
+      const imageUploadElements = document.querySelectorAll('[data-image-preview]');
+      imageUploadElements.forEach(element => {
+        const img = element.querySelector('img');
+        if (img && img.src.startsWith('blob:')) {
+          URL.revokeObjectURL(img.src);
+        }
+      });
+
       toast({
         title: "Success",
         description: "Catalog item added successfully",
@@ -740,6 +777,20 @@ export default function CatalogPage() {
   };
 
   const onSubmit = async (data: CatalogItemForm) => {
+    // Validate JSON specifications if provided
+    if (data.specifications && data.specifications.trim()) {
+      try {
+        JSON.parse(data.specifications);
+      } catch (error) {
+        toast({
+          title: "Invalid JSON",
+          description: "Specifications must be valid JSON format",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // Check if files were selected
     const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
     const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;

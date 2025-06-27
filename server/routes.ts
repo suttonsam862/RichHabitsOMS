@@ -27,7 +27,7 @@ import imageRoutes from './routes/api/imageRoutes';
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import { createClient } from '@supabase/supabase-js';
 import express from 'express';
-import cors from 'cors';
+const cors = require('cors');
 import session from 'express-session';
 import bodyParser from 'body-parser';
 
