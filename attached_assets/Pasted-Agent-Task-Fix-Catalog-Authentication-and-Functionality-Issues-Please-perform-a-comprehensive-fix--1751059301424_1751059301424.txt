@@ -1,0 +1,51 @@
+Agent Task: Fix Catalog Authentication and Functionality Issues
+
+Please perform a comprehensive fix to resolve all catalog functionality issues:
+
+Step 1: Authentication Token Management
+
+Standardize token storage to use a single key (authToken) throughout the application
+Fix the login flow to properly store authentication tokens in localStorage
+Update all API calls to consistently use the same token key
+Ensure the authentication context properly manages token state
+Step 2: API Authentication Headers
+
+Review and fix all catalog-related API calls in CatalogPage.tsx to include proper authentication headers
+Ensure the server-side authentication middleware correctly validates tokens
+Fix any issues with the requireAuth and requireRole middleware functions
+Step 3: Login/Authentication Flow
+
+Fix the login process to properly authenticate users and store tokens
+Ensure the authentication context updates when users log in/out
+Verify that the authentication state persists across page refreshes
+Step 4: Server-Side Authentication
+
+Review and fix the authentication middleware in server/middleware/adminAuth.ts
+Ensure proper token validation is happening server-side
+Fix any issues with the authentication routes
+Step 5: Database Access
+
+Verify that authenticated requests can properly access the catalog_items table
+Test the catalog creation, reading, and SKU generation endpoints
+Ensure proper error handling for database operations
+Step 6: Frontend State Management
+
+Fix any React Query authentication issues
+Ensure proper error handling when authentication fails
+Update the UI to show appropriate messages for authentication failures
+Requirements:
+
+Users should be able to log in and stay authenticated
+The "Add Item" form should work without authentication errors
+The "Auto-Generate SKU" button should function properly
+All catalog operations (create, read, update, delete) should work for authenticated admin users
+Proper error messages should display for authentication failures
+Testing Criteria:
+
+User can log in successfully and token is stored
+User can access the catalog page
+User can fill out and submit the catalog item form
+User can generate SKUs automatically
+User can view existing catalog items
+Authentication persists across page refreshes
+Please implement all necessary changes to resolve these issues and ensure the catalog functionality works end-to-end.
