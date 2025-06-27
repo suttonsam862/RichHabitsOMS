@@ -27,7 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 
 export function AppLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPageAccess } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -45,84 +45,83 @@ export function AppLayout() {
   const lastName = user.lastName || '';
   const fullName = `${firstName} ${lastName}`.trim() || user.username || '';
 
-  // Define navigation items based on user role
+  // Define navigation items with page access names
   const navigationItems = [
     {
       name: 'Dashboard',
       href: `/dashboard/${user.role}`,
       icon: Home,
       current: location.pathname === `/dashboard/${user.role}`,
-      roles: ['admin', 'salesperson', 'designer', 'manufacturer', 'customer'],
+      page: 'dashboard',
     },
     {
       name: 'Orders',
       href: '/orders',
       icon: ShoppingBag,
       current: location.pathname === '/orders',
-      roles: ['admin', 'salesperson', 'customer', 'designer', 'manufacturer'],
+      page: 'orders',
     },
     {
       name: 'Customers',
       href: '/admin/customers',
       icon: Users,
       current: location.pathname === '/admin/customers',
-      roles: ['admin', 'salesperson'],
+      page: 'customers',
     },
     {
       name: 'Messages',
       href: '/messages',
       icon: MessageSquare,
       current: location.pathname === '/messages',
-      roles: ['admin', 'salesperson', 'designer', 'manufacturer', 'customer'],
+      page: 'messages',
     },
     {
       name: 'Design Tasks',
       href: '/design-tasks',
       icon: Brush,
       current: location.pathname === '/design-tasks',
-      roles: ['admin', 'designer'],
+      page: 'design',
     },
     {
       name: 'Production',
       href: '/production',
       icon: Factory,
       current: location.pathname === '/production',
-      roles: ['admin', 'manufacturer'],
+      page: 'production',
     },
     {
       name: 'Manufacturer Assignment',
       href: '/manufacturer-assignment',
       icon: UserCheck,
       current: location.pathname === '/manufacturer-assignment',
-      roles: ['admin'],
+      page: 'manufacturer-assignment',
     },
     {
       name: 'Catalog',
       href: '/admin/catalog',
       icon: Package,
       current: location.pathname === '/admin/catalog',
-      roles: ['admin'],
+      page: 'catalog',
     },
-    // Customer Management entry removed as it was redundant
     {
       name: 'Analytics',
       href: '/admin/analytics',
       icon: BarChart,
       current: location.pathname === '/admin/analytics',
-      roles: ['admin'],
+      page: 'analytics',
     },
     {
       name: 'Settings',
       href: '/admin/settings',
       icon: Settings,
       current: location.pathname === '/admin/settings',
-      roles: ['admin', 'salesperson', 'designer', 'manufacturer', 'customer'],
+      page: 'settings',
     },
   ];
 
-  // Filter navigation items based on user role
+  // Filter navigation items based on custom role-based page access
   const filteredNavigationItems = navigationItems.filter(item => 
-    item.roles.includes(user.role)
+    hasPageAccess(item.page)
   );
 
   const handleLogout = () => {
