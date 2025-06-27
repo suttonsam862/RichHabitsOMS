@@ -336,12 +336,13 @@ export default function CatalogPage() {
 
       // Check if SKU already exists and regenerate if needed
       while (attempts < maxAttempts) {
-        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        const token = localStorage.getItem('authToken');
         const response = await fetch(`/api/catalog/check-sku?sku=${encodeURIComponent(newSKU)}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
+          credentials: 'include'
         });
 
         if (response.ok) {
@@ -577,10 +578,10 @@ export default function CatalogPage() {
   });
 
   // Combine database categories with local state as fallback
-  const allCategories = dbCategories.length > 0 ? dbCategories.map(cat => cat.name) : categories;
+  const allCategories = dbCategories.length > 0 ? dbCategories.map((cat: any) => cat.name) : categories;
 
   // Combine database sports with local state as fallback
-  const allSports = dbSports.length > 0 ? dbSports.map(sport => sport.name) : sports;
+  const allSports = dbSports.length > 0 ? dbSports.map((sport: any) => sport.name) : sports;
 
   // Add new category handler with database persistence
   const addNewCategory = async () => {
@@ -621,7 +622,7 @@ export default function CatalogPage() {
       console.error("Error adding category:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add category",
+        description: error instanceof Error ? error.message : "Failed to add category",
         variant: "destructive",
       });
     }
@@ -666,7 +667,7 @@ export default function CatalogPage() {
       console.error("Error adding sport:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add sport",
+        description: error instanceof Error ? error.message : "Failed to add sport",
         variant: "destructive",
       });
     }
@@ -862,7 +863,7 @@ export default function CatalogPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {allSports.map((sport) => (
+                              {allSports.map((sport: string) => (
                                 <SelectItem key={sport} value={sport}>
                                   {sport}
                                 </SelectItem>
@@ -989,7 +990,7 @@ export default function CatalogPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rich-card">
-                              {allCategories.map((category) => (
+                              {allCategories.map((category: string) => (
                                 <SelectItem key={category} value={category}>{category}</SelectItem>
                               ))}
                               <SelectItem value="add-new-category" className="text-neon-blue font-medium">
