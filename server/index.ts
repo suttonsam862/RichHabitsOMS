@@ -178,23 +178,19 @@ import imageRoutes from './routes/api/imageRoutes';
       console.error(err);
     });
 
+    // Serve uploaded images
+    app.use('/uploads', express.static('uploads'));
+
     // Static file serving and client-side routing should come after API routes
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
       serveStatic(app);
+      // Catch-all route for production only
+      app.get("*", (req, res) => {
+        res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
+      });
     }
-
-    app.use(express.static(path.resolve(__dirname, "../client/dist")));
-    // Serve static files
-app.use(express.static('client/dist'));
-app.use('/uploads', express.static('uploads')); // Serve uploaded images
-    // API documentation route (swagger disabled for now)
-
-    // Catch-all route should be last
-    app.get("*", (req, res) => {
-      res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
-    });
 
     // ALWAYS serve the app on port 5000
     // this serves both the API and the client.
