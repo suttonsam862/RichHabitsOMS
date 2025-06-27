@@ -158,17 +158,20 @@ import imageRoutes from './routes/api/imageRoutes';
       console.log("Supabase connection verified successfully");
     }
 
-    // Add authentication middleware before API routes
-    app.use('/api', authenticateRequest);
-
-    // Register API routes first
+    // Register API routes BEFORE Vite middleware to prevent conflicts
     const server = await registerRoutes(app);
+
+    // Add authentication middleware after basic routes but before authenticated routes
+    app.use('/api', authenticateRequest);
 
     // Register catalog routes
     app.use('/api/catalog', catalogRoutes);
     app.use('/api/catalog-options', catalogOptionsRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/images', imageRoutes);
+
+    // Serve uploaded images
+    app.use('/uploads', express.static('uploads'));
 
     // Error handling middleware for API routes
     app.use("/api", (err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -178,10 +181,7 @@ import imageRoutes from './routes/api/imageRoutes';
       console.error(err);
     });
 
-    // Serve uploaded images
-    app.use('/uploads', express.static('uploads'));
-
-    // Static file serving and client-side routing should come after API routes
+    // Static file serving and client-side routing should come AFTER all API routes
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
