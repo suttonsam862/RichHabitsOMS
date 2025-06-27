@@ -1408,7 +1408,7 @@ export default function CatalogPage() {
                       </TableCell>
                       <TableCell className="text-foreground font-mono text-sm">{item.sku}</TableCell>
                       <TableCell className="text-foreground">{item.category}</TableCell>
-                      <TableCell className="text-foreground">${item.basePrice.toFixed(2)}</TableCell>
+                      <TableCell className="text-foreground">${(item.basePrice || 0).toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge 
                           variant={item.status === 'active' ? 'default' : 'secondary'}
