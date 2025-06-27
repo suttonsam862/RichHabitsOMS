@@ -461,8 +461,12 @@ export default function CatalogPage() {
 
   // Safe fallback for manufacturers data
   const manufacturers = React.useMemo(() => {
-    if (manufacturersError || !manufacturersData) {
-      console.warn('Manufacturers data not available:', manufacturersError);
+    if (manufacturersError) {
+      console.warn('Manufacturers data error:', manufacturersError);
+      return [];
+    }
+    
+    if (!manufacturersData) {
       return [];
     }
 
@@ -989,8 +993,7 @@ export default function CatalogPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="subtitle text-muted-foreground text-xs">ETA (Days)</FormLabel>
-                        <previous_generation>```text
-<FormControl>
+                        <FormControl>
                           <div className="relative">
                             <Input 
                               {...field} 
@@ -1476,7 +1479,7 @@ export default function CatalogPage() {
                       </TableCell>
                       <TableCell className="text-foreground font-mono text-sm">{item.sku}</TableCell>
                       <TableCell className="text-foreground">{item.category}</TableCell>
-                      <TableCell className="text-foreground">${(item.basePrice || 0).toFixed(2)}</TableCell>
+                      <TableCell className="text-foreground">${typeof item.basePrice === 'number' ? item.basePrice.toFixed(2) : '0.00'}</TableCell>
                       <TableCell>
                         <Badge 
                           variant={item.status === 'active' ? 'default' : 'secondary'}
