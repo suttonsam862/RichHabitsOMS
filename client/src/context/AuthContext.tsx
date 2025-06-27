@@ -21,6 +21,7 @@ interface AuthContextType {
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  hasPageAccess: (pageName: string) => boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -31,6 +32,7 @@ export const AuthContext = createContext<AuthContextType>({
   register: async () => {},
   logout: async () => {},
   isAuthenticated: false,
+  hasPageAccess: () => false,
 });
 
 interface AuthProviderProps {
@@ -207,6 +209,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const role = user?.role || '';
   const isAuthenticated = !!user;
 
+  // Custom role-based page access control
+  const hasPageAccess = (pageName: string): boolean => {
+    if (!user) return false;
+    
+    // Admin users have access to all pages
+    if (user.role === 'admin') return true;
+    
+    // Check custom role visibility
+    if (user.visiblePages && user.visiblePages.length > 0) {
+      return user.visiblePages.includes(pageName.toLowerCase());
+    }
+    
+    // Default role-based access for backwards compatibility
+    switch (user.role) {
+      case 'salesperson':
+        return ['dashboard', 'orders', 'customers'].includes(pageName.toLowerCase());
+      case 'designer':
+        return ['dashboard', 'orders', 'design'].includes(pageName.toLowerCase());
+      case 'manufacturer':
+        return ['dashboard', 'orders', 'production'].includes(pageName.toLowerCase());
+      case 'customer':
+        return ['dashboard', 'orders'].includes(pageName.toLowerCase());
+      default:
+        return false;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -217,6 +246,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         register,
         logout,
         isAuthenticated,
+        hasPageAccess,
       }}
     >
       {children}

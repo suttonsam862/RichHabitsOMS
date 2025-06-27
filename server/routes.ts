@@ -4,7 +4,6 @@ import { WebSocketServer } from 'ws';
 import { z } from 'zod';
 import { loginSchema, registerSchema } from '../shared/schema';
 import { supabase } from './db';
-import { authenticateRequest, requireAuth, requireRole } from './routes/auth/auth';
 import { sendEmail, getCustomerInviteEmailTemplate } from './email';
 import adminRoutes from './routes/admin/admin';
 import { createCustomer } from './routes/api/customerRoutes';
@@ -27,11 +26,9 @@ import imageRoutes from './routes/api/imageRoutes';
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import { createClient } from '@supabase/supabase-js';
 import express from 'express';
-const cors = require('cors');
+import cors from 'cors';
 import session from 'express-session';
 import bodyParser from 'body-parser';
-
-// Auth routes
 import { authenticateRequest, requireAuth, requireRole } from './routes/auth/auth';
 
 // API routes
@@ -2323,8 +2320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check (no auth required)
   router.use('/health', healthRoutesRefactored);
 
-  // Auth routes (no auth required)
-  router.use('/api/auth', authRoutes);
+  // Auth routes are handled directly in the main routes function
 
   // API routes (auth required)
   router.use('/api/catalog-options', catalogOptionsRoutesRefactored);
