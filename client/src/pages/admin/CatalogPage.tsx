@@ -513,7 +513,7 @@ export default function CatalogPage() {
       console.warn('Manufacturers data error:', manufacturersError);
       return [];
     }
-    
+
     if (!manufacturersData) {
       return [];
     }
@@ -976,7 +976,8 @@ export default function CatalogPage() {
           if (typeof parsedSpecs !== 'object' || parsedSpecs === null || Array.isArray(parsedSpecs)) {
             throw new Error("Specifications must be a JSON object");
           }
-        } catch (error) {
+        } catch (```python
+error) {
           toast({
             title: "Invalid JSON",
             description: "Specifications must be valid JSON object format",
@@ -1009,7 +1010,7 @@ export default function CatalogPage() {
       if (data.hasMeasurements && !data.measurementInstructions?.trim() && !data.measurementChartUrl?.trim()) {
         const fileInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
         const selectedMeasurementFile = (fileInput as any)?.selectedMeasurementFile;
-        
+
         if (!selectedMeasurementFile) {
           toast({
             title: "Missing Measurement Info",
@@ -1105,11 +1106,11 @@ export default function CatalogPage() {
       // Primary sort: Category (alphabetical)
       const categoryCompare = a.category.localeCompare(b.category);
       if (categoryCompare !== 0) return categoryCompare;
-      
+
       // Secondary sort: Sport (alphabetical)
       const sportCompare = a.sport.localeCompare(b.sport);
       if (sportCompare !== 0) return sportCompare;
-      
+
       // Tertiary sort: Name (alphabetical)
       return a.name.localeCompare(b.name);
     });
