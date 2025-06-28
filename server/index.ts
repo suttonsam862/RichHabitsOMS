@@ -161,14 +161,14 @@ import imageRoutes from './routes/api/imageRoutes';
     // Register API routes BEFORE Vite middleware to prevent conflicts
     const server = await registerRoutes(app);
 
-    // Add authentication middleware after basic routes but before authenticated routes
-    app.use('/api', authenticateRequest);
-
     // Register catalog routes
     app.use('/api/catalog', catalogRoutes);
     app.use('/api/catalog-options', catalogOptionsRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/images', imageRoutes);
+
+    // Add authentication middleware after routes that don't need auth
+    app.use('/api', authenticateRequest);
 
     // Serve uploaded images
     app.use('/uploads', express.static('uploads'));
