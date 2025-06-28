@@ -30,8 +30,8 @@ class CatalogAPITest {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: 'suttonsam862@gmail.com',
-          password: 'Arlodog2013!'
+          email: 'samsutton@rich-habits.com',
+          password: 'admin123'
         })
       });
 
