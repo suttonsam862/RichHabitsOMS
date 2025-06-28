@@ -242,18 +242,94 @@ export async function createCatalogItem(req: Request, res: Response) {
 export async function updateCatalogItem(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const updateData = req.body as Partial<CatalogItem>;
+    const {
+      name,
+      category,
+      sport,
+      basePrice,
+      unitCost,
+      status,
+      imageUrl,
+      measurementChartUrl,
+      hasMeasurements,
+      measurementInstructions,
+      etaDays,
+      preferredManufacturerId,
+      tags,
+      specifications
+    } = req.body;
 
     console.log('Updating catalog item:', id);
 
-    // Remove undefined values
-    const cleanedData = Object.fromEntries(
-      Object.entries(updateData).filter(([_, value]) => value !== undefined)
-    );
+    // Validate required fields
+    if (!name || !category || !sport || basePrice === undefined || unitCost === undefined || !etaDays) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, category, sport, basePrice, unitCost, and etaDays are required'
+      });
+    }
+
+    // Validate data types and ranges
+    const numericBasePrice = Number(basePrice);
+    const numericUnitCost = Number(unitCost);
+
+    if (isNaN(numericBasePrice) || numericBasePrice < 0.01 || numericBasePrice > 999999.99) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid base price: must be between $0.01 and $999,999.99'
+      });
+    }
+
+    if (isNaN(numericUnitCost) || numericUnitCost < 0 || numericUnitCost > 999999.99) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid unit cost: must be between $0.00 and $999,999.99'
+      });
+    }
+
+    // Parse specifications if provided
+    let parsedSpecifications = {};
+    if (specifications && specifications.trim()) {
+      try {
+        parsedSpecifications = JSON.parse(specifications);
+        if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
+          throw new Error('Must be an object');
+        }
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid specifications: must be valid JSON object'
+        });
+      }
+    }
+
+    // Parse tags if provided
+    let parsedTags = [];
+    if (tags && tags.trim()) {
+      parsedTags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+    }
+
+    const updateData = {
+      name: name.trim(),
+      category: category.trim(),
+      sport: sport.trim(),
+      base_price: numericBasePrice,
+      unit_cost: numericUnitCost,
+      status: status,
+      base_image_url: imageUrl?.trim() || null,
+      measurement_chart_url: measurementChartUrl?.trim() || null,
+      has_measurements: Boolean(hasMeasurements),
+      measurement_instructions: measurementInstructions?.trim() || null,
+      eta_days: etaDays.trim(),
+      preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
+      tags: parsedTags,
+      specifications: parsedSpecifications,
+      updated_at: new Date().toISOString()
+    };
 
     const { data: item, error } = await supabase
       .from('catalog_items')
-      .update(cleanedData)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -277,7 +353,18 @@ export async function updateCatalogItem(req: Request, res: Response) {
     console.log('Catalog item updated successfully:', id);
     return res.json({
       success: true,
-      item
+      item: {
+        ...item,
+        // Transform back to camelCase for consistency
+        basePrice: item.base_price,
+        unitCost: item.unit_cost,
+        imageUrl: item.base_image_url,
+        measurementChartUrl: item.measurement_chart_url,
+        hasMeasurements: item.has_measurements,
+        measurementInstructions: item.measurement_instructions,
+        etaDays: item.eta_days,
+        preferredManufacturerId: item.preferred_manufacturer_id
+      }
     });
   } catch (error) {
     console.error('Catalog update error:', error);

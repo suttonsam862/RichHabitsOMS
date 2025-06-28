@@ -262,6 +262,9 @@ export default function CatalogPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [categories, setCategories] = useState<string[]>([]);
   const [sports, setSports] = useState<string[]>([]);
+  const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
+  const [isViewDetailsDialogOpen, setIsViewDetailsDialogOpen] = useState(false);
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
 
   // Fetch categories and sports from API
   useEffect(() => {
@@ -679,6 +682,75 @@ export default function CatalogPage() {
     },
   });
 
+  // Delete item mutation
+  const deleteItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/catalog/${itemId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete catalog item");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
+      toast({
+        title: "Success",
+        description: "Catalog item deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete catalog item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle dropdown actions
+  const handleViewDetails = (item: CatalogItem) => {
+    setSelectedItem(item);
+    setIsViewDetailsDialogOpen(true);
+  };
+
+  const handleEditItem = (item: CatalogItem) => {
+    setSelectedItem(item);
+    // Populate form with existing data
+    form.reset({
+      name: item.name,
+      category: item.category,
+      sport: item.sport,
+      basePrice: item.basePrice,
+      unitCost: item.unitCost,
+      sku: item.sku,
+      status: item.status,
+      imageUrl: item.imageUrl || "",
+      measurementChartUrl: item.measurementChartUrl || "",
+      hasMeasurements: item.hasMeasurements || false,
+      measurementInstructions: item.measurementInstructions || "",
+      etaDays: item.etaDays,
+      preferredManufacturerId: item.preferredManufacturerId || "",
+      tags: Array.isArray(item.tags) ? item.tags.join(", ") : "",
+      specifications: item.specifications ? JSON.stringify(item.specifications, null, 2) : "",
+    });
+    setIsEditItemDialogOpen(true);
+  };
+
+  const handleDeleteItem = (item: CatalogItem) => {
+    if (window.confirm(`Are you sure you want to delete "${item.name}"? This action cannot be undone.`)) {
+      deleteItemMutation.mutate(item.id);
+    }
+  };
+
   // Combine database categories with local state as fallback and ensure uniqueness
   const allCategories = React.useMemo(() => {
     const dbCats = dbCategories.length > 0 ? dbCategories.map((cat: any) => cat.name) : [];
@@ -835,11 +907,59 @@ export default function CatalogPage() {
     }
   };
 
+  // Update item mutation
+  const updateItemMutation = useMutation({
+    mutationFn: async (data: CatalogItemForm & { itemId: string }) => {
+      const { itemId, ...itemData } = data;
+
+      const payload = {
+        ...itemData,
+        tags: itemData.tags ? itemData.tags.split(",").map(tag => tag.trim()) : [],
+        specifications: itemData.specifications ? JSON.parse(itemData.specifications) : {},
+      };
+
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/catalog/${itemId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update catalog item");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
+      setIsEditItemDialogOpen(false);
+      setIsAddItemDialogOpen(false);
+      setSelectedItem(null);
+      form.reset();
+
+      toast({
+        title: "Success",
+        description: "Catalog item updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update catalog item",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = async (data: CatalogItemForm) => {
     // Comprehensive form validation before submission
     try {
-      // Validate SKU format and uniqueness
-      if (!data.sku || data.sku.trim().length < 3) {
+      // Validate SKU format and uniqueness (only for new items)
+      if (!selectedItem && (!data.sku || data.sku.trim().length < 3)) {
         toast({
           title: "Invalid SKU",
           description: "SKU must be at least 3 characters long",
@@ -900,31 +1020,6 @@ export default function CatalogPage() {
         }
       }
 
-      // Check for file uploads
-      const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
-      const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
-      const selectedFile = (fileInput as any)?.selectedFile;
-      const selectedMeasurementFile = (measurementInput as any)?.selectedMeasurementFile;
-
-      // Validate file sizes if present
-      if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File Too Large",
-          description: "Product image must be less than 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (selectedMeasurementFile && selectedMeasurementFile.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File Too Large",
-          description: "Measurement chart must be less than 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
-
       // Process and clean data
       const processedData = {
         ...data,
@@ -937,17 +1032,51 @@ export default function CatalogPage() {
         etaDays: data.etaDays.trim()
       };
 
-      // Submit with or without file uploads
-      if (selectedFile || selectedMeasurementFile) {
-        addItemMutation.mutate({
+      // Check if we're editing an existing item
+      if (selectedItem) {
+        // Update existing item
+        updateItemMutation.mutate({
           ...processedData,
-          imageUrl: selectedFile ? "" : processedData.imageUrl,
-          measurementChartUrl: selectedMeasurementFile ? "" : processedData.measurementChartUrl,
-          _uploadFile: selectedFile,
-          _uploadMeasurementFile: selectedMeasurementFile
+          itemId: selectedItem.id
         });
       } else {
-        addItemMutation.mutate(processedData);
+        // Check for file uploads for new items
+        const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
+        const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
+        const selectedFile = (fileInput as any)?.selectedFile;
+        const selectedMeasurementFile = (measurementInput as any)?.selectedMeasurementFile;
+
+        // Validate file sizes if present
+        if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
+          toast({
+            title: "File Too Large",
+            description: "Product image must be less than 5MB",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (selectedMeasurementFile && selectedMeasurementFile.size > 5 * 1024 * 1024) {
+          toast({
+            title: "File Too Large",
+            description: "Measurement chart must be less than 5MB",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Create new item with or without file uploads
+        if (selectedFile || selectedMeasurementFile) {
+          addItemMutation.mutate({
+            ...processedData,
+            imageUrl: selectedFile ? "" : processedData.imageUrl,
+            measurementChartUrl: selectedMeasurementFile ? "" : processedData.measurementChartUrl,
+            _uploadFile: selectedFile,
+            _uploadMeasurementFile: selectedMeasurementFile
+          });
+        } else {
+          addItemMutation.mutate(processedData);
+        }
       }
     } catch (error) {
       console.error('Form submission validation error:', error);
@@ -1538,6 +1667,330 @@ export default function CatalogPage() {
         </DialogContent>
       </Dialog>
 
+      {/* View Details Dialog */}
+      <Dialog open={isViewDetailsDialogOpen} onOpenChange={setIsViewDetailsDialogOpen}>
+        <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-neon-blue flex items-center">
+              <Eye className="mr-2 h-5 w-5" />
+              Item Details
+            </DialogTitle>
+            <DialogDescription className="subtitle text-neon-green">
+              Detailed information for {selectedItem?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedItem && (
+            <div className="space-y-6 p-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Product Image */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">Product Image</h3>
+                  {selectedItem.imageUrl ? (
+                    <img 
+                      src={selectedItem.imageUrl} 
+                      alt={selectedItem.name}
+                      className="w-full h-48 object-cover rounded-lg border border-glass-border"
+                    />
+                  ) : (
+                    <div className="w-full h-48 glass-panel flex items-center justify-center rounded-lg">
+                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground">Basic Information</h3>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Name:</span>
+                        <span className="text-sm text-foreground font-medium">{selectedItem.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">SKU:</span>
+                        <span className="text-sm text-foreground font-mono">{selectedItem.sku}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Category:</span>
+                        <span className="text-sm text-foreground">{selectedItem.category}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Sport:</span>
+                        <span className="text-sm text-foreground">{selectedItem.sport}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Status:</span>
+                        <Badge 
+                          variant={selectedItem.status === 'active' ? 'default' : 'secondary'}
+                          className={
+                            selectedItem.status === 'active' ? 'bg-neon-green text-rich-black' :
+                            selectedItem.status === 'inactive' ? 'bg-yellow-500 text-rich-black' :
+                            'bg-red-500 text-white'
+                          }
+                        >
+                          {selectedItem.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing and Logistics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="glass-panel p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Base Price</h4>
+                  <p className="text-2xl font-bold text-neon-green">${selectedItem.basePrice.toFixed(2)}</p>
+                </div>
+                <div className="glass-panel p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Unit Cost</h4>
+                  <p className="text-2xl font-bold text-neon-blue">${selectedItem.unitCost.toFixed(2)}</p>
+                </div>
+                <div className="glass-panel p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">ETA</h4>
+                  <p className="text-2xl font-bold text-foreground">{selectedItem.etaDays} days</p>
+                </div>
+              </div>
+
+              {/* Measurements */}
+              {selectedItem.hasMeasurements && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Measurements</h3>
+                  <div className="glass-panel p-4 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs bg-neon-blue text-rich-black px-2 py-1 rounded">Requires Measurements</span>
+                    </div>
+                    {selectedItem.measurementInstructions && (
+                      <div className="mt-3">
+                        <h4 className="text-xs font-medium text-muted-foreground mb-1">Instructions:</h4>
+                        <p className="text-sm text-foreground">{selectedItem.measurementInstructions}</p>
+                      </div>
+                    )}
+                    {selectedItem.measurementChartUrl && (
+                      <div className="mt-3">
+                        <h4 className="text-xs font-medium text-muted-foreground mb-1">Measurement Chart:</h4>
+                        <a 
+                          href={selectedItem.measurementChartUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-neon-blue hover:underline text-sm"
+                        >
+                          View Chart
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Tags and Specifications */}
+              {(selectedItem.tags?.length > 0 || selectedItem.specifications) && (
+                <div className="space-y-4">
+                  {selectedItem.tags?.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedItem.tags.map((tag: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedItem.specifications && Object.keys(selectedItem.specifications).length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Specifications</h3>
+                      <div className="glass-panel p-3 rounded-lg">
+                        <pre className="text-xs text-foreground overflow-x-auto">
+                          {JSON.stringify(selectedItem.specifications, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsViewDetailsDialogOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+        <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw]">
+          <DialogHeader>
+            <DialogTitle className="text-neon-blue flex items-center">
+              <Edit className="mr-2 h-5 w-5" />
+              Edit Catalog Item
+            </DialogTitle>
+            <DialogDescription className="subtitle text-neon-green">
+              Make changes to {selectedItem?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
+              {/* Same form fields as Add Item, but populated with existing data */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="subtitle text-muted-foreground text-xs">Product Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="rich-input" placeholder="Enter product name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="subtitle text-muted-foreground text-xs">SKU</FormLabel>
+                      <FormControl>
+                        <Input {...field} className="rich-input" placeholder="SKU" readOnly />
+                      </FormControl>
+                      <FormDescription className="subtitle text-muted-foreground text-xs">
+                        SKU cannot be changed after creation
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="subtitle text-muted-foreground text-xs">Category</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="rich-input">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rich-card">
+                          {allCategories.map((category: string) => (
+                            <SelectItem key={category} value={category}>{category}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sport"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="subtitle text-muted-foreground text-xs">Sport</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="rich-input">
+                            <SelectValue placeholder="Select sport" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {allSports.map((sport: string) => (
+                            <SelectItem key={sport} value={sport}>
+                              {sport}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="basePrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="subtitle text-muted-foreground text-xs">Base Price ($)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          step="0.01"
+                          className="rich-input" 
+                          placeholder="0.00"
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="unitCost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="subtitle text-muted-foreground text-xs">Unit Cost ($)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          step="0.01"
+                          className="rich-input" 
+                          placeholder="0.00"
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditItemDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={addItemMutation.isPending}
+                >
+                  {addItemMutation.isPending ? "Updating..." : "Update Item"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       <Card className="rich-card">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -1653,16 +2106,25 @@ export default function CatalogPage() {
                           <DropdownMenuContent align="end" className="rich-card">
                             <DropdownMenuLabel className="text-foreground">Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-foreground hover:glass-panel">
+                            <DropdownMenuItem 
+                              className="text-foreground hover:glass-panel"
+                              onClick={() => handleViewDetails(item)}
+                            >
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-foreground hover:glass-panel">
+                            <DropdownMenuItem 
+                              className="text-foreground hover:glass-panel"
+                              onClick={() => handleEditItem(item)}
+                            >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Item
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteItem(item)}
+                            >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
