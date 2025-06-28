@@ -689,9 +689,9 @@ export default function CatalogPage() {
 
   // Combine database sports with local state as fallback and ensure uniqueness
   const allSports = React.useMemo(() => {
-    const dbSports = dbSports.length > 0 ? dbSports.map((sport: any) => sport.name) : [];
+    const dbSportsNames = dbSports.length > 0 ? dbSports.map((sport: any) => sport.name) : [];
     const localSports = sports || [];
-    const combined = [...new Set([...dbSports, ...localSports])];
+    const combined = [...new Set([...dbSportsNames, ...localSports])];
     return combined.sort();
   }, [dbSports, sports]);
 

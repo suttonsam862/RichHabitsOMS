@@ -1,0 +1,33 @@
+The above error occurred in the <CatalogPage> component:
+
+    at CatalogPage (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/pages/admin/CatalogPage.tsx:305:39)
+    at RequireAuth (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/auth/RequireAuth.tsx:20:31)
+    at RenderedRoute (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=49664747:5449:26)
+    at Outlet (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=49664747:6116:26)
+    at main
+    at div
+    at div
+    at AppLayout (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/layout/AppLayout.tsx:45:43)
+    at RenderedRoute (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=49664747:5449:26)
+    at Routes (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=49664747:6182:3)
+    at Router (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=49664747:6125:13)
+    at BrowserRouter (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=49664747:9111:3)
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=49664747:38:15)
+    at TooltipProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=49664747:62:5)
+    at AuthProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/context/AuthContext.tsx:33:32)
+    at QueryClientProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=49664747:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Cannot access 'dbSports2' before initialization
+at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/pages/admin/CatalogPage.tsx:665:23
+at mountMemo (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=49664747:12194:27)
+at Object.useMemo (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=49664747:12518:24)
+at Object.useMemo (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-QCHXOAYK.js?v=49664747:1094:29)
+at CatalogPage (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/pages/admin/CatalogPage.tsx:664:27)
+at renderWithHooks (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=49664747:11548:26)
+at mountIndeterminateComponent (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=49664747:14926:21)
+at beginWork (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=49664747:15914:22)
+at beginWork$1 (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=49664747:19753:22)
+at performUnitOfWork (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=49664747:19198:20)
