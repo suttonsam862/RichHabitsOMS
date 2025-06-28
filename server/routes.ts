@@ -2334,8 +2334,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes (admin auth required)
   router.use('/api/admin', adminRoutesRefactored);
 
-  // 404 handler
-  router.use('*', (req, res) => {
+  // API 404 handler - only for API routes
+  router.use('/api/*', (req, res) => {
     res.status(404).json({ 
       success: false, 
       message: `Route ${req.originalUrl} not found` 

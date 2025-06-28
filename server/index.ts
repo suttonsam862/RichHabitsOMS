@@ -186,10 +186,6 @@ import imageRoutes from './routes/api/imageRoutes';
       await setupVite(app, server);
     } else {
       serveStatic(app);
-      // Catch-all route for production only
-      app.get("*", (req, res) => {
-        res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
-      });
     }
 
     // ALWAYS serve the app on port 5000
