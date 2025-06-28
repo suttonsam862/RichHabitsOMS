@@ -395,6 +395,14 @@ export default function CatalogPage() {
 
           clearTimeout(timeoutId);
 
+          if (response.status === 401) {
+            // Token expired, clear auth and reload
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('tokenExpires');
+            window.location.reload();
+            throw new Error("Authentication expired. Please log in again.");
+          }
+
           if (!response.ok) {
             throw new Error(`Server error: ${response.status}`);
           }
@@ -597,8 +605,17 @@ export default function CatalogPage() {
         body: JSON.stringify(payload),
       });
 
+      if (response.status === 401) {
+        // Token expired, clear auth and reload
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('tokenExpires');
+        window.location.reload();
+        throw new Error("Authentication expired. Please log in again.");
+      }
+
       if (!response.ok) {
-        throw new Error("Failed to add catalog item");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to add catalog item");
       }
 
       const result = await response.json();
