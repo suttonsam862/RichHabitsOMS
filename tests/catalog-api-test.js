@@ -35,16 +35,29 @@ class CatalogAPITest {
         })
       });
 
+      console.log('Auth response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        this.authToken = data.token;
+        console.log('Auth response data:', data);
+        
+        // Check both possible token locations
+        this.authToken = data.token || data.session?.token;
+        
+        if (!this.authToken) {
+          throw new Error('No token found in response');
+        }
+        
         this.results.push({ test: 'Authentication', status: '✅ PASS', details: 'Login successful' });
         console.log('✅ Authentication successful');
       } else {
-        this.results.push({ test: 'Authentication', status: '❌ FAIL', details: `Status: ${response.status}` });
-        throw new Error(`Authentication failed: ${response.status}`);
+        const errorText = await response.text();
+        console.log('Auth error response:', errorText);
+        this.results.push({ test: 'Authentication', status: '❌ FAIL', details: `Status: ${response.status} - ${errorText}` });
+        throw new Error(`Authentication failed: ${response.status} - ${errorText}`);
       }
     } catch (error) {
+      console.error('Authentication error details:', error);
       this.results.push({ test: 'Authentication', status: '❌ FAIL', details: error.message });
       throw error;
     }
