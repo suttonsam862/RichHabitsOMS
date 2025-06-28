@@ -1,5 +1,5 @@
 
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test.describe('Catalog Route Diagnostic Tests', () => {
   test('Complete catalog functionality check', async ({ page }) => {
