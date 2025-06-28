@@ -50,13 +50,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         // Check for stored token in localStorage
         const storedToken = localStorage.getItem('authToken');
-        
+
         if (!storedToken) {
           console.log('No auth token found in localStorage');
           setUser(null);
           return;
         }
-        
+
         // The server handles token validation with Supabase Auth
         const res = await fetch("/api/auth/me", {
           headers: {
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           },
           credentials: 'include'
         });
-        
+
         if (!res.ok) {
           console.log('Auth validation failed, clearing session');
           localStorage.removeItem('authToken');
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(null);
           return;
         }
-        
+
         const userData = await res.json();
         if (userData && userData.success && userData.user) {
           console.log('User session validated successfully');
@@ -100,11 +100,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     try {
       console.log(`Attempting login for ${email}`);
-      
+
       // Clear any existing tokens/data
       localStorage.removeItem('authToken');
       localStorage.removeItem('tokenExpires');
-      
+
       // Create a safe fetch request that always returns JSON, even on errors
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (!text) {
           throw new Error("Empty response from server");
         }
-        
+
         try {
           data = JSON.parse(text);
         } catch (parseError) {
@@ -143,7 +143,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.error("Invalid auth response format:", data);
         throw new Error("Invalid response from authentication server");
       }
-      
+
       // Check for session with token (backend returns session.token)
       if (!data.session?.token) {
         console.error("No authentication token found in response");
@@ -156,15 +156,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (data.session.expiresAt) {
         localStorage.setItem('tokenExpires', data.session.expiresAt.toString());
       }
-      
+
       // Update user state with authenticated user data
       setUser(data.user);
-      
+
       console.log("Authentication successful");
       return data.user;
     } catch (error: any) {
       console.error("Login error:", error);
-      
+
       // Ensure a clean error is thrown with helpful message
       if (error instanceof Error) {
         throw error;
@@ -212,15 +212,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Custom role-based page access control
   const hasPageAccess = (pageName: string): boolean => {
     if (!user) return false;
-    
+
     // Admin users have access to all pages
     if (user.role === 'admin') return true;
-    
+
     // Check custom role visibility
     if (user.visiblePages && user.visiblePages.length > 0) {
       return user.visiblePages.includes(pageName.toLowerCase());
     }
-    
+
     // Default role-based access for backwards compatibility
     switch (user.role) {
       case 'salesperson':
@@ -235,6 +235,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return false;
     }
   };
+
+  // Show loading spinner while checking auth state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider

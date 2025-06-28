@@ -57,15 +57,15 @@ function App() {
         <TooltipProvider>
           <Router>
             <Routes>
+              {/* Redirect from root to login */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/setup-password" element={<SetupPassword />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
               <Route path="/payment-cancel" element={<PaymentCancel />} />
-              
-              {/* Redirect from root to login */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
               
               {/* Main dashboard route that redirects to role-specific dashboard */}
               <Route 
