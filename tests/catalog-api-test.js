@@ -1,5 +1,5 @@
 
-import fetch from 'node-fetch';
+// Using built-in fetch (Node.js 18+)
 
 const API_BASE = 'http://0.0.0.0:5000';
 
