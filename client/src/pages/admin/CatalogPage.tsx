@@ -284,12 +284,12 @@ export default function CatalogPage() {
 
         if (categoriesRes.ok) {
           const categoriesData = await categoriesRes.json();
-          setCategories(categoriesData.categories.map((cat: any) => cat.name));
+          setCategories(categoriesData.data.categories.map((cat: any) => cat.name));
         }
 
         if (sportsRes.ok) {
           const sportsData = await sportsRes.json();
-          setSports(sportsData.sports.map((sport: any) => sport.name));
+          setSports(sportsData.data.sports.map((sport: any) => sport.name));
         }
       } catch (error) {
         console.error('Error fetching catalog options:', error);
