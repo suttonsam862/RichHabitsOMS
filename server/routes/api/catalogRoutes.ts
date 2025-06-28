@@ -67,56 +67,124 @@ export async function createCatalogItem(req: Request, res: Response) {
   try {
     const {
       name,
-      description,
       category,
+      sport,
       basePrice,
+      unitCost,
       sku,
       status = 'active',
-      baseImageUrl,
-      tags = [],
-      specifications = {}
+      imageUrl,
+      measurementChartUrl,
+      hasMeasurements,
+      measurementInstructions,
+      etaDays,
+      preferredManufacturerId,
+      tags,
+      specifications
     } = req.body;
 
-    console.log('Creating new catalog item:', { name, sku, category });
+    console.log('Creating new catalog item:', { name, sku, category, sport });
 
-    // Validate required fields
-    if (!name || !category || !sku || basePrice === undefined) {
+    // Comprehensive server-side validation
+    if (!name || !category || !sport || !sku || basePrice === undefined || unitCost === undefined || !etaDays) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: name, category, sku, and basePrice are required'
+        message: 'Missing required fields: name, category, sport, sku, basePrice, unitCost, and etaDays are required'
       });
     }
 
-    // Check if SKU already exists
+    // Validate data types and ranges
+    if (typeof name !== 'string' || name.trim().length === 0 || name.length > 255) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid name: must be a non-empty string under 255 characters'
+      });
+    }
+
+    if (typeof sku !== 'string' || sku.trim().length < 3 || sku.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid SKU: must be 3-100 characters long'
+      });
+    }
+
+    const numericBasePrice = Number(basePrice);
+    const numericUnitCost = Number(unitCost);
+
+    if (isNaN(numericBasePrice) || numericBasePrice < 0.01 || numericBasePrice > 999999.99) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid base price: must be between $0.01 and $999,999.99'
+      });
+    }
+
+    if (isNaN(numericUnitCost) || numericUnitCost < 0 || numericUnitCost > 999999.99) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid unit cost: must be between $0.00 and $999,999.99'
+      });
+    }
+
+    // Validate JSON specifications if provided
+    let parsedSpecifications = {};
+    if (specifications && specifications.trim()) {
+      try {
+        parsedSpecifications = JSON.parse(specifications);
+        if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
+          throw new Error('Must be an object');
+        }
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid specifications: must be valid JSON object'
+        });
+      }
+    }
+
+    // Parse tags if provided
+    let parsedTags = [];
+    if (tags && tags.trim()) {
+      parsedTags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+    }
+
+    // Check if SKU already exists (case insensitive)
     const { data: existingItem } = await supabase
       .from('catalog_items')
       .select('id')
-      .eq('sku', sku)
+      .ilike('sku', sku.trim())
       .single();
 
     if (existingItem) {
       return res.status(400).json({
         success: false,
-        message: 'SKU already exists'
+        message: 'SKU already exists (case insensitive check)'
+      });
+    }
+
+    // Validate measurement requirements
+    if (hasMeasurements && !measurementInstructions?.trim() && !measurementChartUrl?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Items requiring measurements must have either instructions or measurement chart URL'
       });
     }
 
     const newItem = {
-      name,
-      category,
-      sport: req.body.sport || 'All Around Item',
-      base_price: Number(basePrice),
-      unit_cost: Number(req.body.unitCost || 0),
-      sku,
-      status,
-      base_image_url: baseImageUrl || null,
-      measurement_chart_url: req.body.measurementChartUrl || null,
-      has_measurements: Boolean(req.body.hasMeasurements),
-      measurement_instructions: req.body.measurementInstructions || null,
-      eta_days: req.body.etaDays || '7',
-      preferred_manufacturer_id: req.body.preferredManufacturerId || null,
-      tags: tags || [],
-      specifications: specifications || {}
+      name: name.trim(),
+      category: category.trim(),
+      sport: sport.trim(),
+      base_price: numericBasePrice,
+      unit_cost: numericUnitCost,
+      sku: sku.trim().toUpperCase(),
+      status: status,
+      base_image_url: imageUrl?.trim() || null,
+      measurement_chart_url: measurementChartUrl?.trim() || null,
+      has_measurements: Boolean(hasMeasurements),
+      measurement_instructions: measurementInstructions?.trim() || null,
+      eta_days: etaDays.trim(),
+      preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
+      tags: parsedTags,
+      specifications: parsedSpecifications
     };
 
     const { data: item, error } = await supabase
@@ -127,6 +195,15 @@ export async function createCatalogItem(req: Request, res: Response) {
 
     if (error) {
       console.error('Error creating catalog item:', error);
+      
+      // Handle specific database errors
+      if (error.code === '23505') { // unique constraint violation
+        return res.status(400).json({
+          success: false,
+          message: 'SKU already exists'
+        });
+      }
+      
       return res.status(500).json({
         success: false,
         message: 'Failed to create catalog item',
@@ -137,7 +214,18 @@ export async function createCatalogItem(req: Request, res: Response) {
     console.log('Catalog item created successfully:', item.id);
     return res.status(201).json({
       success: true,
-      item
+      item: {
+        ...item,
+        // Transform back to camelCase for consistency
+        basePrice: item.base_price,
+        unitCost: item.unit_cost,
+        imageUrl: item.base_image_url,
+        measurementChartUrl: item.measurement_chart_url,
+        hasMeasurements: item.has_measurements,
+        measurementInstructions: item.measurement_instructions,
+        etaDays: item.eta_days,
+        preferredManufacturerId: item.preferred_manufacturer_id
+      }
     });
   } catch (error) {
     console.error('Catalog creation error:', error);

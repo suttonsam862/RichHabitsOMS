@@ -87,21 +87,29 @@ interface CatalogItem {
 }
 
 const catalogItemSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  category: z.string().min(1, "Category is required"),
-  sport: z.string().min(1, "Sport is required"),
-  basePrice: z.number().min(0, "Price must be positive"),
-  unitCost: z.number().min(0, "Unit cost must be positive"),
-  sku: z.string().min(1, "SKU is required"),
+  name: z.string().min(1, "Name is required").max(255, "Name too long"),
+  category: z.string().min(1, "Category is required").max(100, "Category name too long"),
+  sport: z.string().min(1, "Sport is required").max(100, "Sport name too long"),
+  basePrice: z.number().min(0.01, "Price must be greater than $0.00").max(999999.99, "Price too high"),
+  unitCost: z.number().min(0, "Unit cost cannot be negative").max(999999.99, "Unit cost too high"),
+  sku: z.string().min(3, "SKU must be at least 3 characters").max(100, "SKU too long").regex(/^[A-Z0-9\-_]+$/i, "SKU can only contain letters, numbers, hyphens, and underscores"),
   status: z.enum(['active', 'inactive', 'discontinued']).default('active'),
-  imageUrl: z.string().url().optional().or(z.literal("")),
-  measurementChartUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: z.string().url("Invalid URL format").optional().or(z.literal("")),
+  measurementChartUrl: z.string().url("Invalid URL format").optional().or(z.literal("")),
   hasMeasurements: z.boolean().default(false),
-  measurementInstructions: z.string().optional(),
-  etaDays: z.string().min(1, "ETA is required"),
+  measurementInstructions: z.string().max(1000, "Instructions too long").optional(),
+  etaDays: z.string().min(1, "ETA is required").regex(/^\d+$/, "ETA must be a number"),
   preferredManufacturerId: z.string().optional(),
-  tags: z.string().optional(),
-  specifications: z.string().optional(),
+  tags: z.string().max(500, "Tags too long").optional(),
+  specifications: z.string().refine((val) => {
+    if (!val || val.trim() === '') return true;
+    try {
+      JSON.parse(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Specifications must be valid JSON").optional(),
 });
 
 // Image Upload Area Component
@@ -313,13 +321,30 @@ export default function CatalogPage() {
       tags: "",
       specifications: "",
     },
+    mode: "onChange", // Enable real-time validation
   });
+
+  // Form validation helper
+  const validateFormState = () => {
+    const formData = form.getValues();
+    const errors = [];
+
+    if (!formData.name?.trim()) errors.push("Product name is required");
+    if (!formData.category?.trim()) errors.push("Category is required");
+    if (!formData.sport?.trim()) errors.push("Sport is required");
+    if (!formData.sku?.trim()) errors.push("SKU is required");
+    if (formData.basePrice <= 0) errors.push("Base price must be greater than $0");
+    if (formData.unitCost < 0) errors.push("Unit cost cannot be negative");
+    if (!formData.etaDays?.trim()) errors.push("ETA is required");
+
+    return errors;
+  };
 
   // Watch name and category for manual SKU generation
   const watchedName = form.watch("name");
   const watchedCategory = form.watch("category");
 
-  // Function to manually regenerate SKU with uniqueness check
+  // Function to manually regenerate SKU with improved uniqueness check
   const regenerateSKU = async () => {
     const name = form.getValues("name");
     const category = form.getValues("category");
@@ -333,62 +358,82 @@ export default function CatalogPage() {
     }
 
     try {
-      let newSKU = generateSKU(category, name);
       let attempts = 0;
-      const maxAttempts = 10;
+      const maxAttempts = 15;
+      const token = localStorage.getItem('authToken');
 
-      // Check if SKU already exists and regenerate if needed
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to generate SKU",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate SKUs with increasing randomness until unique
       while (attempts < maxAttempts) {
-        const token = localStorage.getItem('authToken');
+        // Add more randomness for subsequent attempts
+        const extraRandomness = attempts > 0 ? Math.random().toString(36).substring(2, 5).toUpperCase() : '';
+        const newSKU = generateSKU(category, name) + extraRandomness;
 
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+
           const response = await fetch(`/api/catalog/check-sku?sku=${encodeURIComponent(newSKU)}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
-            credentials: 'include'
+            credentials: 'include',
+            signal: controller.signal
           });
 
-          if (response.ok) {
-            const result = await response.json();
-            if (!result.exists) {
-              // SKU is unique, use it
-              form.setValue("sku", newSKU);
-              toast({
-                title: "SKU Generated",
-                description: `Generated unique SKU: ${newSKU}`,
-              });
-              return;
-            }
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (!result.exists) {
+            form.setValue("sku", newSKU);
+            toast({
+              title: "SKU Generated",
+              description: `Generated unique SKU: ${newSKU}`,
+            });
+            return;
           }
         } catch (error) {
-          console.warn('SKU check failed, continuing with generation:', error);
+          if (error.name === 'AbortError') {
+            console.warn('SKU check timed out, attempt:', attempts + 1);
+          } else {
+            console.warn('SKU check failed:', error);
+          }
         }
 
-        // SKU exists or check failed, generate a new one with more randomness
         attempts++;
-        const extraRandom = Math.random().toString(36).substring(2, 4).toUpperCase();
-        newSKU = generateSKU(category, name) + extraRandom;
-
-        // Add small delay to prevent rapid requests
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Exponential backoff for retries
+        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempts), 5000)));
       }
 
-      // If we couldn't generate a unique SKU after max attempts
+      // Final fallback with timestamp for uniqueness
+      const fallbackSKU = generateSKU(category, name) + '-' + Date.now().toString().slice(-8);
+      form.setValue("sku", fallbackSKU);
       toast({
-        title: "SKU Generation Failed", 
-        description: "Could not generate a unique SKU. Please enter one manually.",
-        variant: "destructive",
+        title: "SKU Generated",
+        description: `Generated SKU: ${fallbackSKU} (uniqueness not verified due to server issues)`,
+        variant: "default",
       });
     } catch (error) {
       console.error('Error generating SKU:', error);
-      // Fallback to basic generation without uniqueness check
-      const newSKU = generateSKU(category, name);
-      form.setValue("sku", newSKU);
+      const errorSKU = generateSKU(category, name) + '-ERR' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      form.setValue("sku", errorSKU);
       toast({
-        title: "SKU Generated",
-        description: `Generated SKU: ${newSKU} (uniqueness not verified)`,
+        title: "SKU Generated with Errors",
+        description: `Generated fallback SKU: ${errorSKU}. Please verify uniqueness manually.`,
+        variant: "destructive",
       });
     }
   };
@@ -634,11 +679,21 @@ export default function CatalogPage() {
     },
   });
 
-  // Combine database categories with local state as fallback
-  const allCategories = dbCategories.length > 0 ? dbCategories.map((cat: any) => cat.name) : categories;
+  // Combine database categories with local state as fallback and ensure uniqueness
+  const allCategories = React.useMemo(() => {
+    const dbCats = dbCategories.length > 0 ? dbCategories.map((cat: any) => cat.name) : [];
+    const localCats = categories || [];
+    const combined = [...new Set([...dbCats, ...localCats])];
+    return combined.sort();
+  }, [dbCategories, categories]);
 
-  // Combine database sports with local state as fallback
-  const allSports = dbSports.length > 0 ? dbSports.map((sport: any) => sport.name) : sports;
+  // Combine database sports with local state as fallback and ensure uniqueness
+  const allSports = React.useMemo(() => {
+    const dbSports = dbSports.length > 0 ? dbSports.map((sport: any) => sport.name) : [];
+    const localSports = sports || [];
+    const combined = [...new Set([...dbSports, ...localSports])];
+    return combined.sort();
+  }, [dbSports, sports]);
 
   // Add new category handler with database persistence
   const addNewCategory = async () => {
@@ -781,58 +836,154 @@ export default function CatalogPage() {
   };
 
   const onSubmit = async (data: CatalogItemForm) => {
-    // Validate JSON specifications if provided
-    if (data.specifications && data.specifications.trim()) {
-      try {
-        JSON.parse(data.specifications);
-      } catch (error) {
+    // Comprehensive form validation before submission
+    try {
+      // Validate SKU format and uniqueness
+      if (!data.sku || data.sku.trim().length < 3) {
         toast({
-          title: "Invalid JSON",
-          description: "Specifications must be valid JSON format",
+          title: "Invalid SKU",
+          description: "SKU must be at least 3 characters long",
           variant: "destructive",
         });
         return;
       }
-    }
 
-    // Check if files were selected
-    const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
-    const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
-    const selectedFile = (fileInput as any)?.selectedFile;
-    const selectedMeasurementFile = (measurementInput as any)?.selectedMeasurementFile;
+      // Validate JSON specifications if provided
+      if (data.specifications && data.specifications.trim()) {
+        try {
+          const parsedSpecs = JSON.parse(data.specifications);
+          // Ensure it's an object, not a primitive
+          if (typeof parsedSpecs !== 'object' || parsedSpecs === null || Array.isArray(parsedSpecs)) {
+            throw new Error("Specifications must be a JSON object");
+          }
+        } catch (error) {
+          toast({
+            title: "Invalid JSON",
+            description: "Specifications must be valid JSON object format",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
 
-    // Convert 'none' back to empty string for manufacturer preference
-    const processedData = {
-      ...data,
-      preferredManufacturerId: data.preferredManufacturerId === 'none' ? '' : data.preferredManufacturerId
-    };
+      // Validate category and sport selections
+      if (!allCategories.includes(data.category)) {
+        toast({
+          title: "Invalid Category",
+          description: "Please select a valid category from the list",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (selectedFile || selectedMeasurementFile) {
-      // Create item first, then upload files
-      addItemMutation.mutate({
-        ...processedData,
-        imageUrl: selectedFile ? "" : processedData.imageUrl, // Clear URL if uploading file
-        measurementChartUrl: selectedMeasurementFile ? "" : processedData.measurementChartUrl,
-        _uploadFile: selectedFile,
-        _uploadMeasurementFile: selectedMeasurementFile
+      if (!allSports.includes(data.sport)) {
+        toast({
+          title: "Invalid Sport",
+          description: "Please select a valid sport from the list",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate measurement requirements
+      if (data.hasMeasurements && !data.measurementInstructions?.trim() && !data.measurementChartUrl?.trim()) {
+        const fileInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
+        const selectedMeasurementFile = (fileInput as any)?.selectedMeasurementFile;
+        
+        if (!selectedMeasurementFile) {
+          toast({
+            title: "Missing Measurement Info",
+            description: "Items requiring measurements must have either instructions or a measurement chart",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Check for file uploads
+      const fileInput = document.getElementById('catalog-image-upload') as HTMLInputElement;
+      const measurementInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
+      const selectedFile = (fileInput as any)?.selectedFile;
+      const selectedMeasurementFile = (measurementInput as any)?.selectedMeasurementFile;
+
+      // Validate file sizes if present
+      if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Product image must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (selectedMeasurementFile && selectedMeasurementFile.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Measurement chart must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Process and clean data
+      const processedData = {
+        ...data,
+        preferredManufacturerId: data.preferredManufacturerId === 'none' ? '' : data.preferredManufacturerId,
+        tags: data.tags?.trim() || '',
+        specifications: data.specifications?.trim() || '',
+        measurementInstructions: data.measurementInstructions?.trim() || '',
+        name: data.name.trim(),
+        sku: data.sku.trim().toUpperCase(),
+        etaDays: data.etaDays.trim()
+      };
+
+      // Submit with or without file uploads
+      if (selectedFile || selectedMeasurementFile) {
+        addItemMutation.mutate({
+          ...processedData,
+          imageUrl: selectedFile ? "" : processedData.imageUrl,
+          measurementChartUrl: selectedMeasurementFile ? "" : processedData.measurementChartUrl,
+          _uploadFile: selectedFile,
+          _uploadMeasurementFile: selectedMeasurementFile
+        });
+      } else {
+        addItemMutation.mutate(processedData);
+      }
+    } catch (error) {
+      console.error('Form submission validation error:', error);
+      toast({
+        title: "Submission Error",
+        description: "Please check all fields and try again",
+        variant: "destructive",
       });
-    } else {
-      // Normal submission with URLs
-      addItemMutation.mutate(processedData);
     }
   };
 
-  // Filter items
+  // Filter and sort items with automatic categorization
   const items = catalogItems || [];
-  const filteredItems = items.filter((item: CatalogItem) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.category.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredItems = items
+    .filter((item: CatalogItem) => {
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (item.tags && item.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())));
 
-    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
 
-    return matchesSearch && matchesCategory;
-  });
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a: CatalogItem, b: CatalogItem) => {
+      // Primary sort: Category (alphabetical)
+      const categoryCompare = a.category.localeCompare(b.category);
+      if (categoryCompare !== 0) return categoryCompare;
+      
+      // Secondary sort: Sport (alphabetical)
+      const sportCompare = a.sport.localeCompare(b.sport);
+      if (sportCompare !== 0) return sportCompare;
+      
+      // Tertiary sort: Name (alphabetical)
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <div className="container mx-auto py-8">
