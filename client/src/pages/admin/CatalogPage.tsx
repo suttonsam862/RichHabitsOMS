@@ -976,8 +976,7 @@ export default function CatalogPage() {
           if (typeof parsedSpecs !== 'object' || parsedSpecs === null || Array.isArray(parsedSpecs)) {
             throw new Error("Specifications must be a JSON object");
           }
-        } catch (```python
-error) {
+        } catch (error) {
           toast({
             title: "Invalid JSON",
             description: "Specifications must be valid JSON object format",
