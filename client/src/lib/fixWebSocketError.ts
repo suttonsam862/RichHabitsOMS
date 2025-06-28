@@ -1,3 +1,4 @@
+
 /**
  * This script fixes the WebSocket connection error in Replit environments
  * by patching the WebSocket constructor that Vite uses for HMR.
@@ -37,11 +38,6 @@ export const fixWebSocketConnection = () => {
           console.error('Error fixing WebSocket URL:', e);
           // Fallback to original WebSocket if fix fails
           return new OriginalWebSocket(urlString, protocols);
-        }
-          
-          // Fallback to simple replacement if URL parsing fails
-          const fixedUrl = urlString.replace(/wss?:\/\/localhost:undefined/g, `${protocol}//${currentHost}`);
-          return new OriginalWebSocket(fixedUrl, protocols);
         }
       }
       
