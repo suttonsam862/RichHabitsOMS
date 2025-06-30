@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import App from "./App";
+import App from "./App-debug";
 import "./index.css";
 import { fixWebSocketConnection } from './lib/fixWebSocketError'
 

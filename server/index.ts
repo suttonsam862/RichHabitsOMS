@@ -25,6 +25,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Configure trust proxy for Replit environment
+app.set('trust proxy', true);
+
 // Apply security headers first
 app.use(securityHeaders);
 
@@ -189,23 +192,6 @@ import authRoutes from './routes/api/authRoutes';
 
     // Register API routes BEFORE Vite middleware to prevent conflicts
     const server = await registerRoutes(app);
-
-    // Register auth routes first (no auth required for these)
-    app.use('/api/auth', authRoutes);
-    
-    // Add authentication middleware for protected routes
-    const protectedRoutes = ['/api/catalog-options', '/api/catalog', '/api/customers', '/api/images', '/api/invitations', '/api/users'];
-    protectedRoutes.forEach(route => {
-      app.use(route, authenticateRequest);
-    });
-    
-    // Register protected API routes
-    app.use('/api/catalog-options', catalogOptionsRoutes);
-    app.use('/api/catalog', catalogRoutes);
-    app.use('/api/customers', customerRoutes);
-    app.use('/api/images', imageRoutes);
-    app.use('/api/invitations', invitationRoutes);
-    app.use('/api/users', userRolesRoutes);
 
     // Serve uploaded images
     app.use('/uploads', express.static('uploads'));
