@@ -965,7 +965,49 @@ export async function createUserWithRole(req: Request, res: Response) {
   }
 }
 
+/**
+ * Get all users (admin only)
+ */
+async function getAllUsers(req: Request, res: Response) {
+  try {
+    const { data, error } = await supabase.auth.admin.listUsers();
+    
+    if (error) {
+      console.error('Error fetching users:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch users: ' + error.message
+      });
+    }
+
+    const users = data.users.map(user => ({
+      id: user.id,
+      email: user.email,
+      role: user.user_metadata?.role || 'customer',
+      firstName: user.user_metadata?.firstName || '',
+      lastName: user.user_metadata?.lastName || '',
+      created_at: user.created_at,
+      last_sign_in_at: user.last_sign_in_at,
+      email_confirmed_at: user.email_confirmed_at
+    }));
+
+    res.json({
+      success: true,
+      data: users,
+      count: users.length
+    });
+
+  } catch (error) {
+    console.error('Error in getAllUsers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
 // Configure routes
+router.get('/', requireAuth, requireRole(['admin']), getAllUsers);
 router.get('/manufacturers', requireAuth, requireRole(['admin']), getManufacturers);
 router.get('/role/:role', requireAuth, requireRole(['admin']), getUsersByRole);
 router.get('/:userId/permissions', requireAuth, requireRole(['admin']), getUserPermissions);

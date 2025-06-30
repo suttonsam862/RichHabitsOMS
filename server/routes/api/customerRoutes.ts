@@ -369,7 +369,53 @@ export async function createCustomer(req: Request, res: Response) {
   }
 }
 
+/**
+ * Get all customers (admin only)
+ */
+async function getAllCustomers(req: Request, res: Response) {
+  try {
+    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (error) {
+      console.error('Error fetching customers:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch customers: ' + error.message
+      });
+    }
+
+    // Filter for customer role users
+    const customers = users.users
+      .filter(user => user.user_metadata?.role === 'customer')
+      .map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.user_metadata?.firstName || '',
+        lastName: user.user_metadata?.lastName || '',
+        company: user.user_metadata?.company || '',
+        phone: user.user_metadata?.phone || '',
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at,
+        email_confirmed_at: user.email_confirmed_at
+      }));
+
+    res.json({
+      success: true,
+      data: customers,
+      count: customers.length
+    });
+
+  } catch (error) {
+    console.error('Error in getAllCustomers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
 // Configure routes
+router.get('/', requireAuth, requireRole(['admin']), getAllCustomers);
 router.post('/invite', requireAuth, requireRole(['admin']), sendUserInvitation);
 router.get('/verify/:token', verifyInvitation);
 router.post('/', requireAuth, requireRole(['admin']), createCustomer);
