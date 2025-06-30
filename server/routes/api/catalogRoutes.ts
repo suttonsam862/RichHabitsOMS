@@ -125,26 +125,34 @@ export async function createCatalogItem(req: Request, res: Response) {
       });
     }
 
-    // Validate JSON specifications if provided
+    // Validate and parse specifications if provided
     let parsedSpecifications = {};
-    if (specifications && typeof specifications === 'string' && specifications.trim()) {
-      try {
-        parsedSpecifications = JSON.parse(specifications);
-        if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
-          throw new Error('Must be an object');
+    if (specifications) {
+      if (typeof specifications === 'string' && specifications.trim()) {
+        try {
+          parsedSpecifications = JSON.parse(specifications);
+          if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
+            throw new Error('Must be an object');
+          }
+        } catch (error) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid specifications: must be valid JSON object'
+          });
         }
-      } catch (error) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid specifications: must be valid JSON object'
-        });
+      } else if (typeof specifications === 'object' && specifications !== null) {
+        parsedSpecifications = specifications;
       }
     }
 
     // Parse tags if provided
     let parsedTags = [];
-    if (tags && tags.trim()) {
-      parsedTags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+    if (tags) {
+      if (typeof tags === 'string' && tags.trim()) {
+        parsedTags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+      } else if (Array.isArray(tags)) {
+        parsedTags = tags.filter((tag: any) => typeof tag === 'string' && tag.trim().length > 0);
+      }
     }
 
     // Check if SKU already exists (case insensitive)
@@ -289,24 +297,32 @@ export async function updateCatalogItem(req: Request, res: Response) {
 
     // Parse specifications if provided
     let parsedSpecifications = {};
-    if (specifications && specifications.trim()) {
-      try {
-        parsedSpecifications = JSON.parse(specifications);
-        if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
-          throw new Error('Must be an object');
+    if (specifications) {
+      if (typeof specifications === 'string' && specifications.trim()) {
+        try {
+          parsedSpecifications = JSON.parse(specifications);
+          if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
+            throw new Error('Must be an object');
+          }
+        } catch (error) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid specifications: must be valid JSON object'
+          });
         }
-      } catch (error) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid specifications: must be valid JSON object'
-        });
+      } else if (typeof specifications === 'object' && specifications !== null) {
+        parsedSpecifications = specifications;
       }
     }
 
     // Parse tags if provided
     let parsedTags = [];
-    if (tags && tags.trim()) {
-      parsedTags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+    if (tags) {
+      if (typeof tags === 'string' && tags.trim()) {
+        parsedTags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+      } else if (Array.isArray(tags)) {
+        parsedTags = tags.filter((tag: any) => typeof tag === 'string' && tag.trim().length > 0);
+      }
     }
 
     const updateData = {

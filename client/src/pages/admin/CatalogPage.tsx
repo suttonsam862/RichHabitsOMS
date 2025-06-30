@@ -534,8 +534,15 @@ function CatalogPageContent() {
 
       const payload = {
         ...itemData,
-        tags: itemData.tags ? itemData.tags.split(",").map(tag => tag.trim()) : [],
-        specifications: itemData.specifications ? JSON.parse(itemData.specifications) : {},
+        tags: itemData.tags ? itemData.tags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0) : [],
+        specifications: itemData.specifications && itemData.specifications.trim() ? 
+          (() => {
+            try {
+              return JSON.parse(itemData.specifications);
+            } catch (error) {
+              throw new Error("Invalid JSON in specifications field");
+            }
+          })() : {},
       };
 
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
@@ -876,8 +883,15 @@ function CatalogPageContent() {
 
       const payload = {
         ...itemData,
-        tags: itemData.tags ? itemData.tags.split(",").map(tag => tag.trim()) : [],
-        specifications: itemData.specifications ? JSON.parse(itemData.specifications) : {},
+        tags: itemData.tags ? itemData.tags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0) : [],
+        specifications: itemData.specifications && itemData.specifications.trim() ? 
+          (() => {
+            try {
+              return JSON.parse(itemData.specifications);
+            } catch (error) {
+              throw new Error("Invalid JSON in specifications field");
+            }
+          })() : {},
       };
 
       const token = localStorage.getItem('authToken');
@@ -937,7 +951,6 @@ function CatalogPageContent() {
           // Ensure it's an object, not a primitive
           if (typeof parsedSpecs !== 'object' || parsedSpecs === null || Array.isArray(parsedSpecs)) {
             throw new Error("Specifications must be a JSON object");
-          ```tool_code
           }
         } catch (error) {
           toast({
