@@ -179,6 +179,7 @@ import imageRoutes from './routes/api/imageRoutes';
 import invitationRoutes from './routes/api/invitationRoutes';
 import userRolesRoutes from './routes/api/userRolesRoutes';
 import authRoutes from './routes/api/authRoutes';
+import healthRoutes from './routes/health';
 
 (async () => {
   try {
@@ -253,7 +254,8 @@ import authRoutes from './routes/api/authRoutes';
     // Create HTTP server
     const server = createServer(app);
 
-    // Register auth routes first (no auth required for these)
+    // Register health and auth routes first (no auth required for these)
+    app.use('/api', healthRoutes);
     app.use('/api/auth', authRoutes);
     
     // Add authentication middleware for protected routes
