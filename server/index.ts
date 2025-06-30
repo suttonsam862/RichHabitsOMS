@@ -215,8 +215,8 @@ import healthRoutes from './routes/health';
       'SENDGRID_API_KEY'
     ];
 
-    let missingRequired = [];
-    let missingOptional = [];
+    let missingRequired: string[] = [];
+    let missingOptional: string[] = [];
 
     requiredEnvVars.forEach(varName => {
       const isSet = !!process.env[varName];

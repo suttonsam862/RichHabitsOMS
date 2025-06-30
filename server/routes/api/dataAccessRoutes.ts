@@ -30,7 +30,7 @@ export const dataAccessControlMiddleware = async (req: Request, res: Response, n
     
     // Check geographic restrictions
     if (permissions?.geographic_restrictions) {
-      const clientIP = req.ip || req.connection.remoteAddress;
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
       const isAllowedLocation = await checkGeographicRestrictions(clientIP, permissions.geographic_restrictions);
       
       if (!isAllowedLocation) {
@@ -325,12 +325,12 @@ export async function testDataAccess(req: Request, res: Response) {
     };
 
     // Check field-level access
-    if (permissions?.field_level_access?.[tableName]) {
-      const fieldAccess = permissions.field_level_access[tableName];
+    if (permissions?.field_level_access && permissions.field_level_access[tableName]) {
+      const fieldAccess = permissions.field_level_access[tableName] as any;
       testResult.fieldAccess = {
-        viewable: fieldAccess.viewable_fields || [],
-        editable: fieldAccess.editable_fields || [],
-        restricted: fieldAccess.restricted_fields || []
+        viewable: fieldAccess?.viewable_fields || [],
+        editable: fieldAccess?.editable_fields || [],
+        restricted: fieldAccess?.restricted_fields || []
       };
     }
 

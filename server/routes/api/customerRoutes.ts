@@ -47,10 +47,11 @@ export async function sendUserInvitation(req: Request, res: Response) {
   try {
     console.log(`Creating invitation for ${email} with role: ${role}`);
 
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    // Check if user already exists by searching all users
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const userExists = existingUsers?.users?.some(user => user.email === email);
     
-    if (existingUser.user) {
+    if (userExists) {
       return res.status(400).json({
         success: false,
         message: 'A user with this email already exists'
