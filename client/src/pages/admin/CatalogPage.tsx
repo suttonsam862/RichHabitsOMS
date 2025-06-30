@@ -927,8 +927,8 @@ function CatalogPageContent() {
       form.reset();
 
       toast({
-        title: "Success",```text
-        description: "Catalog item updatedsuccessfully",
+        title: "Success",
+        description: "Catalog item updated successfully",
       });
     },
     onError: (error) => {
@@ -1851,7 +1851,8 @@ function CatalogPageContent() {
                         <Input {...field} className="rich-input" placeholder="Enter product name" />
                       </FormControl>
                       <FormMessage />
-                    </FormItem                  )}
+                    </FormItem>
+                  )}
                 />
 
                 <FormField
