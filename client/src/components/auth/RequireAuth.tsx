@@ -3,8 +3,8 @@ import { useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 
 interface RequireAuthProps {
-  allowedRoles?: string[];
   children: ReactNode;
+  allowedRoles?: ('admin' | 'customer' | 'salesperson' | 'designer' | 'manufacturer' | 'catalog_manager')[];
 }
 
 export function RequireAuth({ allowedRoles = [], children }: RequireAuthProps) {

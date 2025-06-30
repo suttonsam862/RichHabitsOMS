@@ -93,8 +93,8 @@ router.post('/login', async (req: Request, res: Response) => {
           id: data.user.id,
           username: email.split('@')[0],
           role: userRole,
-          firstName: data.user.user_metadata?.firstName,
-          lastName: data.user.user_metadata?.lastName
+          first_name: data.user.user_metadata?.firstName,
+          last_name: data.user.user_metadata?.lastName
         })
         .select();
 
@@ -126,8 +126,8 @@ router.post('/login', async (req: Request, res: Response) => {
         id: data.user.id,
         email: data.user.email,
         username: profileData?.username || email.split('@')[0],
-        firstName: profileData?.firstName || data.user.user_metadata?.firstName,
-        lastName: profileData?.lastName || data.user.user_metadata?.lastName,
+        firstName: profileData?.first_name || data.user.user_metadata?.firstName,
+        lastName: profileData?.last_name || data.user.user_metadata?.lastName,
         role: userRole,
         customRole: data.user.user_metadata?.customRole,
         visiblePages: data.user.user_metadata?.visiblePages || [],

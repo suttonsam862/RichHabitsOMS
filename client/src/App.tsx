@@ -130,6 +130,16 @@ function App() {
                     </RequireAuth>
                   } 
                 />
+                
+                {/* Catalog Manager route */}
+                 <Route 
+                  path="/dashboard/catalog_manager" 
+                  element={
+                    <RequireAuth allowedRoles={['catalog_manager']}>
+                     <Navigate to="/admin/catalog" replace />
+                    </RequireAuth>
+                  } 
+                />
 
                 <Route 
                   path="/customer/orders" 
@@ -245,7 +255,7 @@ function App() {
                 <Route 
                   path="/admin/catalog" 
                   element={
-                    <RequireAuth allowedRoles={['admin']}>
+                    <RequireAuth allowedRoles={['admin', 'catalog_manager']}>
                       <CatalogPage />
                     </RequireAuth>
                   } 
