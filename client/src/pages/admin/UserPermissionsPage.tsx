@@ -82,7 +82,7 @@ const permissionCategories = {
   }
 };
 
-export default function UserPermissionsPage() {
+function UserPermissionsPageContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -795,5 +795,43 @@ export default function UserPermissionsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function UserPermissionsPage() {
+  return (
+    <ErrorBoundary
+      fallback={({ error, resetError }) => (
+        <div className="container mx-auto py-8">
+          <Card className="mx-auto max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+                User Permissions Error
+              </CardTitle>
+              <CardDescription>
+                Failed to load user permissions management.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Error: {error?.message || 'Unknown error occurred'}
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={resetError} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+                <Button onClick={() => window.location.reload()} size="sm">
+                  Reload Page
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    >
+      <UserPermissionsPageContent />
+    </ErrorBoundary>
   );
 }

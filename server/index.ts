@@ -2,10 +2,19 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
 import MemoryStore from "memorystore";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase, testSupabaseConnection, closeConnections } from "./db";
-import { authenticateRequest } from "./routes/auth/auth"; // Import our new auth middleware
+import { authenticateRequest } from "./routes/auth/auth";
+import { globalErrorHandler, notFoundHandler } from "./middleware/errorHandler";
+import { 
+  apiLimiter, 
+  authLimiter, 
+  securityHeaders, 
+  corsOptions, 
+  sanitizeInput 
+} from "./middleware/security";
 import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -15,8 +24,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Apply security headers first
+app.use(securityHeaders);
+
+// Apply CORS
+app.use(cors(corsOptions));
+
+// Apply rate limiting to all API routes
+app.use('/api', apiLimiter);
+
+// Apply stricter rate limiting to auth routes
+app.use('/api/auth', authLimiter);
+
+// Body parsing with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Sanitize all inputs
+app.use(sanitizeInput);
 
 // Generate a strong random session secret
 const generateRandomString = (length = 32) => {
@@ -146,6 +172,7 @@ import customerRoutes from './routes/api/customerRoutes';
 import imageRoutes from './routes/api/imageRoutes';
 import invitationRoutes from './routes/api/invitationRoutes';
 import userRolesRoutes from './routes/api/userRolesRoutes';
+import authRoutes from './routes/api/authRoutes';
 
 (async () => {
   try {
@@ -163,7 +190,10 @@ import userRolesRoutes from './routes/api/userRolesRoutes';
     // Register API routes BEFORE Vite middleware to prevent conflicts
     const server = await registerRoutes(app);
 
-    // Register catalog routes
+    // Register auth routes first (no auth required for these)
+    app.use('/api/auth', authRoutes);
+    
+    // Register other API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
     app.use('/api/catalog', catalogRoutes);
     app.use('/api/customers', customerRoutes);
@@ -177,13 +207,11 @@ import userRolesRoutes from './routes/api/userRolesRoutes';
     // Serve uploaded images
     app.use('/uploads', express.static('uploads'));
 
-    // Error handling middleware for API routes
-    app.use("/api", (err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      res.status(status).json({ message });
-      console.error(err);
-    });
+    // 404 handler for API routes
+    app.use('/api/*', notFoundHandler);
+    
+    // Global error handling middleware
+    app.use(globalErrorHandler);
 
     // Static file serving and client-side routing should come AFTER all API routes
     if (app.get("env") === "development") {

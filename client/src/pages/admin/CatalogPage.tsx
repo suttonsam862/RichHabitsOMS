@@ -1,72 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { 
-  Search, 
-  MoreHorizontal, 
-  PlusCircle, 
-  Filter, 
-  RefreshCw, 
-  Edit, 
-  Trash2,
-  Package,
-  Eye,
-  ImageIcon
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Plus, Edit, Trash2, Package, DollarSign, Tag, Users, AlertCircle, RefreshCw } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 interface CatalogItem {
   id: string;
@@ -256,7 +201,7 @@ const initialSports = [
   "Hockey",
 ];
 
-export default function CatalogPage() {
+function CatalogPageContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -992,6 +937,7 @@ export default function CatalogPage() {
           // Ensure it's an object, not a primitive
           if (typeof parsedSpecs !== 'object' || parsedSpecs === null || Array.isArray(parsedSpecs)) {
             throw new Error("Specifications must be a JSON object");
+          ```tool_code
           }
         } catch (error) {
           toast({
@@ -1922,7 +1868,7 @@ export default function CatalogPage() {
                   name="sport"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="subtitle text-muted-foreground text-xs">Sport</FormLabel>
+                      <FormLabel className="subtitle text-muted-foreground text-xs">Sport</FormLabel
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="rich-input">
@@ -2174,5 +2120,43 @@ export default function CatalogPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function CatalogPage() {
+  return (
+    <ErrorBoundary
+      fallback={({ error, resetError }) => (
+        <div className="container mx-auto py-8">
+          <Card className="mx-auto max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+                Catalog Page Error
+              </CardTitle>
+              <CardDescription>
+                Something went wrong while loading the catalog page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Error: {error?.message || 'Unknown error occurred'}
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={resetError} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+                <Button onClick={() => window.location.reload()} size="sm">
+                  Reload Page
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    >
+      <CatalogPageContent />
+    </ErrorBoundary>
   );
 }
