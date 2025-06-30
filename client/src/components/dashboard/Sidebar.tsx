@@ -34,6 +34,8 @@ const navigationItems = {
     { name: "Customer Invites", href: "/admin/invites", icon: Mail },
     { name: "Order Inquiries", href: "/admin/inquiries", icon: FileText },
     { name: "Users", href: "/users", icon: Users },
+    { name: "User Permissions", href: "/admin/user-permissions", icon: Shield },
+    { name: "Custom Permissions", href: "/admin/custom-permissions", icon: Settings },
     { name: "Task Assignment", href: "/tasks", icon: Brush },
     { name: "Legal Management", href: "/admin/legal", icon: Scale },
     { name: "Reports", href: "/reports", icon: BarChart },

@@ -44,8 +44,8 @@ import CustomerDetailsPage from "@/pages/admin/CustomerDetailsPage";
 import CustomerEditPage from "@/pages/admin/CustomerEditPage";
 import SettingsPage from './pages/admin/SettingsPage';
 import CatalogPage from './pages/admin/CatalogPage';
-import CustomerListPage from './pages/admin/CustomerListPage';
 import UserPermissionsPage from './pages/admin/UserPermissionsPage';
+import CustomPermissionsBuilder from './pages/admin/CustomPermissionsBuilder';
 import AnalyticsPage from "@/pages/admin/AnalyticsPage";
 import LegalManagementPage from "@/pages/admin/LegalManagementPage";
 import CustomerInvitesPage from "@/pages/admin/CustomerInvitesPage";
@@ -333,6 +333,14 @@ function App() {
                   } 
                 />
                 <Route path="/admin/user-permissions" element={<UserPermissionsPage />} />
+                <Route 
+                  path="/admin/custom-permissions" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <CustomPermissionsBuilder />
+                    </RequireAuth>
+                  } 
+                />
               </Route>
 
               {/* Catch-all for 404 */}
