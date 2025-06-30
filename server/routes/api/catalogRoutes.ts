@@ -169,8 +169,8 @@ export async function createCatalogItem(req: Request, res: Response) {
       });
     }
 
-    // Validate measurement requirements
-    if (hasMeasurements && !measurementInstructions?.trim() && !measurementChartUrl?.trim()) {
+    // Validate measurement requirements - only if hasMeasurements is explicitly true
+    if (hasMeasurements === true && !measurementInstructions?.trim() && !measurementChartUrl?.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Items requiring measurements must have either instructions or measurement chart URL'

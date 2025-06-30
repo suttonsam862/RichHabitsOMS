@@ -928,7 +928,7 @@ function CatalogPageContent() {
 
       toast({
         title: "Success",
-        description: "Catalog item updated successfully",
+        description: "Catalog item updatedsuccessfully",
       });
     },
     onError: (error) => {
@@ -1548,9 +1548,16 @@ function CatalogPageContent() {
                     <Button 
                       type="submit" 
                       className="btn-primary"
-                      disabled={addItemMutation.isPending}
+                      disabled={addItemMutation.isPending || updateItemMutation.isPending}
                     >
-                      {addItemMutation.isPending ? "Adding..." : "Add Item"}
+                      {(addItemMutation.isPending || updateItemMutation.isPending) ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {selectedItem ? "Updating..." : "Adding..."}
+                    </>
+                  ) : (
+                    selectedItem ? "Update Item" : "Add Item"
+                  )}
                     </Button>
                   </div>
                 </form>
@@ -1966,9 +1973,9 @@ function CatalogPageContent() {
                 <Button 
                   type="submit" 
                   className="btn-primary"
-                  disabled={addItemMutation.isPending}
+                  disabled={addItemMutation.isPending || updateItemMutation.isPending}
                 >
-                  {addItemMutation.isPending ? "Updating..." : "Update Item"}
+                  {addItemMutation.isPending || updateItemMutation.isPending ? "Updating..." : "Update Item"}
                 </Button>
               </div>
             </form>
