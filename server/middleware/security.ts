@@ -12,7 +12,6 @@ export const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: process.env.NODE_ENV === 'production' ? 1 : false, // Only trust proxy in production
   keyGenerator: (req) => {
     // Use a combination of IP and user agent for better rate limiting in development
     return process.env.NODE_ENV === 'production' 
@@ -31,7 +30,6 @@ export const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: process.env.NODE_ENV === 'production' ? 1 : false, // Only trust proxy in production
   keyGenerator: (req) => {
     return process.env.NODE_ENV === 'production' 
       ? req.ip || req.connection.remoteAddress || 'unknown'
