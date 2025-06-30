@@ -105,7 +105,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
       console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
 
       const startTime = Date.now();
-      
+
       // Simple query to test connection
       const { data, error } = await supabase
         .from('customers')
@@ -121,7 +121,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
         console.error(`   Error Message: ${error.message}`);
         console.error(`   Error Details: ${error.details || 'None'}`);
         console.error(`   Error Hint: ${error.hint || 'None'}`);
-        
+
         // Specific error diagnosis
         if (error.code === 'PGRST301') {
           console.error('   🔍 DIAGNOSIS: Table "customers" not found - database schema may not be set up');
@@ -132,7 +132,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
         } else {
           console.error('   🔍 DIAGNOSIS: Unknown database error - check Supabase dashboard for more info');
         }
-        
+
         retries++;
 
         if (retries < MAX_RETRIES) {
@@ -141,7 +141,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
           await delay(retryDelay);
           continue;
         }
-        
+
         console.error('\n💀 ALL CONNECTION ATTEMPTS FAILED');
         console.error('🔧 TROUBLESHOOTING STEPS:');
         console.error('   1. Check if Supabase project is active');
@@ -149,7 +149,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
         console.error('   3. Check if "customers" table exists in database');
         console.error('   4. Verify Row Level Security (RLS) policies allow access');
         console.error('   5. Check Supabase dashboard for any service interruptions');
-        
+
         return false;
       }
 
@@ -157,21 +157,21 @@ export async function testSupabaseConnection(): Promise<boolean> {
       console.log(`   📊 Query result: ${JSON.stringify(data)}`);
       console.log(`   ⚡ Response time: ${duration}ms`);
       console.log(`   🎯 Connection quality: ${duration < 100 ? 'Excellent' : duration < 500 ? 'Good' : duration < 1000 ? 'Fair' : 'Poor'}`);
-      
+
       return true;
     } catch (err: any) {
       console.error(`\n💥 CONNECTION TEST EXCEPTION (attempt ${retries + 1}):`);
       console.error(`   Exception Type: ${err.constructor.name}`);
       console.error(`   Exception Message: ${err.message}`);
       console.error(`   Exception Code: ${err.code || 'Unknown'}`);
-      
+
       if (err.stack) {
         console.error('   Exception Stack:');
         err.stack.split('\n').forEach((line: string, index: number) => {
           console.error(`     ${index + 1}: ${line.trim()}`);
         });
       }
-      
+
       // Network-specific error diagnosis
       if (err.message.includes('ENOTFOUND')) {
         console.error('   🔍 DIAGNOSIS: DNS resolution failed - check internet connection and Supabase URL');
@@ -182,7 +182,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
       } else {
         console.error('   🔍 DIAGNOSIS: Unexpected error - check Supabase service status');
       }
-      
+
       retries++;
 
       if (retries < MAX_RETRIES) {
@@ -242,5 +242,69 @@ export async function closeConnections() {
     console.log('Database connections closed gracefully');
   } catch (err) {
     console.error('Error closing database connections:', err);
+  }
+}
+
+export async function testDatabaseConnection(): Promise<boolean> {
+  const maxRetries = 3;
+  let attempt = 1;
+
+  while (attempt <= maxRetries) {
+    try {
+      console.log(`🔄 Testing Supabase connection (attempt ${attempt}/${maxRetries})...`);
+      console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+
+      const startTime = Date.now();
+      const { data, error } = await supabase
+        .from('catalog_items')
+        .select('count(*)', { count: 'exact', head: true });
+
+      const responseTime = Date.now() - startTime;
+      console.log(`⚡ Query execution time: ${responseTime}ms`);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log(`✅ SUPABASE CONNECTION SUCCESSFUL`);
+      console.log(`   📊 Query result: ${JSON.stringify(data)}`);
+      console.log(`   ⚡ Response time: ${responseTime}ms`);
+      console.log(`   🎯 Connection quality: ${responseTime < 100 ? 'Excellent' : responseTime < 200 ? 'Good' : 'Fair'}`);
+
+      return true;
+    } catch (error) {
+      console.error(`❌ Supabase connection test failed (attempt ${attempt}/${maxRetries}):`, error);
+
+      if (attempt === maxRetries) {
+        console.error('🚨 Maximum connection attempts reached. Database may be unavailable.');
+        return false;
+      }
+
+      attempt++;
+      const delay = Math.min(attempt * 1000, 5000); // Exponential backoff with max 5s
+      console.log(`⏳ Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  return false;
+}
+
+// Add connection health check
+export async function ensureConnection(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('catalog_categories')
+      .select('count(*)', { count: 'exact', head: true });
+
+    if (error) {
+      console.warn('Connection health check failed:', error.message);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.warn('Connection health check error:', error);
+    return false;
   }
 }

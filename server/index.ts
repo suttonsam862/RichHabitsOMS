@@ -1,7 +1,17 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import pgSession from "connect-pg-simple";
 import MemoryStore from "memorystore";
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
 import cors from "cors";
 import { createServer } from "http";
 import { setupVite, serveStatic, log } from "./vite";
@@ -189,7 +199,7 @@ import healthRoutes from './routes/health';
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔧 Node Version: ${process.version}`);
     console.log(`💻 Platform: ${process.platform}`);
-    
+
     // Environment Variable Check
     console.log('\n🔍 ENVIRONMENT VARIABLES CHECK:');
     const requiredEnvVars = [
@@ -197,28 +207,28 @@ import healthRoutes from './routes/health';
       'SUPABASE_ANON_KEY', 
       'DATABASE_URL'
     ];
-    
+
     const optionalEnvVars = [
       'SUPABASE_SERVICE_KEY',
       'SESSION_SECRET',
       'SENDGRID_API_KEY'
     ];
-    
+
     let missingRequired = [];
     let missingOptional = [];
-    
+
     requiredEnvVars.forEach(varName => {
       const isSet = !!process.env[varName];
       console.log(`   ${isSet ? '✅' : '❌'} ${varName}: ${isSet ? 'Set' : 'MISSING'}`);
       if (!isSet) missingRequired.push(varName);
     });
-    
+
     optionalEnvVars.forEach(varName => {
       const isSet = !!process.env[varName];
       console.log(`   ${isSet ? '✅' : '⚠️'} ${varName}: ${isSet ? 'Set' : 'Missing (optional)'}`);
       if (!isSet) missingOptional.push(varName);
     });
-    
+
     if (missingRequired.length > 0) {
       console.error('\n💀 CRITICAL: Missing required environment variables:');
       missingRequired.forEach(varName => {
@@ -227,7 +237,7 @@ import healthRoutes from './routes/health';
       console.error('Application cannot start without these variables. Check your .env file or Replit secrets.');
       process.exit(1);
     }
-    
+
     if (missingOptional.length > 0) {
       console.warn('\n⚠️ WARNING: Missing optional environment variables:');
       missingOptional.forEach(varName => {
@@ -235,7 +245,7 @@ import healthRoutes from './routes/health';
       });
       console.warn('Some features may be disabled without these variables.');
     }
-    
+
     // Verify Supabase connection
     console.log("\n🗄️ CHECKING DATABASE INITIALIZATION...");
     const connected = await testSupabaseConnection();
@@ -258,7 +268,7 @@ import healthRoutes from './routes/health';
     // Register health and auth routes first (no auth required for these)
     app.use('/api', healthRoutes);
     app.use('/api/auth', authRoutes);
-    
+
     // Add authentication middleware for protected routes
     app.use('/api/catalog-options', authenticateRequest);
     app.use('/api/catalog', authenticateRequest);
@@ -266,7 +276,7 @@ import healthRoutes from './routes/health';
     app.use('/api/images', authenticateRequest);
     app.use('/api/invitations', authenticateRequest);
     app.use('/api/users', authenticateRequest);
-    
+
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
     app.use('/api/catalog', catalogRoutes);
@@ -280,7 +290,7 @@ import healthRoutes from './routes/health';
 
     // 404 handler for API routes
     app.use('/api/*', notFoundHandler);
-    
+
     // Global error handling middleware
     app.use(globalErrorHandler);
 

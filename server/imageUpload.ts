@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import { existsSync } from 'fs';
 import { Request } from 'express';
 
 // Ensure upload directories exist
@@ -67,7 +68,7 @@ export const fileFilter = (req: any, file: any, cb: any) => {
 // Scalable storage with automatic cleanup
 const createUploadPath = (type: string): string => {
   const uploadPath = path.join(process.cwd(), 'uploads', type);
-  if (!fs.existsSync(uploadPath)) {
+  if (!existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath, { recursive: true });
   }
   return uploadPath;
@@ -81,7 +82,7 @@ const uploadDirs = {
 };
 
 Object.values(uploadDirs).forEach(dir => {
-  if (!fs.existsSync(dir)) {
+  if (!existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 });
@@ -194,7 +195,7 @@ export const deleteImageFile = (filename: string, type: 'catalog' | 'order-item'
       type === 'catalog' ? uploadDirs.catalog : uploadDirs.orderItems,
       filename
     );
-    if (fs.existsSync(filePath)) {
+    if (existsSync(filePath)) {
       fs.unlinkSync(filePath);
       return true;
     }
