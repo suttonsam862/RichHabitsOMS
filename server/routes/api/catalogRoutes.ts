@@ -127,7 +127,7 @@ export async function createCatalogItem(req: Request, res: Response) {
 
     // Validate JSON specifications if provided
     let parsedSpecifications = {};
-    if (specifications && specifications.trim()) {
+    if (specifications && typeof specifications === 'string' && specifications.trim()) {
       try {
         parsedSpecifications = JSON.parse(specifications);
         if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {

@@ -1,4 +1,3 @@
-
 import { Request, Response, Router } from 'express';
 import { supabase } from '../../db';
 import { requireAuth, requireRole } from '../auth/auth';
@@ -20,7 +19,7 @@ export const comprehensivePermissionSets = {
       manage_user_sessions: true,
       impersonate_users: true,
       audit_user_activity: true,
-      
+
       // Role and Permission Management
       manage_roles: true,
       create_roles: true,
@@ -30,7 +29,7 @@ export const comprehensivePermissionSets = {
       revoke_roles: true,
       view_permission_matrix: true,
       manage_custom_permissions: true,
-      
+
       // Order Management
       manage_orders: true,
       create_orders: true,
@@ -41,7 +40,7 @@ export const comprehensivePermissionSets = {
       cancel_orders: true,
       refund_orders: true,
       export_order_data: true,
-      
+
       // Catalog Management
       manage_catalog: true,
       create_catalog_items: true,
@@ -51,7 +50,7 @@ export const comprehensivePermissionSets = {
       manage_pricing: true,
       manage_inventory: true,
       import_catalog_data: true,
-      
+
       // Financial Management
       view_financials: true,
       manage_payments: true,
@@ -60,7 +59,7 @@ export const comprehensivePermissionSets = {
       export_financial_data: true,
       manage_tax_settings: true,
       view_profit_margins: true,
-      
+
       // System Administration
       manage_settings: true,
       view_system_logs: true,
@@ -69,7 +68,7 @@ export const comprehensivePermissionSets = {
       system_maintenance: true,
       manage_api_keys: true,
       configure_webhooks: true,
-      
+
       // Analytics and Reporting
       view_analytics: true,
       create_reports: true,
@@ -77,14 +76,14 @@ export const comprehensivePermissionSets = {
       export_analytics: true,
       view_user_analytics: true,
       view_business_metrics: true,
-      
+
       // Security and Compliance
       manage_security_settings: true,
       view_audit_logs: true,
       manage_data_retention: true,
       configure_2fa: true,
       manage_ip_restrictions: true,
-      
+
       // Advanced Features
       manage_workflows: true,
       configure_automations: true,
@@ -126,7 +125,7 @@ export const comprehensivePermissionSets = {
       manage_customer_notes: true,
       view_customer_history: true,
       export_customer_lists: true,
-      
+
       // Order Management
       create_orders: true,
       view_orders: true,
@@ -135,7 +134,7 @@ export const comprehensivePermissionSets = {
       duplicate_orders: true,
       view_order_status: true,
       manage_order_notes: true,
-      
+
       // Sales Tools
       manage_quotes: true,
       create_estimates: true,
@@ -143,28 +142,28 @@ export const comprehensivePermissionSets = {
       track_follow_ups: true,
       manage_sales_pipeline: true,
       schedule_appointments: true,
-      
+
       // Product and Catalog
       view_catalog: true,
       view_pricing: true,
       apply_discounts: true,
       create_custom_quotes: true,
       view_product_availability: true,
-      
+
       // Analytics and Reporting
       view_sales_analytics: true,
       view_own_performance: true,
       view_commission_data: true,
       generate_sales_reports: true,
       view_territory_metrics: true,
-      
+
       // Lead Management
       manage_leads: true,
       convert_leads: true,
       assign_leads: true,
       track_lead_sources: true,
       manage_lead_scoring: true,
-      
+
       // Communication
       send_marketing_emails: true,
       manage_customer_communications: true,
@@ -227,7 +226,7 @@ export const comprehensivePermissionSets = {
       request_task_changes: true,
       manage_task_timeline: true,
       update_task_status: true,
-      
+
       // File and Asset Management
       manage_design_files: true,
       upload_designs: true,
@@ -236,14 +235,14 @@ export const comprehensivePermissionSets = {
       share_design_files: true,
       export_design_files: true,
       access_design_library: true,
-      
+
       // Design Approval Workflow
       submit_designs_for_approval: true,
       revise_designs: true,
       approve_junior_designs: true,
       provide_design_feedback: true,
       request_client_feedback: true,
-      
+
       // Template and Resource Management
       manage_design_templates: true,
       create_design_templates: true,
@@ -251,27 +250,27 @@ export const comprehensivePermissionSets = {
       access_brand_guidelines: true,
       manage_color_palettes: true,
       manage_font_libraries: true,
-      
+
       // Collaboration and Communication
       comment_on_orders: true,
       communicate_with_clients: true,
       participate_in_design_reviews: true,
       request_order_changes: true,
       collaborate_with_team: true,
-      
+
       // Project and Order Access
       view_assigned_orders: true,
       view_order_specifications: true,
       access_customer_requirements: true,
       view_project_briefs: true,
       track_project_milestones: true,
-      
+
       // Analytics and Performance
       view_design_analytics: true,
       track_design_performance: true,
       view_client_satisfaction: true,
       monitor_revision_rates: true,
-      
+
       // Creative Tools Integration
       access_design_software: true,
       use_ai_design_tools: true,
@@ -339,7 +338,7 @@ export const comprehensivePermissionSets = {
       schedule_production_runs: true,
       manage_production_capacity: true,
       allocate_production_resources: true,
-      
+
       // Inventory and Materials
       manage_inventory: true,
       track_material_usage: true,
@@ -347,7 +346,7 @@ export const comprehensivePermissionSets = {
       manage_supplier_relationships: true,
       update_inventory_levels: true,
       forecast_material_needs: true,
-      
+
       // Design and Specification Access
       view_design_files: true,
       download_production_files: true,
@@ -355,7 +354,7 @@ export const comprehensivePermissionSets = {
       request_design_modifications: true,
       provide_manufacturability_feedback: true,
       suggest_design_improvements: true,
-      
+
       // Quality Control and Assurance
       manage_quality_control: true,
       perform_quality_inspections: true,
@@ -363,14 +362,14 @@ export const comprehensivePermissionSets = {
       approve_quality_standards: true,
       manage_defect_tracking: true,
       implement_corrective_actions: true,
-      
+
       // Production Communication
       comment_on_designs: true,
       communicate_with_designers: true,
       provide_production_updates: true,
       escalate_production_issues: true,
       coordinate_with_suppliers: true,
-      
+
       // Shipping and Fulfillment
       update_shipping_status: true,
       manage_shipping_schedules: true,
@@ -378,7 +377,7 @@ export const comprehensivePermissionSets = {
       track_shipments: true,
       handle_shipping_issues: true,
       manage_delivery_confirmations: true,
-      
+
       // Reporting and Analytics
       view_production_analytics: true,
       generate_production_reports: true,
@@ -386,13 +385,13 @@ export const comprehensivePermissionSets = {
       monitor_cost_analysis: true,
       report_production_issues: true,
       analyze_defect_rates: true,
-      
+
       // Equipment and Maintenance
       manage_equipment_schedules: true,
       report_equipment_issues: true,
       schedule_maintenance: true,
       track_equipment_performance: true,
-      
+
       // Compliance and Safety
       ensure_safety_compliance: true,
       manage_regulatory_requirements: true,
@@ -459,14 +458,14 @@ export const comprehensivePermissionSets = {
       track_order_status: true,
       view_order_history: true,
       download_order_confirmations: true,
-      
+
       // File and Asset Management
       upload_custom_files: true,
       manage_uploaded_files: true,
       view_design_proofs: true,
       download_final_designs: true,
       provide_file_feedback: true,
-      
+
       // Catalog and Product Access
       view_catalog: true,
       browse_products: true,
@@ -475,7 +474,7 @@ export const comprehensivePermissionSets = {
       compare_products: true,
       save_favorite_products: true,
       view_pricing: true,
-      
+
       // Payment and Billing
       make_payments: true,
       view_invoices: true,
@@ -484,7 +483,7 @@ export const comprehensivePermissionSets = {
       update_payment_methods: true,
       view_account_balance: true,
       set_up_auto_payments: true,
-      
+
       // Communication and Support
       communicate_with_team: true,
       submit_support_tickets: true,
@@ -492,7 +491,7 @@ export const comprehensivePermissionSets = {
       provide_order_feedback: true,
       request_design_changes: true,
       schedule_consultations: true,
-      
+
       // Profile and Account Management
       manage_profile: true,
       update_contact_information: true,
@@ -500,7 +499,7 @@ export const comprehensivePermissionSets = {
       set_communication_preferences: true,
       manage_account_settings: true,
       view_account_activity: true,
-      
+
       // Self-Service Features
       track_shipments: true,
       request_order_updates: true,
@@ -508,7 +507,7 @@ export const comprehensivePermissionSets = {
       view_measurement_guides: true,
       use_size_calculators: true,
       access_care_instructions: true,
-      
+
       // Personalization
       save_design_preferences: true,
       create_custom_profiles: true,
@@ -568,7 +567,7 @@ export const comprehensivePermissionSets = {
       supportAccess: true
     }
   },
-  
+
   // Base permission sets for inheritance
   base_user: {
     corePermissions: {
@@ -581,7 +580,7 @@ export const comprehensivePermissionSets = {
       access_help_documentation: true
     }
   },
-  
+
   creative_tools: {
     corePermissions: {
       access_design_software_integrations: true,
@@ -590,7 +589,7 @@ export const comprehensivePermissionSets = {
       participate_in_creative_reviews: true
     }
   },
-  
+
   production_tools: {
     corePermissions: {
       access_production_systems: true,
@@ -786,7 +785,7 @@ export async function getUsersByRole(req: Request, res: Response) {
       .filter(user => {
         const userRole = user.user_metadata?.role;
         const isActive = user.email_confirmed_at !== null;
-        
+
         return userRole === role && (includeInactive || isActive);
       })
       .map(user => ({
