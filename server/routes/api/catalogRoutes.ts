@@ -205,22 +205,21 @@ export async function createCatalogItem(req: Request, res: Response) {
     }
 
     // Check if SKU already exists (case insensitive)
-    const { data: existingItem, error: skuCheckError } = await supabase
+    const { data: existingItems, error: skuCheckError } = await supabase
       .from('catalog_items')
       .select('id')
-      .ilike('sku', sku.trim())
-      .single();
+      .ilike('sku', sku.trim());
 
-      if (skuCheckError) {
-        logCatalogOperation('create_catalog_item', req, null, skuCheckError);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to check SKU existence',
-            error: skuCheckError.message
-        });
+    if (skuCheckError) {
+      logCatalogOperation('create_catalog_item', req, null, skuCheckError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to check SKU existence',
+        error: skuCheckError.message
+      });
     }
 
-    if (existingItem) {
+    if (existingItems && existingItems.length > 0) {
       const error = new Error('SKU already exists (case insensitive check)');
       logCatalogOperation('create_catalog_item', req, null, error);
       return res.status(400).json({
