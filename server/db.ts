@@ -93,42 +93,108 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function testSupabaseConnection(): Promise<boolean> {
   let retries = 0;
 
+  console.log('\n🔌 === DATABASE CONNECTION TEST STARTING ===');
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📍 Supabase URL: ${process.env.SUPABASE_URL ? 'Set' : 'MISSING'}`);
+  console.log(`🔑 Anon Key: ${process.env.SUPABASE_ANON_KEY ? 'Set' : 'MISSING'}`);
+  console.log(`🗄️ Database URL: ${process.env.DATABASE_URL ? 'Set' : 'MISSING'}`);
+
   while (retries < MAX_RETRIES) {
     try {
-      console.log(`Testing Supabase connection (attempt ${retries + 1}/${MAX_RETRIES})...`);
+      console.log(`\n🔄 Testing Supabase connection (attempt ${retries + 1}/${MAX_RETRIES})...`);
+      console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
 
+      const startTime = Date.now();
+      
       // Simple query to test connection
       const { data, error } = await supabase
         .from('customers')
         .select('count')
         .limit(1);
 
+      const duration = Date.now() - startTime;
+      console.log(`⚡ Query execution time: ${duration}ms`);
+
       if (error) {
-        console.error(`Connection test failed (attempt ${retries + 1}):`, error.message);
+        console.error(`\n❌ CONNECTION TEST FAILED (attempt ${retries + 1}):`);
+        console.error(`   Error Code: ${error.code || 'Unknown'}`);
+        console.error(`   Error Message: ${error.message}`);
+        console.error(`   Error Details: ${error.details || 'None'}`);
+        console.error(`   Error Hint: ${error.hint || 'None'}`);
+        
+        // Specific error diagnosis
+        if (error.code === 'PGRST301') {
+          console.error('   🔍 DIAGNOSIS: Table "customers" not found - database schema may not be set up');
+        } else if (error.message.includes('connection')) {
+          console.error('   🔍 DIAGNOSIS: Database connection issue - check network and credentials');
+        } else if (error.message.includes('authentication')) {
+          console.error('   🔍 DIAGNOSIS: Authentication failed - check Supabase keys');
+        } else {
+          console.error('   🔍 DIAGNOSIS: Unknown database error - check Supabase dashboard for more info');
+        }
+        
         retries++;
 
         if (retries < MAX_RETRIES) {
-          console.log(`Retrying in ${RETRY_DELAY}ms...`);
-          await delay(RETRY_DELAY * retries); // Exponential backoff
+          const retryDelay = RETRY_DELAY * retries;
+          console.log(`   ⏳ Retrying in ${retryDelay}ms...`);
+          await delay(retryDelay);
           continue;
         }
+        
+        console.error('\n💀 ALL CONNECTION ATTEMPTS FAILED');
+        console.error('🔧 TROUBLESHOOTING STEPS:');
+        console.error('   1. Check if Supabase project is active');
+        console.error('   2. Verify SUPABASE_URL and SUPABASE_ANON_KEY are correct');
+        console.error('   3. Check if "customers" table exists in database');
+        console.error('   4. Verify Row Level Security (RLS) policies allow access');
+        console.error('   5. Check Supabase dashboard for any service interruptions');
+        
         return false;
       }
 
-      console.log('Supabase connection verified successfully');
+      console.log('\n✅ SUPABASE CONNECTION SUCCESSFUL');
+      console.log(`   📊 Query result: ${JSON.stringify(data)}`);
+      console.log(`   ⚡ Response time: ${duration}ms`);
+      console.log(`   🎯 Connection quality: ${duration < 100 ? 'Excellent' : duration < 500 ? 'Good' : duration < 1000 ? 'Fair' : 'Poor'}`);
+      
       return true;
-    } catch (err) {
-      console.error(`Connection test error (attempt ${retries + 1}):`, err);
+    } catch (err: any) {
+      console.error(`\n💥 CONNECTION TEST EXCEPTION (attempt ${retries + 1}):`);
+      console.error(`   Exception Type: ${err.constructor.name}`);
+      console.error(`   Exception Message: ${err.message}`);
+      console.error(`   Exception Code: ${err.code || 'Unknown'}`);
+      
+      if (err.stack) {
+        console.error('   Exception Stack:');
+        err.stack.split('\n').forEach((line: string, index: number) => {
+          console.error(`     ${index + 1}: ${line.trim()}`);
+        });
+      }
+      
+      // Network-specific error diagnosis
+      if (err.message.includes('ENOTFOUND')) {
+        console.error('   🔍 DIAGNOSIS: DNS resolution failed - check internet connection and Supabase URL');
+      } else if (err.message.includes('ECONNREFUSED')) {
+        console.error('   🔍 DIAGNOSIS: Connection refused - Supabase service may be down');
+      } else if (err.message.includes('timeout')) {
+        console.error('   🔍 DIAGNOSIS: Connection timeout - network latency or service overload');
+      } else {
+        console.error('   🔍 DIAGNOSIS: Unexpected error - check Supabase service status');
+      }
+      
       retries++;
 
       if (retries < MAX_RETRIES) {
-        console.log(`Retrying in ${RETRY_DELAY}ms...`);
-        await delay(RETRY_DELAY * retries);
+        const retryDelay = RETRY_DELAY * retries;
+        console.log(`   ⏳ Retrying in ${retryDelay}ms...`);
+        await delay(retryDelay);
       }
     }
   }
 
-  console.error('All connection attempts failed');
+  console.error('\n💀 ALL CONNECTION ATTEMPTS EXHAUSTED');
+  console.error('=== END DATABASE CONNECTION TEST ===\n');
   return false;
 }
 

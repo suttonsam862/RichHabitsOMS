@@ -3,6 +3,39 @@ import { supabase } from '../../db';
 import { CatalogItem, InsertCatalogItem } from '../../../shared/schema';
 import { requireAuth, requireRole } from '../auth/auth';
 import { deleteImageFile, extractFilenameFromUrl } from '../../imageUpload';
+import { z } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
+
+// Comprehensive logging function for catalog operations
+function logCatalogOperation(operation: string, req: Request, data?: any, error?: any) {
+  const timestamp = new Date().toISOString();
+  const requestId = `catalog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  console.log(`\n📁 === CATALOG OPERATION: ${operation.toUpperCase()} ===`);
+  console.log(`🆔 Request ID: ${requestId}`);
+  console.log(`📅 Timestamp: ${timestamp}`);
+  console.log(`👤 User: ${(req as any).user?.email || 'Anonymous'} (${(req as any).user?.role || 'Unknown'})`);
+  console.log(`🌐 Route: ${req.method} ${req.path}`);
+
+  if (data) {
+    console.log(`📊 Operation Data:`);
+    console.log(JSON.stringify(data, null, 2));
+  }
+
+  if (error) {
+    console.error(`❌ Operation Error:`);
+    console.error(`   Type: ${error.constructor.name}`);
+    console.error(`   Message: ${error.message}`);
+    console.error(`   Code: ${error.code || 'Unknown'}`);
+    if (error.details) console.error(`   Details: ${error.details}`);
+    if (error.hint) console.error(`   Hint: ${error.hint}`);
+  }
+
+  console.log(`=== END CATALOG OPERATION ===\n`);
+}
 
 const router = Router();
 
@@ -11,7 +44,7 @@ const router = Router();
  */
 export async function getCatalogItems(req: Request, res: Response) {
   try {
-    console.log('Fetching catalog items from Supabase...');
+    logCatalogOperation('get_catalog_items', req);
 
     const { data: items, error } = await supabase
       .from('catalog_items')
@@ -19,6 +52,7 @@ export async function getCatalogItems(req: Request, res: Response) {
       .order('created_at', { ascending: false });
 
     if (error) {
+      logCatalogOperation('get_catalog_items', req, null, error);
       console.error('Error fetching catalog items:', error);
       return res.status(500).json({ 
         success: false, 
@@ -49,9 +83,11 @@ export async function getCatalogItems(req: Request, res: Response) {
       updated_at: item.updated_at
     }));
 
+    logCatalogOperation('get_catalog_items', req, { count: transformedItems.length });
     console.log(`Found ${transformedItems.length} catalog items`);
     return res.json(transformedItems);
   } catch (error) {
+    logCatalogOperation('get_catalog_items', req, null, error);
     console.error('Catalog fetch error:', error);
     return res.status(500).json({ 
       success: false, 
@@ -83,10 +119,14 @@ export async function createCatalogItem(req: Request, res: Response) {
       specifications
     } = req.body;
 
+    logCatalogOperation('create_catalog_item', req, { requestBody: req.body });
+
     console.log('Creating new catalog item:', { name, sku, category, sport });
 
     // Comprehensive server-side validation
     if (!name || !category || !sport || !sku || basePrice === undefined || unitCost === undefined || !etaDays) {
+      const error = new Error('Missing required fields: name, category, sport, sku, basePrice, unitCost, and etaDays are required');
+      logCatalogOperation('create_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: name, category, sport, sku, basePrice, unitCost, and etaDays are required'
@@ -95,6 +135,8 @@ export async function createCatalogItem(req: Request, res: Response) {
 
     // Validate data types and ranges
     if (typeof name !== 'string' || name.trim().length === 0 || name.length > 255) {
+      const error = new Error('Invalid name: must be a non-empty string under 255 characters');
+      logCatalogOperation('create_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'Invalid name: must be a non-empty string under 255 characters'
@@ -102,6 +144,8 @@ export async function createCatalogItem(req: Request, res: Response) {
     }
 
     if (typeof sku !== 'string' || sku.trim().length < 3 || sku.length > 100) {
+      const error = new Error('Invalid SKU: must be 3-100 characters long');
+      logCatalogOperation('create_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'Invalid SKU: must be 3-100 characters long'
@@ -112,6 +156,8 @@ export async function createCatalogItem(req: Request, res: Response) {
     const numericUnitCost = Number(unitCost);
 
     if (isNaN(numericBasePrice) || numericBasePrice < 0.01 || numericBasePrice > 999999.99) {
+      const error = new Error('Invalid base price: must be between $0.01 and $999,999.99');
+      logCatalogOperation('create_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'Invalid base price: must be between $0.01 and $999,999.99'
@@ -119,6 +165,8 @@ export async function createCatalogItem(req: Request, res: Response) {
     }
 
     if (isNaN(numericUnitCost) || numericUnitCost < 0 || numericUnitCost > 999999.99) {
+      const error = new Error('Invalid unit cost: must be between $0.00 and $999,999.99');
+      logCatalogOperation('create_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'Invalid unit cost: must be between $0.00 and $999,999.99'
@@ -135,6 +183,7 @@ export async function createCatalogItem(req: Request, res: Response) {
             throw new Error('Must be an object');
           }
         } catch (error) {
+          logCatalogOperation('create_catalog_item', req, null, error);
           return res.status(400).json({
             success: false,
             message: 'Invalid specifications: must be valid JSON object'
@@ -156,13 +205,24 @@ export async function createCatalogItem(req: Request, res: Response) {
     }
 
     // Check if SKU already exists (case insensitive)
-    const { data: existingItem } = await supabase
+    const { data: existingItem, error: skuCheckError } = await supabase
       .from('catalog_items')
       .select('id')
       .ilike('sku', sku.trim())
       .single();
 
+      if (skuCheckError) {
+        logCatalogOperation('create_catalog_item', req, null, skuCheckError);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to check SKU existence',
+            error: skuCheckError.message
+        });
+    }
+
     if (existingItem) {
+      const error = new Error('SKU already exists (case insensitive check)');
+      logCatalogOperation('create_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'SKU already exists (case insensitive check)'
@@ -198,8 +258,9 @@ export async function createCatalogItem(req: Request, res: Response) {
       .single();
 
     if (error) {
+      logCatalogOperation('create_catalog_item', req, newItem, error);
       console.error('Error creating catalog item:', error);
-      
+
       // Handle specific database errors
       if (error.code === '23505') { // unique constraint violation
         return res.status(400).json({
@@ -207,7 +268,7 @@ export async function createCatalogItem(req: Request, res: Response) {
           message: 'SKU already exists'
         });
       }
-      
+
       return res.status(500).json({
         success: false,
         message: 'Failed to create catalog item',
@@ -215,6 +276,7 @@ export async function createCatalogItem(req: Request, res: Response) {
       });
     }
 
+    logCatalogOperation('create_catalog_item', req, item);
     console.log('Catalog item created successfully:', item.id);
     return res.status(201).json({
       success: true,
@@ -232,6 +294,7 @@ export async function createCatalogItem(req: Request, res: Response) {
       }
     });
   } catch (error) {
+    logCatalogOperation('create_catalog_item', req, null, error);
     console.error('Catalog creation error:', error);
     return res.status(500).json({
       success: false,
@@ -263,10 +326,14 @@ export async function updateCatalogItem(req: Request, res: Response) {
       specifications
     } = req.body;
 
+    logCatalogOperation('update_catalog_item', req, { itemId: id, requestBody: req.body });
+
     console.log('Updating catalog item:', id);
 
     // Validate required fields
     if (!name || !category || !sport || basePrice === undefined || unitCost === undefined || !etaDays) {
+      const error = new Error('Missing required fields: name, category, sport, basePrice, unitCost, and etaDays are required');
+      logCatalogOperation('update_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: name, category, sport, basePrice, unitCost, and etaDays are required'
@@ -278,6 +345,8 @@ export async function updateCatalogItem(req: Request, res: Response) {
     const numericUnitCost = Number(unitCost);
 
     if (isNaN(numericBasePrice) || numericBasePrice < 0.01 || numericBasePrice > 999999.99) {
+      const error = new Error('Invalid base price: must be between $0.01 and $999,999.99');
+      logCatalogOperation('update_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'Invalid base price: must be between $0.01 and $999,999.99'
@@ -285,6 +354,8 @@ export async function updateCatalogItem(req: Request, res: Response) {
     }
 
     if (isNaN(numericUnitCost) || numericUnitCost < 0 || numericUnitCost > 999999.99) {
+      const error = new Error('Invalid unit cost: must be between $0.00 and $999,999.99');
+      logCatalogOperation('update_catalog_item', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'Invalid unit cost: must be between $0.00 and $999,999.99'
@@ -301,6 +372,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
             throw new Error('Must be an object');
           }
         } catch (error) {
+          logCatalogOperation('update_catalog_item', req, null, error);
           return res.status(400).json({
             success: false,
             message: 'Invalid specifications: must be valid JSON object'
@@ -347,6 +419,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
       .single();
 
     if (error) {
+      logCatalogOperation('update_catalog_item', req, updateData, error);
       console.error('Error updating catalog item:', error);
       return res.status(500).json({
         success: false,
@@ -356,12 +429,15 @@ export async function updateCatalogItem(req: Request, res: Response) {
     }
 
     if (!item) {
+      const error = new Error('Catalog item not found');
+      logCatalogOperation('update_catalog_item', req, updateData, error);
       return res.status(404).json({
         success: false,
         message: 'Catalog item not found'
       });
     }
 
+    logCatalogOperation('update_catalog_item', req, item);
     console.log('Catalog item updated successfully:', id);
     return res.json({
       success: true,
@@ -379,6 +455,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
       }
     });
   } catch (error) {
+    logCatalogOperation('update_catalog_item', req, null, error);
     console.error('Catalog update error:', error);
     return res.status(500).json({
       success: false,
@@ -394,6 +471,8 @@ export async function deleteCatalogItem(req: Request, res: Response) {
   try {
     const { id } = req.params;
 
+    logCatalogOperation('delete_catalog_item', req, { itemId: id });
+
     console.log('Deleting catalog item:', id);
 
     const { error } = await supabase
@@ -402,6 +481,7 @@ export async function deleteCatalogItem(req: Request, res: Response) {
       .eq('id', id);
 
     if (error) {
+      logCatalogOperation('delete_catalog_item', req, null, error);
       console.error('Error deleting catalog item:', error);
       return res.status(500).json({
         success: false,
@@ -410,12 +490,14 @@ export async function deleteCatalogItem(req: Request, res: Response) {
       });
     }
 
+    logCatalogOperation('delete_catalog_item', req, { itemId: id, success: true });
     console.log('Catalog item deleted successfully:', id);
     return res.json({
       success: true,
       message: 'Catalog item deleted successfully'
     });
   } catch (error) {
+    logCatalogOperation('delete_catalog_item', req, null, error);
     console.error('Catalog deletion error:', error);
     return res.status(500).json({
       success: false,
@@ -431,6 +513,8 @@ export async function getCatalogItem(req: Request, res: Response) {
   try {
     const { id } = req.params;
 
+    logCatalogOperation('get_catalog_item', req, { itemId: id });
+
     console.log('Fetching catalog item:', id);
 
     const { data: item, error } = await supabase
@@ -440,6 +524,7 @@ export async function getCatalogItem(req: Request, res: Response) {
       .single();
 
     if (error) {
+      logCatalogOperation('get_catalog_item', req, null, error);
       console.error('Error fetching catalog item:', error);
       return res.status(500).json({
         success: false,
@@ -449,17 +534,21 @@ export async function getCatalogItem(req: Request, res: Response) {
     }
 
     if (!item) {
+      const error = new Error('Catalog item not found');
+      logCatalogOperation('get_catalog_item', req, null, error);
       return res.status(404).json({
         success: false,
         message: 'Catalog item not found'
       });
     }
 
+    logCatalogOperation('get_catalog_item', req, item);
     return res.json({
       success: true,
       item
     });
   } catch (error) {
+    logCatalogOperation('get_catalog_item', req, null, error);
     console.error('Catalog fetch error:', error);
     return res.status(500).json({
       success: false,
@@ -475,7 +564,11 @@ export async function checkSKUExists(req: Request, res: Response) {
   try {
     const { sku } = req.query;
 
+    logCatalogOperation('check_sku_exists', req, { sku });
+
     if (!sku) {
+      const error = new Error('SKU parameter is required');
+      logCatalogOperation('check_sku_exists', req, null, error);
       return res.status(400).json({
         success: false,
         message: 'SKU parameter is required'
@@ -491,6 +584,7 @@ export async function checkSKUExists(req: Request, res: Response) {
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      logCatalogOperation('check_sku_exists', req, null, error);
       console.error('Error checking SKU:', error);
       return res.status(500).json({
         success: false,
@@ -499,11 +593,13 @@ export async function checkSKUExists(req: Request, res: Response) {
       });
     }
 
+    logCatalogOperation('check_sku_exists', req, { sku, exists: !!existingItem });
     return res.json({
       success: true,
       exists: !!existingItem
     });
   } catch (error) {
+    logCatalogOperation('check_sku_exists', req, null, error);
     console.error('SKU check error:', error);
     return res.status(500).json({
       success: false,

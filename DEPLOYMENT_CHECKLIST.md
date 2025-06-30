@@ -1,0 +1,119 @@
+
+# ThreadCraft Production Deployment Checklist
+
+## Critical Environment Variables
+- [ ] `SUPABASE_URL` - Must be set to production Supabase URL
+- [ ] `SUPABASE_ANON_KEY` - Public anon key for client-side operations
+- [ ] `SUPABASE_SERVICE_KEY` - Service role key for admin operations (NEVER expose to client)
+- [ ] `DATABASE_URL` - PostgreSQL connection string for direct database access
+- [ ] `SESSION_SECRET` - Strong random string for session encryption (minimum 32 characters)
+- [ ] `NODE_ENV=production` - Critical for security headers and optimizations
+- [ ] `SENDGRID_API_KEY` - For email notifications (if email features are enabled)
+
+## Database Schema Validation
+- [ ] **user_profiles table** - Must have correct column names (first_name, last_name, not firstName, lastName)
+- [ ] **catalog_items table** - All required fields present with proper data types
+- [ ] **catalog_options tables** - Sports, categories, sizes, colors, materials properly seeded
+- [ ] **customers table** - Customer management functionality working
+- [ ] **orders table** - Order management with proper foreign keys
+- [ ] **order_items table** - Linked to orders and catalog items
+- [ ] **invitations table** - User invitation system
+- [ ] **Row Level Security (RLS)** - Properly configured for all tables
+- [ ] **Database indexes** - Created for frequently queried fields
+- [ ] **Foreign key constraints** - All relationships properly defined
+
+## Authentication & Authorization
+- [ ] **Supabase Auth** - User registration and login working
+- [ ] **Role-based access** - Admin, salesperson, designer, manufacturer, customer, catalog_manager roles
+- [ ] **Custom roles** - catalog_manager and other custom roles properly handled
+- [ ] **Session management** - Express sessions with proper store (PostgreSQL in production)
+- [ ] **JWT token validation** - Proper token verification on protected routes
+- [ ] **Password policies** - Strong password requirements enforced
+- [ ] **Account lockout** - Protection against brute force attacks
+
+## Security Configuration
+- [ ] **CORS settings** - Properly configured for production domain
+- [ ] **Rate limiting** - API and auth endpoints protected
+- [ ] **Input sanitization** - All user inputs properly sanitized
+- [ ] **File upload validation** - Proper validation and size limits
+- [ ] **Security headers** - CSP, HSTS, X-Frame-Options properly set
+- [ ] **Trust proxy** - Configured for production environment
+- [ ] **HTTPS enforcement** - All connections encrypted
+- [ ] **Session security** - Secure cookies, proper expiration
+
+## Database Connection Management
+- [ ] **Connection pooling** - Optimized for horizontal scaling
+- [ ] **Connection limits** - Proper min/max connections per instance
+- [ ] **Connection retry logic** - Handles temporary connection failures
+- [ ] **Graceful shutdown** - Proper connection cleanup on app restart
+- [ ] **Health checks** - Database connectivity monitoring
+- [ ] **Connection timeouts** - Prevent hanging connections
+
+## API Endpoints Validation
+- [ ] **Authentication routes** (/api/auth/login, /api/auth/register, /api/auth/logout)
+- [ ] **Catalog routes** (/api/catalog, /api/catalog-options)
+- [ ] **User management** (/api/users)
+- [ ] **Customer management** (/api/customers)
+- [ ] **Order management** (/api/orders)
+- [ ] **Image upload** (/api/images)
+- [ ] **Invitation system** (/api/invitations)
+- [ ] **Error handling** - All endpoints return proper HTTP status codes
+- [ ] **Input validation** - Zod schemas properly implemented
+
+## Frontend Build Requirements
+- [ ] **Production build** - `npm run build` completes without errors
+- [ ] **Asset optimization** - Images, CSS, JS properly minified
+- [ ] **Bundle size** - Optimized for fast loading
+- [ ] **Static file serving** - Proper configuration for production
+- [ ] **Client-side routing** - React Router working with server-side routing
+- [ ] **Environment variables** - Client-side env vars properly configured
+- [ ] **TypeScript compilation** - No type errors in production build
+
+## File System & Uploads
+- [ ] **Upload directories** - Proper permissions for uploads/catalog, uploads/order-items
+- [ ] **File validation** - Image types and sizes properly validated
+- [ ] **Storage cleanup** - Orphaned files properly managed
+- [ ] **Backup strategy** - File backup and recovery procedures
+- [ ] **Static file serving** - /uploads route properly configured
+
+## Performance Optimization
+- [ ] **Database queries** - Optimized with proper indexes
+- [ ] **API response times** - All endpoints respond within acceptable limits
+- [ ] **Memory usage** - Proper memory management and cleanup
+- [ ] **Cache headers** - Static assets properly cached
+- [ ] **Bundle splitting** - Code splitting for optimal loading
+- [ ] **Image optimization** - Images compressed and properly sized
+
+## Error Handling & Logging
+- [ ] **Global error handler** - Catches all unhandled errors
+- [ ] **Request logging** - All API requests logged with timing
+- [ ] **Error context** - Sufficient detail for debugging
+- [ ] **User-friendly errors** - Production errors don't expose sensitive info
+- [ ] **Health monitoring** - Application health endpoints
+- [ ] **Performance monitoring** - Response time and error rate tracking
+
+## Third-Party Services
+- [ ] **Supabase integration** - All features working (Auth, Database, Storage)
+- [ ] **SendGrid email** - Email sending functionality (if enabled)
+- [ ] **Payment processing** - Stripe integration (if payments enabled)
+- [ ] **Service monitoring** - Health checks for external dependencies
+
+## Post-Deployment Verification
+- [ ] **Application loads** - Homepage renders without errors
+- [ ] **Authentication flow** - Login/logout working properly
+- [ ] **Role-based access** - Different user types see appropriate content
+- [ ] **Database operations** - CRUD operations working
+- [ ] **File uploads** - Image uploads functioning
+- [ ] **API endpoints** - All endpoints responding correctly
+- [ ] **Error pages** - 404 and error pages display properly
+- [ ] **Performance** - Acceptable response times under load
+
+## Common Issues to Watch For
+- [ ] **Column name mismatches** - firstName vs first_name in database
+- [ ] **Missing environment variables** - All required vars present
+- [ ] **Database connection failures** - Connection string and credentials correct
+- [ ] **Permission errors** - File system permissions for uploads
+- [ ] **CORS issues** - Frontend can communicate with backend
+- [ ] **Session storage** - Session store properly configured for production
+- [ ] **Build failures** - TypeScript and build errors resolved
+- [ ] **Route conflicts** - API routes don't conflict with frontend routes

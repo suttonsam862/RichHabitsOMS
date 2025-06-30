@@ -182,15 +182,72 @@ import authRoutes from './routes/api/authRoutes';
 
 (async () => {
   try {
+    console.log('\n🚀 === THREADCRAFT APPLICATION STARTUP ===');
+    console.log(`📅 Startup Time: ${new Date().toISOString()}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔧 Node Version: ${process.version}`);
+    console.log(`💻 Platform: ${process.platform}`);
+    
+    // Environment Variable Check
+    console.log('\n🔍 ENVIRONMENT VARIABLES CHECK:');
+    const requiredEnvVars = [
+      'SUPABASE_URL',
+      'SUPABASE_ANON_KEY', 
+      'DATABASE_URL'
+    ];
+    
+    const optionalEnvVars = [
+      'SUPABASE_SERVICE_KEY',
+      'SESSION_SECRET',
+      'SENDGRID_API_KEY'
+    ];
+    
+    let missingRequired = [];
+    let missingOptional = [];
+    
+    requiredEnvVars.forEach(varName => {
+      const isSet = !!process.env[varName];
+      console.log(`   ${isSet ? '✅' : '❌'} ${varName}: ${isSet ? 'Set' : 'MISSING'}`);
+      if (!isSet) missingRequired.push(varName);
+    });
+    
+    optionalEnvVars.forEach(varName => {
+      const isSet = !!process.env[varName];
+      console.log(`   ${isSet ? '✅' : '⚠️'} ${varName}: ${isSet ? 'Set' : 'Missing (optional)'}`);
+      if (!isSet) missingOptional.push(varName);
+    });
+    
+    if (missingRequired.length > 0) {
+      console.error('\n💀 CRITICAL: Missing required environment variables:');
+      missingRequired.forEach(varName => {
+        console.error(`   - ${varName}`);
+      });
+      console.error('Application cannot start without these variables. Check your .env file or Replit secrets.');
+      process.exit(1);
+    }
+    
+    if (missingOptional.length > 0) {
+      console.warn('\n⚠️ WARNING: Missing optional environment variables:');
+      missingOptional.forEach(varName => {
+        console.warn(`   - ${varName}`);
+      });
+      console.warn('Some features may be disabled without these variables.');
+    }
+    
     // Verify Supabase connection
-    console.log("Checking database initialization state with Supabase client...");
+    console.log("\n🗄️ CHECKING DATABASE INITIALIZATION...");
     const connected = await testSupabaseConnection();
 
     if (!connected) {
-      console.warn("Supabase connection failed. Please check your environment variables and database setup.");
-      console.log("Will continue and retry connection as needed");
+      console.error("\n❌ SUPABASE CONNECTION FAILED");
+      console.error("🔧 IMMEDIATE ACTIONS REQUIRED:");
+      console.error("   1. Check if Supabase project is active and accessible");
+      console.error("   2. Verify environment variables are correct");
+      console.error("   3. Check database schema is properly set up");
+      console.error("   4. Verify Row Level Security policies");
+      console.error("\n⚠️ Will continue startup but database operations may fail");
     } else {
-      console.log("Supabase connection verified successfully");
+      console.log("✅ Supabase connection verified successfully");
     }
 
     // Create HTTP server
