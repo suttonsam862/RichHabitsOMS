@@ -801,7 +801,7 @@ export async function getUsersByRole(req: Request, res: Response) {
         specialties: user.user_metadata?.specialties || '',
         created_at: user.created_at,
         isActive: user.email_confirmed_at !== null,
-        permissions: rolePermissions[role as keyof typeof rolePermissions] || {}
+        permissions: comprehensivePermissionSets[role as keyof typeof comprehensivePermissionSets]?.corePermissions || {}
       }));
 
     console.log(`Found ${filteredUsers.length} users with role ${role}`);
@@ -841,7 +841,7 @@ export async function getUserPermissions(req: Request, res: Response) {
     }
 
     const userRole = userData.user.user_metadata?.role;
-    const basePermissions = rolePermissions[userRole as keyof typeof rolePermissions] || {};
+    const basePermissions = comprehensivePermissionSets[userRole as keyof typeof comprehensivePermissionSets]?.corePermissions || {};
 
     // TODO: Fetch custom permissions from database if implemented
     // For now, return base role permissions
@@ -909,7 +909,7 @@ export async function createUserWithRole(req: Request, res: Response) {
         phone: phone || '',
         specialties: specialties || '',
         username: email.split('@')[0],
-        permissions: rolePermissions[role as keyof typeof rolePermissions] || {}
+        permissions: comprehensivePermissionSets[role as keyof typeof comprehensivePermissionSets]?.corePermissions || {}
       }
     });
 
@@ -943,7 +943,7 @@ export async function createUserWithRole(req: Request, res: Response) {
         company: company || '',
         phone: phone || '',
         specialties: specialties || '',
-        permissions: rolePermissions[role as keyof typeof rolePermissions] || {},
+        permissions: comprehensivePermissionSets[role as keyof typeof comprehensivePermissionSets]?.corePermissions || {},
         created_at: data.user.created_at
       }
     });
