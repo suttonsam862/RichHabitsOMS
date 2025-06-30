@@ -971,7 +971,7 @@ export async function createUserWithRole(req: Request, res: Response) {
 async function getAllUsers(req: Request, res: Response) {
   try {
     const { data, error } = await supabase.auth.admin.listUsers();
-    
+
     if (error) {
       console.error('Error fetching users:', error);
       return res.status(500).json({
@@ -1008,7 +1008,7 @@ async function getAllUsers(req: Request, res: Response) {
 
 // Configure routes
 router.get('/', requireAuth, requireRole(['admin']), getAllUsers);
-router.get('/manufacturers', requireAuth, requireRole(['admin']), getManufacturers);
+router.get('/manufacturers', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), getManufacturers);
 router.get('/role/:role', requireAuth, requireRole(['admin']), getUsersByRole);
 router.get('/:userId/permissions', requireAuth, requireRole(['admin']), getUserPermissions);
 router.post('/create', requireAuth, requireRole(['admin']), createUserWithRole);

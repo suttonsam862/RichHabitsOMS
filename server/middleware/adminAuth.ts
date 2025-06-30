@@ -78,7 +78,12 @@ export function requireRole(roles: string[]) {
     // Check session authentication first
     if (req.isAuthenticated && req.isAuthenticated()) {
       if (!req.user?.role || !roles.includes(req.user.role)) {
-        return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+        return res.status(403).json({ 
+          success: false,
+          message: 'Forbidden: Insufficient permissions',
+          requiredRoles: roles,
+          userRole: req.user?.role
+        });
       }
       return next();
     }
@@ -92,20 +97,29 @@ export function requireRole(roles: string[]) {
       });
     }
 
-    // For now, we'll accept any bearer token as valid admin
-    // In production, you'd verify this token properly
+    // Check if user object exists from previous middleware
+    if (req.user && req.user.role) {
+      if (roles.includes(req.user.role)) {
+        return next();
+      } else {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Forbidden: Insufficient permissions',
+          requiredRoles: roles,
+          userRole: req.user.role
+        });
+      }
+    }
+
+    // Fallback for legacy admin check
     const token = authHeader.substring(7);
-    if (token) {
-      // Set a dummy user for now - replace with proper token validation
+    if (token && roles.includes('admin')) {
       req.user = { 
         id: 'authenticated-user', 
         role: 'admin',
         email: 'user@example.com' 
       };
-      
-      if (roles.includes('admin')) {
-        return next();
-      }
+      return next();
     }
 
     return res.status(403).json({ 

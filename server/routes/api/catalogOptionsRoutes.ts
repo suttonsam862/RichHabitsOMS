@@ -42,7 +42,7 @@ router.get('/categories', requireAuth, async (req, res) => {
 });
 
 // Add new category
-router.post('/categories', requireAuth, requireRole(['admin']), async (req, res) => {
+router.post('/categories', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), async (req, res) => {
   try {
     const { name } = req.body;
 
@@ -101,7 +101,7 @@ router.post('/categories', requireAuth, requireRole(['admin']), async (req, res)
 });
 
 // Get all sports
-router.get('/sports', requireAuth, async (req, res) => {
+router.get('/sports', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), async (req, res) => {
   try {
     const { data: sports, error } = await supabase
       .from('catalog_sports')
@@ -137,7 +137,7 @@ router.get('/sports', requireAuth, async (req, res) => {
 });
 
 // Add new sport
-router.post('/sports', requireAuth, requireRole(['admin']), async (req, res) => {
+router.post('/sports', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), async (req, res) => {
   try {
     const { name } = req.body;
 

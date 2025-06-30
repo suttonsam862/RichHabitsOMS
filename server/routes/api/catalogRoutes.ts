@@ -666,12 +666,12 @@ export async function checkSKUExists(req: Request, res: Response) {
   }
 }
 
-// Configure routes
-router.get('/', requireAuth, requireRole(['admin']), getCatalogItems);
-router.post('/', requireAuth, requireRole(['admin']), createCatalogItem);
-router.get('/check-sku', requireAuth, requireRole(['admin']), checkSKUExists);
-router.get('/:id', requireAuth, requireRole(['admin']), getCatalogItem);
-router.put('/:id', requireAuth, requireRole(['admin']), updateCatalogItem);
-router.delete('/:id', requireAuth, requireRole(['admin']), deleteCatalogItem);
+// Configure routes - Allow catalog_manager and customer_catalog_manager roles
+router.get('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), getCatalogItems);
+router.post('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), createCatalogItem);
+router.get('/check-sku', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), checkSKUExists);
+router.get('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), getCatalogItem);
+router.put('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), updateCatalogItem);
+router.delete('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), deleteCatalogItem);
 
 export default router;
