@@ -1,0 +1,58 @@
+Task: Perform a comprehensive analysis of the ThreadCraft application to identify and implement any missing database connections, API endpoints, routes, or integrations required for full functionality.
+
+Analysis Areas:
+
+Database Schema Completeness
+
+Verify all tables referenced in the codebase exist in Supabase
+Check for missing foreign key relationships
+Ensure RLS policies are properly configured
+Validate data types and constraints match application expectations
+API Route Coverage
+
+Audit all frontend API calls against existing backend routes
+Identify missing CRUD operations for each entity
+Check for proper authentication middleware on protected routes
+Verify error handling and response formatting consistency
+Authentication & Authorization
+
+Ensure all user roles (admin, salesperson, designer, manufacturer, customer) have proper database representations
+Verify session management works across all routes
+Check that role-based access control is properly implemented
+Validate JWT token handling and refresh mechanisms
+File Upload & Storage
+
+Verify image upload functionality for catalog items and orders
+Check file storage paths and URL generation
+Ensure proper file cleanup on deletion
+Validate file type restrictions and size limits
+Business Logic Integrations
+
+Order management workflow completeness
+Customer invitation system functionality
+Payment processing integration points
+Email notification system connections
+Implementation Requirements:
+
+Missing Routes: Create any missing API endpoints found during analysis
+Database Connections: Fix any broken or missing database queries
+Error Handling: Implement proper error responses for all failure cases
+Data Validation: Add input validation for all API endpoints
+Security: Ensure all routes have appropriate authentication/authorization
+Testing: Verify all implemented changes work with existing frontend code
+Priority Focus Areas:
+
+Catalog management (items, categories, sports, manufacturers)
+User management and role assignments
+Order creation and management workflow
+Customer invitation and onboarding process
+Image upload and file management
+Success Criteria:
+
+All frontend API calls receive proper responses
+No 404 errors on API routes
+All database operations complete successfully
+Authentication works across all user roles
+File uploads function correctly
+Error handling provides meaningful feedback
+Please analyze the current codebase systematically and implement any missing integrations, ensuring the application functions as a complete, production-ready system.

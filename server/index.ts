@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import pgSession from "connect-pg-simple";
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
