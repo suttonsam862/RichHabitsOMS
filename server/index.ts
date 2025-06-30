@@ -193,16 +193,19 @@ import authRoutes from './routes/api/authRoutes';
     // Register auth routes first (no auth required for these)
     app.use('/api/auth', authRoutes);
     
-    // Register other API routes
+    // Add authentication middleware for protected routes
+    const protectedRoutes = ['/api/catalog-options', '/api/catalog', '/api/customers', '/api/images', '/api/invitations', '/api/users'];
+    protectedRoutes.forEach(route => {
+      app.use(route, authenticateRequest);
+    });
+    
+    // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
     app.use('/api/catalog', catalogRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/images', imageRoutes);
     app.use('/api/invitations', invitationRoutes);
     app.use('/api/users', userRolesRoutes);
-
-    // Add authentication middleware after routes that don't need auth
-    app.use('/api', authenticateRequest);
 
     // Serve uploaded images
     app.use('/uploads', express.static('uploads'));

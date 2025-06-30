@@ -29,6 +29,9 @@ interface CatalogItem {
   sku: string;
   status: 'active' | 'inactive' | 'discontinued';
   imageUrl?: string;
+  measurementChartUrl?: string;
+  hasMeasurements?: boolean;
+  measurementInstructions?: string;
   etaDays: string;
   preferredManufacturerId?: string;
   tags?: string[];
