@@ -599,7 +599,6 @@ export const comprehensivePermissionSets = {
       manage_production_workflows: true
     }
   }
-}
 };
 
 // Enhanced data access control with granular permissions

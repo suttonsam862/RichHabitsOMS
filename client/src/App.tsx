@@ -51,7 +51,6 @@ import LegalManagementPage from "@/pages/admin/LegalManagementPage";
 import CustomerInvitesPage from "@/pages/admin/CustomerInvitesPage";
 import NewOrderInquiriesPage from "@/pages/admin/NewOrderInquiriesPage";
 import ProductLibrary from "@/pages/ProductLibrary";
-import CatalogPage from "@/pages/admin/CatalogPage";
 
 function App() {
   return (

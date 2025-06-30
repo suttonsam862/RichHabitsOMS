@@ -1,7 +1,4 @@
 
-<file_path>client/src/pages/admin/CustomPermissionsBuilder.tsx</file_path>
-<line_number>1</line_number>
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
