@@ -70,8 +70,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           localStorage.removeItem('authToken');
           localStorage.removeItem('tokenExpires');
           setUser(null);
-          // Force page reload to redirect to login
-          window.location.reload();
           return;
         }
 
