@@ -25,8 +25,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Configure trust proxy for Replit environment
-app.set('trust proxy', true);
+// Configure trust proxy for Replit environment - only in production
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Apply security headers first
 app.use(securityHeaders);
@@ -129,12 +131,13 @@ app.use(session({
     // In production, Replit handles HTTPS - so we can set secure cookies
     // But we provide an override in case the deployment platform doesn't support HTTPS
     secure: process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days - longer session life
     sameSite: 'lax', // Prevents CSRF while allowing normal navigation
     httpOnly: true, // Prevents client-side JS from accessing the cookie
     path: '/' // Makes cookie available for all routes
   },
-  rolling: true // Refresh session with each request to prevent expiration
+  rolling: true, // Refresh session with each request to prevent expiration
+  name: 'threadcraft.session' // Custom session name
 }));
 
 // Request logging middleware

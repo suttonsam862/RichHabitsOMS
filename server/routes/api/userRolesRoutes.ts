@@ -701,19 +701,29 @@ export interface DataClassification {
 /**
  * Get manufacturers only
  */
-export async function getManufacturers(req: Request, res: Response) {
+const getManufacturers = async (req: Request, res: Response) => {
   try {
     console.log('Fetching manufacturers only...');
 
-    // Get all users with manufacturer role from auth.users
+    // For development, return mock data instead of calling Supabase admin API
+    if (process.env.NODE_ENV === 'development') {
+      return res.json({
+        success: true,
+        data: {
+          manufacturers: [],
+          total: 0
+        }
+      });
+    }
+
+    // Fetch all auth users using service role (production only)
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
 
     if (authError) {
       console.error('Error fetching auth users:', authError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to fetch manufacturers',
-        error: authError.message
+        message: 'Failed to fetch manufacturers'
       });
     }
 

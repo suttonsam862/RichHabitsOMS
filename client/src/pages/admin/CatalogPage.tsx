@@ -927,7 +927,7 @@ function CatalogPageContent() {
       form.reset();
 
       toast({
-        title: "Success",
+        title: "Success",```text
         description: "Catalog item updatedsuccessfully",
       });
     },
@@ -994,7 +994,7 @@ function CatalogPageContent() {
       if (data.hasMeasurements) {
         const fileInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
         const selectedMeasurementFile = (fileInput as any)?.selectedMeasurementFile;
-        
+
         // Allow if there's either instructions, a URL, or an uploaded file
         const hasInstructions = data.measurementInstructions?.trim();
         const hasChartUrl = data.measurementChartUrl?.trim();
@@ -1851,8 +1851,7 @@ function CatalogPageContent() {
                         <Input {...field} className="rich-input" placeholder="Enter product name" />
                       </FormControl>
                       <FormMessage />
-                    </FormItem>
-                  )}
+                    </FormItem                  )}
                 />
 
                 <FormField

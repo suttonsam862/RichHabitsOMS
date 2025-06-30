@@ -1,9 +1,8 @@
-
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
 
-// General API rate limiting
+// API rate limiting with trust proxy configuration
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -13,9 +12,16 @@ export const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  trustProxy: process.env.NODE_ENV === 'production' ? 1 : false, // Only trust proxy in production
+  keyGenerator: (req) => {
+    // Use a combination of IP and user agent for better rate limiting in development
+    return process.env.NODE_ENV === 'production' 
+      ? req.ip || req.connection.remoteAddress || 'unknown'
+      : `${req.ip || 'dev'}-${req.get('User-Agent')?.substring(0, 50) || 'unknown'}`;
+  }
 });
 
-// Strict rate limiting for authentication endpoints
+// Stricter rate limiting for auth routes
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // limit each IP to 5 requests per windowMs
@@ -25,7 +31,12 @@ export const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true,
+  trustProxy: process.env.NODE_ENV === 'production' ? 1 : false, // Only trust proxy in production
+  keyGenerator: (req) => {
+    return process.env.NODE_ENV === 'production' 
+      ? req.ip || req.connection.remoteAddress || 'unknown'
+      : `${req.ip || 'dev'}-${req.get('User-Agent')?.substring(0, 50) || 'unknown'}`;
+  }
 });
 
 // Create account limiting
@@ -75,18 +86,18 @@ export const corsOptions = {
   origin: (origin: string | undefined, callback: Function) => {
     // Allow requests with no origin (mobile apps, etc.)
     if (!origin) return callback(null, true);
-    
+
     // Allow localhost and Replit domains
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5000',
       'https://9a09c15e-e041-45c1-b33a-b993b4ad0a54-00-2s8p16rwqqhd6.kirk.replit.dev'
     ];
-    
+
     if (allowedOrigins.includes(origin) || origin.includes('.replit.dev')) {
       return callback(null, true);
     }
-    
+
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -111,10 +122,10 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction) =
       }
       return value;
     };
-    
+
     req.body = sanitizeValue(req.body);
   }
-  
+
   next();
 };
 
@@ -124,14 +135,14 @@ export const fileUploadSecurity = (req: Request, res: Response, next: NextFuncti
   if (req.file) {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
     const maxSize = 10 * 1024 * 1024; // 10MB
-    
+
     if (!allowedTypes.includes(req.file.mimetype)) {
       return res.status(400).json({
         success: false,
         message: 'File type not allowed'
       });
     }
-    
+
     if (req.file.size > maxSize) {
       return res.status(400).json({
         success: false,
@@ -139,6 +150,6 @@ export const fileUploadSecurity = (req: Request, res: Response, next: NextFuncti
       });
     }
   }
-  
+
   next();
 };
