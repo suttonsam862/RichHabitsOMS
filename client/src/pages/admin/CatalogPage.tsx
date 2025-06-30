@@ -370,8 +370,8 @@ function CatalogPageContent() {
             });
             return;
           }
-        } catch (error) {
-          if (error.name === 'AbortError') {
+        } catch (error: unknown) {
+          if ((error as Error).name === 'AbortError') {
             console.warn('SKU check timed out, attempt:', attempts + 1);
           } else {
             console.warn('SKU check failed:', error);
@@ -482,11 +482,11 @@ function CatalogPageContent() {
 
     // Handle both array response and object with users property
     if (Array.isArray(manufacturersData)) {
-      return manufacturersData.filter(user => user.role === 'manufacturer');
+      return manufacturersData.filter((user: any) => user.role === 'manufacturer');
     }
 
     if (manufacturersData.users && Array.isArray(manufacturersData.users)) {
-      return manufacturersData.users.filter(user => user.role === 'manufacturer');
+      return manufacturersData.users.filter((user: any) => user.role === 'manufacturer');
     }
 
     return [];

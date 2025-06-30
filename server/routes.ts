@@ -460,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (linkError) {
             console.error('Error generating recovery link:', linkError);
-          } else if (linkData?.properties?.action_link) {
+          } else if (linkData?.properties && linkData.properties.action_link) {
             inviteUrl = linkData.properties.action_link;
           }
         } catch (linkErr) {
@@ -480,14 +480,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store in customer metadata whether this was created via invitation
       try {
         // Update user metadata to include creation method
-        await supabase.auth.admin.updateUserById(data.user.id, {
-          user_metadata: {
-            ...data.user.user_metadata,
-            created_via: shouldSendInvite ? 'invitation' : 'direct_creation',
-            created_by: req.user?.id || null,
-            requires_verification: !shouldSendInvite
-          }
-        });
+        if (data.user) {
+          await supabase.auth.admin.updateUserById(data.user.id, {
+            user_metadata: {
+              ...data.user.user_metadata,
+              created_via: shouldSendInvite ? 'invitation' : 'direct_creation',
+              created_by: req.user?.id || null,
+              requires_verification: !shouldSendInvite
+            }
+          });
+        }
       } catch (metaErr) {
         console.warn('Could not update user metadata:', metaErr);
       }
