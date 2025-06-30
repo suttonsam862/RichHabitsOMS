@@ -1,8 +1,30 @@
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
-import sharp from 'sharp';
-import { Request, Response, NextFunction } from 'express';
+import fs from 'fs/promises';
+import { Request } from 'express';
+
+// Ensure upload directories exist
+const ensureUploadDirs = async () => {
+  const dirs = [
+    'uploads',
+    'uploads/catalog',
+    'uploads/order-items',
+    'uploads/temp'
+  ];
+
+  for (const dir of dirs) {
+    try {
+      await fs.access(dir);
+    } catch {
+      await fs.mkdir(dir, { recursive: true });
+      console.log(`Created upload directory: ${dir}`);
+    }
+  }
+};
+
+// Initialize directories on module load
+ensureUploadDirs().catch(console.error);
+import { Response, NextFunction } from 'express';
 import crypto from 'crypto';
 
 // Memory storage for processing

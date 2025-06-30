@@ -576,13 +576,12 @@ export async function checkSKUExists(req: Request, res: Response) {
 
     console.log('Checking SKU existence:', sku);
 
-    const { data: existingItem, error } = await supabase
+    const { data: existingItems, error } = await supabase
       .from('catalog_items')
       .select('id')
-      .eq('sku', sku)
-      .single();
+      .eq('sku', sku);
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (error) {
       logCatalogOperation('check_sku_exists', req, null, error);
       console.error('Error checking SKU:', error);
       return res.status(500).json({
@@ -591,6 +590,8 @@ export async function checkSKUExists(req: Request, res: Response) {
         error: error.message
       });
     }
+
+    const existingItem = existingItems && existingItems.length > 0 ? existingItems[0] : null;
 
     logCatalogOperation('check_sku_exists', req, { sku, exists: !!existingItem });
     return res.json({

@@ -105,11 +105,12 @@ if (!pgStoreEnabled) {
   try {
     console.log('Using enhanced memory session store');
     sessionStore = new MemoryStoreClass({
-      checkPeriod: 86400000, // Prune expired entries every 24h
-      max: 1000, // Maximum number of sessions to store
-      ttl: 86400000, // Time to live in milliseconds (24h)
+      checkPeriod: 3600000, // Prune expired entries every hour (not 24h)
+      max: 10000, // Increased maximum sessions
+      ttl: 7 * 24 * 60 * 60 * 1000, // 7 days TTL (matches cookie maxAge)
       dispose: (key, value) => {
-        if (process.env.NODE_ENV !== 'production') {
+        // Reduce noise in logs - only log in development and less frequently
+        if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
           console.log(`Session expired: ${key.substring(0, 8)}...`);
         }
       },
