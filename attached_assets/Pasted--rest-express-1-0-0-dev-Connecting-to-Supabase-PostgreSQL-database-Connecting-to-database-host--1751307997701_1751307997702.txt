@@ -1,0 +1,205 @@
+
+> rest-express@1.0.0 dev
+Connecting to Supabase PostgreSQL database...
+Connecting to database host: db.ctznfijidykgjhzpuyej.supabase.co
+Connecting to Supabase PostgreSQL database...
+Connecting to database host: ctznfijidykgjhzpuyej.supabase.co
+Initializing Supabase client with optimized settings...
+Supabase client initialized with connection pooling
+Using enhanced memory session store
+Checking database initialization state with Supabase client...
+Testing Supabase connection (attempt 1/3)...
+Supabase connection verified successfully
+Supabase connection verified successfully
+6:18:24 PM [express] serving on port 5000
+ValidationError: The Express 'trust proxy' setting is true, which allows anyone to trivially bypass IP-based rate limiting. See https://express-rate-limit.github.io/ERR_ERL_PERMISSIVE_TRUST_PROXY/ for more information.
+    at Object.trustProxy (file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:139:13)
+    at wrappedValidations.<computed> [as trustProxy] (file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:369:22)
+    at Object.keyGenerator (file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:629:20)
+    at file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:682:32
+    at async file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:663:5 {
+  code: 'ERR_ERL_PERMISSIVE_TRUST_PROXY',
+  help: 'https://express-rate-limit.github.io/ERR_ERL_PERMISSIVE_TRUST_PROXY/'
+}
+ValidationError: The Express 'trust proxy' setting is true, which allows anyone to trivially bypass IP-based rate limiting. See https://express-rate-limit.github.io/ERR_ERL_PERMISSIVE_TRUST_PROXY/ for more information.
+    at Object.trustProxy (file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:139:13)
+    at wrappedValidations.<computed> [as trustProxy] (file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:369:22)
+    at Object.keyGenerator (file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:629:20)
+    at file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:682:32
+    at async file:///home/runner/workspace/node_modules/express-rate-limit/dist/index.mjs:663:5 {
+  code: 'ERR_ERL_PERMISSIVE_TRUST_PROXY',
+  help: 'https://express-rate-limit.github.io/ERR_ERL_PERMISSIVE_TRUST_PROXY/'
+}
+Attempting login for user: samsutton@rich-habits.com
+User authenticated successfully: 6b589bf2-be36-44ed-b143-7b871b2c507b
+User metadata from Supabase Auth: {
+  email_verified: true,
+  firstName: 'Sam',
+  is_super_admin: true,
+  lastName: 'Sutton',
+  role: 'admin'
+}
+User is a super admin, setting role to admin
+Could not fetch user profile, creating minimal profile
+Error creating user profile: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'firstName' column of 'user_profiles' in the schema cache"
+}
+6:24:47 PM [express] POST /api/auth/login 200 in 545ms :: {"success":true,"message":"Login successfu…
+Using token from Authorization header
+Session expired: o947QmBC...
+6:24:50 PM [express] GET /api/users 404 in 86ms :: {"success":false,"status":"fail","error":{"status…
+Using token from Authorization header
+Session expired: o947QmBC...
+6:24:51 PM [express] GET /api/users 404 in 75ms :: {"success":false,"status":"fail","error":{"status…
+Using token from Authorization header
+Session expired: o947QmBC...
+6:24:53 PM [express] GET /api/users 404 in 84ms :: {"success":false,"status":"fail","error":{"status…
+Using token from Authorization header
+Session expired: o947QmBC...
+6:24:57 PM [express] GET /api/users 404 in 132ms :: {"success":false,"status":"fail","error":{"statu…
+Session expired: o947QmBC...
+6:25:04 PM [express] GET /api/dashboard/stats 404 in 1ms :: {"success":false,"status":"fail","error"…
+Using token from Authorization header
+Using token from Authorization header
+Using token from Authorization header
+Using token from Authorization header
+Session expired: o947QmBC...
+6:25:06 PM [express] GET /api/catalog-options/categories 200 in 289ms :: {"success":true,"data":{"ca…
+=== Authentication Debug ===
+Headers: Present
+Session: Present
+Using token from Authorization header
+=== Authentication Debug ===
+Headers: Present
+Session: Present
+Using token from Authorization header
+Using token from Authorization header
+Token validated successfully for user: samsutton@rich-habits.com
+User authenticated: samsutton@rich-habits.com Role: admin
+Fetching catalog items from Supabase...
+Token validated successfully for user: samsutton@rich-habits.com
+User authenticated: samsutton@rich-habits.com Role: admin
+Fetching manufacturers only...
+Found 3 catalog items
+Session expired: o947QmBC...
+6:25:06 PM [express] GET /api/catalog 304 in 295ms :: [{"id":"3472a2e5-3de8-4171-890f-6564e6dab3b8",…
+Session expired: o947QmBC...
+6:25:06 PM [express] GET /api/catalog-options/sports 200 in 307ms :: {"success":true,"data":{"sports…
+Using token from Authorization header
+Session expired: o947QmBC...
+6:25:06 PM [express] GET /api/catalog-options/categories 200 in 212ms :: {"success":true,"data":{"ca…
+Error fetching auth users: AuthApiError: User not allowed
+    at handleError (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async _handleRequest (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async GoTrueAdminApi.listUsers (/home/runner/workspace/node_modules/@supabase/auth-js/src/GoTrueAdminApi.ts:182:24)
+    at async getManufacturers (/home/runner/workspace/server/routes/api/userRolesRoutes.ts:709:51) {
+  __isAuthError: true,
+  status: 403,
+  code: 'not_admin'
+}
+Session expired: o947QmBC...
+6:25:06 PM [express] GET /api/users/manufacturers 500 in 405ms :: {"success":false,"message":"Failed…
+Session expired: o947QmBC...
+6:25:06 PM [express] GET /api/catalog-options/sports 200 in 193ms :: {"success":true,"data":{"sports…
+Using token from Authorization header
+=== Authentication Debug ===
+Headers: Present
+Session: Present
+Using token from Authorization header
+Token validated successfully for user: samsutton@rich-habits.com
+User authenticated: samsutton@rich-habits.com Role: admin
+Fetching manufacturers only...
+Error fetching auth users: AuthApiError: User not allowed
+    at handleError (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async _handleRequest (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async GoTrueAdminApi.listUsers (/home/runner/workspace/node_modules/@supabase/auth-js/src/GoTrueAdminApi.ts:182:24)
+    at async getManufacturers (/home/runner/workspace/server/routes/api/userRolesRoutes.ts:709:51) {
+  __isAuthError: true,
+  status: 403,
+  code: 'not_admin'
+}
+Session expired: o947QmBC...
+6:25:07 PM [express] GET /api/users/manufacturers 500 in 233ms :: {"success":false,"message":"Failed…
+Using token from Authorization header
+=== Authentication Debug ===
+Headers: Present
+Session: Present
+Using token from Authorization header
+Token validated successfully for user: samsutton@rich-habits.com
+User authenticated: samsutton@rich-habits.com Role: admin
+Fetching manufacturers only...
+Error fetching auth users: AuthApiError: User not allowed
+    at handleError (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async _handleRequest (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async GoTrueAdminApi.listUsers (/home/runner/workspace/node_modules/@supabase/auth-js/src/GoTrueAdminApi.ts:182:24)
+    at async getManufacturers (/home/runner/workspace/server/routes/api/userRolesRoutes.ts:709:51) {
+  __isAuthError: true,
+  status: 403,
+  code: 'not_admin'
+}
+Session expired: o947QmBC...
+6:25:10 PM [express] GET /api/users/manufacturers 500 in 248ms :: {"success":false,"message":"Failed…
+Using token from Authorization header
+=== Authentication Debug ===
+Headers: Present
+Session: Present
+Using token from Authorization header
+Token validated successfully for user: samsutton@rich-habits.com
+User authenticated: samsutton@rich-habits.com Role: admin
+Checking SKU existence: JER-MEN-951163-VR2
+Session expired: o947QmBC...
+6:25:51 PM [express] GET /api/catalog/check-sku 200 in 457ms :: {"success":true,"exists":false}
+Using token from Authorization header
+=== Authentication Debug ===
+Headers: Present
+Session: Present
+Using token from Authorization header
+Token validated successfully for user: samsutton@rich-habits.com
+User authenticated: samsutton@rich-habits.com Role: admin
+Creating new catalog item: {
+  name: "Men's Singlet",
+  sku: 'JER-MEN-951163-VR2',
+  category: 'Jersey',
+  sport: 'Wrestling'
+}
+Session expired: o947QmBC...
+6:25:56 PM [express] POST /api/catalog 400 in 339ms :: {"success":false,"message":"Items requiring m…
+Using token from Authorization header
+=== Authentication Debug ===
+Headers: Present
+Session: Present
+Using token from Authorization header
+Token validated successfully for user: samsutton@rich-habits.com
+User authenticated: samsutton@rich-habits.com Role: admin
+Creating new catalog item: {
+  name: "Men's Singlet",
+  sku: 'JER-MEN-951163-VR2',
+  category: 'Jersey',
+  sport: 'Wrestling'
+}
+Session expired: o947QmBC...
+6:25:57 PM [express] POST /api/catalog 400 in 218ms :: {"success":false,"message":"Items requiring m…
+Using token from Authorization header
+=== Authentication Debug ===
+Headers: Present
+Session: Present
+Using token from Authorization header
+Token validated successfully for user: samsutton@rich-habits.com
+User authenticated: samsutton@rich-habits.com Role: admin
+Creating new catalog item: {
+  name: "Men's Singlet",
+  sku: 'JER-MEN-951163-VR2',
+  category: 'Jersey',
+  sport: 'Wrestling'
+}
+Session expired: o947QmBC...
+6:26:00 PM [express] POST /api/catalog 400 in 226ms :: {"success":false,"message":"Items requiring m…
