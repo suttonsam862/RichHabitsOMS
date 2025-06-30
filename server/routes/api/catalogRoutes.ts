@@ -67,8 +67,8 @@ export async function getCatalogItems(req: Request, res: Response) {
       name: item.name,
       category: item.category,
       sport: item.sport,
-      basePrice: parseFloat(item.base_price) || 0,
-      unitCost: parseFloat(item.unit_cost) || 0,
+      basePrice: parseFloat(String(item.base_price)) || 0,
+      unitCost: parseFloat(String(item.unit_cost)) || 0,
       sku: item.sku,
       status: item.status,
       imageUrl: item.base_image_url,
@@ -498,6 +498,64 @@ export async function deleteCatalogItem(req: Request, res: Response) {
   } catch (error) {
     logCatalogOperation('delete_catalog_item', req, null, error);
     console.error('Catalog deletion error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+/**
+ * Check if SKU exists (used for validation during creation)
+ */
+export async function checkSkuExists(req: Request, res: Response) {
+  try {
+    const { sku } = req.query;
+
+    if (!sku || typeof sku !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'SKU parameter is required'
+      });
+    }
+
+    logCatalogOperation('check_sku', req, { sku });
+
+    // Check if SKU exists (case insensitive)
+    const { data: existingItems, error } = await supabase
+      .from('catalog_items')
+      .select('id, sku')
+      .ilike('sku', sku.trim());
+
+    if (error) {
+      logCatalogOperation('check_sku', req, null, error);
+      console.error('Error checking SKU:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to check SKU',
+        error: error.message
+      });
+    }
+
+    const exists = existingItems && existingItems.length > 0;
+    
+    logCatalogOperation('check_sku', req, { 
+      sku, 
+      exists, 
+      foundItems: existingItems?.length || 0 
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        exists,
+        sku: sku.trim(),
+        foundItems: existingItems || []
+      }
+    });
+  } catch (error) {
+    logCatalogOperation('check_sku', req, null, error);
+    console.error('SKU check error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error'

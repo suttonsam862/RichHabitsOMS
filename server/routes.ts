@@ -20,7 +20,8 @@ import {
   createCatalogItem,
   updateCatalogItem,
   deleteCatalogItem,
-  getCatalogItem
+  getCatalogItem,
+  checkSkuExists
 } from './routes/api/catalogRoutes';
 import imageRoutes from './routes/api/imageRoutes';
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
