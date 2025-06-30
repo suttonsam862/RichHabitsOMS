@@ -319,9 +319,9 @@ export async function testDataAccess(req: Request, res: Response) {
     // Simulate data access test
     const testResult = {
       allowed: true,
-      restrictions: [],
-      warnings: [],
-      fieldAccess: {}
+      restrictions: [] as string[],
+      warnings: [] as string[],
+      fieldAccess: {} as any
     };
 
     // Check field-level access

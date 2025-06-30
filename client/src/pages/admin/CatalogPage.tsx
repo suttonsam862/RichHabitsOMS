@@ -1683,9 +1683,9 @@ function CatalogPageContent() {
                 {/* Product Image */}
                 <div className="space-y-2">
                   <h3 className="text-sm font-medium text-muted-foreground">Product Image</h3>
-                  {(selectedItem.imageUrl || selectedItem.base_image_url) ? (
+                  {selectedItem.imageUrl ? (
                     <img 
-                      src={selectedItem.imageUrl || selectedItem.base_image_url} 
+                      src={selectedItem.imageUrl} 
                       alt={selectedItem.name}
                       className="w-full h-48 object-cover rounded-lg border border-glass-border"
                       onError={(e) => {
@@ -1694,7 +1694,7 @@ function CatalogPageContent() {
                       }}
                     />
                   ) : null}
-                  <div className={`w-full h-48 glass-panel flex items-center justify-center rounded-lg ${(selectedItem.imageUrl || selectedItem.base_image_url) ? 'hidden' : ''}`}>
+                  <div className={`w-full h-48 glass-panel flex items-center justify-center rounded-lg ${selectedItem.imageUrl ? 'hidden' : ''}`}>
                     <ImageIcon className="h-12 w-12 text-muted-foreground" />
                   </div>
                 </div>
@@ -1786,13 +1786,13 @@ function CatalogPageContent() {
               )}
 
               {/* Tags and Specifications */}
-              {(selectedItem.tags?.length > 0 || selectedItem.specifications) && (
+              {((selectedItem.tags && selectedItem.tags.length > 0) || selectedItem.specifications) && (
                 <div className="space-y-4">
-                  {selectedItem.tags?.length > 0 && (
+                  {selectedItem.tags && selectedItem.tags.length > 0 && (
                     <div>
                       <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
                       <div className="flex flex-wrap gap-2">
-                        {selectedItem.tags.map((tag: string, index: number) => (
+                        {selectedItem.tags?.map((tag: string, index: number) => (
                           <Badge key={index} variant="outline" className="text-xs">
                             {tag}
                           </Badge>
@@ -2062,9 +2062,9 @@ function CatalogPageContent() {
                     <TableRow key={item.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
-                          {(item.imageUrl || item.base_image_url) ? (
+                          {item.imageUrl ? (
                             <img 
-                              src={item.imageUrl || item.base_image_url} 
+                              src={item.imageUrl} 
                               alt={item.name}
                               className="w-10 h-10 object-cover rounded border border-glass-border"
                               onError={(e) => {
@@ -2073,7 +2073,7 @@ function CatalogPageContent() {
                               }}
                             />
                           ) : null}
-                          <div className={`w-10 h-10 glass-panel flex items-center justify-center rounded ${(item.imageUrl || item.base_image_url) ? 'hidden' : ''}`}>
+                          <div className={`w-10 h-10 glass-panel flex items-center justify-center rounded ${item.imageUrl ? 'hidden' : ''}`}>
                             <ImageIcon className="h-5 w-5 text-muted-foreground" />
                           </div>
                           <div>
