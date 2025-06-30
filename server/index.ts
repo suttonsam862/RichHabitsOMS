@@ -3,7 +3,7 @@ import session from "express-session";
 import pgSession from "connect-pg-simple";
 import MemoryStore from "memorystore";
 import cors from "cors";
-import { registerRoutes } from "./routes";
+import { createServer } from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase, testSupabaseConnection, closeConnections } from "./db";
 import { authenticateRequest } from "./routes/auth/auth";
@@ -190,8 +190,27 @@ import authRoutes from './routes/api/authRoutes';
       console.log("Supabase connection verified successfully");
     }
 
-    // Register API routes BEFORE Vite middleware to prevent conflicts
-    const server = await registerRoutes(app);
+    // Create HTTP server
+    const server = createServer(app);
+
+    // Register auth routes first (no auth required for these)
+    app.use('/api/auth', authRoutes);
+    
+    // Add authentication middleware for protected routes
+    app.use('/api/catalog-options', authenticateRequest);
+    app.use('/api/catalog', authenticateRequest);
+    app.use('/api/customers', authenticateRequest);
+    app.use('/api/images', authenticateRequest);
+    app.use('/api/invitations', authenticateRequest);
+    app.use('/api/users', authenticateRequest);
+    
+    // Register protected API routes
+    app.use('/api/catalog-options', catalogOptionsRoutes);
+    app.use('/api/catalog', catalogRoutes);
+    app.use('/api/customers', customerRoutes);
+    app.use('/api/images', imageRoutes);
+    app.use('/api/invitations', invitationRoutes);
+    app.use('/api/users', userRolesRoutes);
 
     // Serve uploaded images
     app.use('/uploads', express.static('uploads'));
