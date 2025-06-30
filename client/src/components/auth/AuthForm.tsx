@@ -50,6 +50,7 @@ interface InvitationData {
   role: string;
   expires: number;
   timestamp: number;
+  token?: string;
 }
 
 interface AuthFormProps {

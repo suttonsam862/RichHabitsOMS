@@ -612,7 +612,7 @@ export default function SettingsPage() {
       toast({
         title: "User created successfully",
         description: "The new user has been added to the system",
-        variant: "success",
+        variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       form.reset();
@@ -640,7 +640,7 @@ export default function SettingsPage() {
       toast({
         title: "User updated successfully",
         description: "The user information has been updated",
-        variant: "success",
+        variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       setSelectedUser(null);
@@ -670,7 +670,7 @@ export default function SettingsPage() {
       toast({
         title: "User deleted successfully",
         description: "The user has been removed from the system",
-        variant: "success",
+        variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
     },

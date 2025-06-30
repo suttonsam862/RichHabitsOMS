@@ -84,6 +84,11 @@ export const securityHeaders = helmet({
 // CORS configuration
 export const corsOptions = {
   origin: (origin: string | undefined, callback: Function) => {
+    // In development, allow all origins for easier debugging
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+
     // Allow requests with no origin (mobile apps, etc.)
     if (!origin) return callback(null, true);
 

@@ -151,7 +151,7 @@ export function OrderForm({ initialData, onSubmit }: OrderFormProps) {
                 <SelectContent>
                   {customersLoading ? (
                     <SelectItem value="loading" disabled>Loading customers...</SelectItem>
-                  ) : customers?.length > 0 ? (
+                  ) : (Array.isArray(customers) && customers.length > 0) ? (
                     customers.map((customer: any) => (
                       <SelectItem key={customer.id} value={customer.id.toString()}>
                         {customer.firstName} {customer.lastName} ({customer.email})
