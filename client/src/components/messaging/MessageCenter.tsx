@@ -83,7 +83,7 @@ export function MessageCenter({ fullPage = false, orderId }: MessageCenterProps)
   }, [messages, activeConversation]);
 
   // Process messages to organize by conversation
-  const conversations = (messages || []).reduce((acc: any, message: any) => {
+  const conversations = (Array.isArray(messages) ? messages : []).reduce((acc: any, message: any) => {
     const otherUserId = message.senderId === user?.id ? message.receiverId : message.senderId;
     
     if (!acc[otherUserId]) {
@@ -120,7 +120,7 @@ export function MessageCenter({ fullPage = false, orderId }: MessageCenterProps)
   const activeMessages = activeConversation ? conversations[activeConversation]?.messages || [] : [];
   
   // Order-specific messages
-  const orderMessages = orderId ? (messages || []).filter((msg: any) => msg.orderId === orderId) : [];
+  const orderMessages = orderId ? (Array.isArray(messages) ? messages : []).filter((msg: any) => msg.orderId === orderId) : [];
 
   // Handle message sending
   const handleSendMessage = () => {
@@ -176,7 +176,7 @@ export function MessageCenter({ fullPage = false, orderId }: MessageCenterProps)
 
   // Find user by ID helper
   const findUserById = (userId: number) => {
-    return (users || []).find((u: any) => u.id === userId);
+    return (Array.isArray(users) ? users : []).find((u: any) => u.id === userId);
   };
 
   // Get username helper
@@ -435,7 +435,7 @@ export function MessageCenter({ fullPage = false, orderId }: MessageCenterProps)
                     {usersLoading ? (
                       <SelectItem value="loading" disabled>Loading users...</SelectItem>
                     ) : (
-                      users?.filter((u: any) => u.id !== user?.id).map((u: any) => (
+                      (Array.isArray(users) ? users : []).filter((u: any) => u.id !== user?.id).map((u: any) => (
                         <SelectItem key={u.id} value={u.id.toString()}>
                           {u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username} ({u.role})
                         </SelectItem>

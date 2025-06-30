@@ -4,10 +4,10 @@ import { useAuth } from '@/hooks/use-auth';
 import { Navigate } from 'react-router-dom';
 
 export function CustomerLayout() {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   
   // Redirect if not a customer
-  if (!isLoading && (!user || user.role !== 'customer')) {
+  if (!loading && (!user || user.role !== 'customer')) {
     return <Navigate to="/login" />;
   }
   

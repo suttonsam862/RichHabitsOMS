@@ -1,0 +1,2055 @@
+
+> rest-express@1.0.0 build:all
+> npm run build:server && npm run build
+
+
+> rest-express@1.0.0 build:server
+> tsc --project tsconfig.json --outDir dist
+
+client/src/components/auth/RequireAuth.tsx:29:57 - error TS2345: Argument of type 'string' is not assignable to parameter of type '"admin" | "customer" | "salesperson" | "designer" | "manufacturer" | "catalog_manager"'.
+
+29   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+                                                           ~~~~~~~~~
+
+client/src/components/customer/CustomerLayout.tsx:7:17 - error TS2339: Property 'isLoading' does not exist on type '{ requireAuth: (allowedRoles?: string[] | undefined) => boolean; user: User | null; role: string; loading: boolean; login: (email: string, password: string) => Promise<void>; register: (userData: any) => Promise<...>; logout: () => Promise<...>; isAuthenticated: boolean; hasPageAccess: (pageName: string) => boolean; }'.
+
+7   const { user, isLoading } = useAuth();
+                  ~~~~~~~~~
+
+client/src/components/design/FileUpload.tsx:95:22 - error TS18046: 'error' is of type 'unknown'.
+
+95         description: error.message || "An error occurred during file upload",
+                        ~~~~~
+
+client/src/components/messaging/MessageCenter.tsx:86:42 - error TS2339: Property 'reduce' does not exist on type '{}'.
+
+86   const conversations = (messages || []).reduce((acc: any, message: any) => {
+                                            ~~~~~~
+
+client/src/components/messaging/MessageCenter.tsx:123:52 - error TS2339: Property 'filter' does not exist on type '{}'.
+
+123   const orderMessages = orderId ? (messages || []).filter((msg: any) => msg.orderId === orderId) : [];
+                                                       ~~~~~~
+
+client/src/components/messaging/MessageCenter.tsx:179:26 - error TS2339: Property 'find' does not exist on type '{}'.
+
+179     return (users || []).find((u: any) => u.id === userId);
+                             ~~~~
+
+client/src/components/messaging/MessageCenter.tsx:438:30 - error TS2339: Property 'filter' does not exist on type '{}'.
+
+438                       users?.filter((u: any) => u.id !== user?.id).map((u: any) => (
+                                 ~~~~~~
+
+client/src/components/orders/OrderForm.tsx:154:34 - error TS2339: Property 'length' does not exist on type '{}'.
+
+154                   ) : customers?.length > 0 ? (
+                                     ~~~~~~
+
+client/src/components/orders/OrderForm.tsx:155:21 - error TS18046: 'customers' is of type 'unknown'.
+
+155                     customers.map((customer: any) => (
+                        ~~~~~~~~~
+
+client/src/components/ui/error-boundary.tsx:68:8 - error TS2322: Type 'PropsWithoutRef<P> & { ref: ForwardedRef<any>; }' is not assignable to type 'IntrinsicAttributes & P'.
+  Type 'PropsWithoutRef<P> & { ref: ForwardedRef<any>; }' is not assignable to type 'P'.
+    'PropsWithoutRef<P> & { ref: ForwardedRef<any>; }' is assignable to the constraint of type 'P', but 'P' could be instantiated with a different subtype of constraint 'object'.
+
+68       <Component {...props} ref={ref} />
+          ~~~~~~~~~
+
+client/src/components/ui/use-toast.tsx:86:37 - error TS2802: Type 'MapIterator<[string, Timeout]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+86         for (const [id, timeout] of toastTimeouts.entries()) {
+                                       ~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/AdminOversightDashboard.tsx:1:1 - error TS2339: Property 'replit_final_file' does not exist on type 'JSX.IntrinsicElements'.
+
+1 <replit_final_file>
+  ~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/AdminOversightDashboard.tsx:2:1 - error TS2339: Property 'replit_final_file' does not exist on type 'JSX.IntrinsicElements'.
+
+2 </replit_final_file>
+  ~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/DesignTasks.tsx:94:25 - error TS18046: 'designTasks' is of type 'unknown'.
+
+94   const filteredTasks = designTasks.filter((task: any) => {
+                           ~~~~~~~~~~~
+
+client/src/pages/Orders.tsx:73:24 - error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+73   const statuses = [...new Set(orders.map(order => order.status))];
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/Payments.tsx:56:38 - error TS2339: Property 'filter' does not exist on type '{}'.
+
+56   const paidOrders = orders ? orders.filter((order: any) =>
+                                        ~~~~~~
+
+client/src/pages/Payments.tsx:175:49 - error TS18047: 'user' is possibly 'null'.
+
+175                     <p className="font-medium">{user.firstName} {user.lastName}</p>
+                                                    ~~~~
+
+client/src/pages/Payments.tsx:175:66 - error TS18047: 'user' is possibly 'null'.
+
+175                     <p className="font-medium">{user.firstName} {user.lastName}</p>
+                                                                     ~~~~
+
+client/src/pages/Payments.tsx:176:59 - error TS18047: 'user' is possibly 'null'.
+
+176                     <p className="text-sm text-gray-600">{user.company || 'No company'}</p>
+                                                              ~~~~
+
+client/src/pages/Payments.tsx:176:64 - error TS2339: Property 'company' does not exist on type 'User'.
+
+176                     <p className="text-sm text-gray-600">{user.company || 'No company'}</p>
+                                                                   ~~~~~~~
+
+client/src/pages/Payments.tsx:179:64 - error TS18047: 'user' is possibly 'null'.
+
+179                     <p className="text-sm text-gray-600 mt-1">{user.phone || 'No phone'}</p>
+                                                                   ~~~~
+
+client/src/pages/Payments.tsx:179:69 - error TS2339: Property 'phone' does not exist on type 'User'.
+
+179                     <p className="text-sm text-gray-600 mt-1">{user.phone || 'No phone'}</p>
+                                                                        ~~~~~
+
+client/src/pages/Production.tsx:79:25 - error TS18046: 'productionTasks' is of type 'unknown'.
+
+79   const filteredTasks = productionTasks.filter((task: any) => {
+                           ~~~~~~~~~~~~~~~
+
+client/src/pages/Production.tsx:98:18 - error TS18046: 'productionTasks' is of type 'unknown'.
+
+98     const task = productionTasks.find((t: any) => t.orderId === selectedOrderId);
+                    ~~~~~~~~~~~~~~~
+
+client/src/pages/Production.tsx:243:16 - error TS18046: 'productionTasks' is of type 'unknown'.
+
+243               {productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production'
+                   ~~~~~~~~~~~~~~~
+
+client/src/pages/Production.tsx:248:16 - error TS18046: 'productionTasks' is of type 'unknown'.
+
+248               {productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production'
+                   ~~~~~~~~~~~~~~~
+
+client/src/pages/Production.tsx:275:19 - error TS18046: 'productionTasks' is of type 'unknown'.
+
+275               ) : productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production'
+                      ~~~~~~~~~~~~~~~
+
+client/src/pages/Register.tsx:41:15 - error TS2353: Object literal may only specify known properties, and 'token' does not exist in type 'InvitationData | ((prevState: InvitationData | null) => InvitationData | null)'.
+
+41               token: inviteToken
+                 ~~~~~
+
+client/src/pages/Register.tsx:115:35 - error TS2322: Type 'InvitationData | null' is not assignable to type 'InvitationData | undefined'.
+  Type 'null' is not assignable to type 'InvitationData | undefined'.
+
+115         <AuthForm type="register" invitationData={invitationData} />
+                                      ~~~~~~~~~~~~~~
+
+  client/src/components/auth/AuthForm.tsx:57:3
+    57   invitationData?: InvitationData;
+         ~~~~~~~~~~~~~~
+    The expected type comes from property 'invitationData' which is declared here on type 'IntrinsicAttributes & AuthFormProps'
+
+client/src/pages/admin/CatalogPage.tsx:374:15 - error TS18046: 'error' is of type 'unknown'.
+
+374           if (error.name === 'AbortError') {
+                  ~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:489:45 - error TS7006: Parameter 'user' implicitly has an 'any' type.
+
+489       return manufacturersData.users.filter(user => user.role === 'manufacturer');
+                                                ~~~~
+
+client/src/pages/admin/CatalogPage.tsx:736:26 - error TS2802: Type 'Set<any>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+736     const combined = [...new Set([...dbCats, ...localCats])];
+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:744:26 - error TS2802: Type 'Set<any>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+744     const combined = [...new Set([...dbSportsNames, ...localSports])];
+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:1686:59 - error TS2339: Property 'base_image_url' does not exist on type 'CatalogItem'.
+
+1686                   {(selectedItem.imageUrl || selectedItem.base_image_url) ? (
+                                                               ~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:1688:66 - error TS2339: Property 'base_image_url' does not exist on type 'CatalogItem'.
+
+1688                       src={selectedItem.imageUrl || selectedItem.base_image_url}
+                                                                      ~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:1697:145 - error TS2339: Property 'base_image_url' does not exist on type 'CatalogItem'.
+
+1697                   <div className={`w-full h-48 glass-panel flex items-center justify-center rounded-lg ${(selectedItem.imageUrl || selectedItem.base_image_url) ? 'hidden' : ''}`}>
+                                                                                                                                                     ~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:1789:17 - error TS18048: 'selectedItem.tags.length' is possibly 'undefined'.
+
+1789               {(selectedItem.tags?.length > 0 || selectedItem.specifications) && (
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:1791:20 - error TS18048: 'selectedItem.tags.length' is possibly 'undefined'.
+
+1791                   {selectedItem.tags?.length > 0 && (
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:1795:26 - error TS18048: 'selectedItem.tags' is possibly 'undefined'.
+
+1795                         {selectedItem.tags.map((tag: string, index: number) => (
+                              ~~~~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:2065:51 - error TS2339: Property 'base_image_url' does not exist on type 'CatalogItem'.
+
+2065                           {(item.imageUrl || item.base_image_url) ? (
+                                                       ~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:2067:58 - error TS2339: Property 'base_image_url' does not exist on type 'CatalogItem'.
+
+2067                               src={item.imageUrl || item.base_image_url}
+                                                              ~~~~~~~~~~~~~~
+
+client/src/pages/admin/CatalogPage.tsx:2076:132 - error TS2339: Property 'base_image_url' does not exist on type 'CatalogItem'.
+
+2076                           <div className={`w-10 h-10 glass-panel flex items-center justify-center rounded ${(item.imageUrl || item.base_image_url) ? 'hidden' : ''}`}>
+                                                                                                                                        ~~~~~~~~~~~~~~
+
+client/src/pages/admin/CustomerInvitesPage.tsx:398:18 - error TS18046: 'invites' is of type 'unknown'.
+
+398                 {invites.length === 0 ? (
+                     ~~~~~~~
+
+client/src/pages/admin/CustomerInvitesPage.tsx:405:19 - error TS18046: 'invites' is of type 'unknown'.
+
+405                   invites.map((invite: any) => (
+                      ~~~~~~~
+
+client/src/pages/admin/NewOrderInquiriesPage.tsx:87:29 - error TS18046: 'inquiries' is of type 'unknown'.
+
+87   const filteredInquiries = inquiries.filter((inquiry: any) => {
+                               ~~~~~~~~~
+
+client/src/pages/admin/SettingsPage.tsx:290:33 - error TS7006: Parameter 'user' implicitly has an 'any' type.
+
+290           users: data.users.map(user => ({
+                                    ~~~~
+
+client/src/pages/admin/SettingsPage.tsx:336:34 - error TS7006: Parameter 'u' implicitly has an 'any' type.
+
+336     customersTotal: users.filter(u => u.role === 'customer').length,
+                                     ~
+
+client/src/pages/admin/SettingsPage.tsx:339:34 - error TS7006: Parameter 'u' implicitly has an 'any' type.
+
+339     activeAccounts: users.filter(u => u.email_confirmed).length,
+                                     ~
+
+client/src/pages/admin/SettingsPage.tsx:340:30 - error TS7006: Parameter 'u' implicitly has an 'any' type.
+
+340     adminUsers: users.filter(u => u.role === 'admin').length,
+                                 ~
+
+client/src/pages/admin/SettingsPage.tsx:341:33 - error TS7006: Parameter 'u' implicitly has an 'any' type.
+
+341     customerUsers: users.filter(u => u.role === 'customer').length,
+                                    ~
+
+client/src/pages/admin/SettingsPage.tsx:342:30 - error TS7006: Parameter 'u' implicitly has an 'any' type.
+
+342     staffUsers: users.filter(u => !['customer', 'admin'].includes(u.role)).length
+                                 ~
+
+client/src/pages/admin/SettingsPage.tsx:615:9 - error TS2322: Type '"success"' is not assignable to type '"default" | "destructive" | undefined'.
+
+615         variant: "success",
+            ~~~~~~~
+
+  client/src/hooks/use-toast.ts:15:3
+    15   variant?: 'default' | 'destructive';
+         ~~~~~~~
+    The expected type comes from property 'variant' which is declared here on type 'ToastOptions'
+
+client/src/pages/admin/SettingsPage.tsx:643:9 - error TS2322: Type '"success"' is not assignable to type '"default" | "destructive" | undefined'.
+
+643         variant: "success",
+            ~~~~~~~
+
+  client/src/hooks/use-toast.ts:15:3
+    15   variant?: 'default' | 'destructive';
+         ~~~~~~~
+    The expected type comes from property 'variant' which is declared here on type 'ToastOptions'
+
+client/src/pages/admin/SettingsPage.tsx:673:9 - error TS2322: Type '"success"' is not assignable to type '"default" | "destructive" | undefined'.
+
+673         variant: "success",
+            ~~~~~~~
+
+  client/src/hooks/use-toast.ts:15:3
+    15   variant?: 'default' | 'destructive';
+         ~~~~~~~
+    The expected type comes from property 'variant' which is declared here on type 'ToastOptions'
+
+client/src/pages/admin/SettingsPage.tsx:1335:27 - error TS2304: Cannot find name 'setUsers'.
+
+1335                           setUsers(users.filter(user => !selectedUserIds.includes(user.id)));
+                               ~~~~~~~~
+
+client/src/pages/admin/SettingsPage.tsx:1335:49 - error TS7006: Parameter 'user' implicitly has an 'any' type.
+
+1335                           setUsers(users.filter(user => !selectedUserIds.includes(user.id)));
+                                                     ~~~~
+
+client/src/pages/admin/SettingsPage.tsx:1358:27 - error TS2304: Cannot find name 'setUsers'.
+
+1358                           setUsers(users.map(user => {
+                               ~~~~~~~~
+
+client/src/pages/admin/SettingsPage.tsx:1358:46 - error TS7006: Parameter 'user' implicitly has an 'any' type.
+
+1358                           setUsers(users.map(user => {
+                                                  ~~~~
+
+client/src/pages/admin/SettingsPage.tsx:1444:70 - error TS7006: Parameter 'user' implicitly has an 'any' type.
+
+1444                                 setSelectedUserIds(filteredUsers.map(user => user.id || user.customerId).filter(Boolean));
+                                                                          ~~~~
+
+client/src/pages/admin/SettingsPage.tsx:1729:43 - error TS2304: Cannot find name 'setUsers'.
+
+1729                                           setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+                                               ~~~~~~~~
+
+client/src/pages/admin/SettingsPage.tsx:1729:62 - error TS7006: Parameter 'u' implicitly has an 'any' type.
+
+1729                                           setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+                                                                  ~
+
+client/src/pages/admin/SettingsPage.tsx:1781:43 - error TS2304: Cannot find name 'setUsers'.
+
+1781                                           setUsers(users.filter(u => u.id !== user.id));
+                                               ~~~~~~~~
+
+client/src/pages/admin/SettingsPage.tsx:1781:65 - error TS7006: Parameter 'u' implicitly has an 'any' type.
+
+1781                                           setUsers(users.filter(u => u.id !== user.id));
+                                                                     ~
+
+client/src/pages/admin/UserPermissionsPage.tsx:364:70 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+364                                       checked={field.value?.includes(permission.key)}
+                                                                         ~~~~~~~~~~~~~~
+
+client/src/pages/admin/UserPermissionsPage.tsx:803:6 - error TS2304: Cannot find name 'ErrorBoundary'.
+
+803     <ErrorBoundary
+         ~~~~~~~~~~~~~
+
+client/src/pages/admin/UserPermissionsPage.tsx:804:20 - error TS7031: Binding element 'error' implicitly has an 'any' type.
+
+804       fallback={({ error, resetError }) => (
+                       ~~~~~
+
+client/src/pages/admin/UserPermissionsPage.tsx:804:27 - error TS7031: Binding element 'resetError' implicitly has an 'any' type.
+
+804       fallback={({ error, resetError }) => (
+                              ~~~~~~~~~~
+
+client/src/pages/admin/UserPermissionsPage.tsx:822:20 - error TS2304: Cannot find name 'RefreshCw'.
+
+822                   <RefreshCw className="h-4 w-4 mr-2" />
+                       ~~~~~~~~~
+
+client/src/pages/admin/UserPermissionsPage.tsx:835:7 - error TS2304: Cannot find name 'ErrorBoundary'.
+
+835     </ErrorBoundary>
+          ~~~~~~~~~~~~~
+
+client/src/pages/customer/OrdersPage.tsx:194:32 - error TS2322: Type '"default" | "destructive" | "outline" | "secondary" | "warning"' is not assignable to type '"default" | "destructive" | "outline" | "secondary" | null | undefined'.
+  Type '"warning"' is not assignable to type '"default" | "destructive" | "outline" | "secondary" | null | undefined'.
+
+194                         <Badge variant={getStatusVariant(order.status)}>
+                                   ~~~~~~~
+
+  client/src/components/ui/badge.tsx:10:7
+     10       variant: {
+              ~~~~~~~~~~
+     11         default: "bg-neon-blue text-rich-black neon-glow",
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ... 
+     14         outline: "border-neon-blue text-neon-blue hover:bg-neon-blue/20",
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     15       },
+        ~~~~~~~
+    The expected type comes from property 'variant' which is declared here on type 'IntrinsicAttributes & BadgeProps'
+
+client/src/pages/orders/OrderManagePage.tsx:626:81 - error TS2551: Property 'size' does not exist on type 'OrderItem'. Did you mean 'sizes'?
+
+626                           <td className="px-4 py-2 text-sm text-gray-500">{item.size}</td>
+                                                                                    ~~~~
+
+  client/src/pages/orders/OrderManagePage.tsx:27:3
+    27   sizes: {
+         ~~~~~
+    'sizes' is declared here.
+
+client/src/pages/orders/OrderManagePage.tsx:628:92 - error TS2339: Property 'quantity' does not exist on type 'OrderItem'.
+
+628                           <td className="px-4 py-2 text-sm text-gray-900 text-right">{item.quantity}</td>
+                                                                                               ~~~~~~~~
+
+server/db.ts:67:9 - error TS2322: Type 'string' is not assignable to type 'undefined'.
+
+67         schema: 'public'
+           ~~~~~~
+
+server/design.ts:21:42 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+21     const order = await storage.getOrder(task.orderId);
+                                            ~~~~~~~~~~~~
+
+server/design.ts:22:56 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+22     const files = await storage.getDesignFilesByTaskId(task.id);
+                                                          ~~~~~~~
+
+server/design.ts:50:5 - error TS2322: Type 'number' is not assignable to type 'string'.
+
+50     designTaskId: taskId,
+       ~~~~~~~~~~~~
+
+  shared/schema.ts:140:3
+    140   designTaskId: uuid('design_task_id').notNull().references(() => designTasks.id, { onDelete: 'cascade' }),
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    The expected type comes from property 'designTaskId' which is declared here on type '{ designTaskId: string; filename: string; fileType: string; filePath: string; uploadedBy: string; }'
+
+server/design.ts:54:5 - error TS2322: Type 'number' is not assignable to type 'string'.
+
+54     uploadedBy: userId
+       ~~~~~~~~~~
+
+  shared/schema.ts:144:3
+    144   uploadedBy: uuid('uploaded_by').notNull().references(() => userProfiles.id),
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    The expected type comes from property 'uploadedBy' which is declared here on type '{ designTaskId: string; filename: string; fileType: string; filePath: string; uploadedBy: string; }'
+
+server/design.ts:64:40 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+64   const order = await storage.getOrder(task.orderId);
+                                          ~~~~~~~~~~~~
+
+server/design.ts:66:31 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+66     await storage.updateOrder(order.id, {
+                                 ~~~~~~~~
+
+server/design.ts:101:42 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+101     const order = await storage.getOrder(task.orderId);
+                                             ~~~~~~~~~~~~
+
+server/design.ts:103:33 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+103       await storage.updateOrder(order.id, {
+                                    ~~~~~~~~
+
+server/design.ts:122:28 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+122     await sendNotification(order.salespersonId, {
+                               ~~~~~~~~~~~~~~~~~~~
+
+server/design.ts:138:46 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+138   const customer = await storage.getCustomer(order.customerId);
+                                                 ~~~~~~~~~~~~~~~~
+
+server/design.ts:140:28 - error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+
+140     await sendNotification(customer.userId, {
+                               ~~~~~~~~~~~~~~~
+
+server/design.ts:151:40 - error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+
+151     const user = await storage.getUser(customer.userId);
+                                           ~~~~~~~~~~~~~~~
+
+server/design.ts:152:22 - error TS2339: Property 'email' does not exist on type '{ id: string; username: string; firstName: string | null; lastName: string | null; role: "admin" | "customer" | "salesperson" | "designer" | "manufacturer"; company: string | null; phone: string | null; createdAt: Date | null; stripeCustomerId: string | null; }'.
+
+152     if (user && user.email) {
+                         ~~~~~
+
+server/design.ts:153:28 - error TS2554: Expected 6 arguments, but got 2.
+
+153       const emailOptions = getDesignApprovalEmailTemplate(
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  server/email.ts:312:3
+    312   designName: string,
+          ~~~~~~~~~~~~~~~~~~
+    An argument for 'designName' was not provided.
+
+server/design.ts:159:18 - error TS2339: Property 'email' does not exist on type '{ id: string; username: string; firstName: string | null; lastName: string | null; role: "admin" | "customer" | "salesperson" | "designer" | "manufacturer"; company: string | null; phone: string | null; createdAt: Date | null; stripeCustomerId: string | null; }'.
+
+159         to: user.email
+                     ~~~~~
+
+server/imageUpload.ts:42:33 - error TS2304: Cannot find name 'sharp'.
+
+42   const processedBuffer = await sharp(buffer)
+                                   ~~~~~
+
+server/imageUpload.ts:72:8 - error TS2339: Property 'mkdirSync' does not exist on type 'typeof import("fs/promises")'.
+
+72     fs.mkdirSync(uploadPath, { recursive: true });
+          ~~~~~~~~~
+
+server/imageUpload.ts:86:8 - error TS2339: Property 'mkdirSync' does not exist on type 'typeof import("fs/promises")'.
+
+86     fs.mkdirSync(dir, { recursive: true });
+          ~~~~~~~~~
+
+server/imageUpload.ts:199:10 - error TS2339: Property 'unlinkSync' does not exist on type 'typeof import("fs/promises")'.
+
+199       fs.unlinkSync(filePath);
+             ~~~~~~~~~~
+
+server/index.ts:218:9 - error TS7034: Variable 'missingRequired' implicitly has type 'any[]' in some locations where its type cannot be determined.
+
+218     let missingRequired = [];
+            ~~~~~~~~~~~~~~~
+
+server/index.ts:219:9 - error TS7034: Variable 'missingOptional' implicitly has type 'any[]' in some locations where its type cannot be determined.
+
+219     let missingOptional = [];
+            ~~~~~~~~~~~~~~~
+
+server/index.ts:235:7 - error TS7005: Variable 'missingRequired' implicitly has an 'any[]' type.
+
+235       missingRequired.forEach(varName => {
+          ~~~~~~~~~~~~~~~
+
+server/index.ts:244:7 - error TS7005: Variable 'missingOptional' implicitly has an 'any[]' type.
+
+244       missingOptional.forEach(varName => {
+          ~~~~~~~~~~~~~~~
+
+server/messaging.ts:31:31 - error TS2352: Conversion of type 'import("/home/runner/workspace/node_modules/@types/ws/index")' to type 'WebSocket' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'dispatchEvent' is missing in type 'import("/home/runner/workspace/node_modules/@types/ws/index")' but required in type 'WebSocket'.
+
+31     clients.get(userId)?.push(ws as WebSocket);
+                                 ~~~~~~~~~~~~~~~
+
+  node_modules/typescript/lib/lib.dom.d.ts:8309:5
+    8309     dispatchEvent(event: Event): boolean;
+             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    'dispatchEvent' is declared here.
+
+server/messaging.ts:48:28 - error TS2352: Conversion of type 'import("/home/runner/workspace/node_modules/@types/ws/index")' to type 'WebSocket' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'dispatchEvent' is missing in type 'import("/home/runner/workspace/node_modules/@types/ws/index")' but required in type 'WebSocket'.
+
+48       removeClient(userId, ws as WebSocket);
+                              ~~~~~~~~~~~~~~~
+
+  node_modules/typescript/lib/lib.dom.d.ts:8309:5
+    8309     dispatchEvent(event: Event): boolean;
+             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    'dispatchEvent' is declared here.
+
+server/messaging.ts:96:7 - error TS2322: Type 'number' is not assignable to type 'string'.
+
+96       senderId,
+         ~~~~~~~~
+
+  shared/schema.ts:164:3
+    164   senderId: uuid('sender_id').notNull().references(() => userProfiles.id),
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    The expected type comes from property 'senderId' which is declared here on type '{ content: string; senderId: string; receiverId: string; status?: "read" | "sent" | "delivered" | undefined; orderId?: string | null | undefined; designTaskId?: string | null | undefined; subject?: string | ... 1 more ... | undefined; productionTaskId?: string | ... 1 more ... | undefined; }'
+
+server/messaging.ts:120:24 - error TS2339: Property 'email' does not exist on type '{ id: string; username: string; firstName: string | null; lastName: string | null; role: "admin" | "customer" | "salesperson" | "designer" | "manufacturer"; company: string | null; phone: string | null; createdAt: Date | null; stripeCustomerId: string | null; }'.
+
+120           to: receiver.email,
+                           ~~~~~
+
+server/messaging.ts:131:46 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+131         await storage.markMessageAsEmailSent(savedMessage.id);
+                                                 ~~~~~~~~~~~~~~~
+
+server/middleware/adminAuth.ts:7:12 - error TS2339: Property 'isAuthenticated' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+
+7   if (!req.isAuthenticated()) {
+             ~~~~~~~~~~~~~~~
+
+server/middleware/adminAuth.ts:18:11 - error TS2339: Property 'isAuthenticated' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+
+18   if (req.isAuthenticated && req.isAuthenticated()) {
+             ~~~~~~~~~~~~~~~
+
+server/middleware/adminAuth.ts:18:34 - error TS2339: Property 'isAuthenticated' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+
+18   if (req.isAuthenticated && req.isAuthenticated()) {
+                                    ~~~~~~~~~~~~~~~
+
+server/middleware/adminAuth.ts:27:33 - error TS2339: Property 'isAuthenticated' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+
+27     console.log('Session:', req.isAuthenticated ? (req.isAuthenticated() ? 'Present' : 'Missing') : 'No session method');
+                                   ~~~~~~~~~~~~~~~
+
+server/middleware/adminAuth.ts:27:56 - error TS2339: Property 'isAuthenticated' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+
+27     console.log('Session:', req.isAuthenticated ? (req.isAuthenticated() ? 'Present' : 'Missing') : 'No session method');
+                                                          ~~~~~~~~~~~~~~~
+
+server/middleware/adminAuth.ts:60:12 - error TS2339: Property 'isAuthenticated' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+
+60   if (!req.isAuthenticated()) {
+              ~~~~~~~~~~~~~~~
+
+server/middleware/adminAuth.ts:79:13 - error TS2339: Property 'isAuthenticated' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+
+79     if (req.isAuthenticated && req.isAuthenticated()) {
+               ~~~~~~~~~~~~~~~
+
+server/middleware/adminAuth.ts:79:36 - error TS2339: Property 'isAuthenticated' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+
+79     if (req.isAuthenticated && req.isAuthenticated()) {
+                                      ~~~~~~~~~~~~~~~
+
+server/middleware/errorHandler.ts:275:34 - error TS2339: Property 'user' does not exist on type 'Session & Partial<SessionData>'.
+
+275   if (req.session && req.session.user) {
+                                     ~~~~
+
+server/middleware/security.ts:15:3 - error TS2353: Object literal may only specify known properties, and 'trustProxy' does not exist in type 'Partial<Options>'.
+
+15   trustProxy: process.env.NODE_ENV === 'production' ? 1 : false, // Only trust proxy in production
+     ~~~~~~~~~~
+
+server/middleware/security.ts:34:3 - error TS2353: Object literal may only specify known properties, and 'trustProxy' does not exist in type 'Partial<Options>'.
+
+34   trustProxy: process.env.NODE_ENV === 'production' ? 1 : false, // Only trust proxy in production
+     ~~~~~~~~~~
+
+server/onboarding.ts:3:10 - error TS2724: '"@shared/schema"' has no exported member named 'users'. Did you mean 'User'?
+
+3 import { users } from '@shared/schema';
+           ~~~~~
+
+server/routes.ts:464:25 - error TS18047: 'linkData.properties' is possibly 'null'.
+
+464             inviteUrl = linkData.properties.action_link;
+                            ~~~~~~~~~~~~~~~~~~~
+
+server/routes.ts:483:50 - error TS18047: 'data.user' is possibly 'null'.
+
+483         await supabase.auth.admin.updateUserById(data.user.id, {
+                                                     ~~~~~~~~~
+
+server/routes.ts:485:16 - error TS18047: 'data.user' is possibly 'null'.
+
+485             ...data.user.user_metadata,
+                   ~~~~~~~~~
+
+server/routes.ts:501:36 - error TS18047: 'createdProfile' is possibly 'null'.
+
+501         customer: createdProfile ? createdProfile[0] : {
+                                       ~~~~~~~~~~~~~~
+
+server/routes.ts:502:15 - error TS18047: 'data.user' is possibly 'null'.
+
+502           id: data.user.id,
+                  ~~~~~~~~~
+
+server/routes.ts:547:9 - error TS2322: Type 'unknown' is not assignable to type 'string'.
+
+547         email: customer.email,
+            ~~~~~
+
+  node_modules/@supabase/auth-js/dist/module/lib/types.d.ts:602:5
+    602     email: string;
+            ~~~~~
+    The expected type comes from property 'email' which is declared here on type 'GenerateLinkParams'
+
+server/routes.ts:998:57 - error TS2345: Argument of type 'unknown' is not assignable to parameter of type '{}'.
+
+998         await supabase.from('orders').delete().eq('id', order.id);
+                                                            ~~~~~~~~
+
+server/routes.ts:1047:34 - error TS2339: Property 'map' does not exist on type 'SelectQueryError<"could not find the relation between orders and order_items">'.
+
+1047         items: order.order_items.map((item: any) => ({
+                                      ~~~
+
+server/routes.ts:1111:33 - error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+
+1111       if (new Date() > new Date(invitation.expires_at)) {
+                                     ~~~~~~~~~~~~~~~~~~~~~
+
+
+server/routes.ts:1740:46 - error TS18046: 'customer.email' is of type 'unknown'.
+
+1740           username: userMetadata.username || customer.email.split('@')[0],
+                                                  ~~~~~~~~~~~~~~
+
+server/routes.ts:1782:48 - error TS18048: 'authUser.email' is possibly 'undefined'.
+
+1782             username: userMetadata.username || authUser.email.split('@')[0],
+                                                    ~~~~~~~~~~~~~~
+
+server/routes.ts:1851:9 - error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+
+1851         email: customer.email,
+             ~~~~~
+
+  node_modules/@supabase/auth-js/dist/module/lib/types.d.ts:284:5
+    284     email?: string;
+            ~~~~~
+    The expected type comes from property 'email' which is declared here on type 'AdminUserAttributes'
+
+server/routes/admin/admin.ts:81:50 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+81       const customer = await storage.getCustomer(order.customerId);
+                                                    ~~~~~~~~~~~~~~~~
+
+server/routes/admin/admin.ts:82:61 - error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+
+82       const customerUser = customer ? await storage.getUser(customer.userId) : null;
+                                                               ~~~~~~~~~~~~~~~
+
+server/routes/admin/admin.ts:115:16 - error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number | Date'.
+      Type 'null' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number'.
+      Type 'null' is not assignable to type 'string | number'.
+
+115       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                   ~~~~~~~~~~~
+
+
+server/routes/admin/admin.ts:115:50 - error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number | Date'.
+      Type 'null' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'Date | null' is not assignable to parameter of type 'string | number'.
+      Type 'null' is not assignable to type 'string | number'.
+
+115       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                                                     ~~~~~~~~~~~
+
+
+server/routes/admin/admin.ts:120:44 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+120       const sender = await storage.getUser(message.senderId);
+                                               ~~~~~~~~~~~~~~~~
+
+server/routes/admin/admin.ts:124:46 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+
+124         const order = await storage.getOrder(message.orderId);
+                                                 ~~~~~~~~~~~~~~~
+
+server/routes/api/customerRoutes.ts:51:67 - error TS2551: Property 'getUserByEmail' does not exist on type 'GoTrueAdminApi'. Did you mean 'getUserById'?
+
+51     const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+                                                                     ~~~~~~~~~~~~~~
+
+  node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts:77:5
+    77     getUserById(uid: string): Promise<UserResponse>;
+           ~~~~~~~~~~~
+    'getUserById' is declared here.
+
+server/routes/api/dataAccessRoutes.ts:34:67 - error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+34       const isAllowedLocation = await checkGeographicRestrictions(clientIP, permissions.geographic_restrictions);
+                                                                     ~~~~~~~~
+
+server/routes/api/dataAccessRoutes.ts:328:9 - error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+
+328     if (permissions?.field_level_access?.[tableName]) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+server/routes/api/dataAccessRoutes.ts:329:27 - error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+
+329       const fieldAccess = permissions.field_level_access[tableName];
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+server/routes/api/dataAccessRoutes.ts:341:38 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+341         testResult.restrictions.push('Time-based access restriction would block this operation');
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+server/routes/api/dataAccessRoutes.ts:347:32 - error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+
+347       testResult.warnings.push('Geographic restrictions are configured and would be checked against user IP');
+                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+server/routes/api/imageRoutes.ts:265:32 - error TS2339: Property 'split' does not exist on type '{}'.
+
+265     const pathParts = imageUrl.split('/');
+                                   ~~~~~
+
+server/routes/api/imageRoutes.ts:342:32 - error TS2339: Property 'split' does not exist on type '{}'.
+
+342     const pathParts = imageUrl.split('/');
+                                   ~~~~~
+
+server/routes/api/invitationRoutes.ts:22:62 - error TS2551: Property 'getUserByEmail' does not exist on type 'GoTrueAdminApi'. Did you mean 'getUserById'?
+
+22     const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
+                                                                ~~~~~~~~~~~~~~
+
+  node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts:77:5
+    77     getUserById(uid: string): Promise<UserResponse>;
+           ~~~~~~~~~~~
+    'getUserById' is declared here.
+
+server/routes/api/invitationRoutes.ts:150:31 - error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+
+150     if (new Date() > new Date(invitation.expires_at)) {
+                                  ~~~~~~~~~~~~~~~~~~~~~
+
+
+server/routes/api/productLibrary.ts:60:30 - error TS2339: Property 'map' does not exist on type 'SelectQueryError<"could not find the relation between product_library and product_pricing_history">'.
+
+60       const prices = pricing.map(p => parseFloat(p.unit_price));
+                                ~~~
+
+server/routes/api/productLibrary.ts:60:34 - error TS7006: Parameter 'p' implicitly has an 'any' type.
+
+60       const prices = pricing.map(p => parseFloat(p.unit_price));
+                                    ~
+
+server/routes/api/productLibrary.ts:67:57 - error TS7006: Parameter 'a' implicitly has an 'any' type.
+
+67           avg_price: prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : product.base_price,
+                                                           ~
+
+server/routes/api/productLibrary.ts:67:60 - error TS7006: Parameter 'b' implicitly has an 'any' type.
+
+67           avg_price: prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : product.base_price,
+                                                              ~
+
+server/routes/api/productLibrary.ts:107:28 - error TS2802: Type 'Set<unknown>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+107     const categories = [...new Set(data?.map(item => item.category))].filter(Boolean);
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+server/routes/api/productLibrary.ts:215:30 - error TS2365: Operator '+' cannot be applied to types '{}' and 'number'.
+
+215         total_times_ordered: (product.total_times_ordered || 0) + 1,
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+server/routes/api/productLibrary.ts:225:30 - error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+
+225       unit_price: parseFloat(product.base_price),
+                                 ~~~~~~~~~~~~~~~~~~
+
+server/routes/api/productLibrary.ts:226:31 - error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+
+226       total_price: parseFloat(product.base_price) * parseInt(quantity),
+                                  ~~~~~~~~~~~~~~~~~~
+
+server/routes/auth/auth.ts:125:27 - error TS2339: Property 'token' does not exist on type 'Session & Partial<SessionData>'.
+
+125     else if (req.session?.token) {
+                              ~~~~~
+
+server/routes/auth/auth.ts:126:27 - error TS2339: Property 'token' does not exist on type 'Session & Partial<SessionData>'.
+
+126       token = req.session.token;
+                              ~~~~~
+
+server/routes/auth/auth.ts:169:36 - error TS2339: Property 'token' does not exist on type 'Session & Partial<SessionData>'.
+
+169     if (req.session && req.session.token) {
+                                       ~~~~~
+
+server/routes/auth/auth.ts:170:19 - error TS2339: Property 'user' does not exist on type 'Session & Partial<SessionData>'.
+
+170       req.session.user = req.user;
+                      ~~~~
+
+server/routes/auth/auth.ts:171:19 - error TS2339: Property 'expires' does not exist on type 'Session & Partial<SessionData>'.
+
+171       req.session.expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+                      ~~~~~~~
+
+server/routes/auth/auth.ts:281:17 - error TS2339: Property 'user' does not exist on type 'Session & Partial<SessionData>'.
+
+281     req.session.user = user;
+                    ~~~~
+
+server/routes/auth/auth.ts:282:17 - error TS2339: Property 'token' does not exist on type 'Session & Partial<SessionData>'.
+
+282     req.session.token = data.session.access_token;
+                    ~~~~~
+
+server/routes/auth/auth.ts:283:17 - error TS2339: Property 'expires' does not exist on type 'Session & Partial<SessionData>'.
+
+283     req.session.expires = new Date(data.session.expires_at! * 1000); // Use Supabase session expiry
+                    ~~~~~~~
+
+server/storage.ts:21:32 - error TS2304: Cannot find name 'User'.
+
+21   getUser(id: number): Promise<User | undefined>;
+                                  ~~~~
+
+server/storage.ts:22:42 - error TS2304: Cannot find name 'User'.
+
+22   getUserByEmail(email: string): Promise<User | undefined>;
+                                            ~~~~
+
+server/storage.ts:23:48 - error TS2304: Cannot find name 'User'.
+
+23   getUserByUsername(username: string): Promise<User | undefined>;
+                                                  ~~~~
+
+server/storage.ts:24:20 - error TS2304: Cannot find name 'InsertUser'.
+
+24   createUser(user: InsertUser): Promise<User>;
+                      ~~~~~~~~~~
+
+server/storage.ts:24:41 - error TS2304: Cannot find name 'User'.
+
+24   createUser(user: InsertUser): Promise<User>;
+                                           ~~~~
+
+server/storage.ts:25:40 - error TS2304: Cannot find name 'InsertUser'.
+
+25   updateUser(id: number, data: Partial<InsertUser>): Promise<User>;
+                                          ~~~~~~~~~~
+
+server/storage.ts:25:62 - error TS2304: Cannot find name 'User'.
+
+25   updateUser(id: number, data: Partial<InsertUser>): Promise<User>;
+                                                                ~~~~
+
+server/storage.ts:26:41 - error TS2304: Cannot find name 'User'.
+
+26   getUsersByRole(role: string): Promise<User[]>;
+                                           ~~~~
+
+server/storage.ts:88:77 - error TS2304: Cannot find name 'User'.
+
+88   updateStripeCustomerId(userId: number, stripeCustomerId: string): Promise<User>;
+                                                                               ~~~~
+
+server/storage.ts:98:38 - error TS2304: Cannot find name 'User'.
+
+98   async getUser(id: number): Promise<User | undefined> {
+                                        ~~~~
+
+server/storage.ts:103:15 - error TS2304: Cannot find name 'users'.
+
+103           id: users.id,
+                  ~~~~~
+
+server/storage.ts:104:18 - error TS2304: Cannot find name 'users'.
+
+104           email: users.email,
+                     ~~~~~
+
+server/storage.ts:105:21 - error TS2304: Cannot find name 'users'.
+
+105           username: users.username,
+                        ~~~~~
+
+server/storage.ts:106:21 - error TS2304: Cannot find name 'users'.
+
+106           password: users.password,
+                        ~~~~~
+
+server/storage.ts:107:22 - error TS2304: Cannot find name 'users'.
+
+107           firstName: users.firstName,
+                         ~~~~~
+
+server/storage.ts:108:21 - error TS2304: Cannot find name 'users'.
+
+108           lastName: users.lastName,
+                        ~~~~~
+
+server/storage.ts:109:17 - error TS2304: Cannot find name 'users'.
+
+109           role: users.role,
+                    ~~~~~
+
+server/storage.ts:110:18 - error TS2304: Cannot find name 'users'.
+
+110           phone: users.phone,
+                     ~~~~~
+
+server/storage.ts:111:20 - error TS2304: Cannot find name 'users'.
+
+111           company: users.company,
+                       ~~~~~
+
+server/storage.ts:112:22 - error TS2304: Cannot find name 'users'.
+
+112           createdAt: users.createdAt,
+                         ~~~~~
+
+server/storage.ts:113:29 - error TS2304: Cannot find name 'users'.
+
+113           stripeCustomerId: users.stripeCustomerId
+                                ~~~~~
+
+server/storage.ts:115:15 - error TS2304: Cannot find name 'users'.
+
+115         .from(users)
+                  ~~~~~
+
+server/storage.ts:116:19 - error TS2304: Cannot find name 'users'.
+
+116         .where(eq(users.id, id));
+                      ~~~~~
+
+server/storage.ts:125:48 - error TS2304: Cannot find name 'User'.
+
+125   async getUserByEmail(email: string): Promise<User | undefined> {
+                                                   ~~~~
+
+server/storage.ts:130:15 - error TS2304: Cannot find name 'users'.
+
+130           id: users.id,
+                  ~~~~~
+
+server/storage.ts:131:18 - error TS2304: Cannot find name 'users'.
+
+131           email: users.email,
+                     ~~~~~
+
+server/storage.ts:132:21 - error TS2304: Cannot find name 'users'.
+
+132           username: users.username,
+                        ~~~~~
+
+server/storage.ts:133:21 - error TS2304: Cannot find name 'users'.
+
+133           password: users.password,
+                        ~~~~~
+
+server/storage.ts:134:22 - error TS2304: Cannot find name 'users'.
+
+134           firstName: users.firstName,
+                         ~~~~~
+
+server/storage.ts:135:21 - error TS2304: Cannot find name 'users'.
+
+135           lastName: users.lastName,
+                        ~~~~~
+
+server/storage.ts:136:17 - error TS2304: Cannot find name 'users'.
+
+136           role: users.role,
+                    ~~~~~
+
+server/storage.ts:137:18 - error TS2304: Cannot find name 'users'.
+
+137           phone: users.phone,
+                     ~~~~~
+
+server/storage.ts:138:20 - error TS2304: Cannot find name 'users'.
+
+138           company: users.company,
+                       ~~~~~
+
+server/storage.ts:139:22 - error TS2304: Cannot find name 'users'.
+
+139           createdAt: users.createdAt,
+                         ~~~~~
+
+server/storage.ts:140:29 - error TS2304: Cannot find name 'users'.
+
+140           stripeCustomerId: users.stripeCustomerId
+                                ~~~~~
+
+server/storage.ts:142:15 - error TS2304: Cannot find name 'users'.
+
+142         .from(users)
+                  ~~~~~
+
+server/storage.ts:143:19 - error TS2304: Cannot find name 'users'.
+
+143         .where(eq(users.email, email));
+                      ~~~~~
+
+server/storage.ts:153:54 - error TS2304: Cannot find name 'User'.
+
+153   async getUserByUsername(username: string): Promise<User | undefined> {
+                                                         ~~~~
+
+server/storage.ts:154:43 - error TS2304: Cannot find name 'users'.
+
+154     const [user] = await db.select().from(users).where(eq(users.username, username));
+                                              ~~~~~
+
+server/storage.ts:154:59 - error TS2304: Cannot find name 'users'.
+
+154     const [user] = await db.select().from(users).where(eq(users.username, username));
+                                                              ~~~~~
+
+server/storage.ts:158:30 - error TS2304: Cannot find name 'InsertUser'.
+
+158   async createUser(userData: InsertUser): Promise<User> {
+                                 ~~~~~~~~~~
+
+server/storage.ts:158:51 - error TS2304: Cannot find name 'User'.
+
+158   async createUser(userData: InsertUser): Promise<User> {
+                                                      ~~~~
+
+server/storage.ts:176:17 - error TS2304: Cannot find name 'users'.
+
+176         .insert(users)
+                    ~~~~~
+
+server/storage.ts:179:15 - error TS2304: Cannot find name 'users'.
+
+179           id: users.id,
+                  ~~~~~
+
+server/storage.ts:180:18 - error TS2304: Cannot find name 'users'.
+
+180           email: users.email,
+                     ~~~~~
+
+server/storage.ts:181:21 - error TS2304: Cannot find name 'users'.
+
+181           username: users.username,
+                        ~~~~~
+
+server/storage.ts:182:22 - error TS2304: Cannot find name 'users'.
+
+182           firstName: users.firstName,
+                         ~~~~~
+
+server/storage.ts:183:21 - error TS2304: Cannot find name 'users'.
+
+183           lastName: users.lastName,
+                        ~~~~~
+
+server/storage.ts:184:17 - error TS2304: Cannot find name 'users'.
+
+184           role: users.role,
+                    ~~~~~
+
+server/storage.ts:185:18 - error TS2304: Cannot find name 'users'.
+
+185           phone: users.phone,
+                     ~~~~~
+
+server/storage.ts:186:20 - error TS2304: Cannot find name 'users'.
+
+186           company: users.company,
+                       ~~~~~
+
+server/storage.ts:187:22 - error TS2304: Cannot find name 'users'.
+
+187           createdAt: users.createdAt,
+                         ~~~~~
+
+server/storage.ts:188:29 - error TS2304: Cannot find name 'users'.
+
+188           stripeCustomerId: users.stripeCustomerId
+                                ~~~~~
+
+server/storage.ts:195:49 - error TS18046: 'error' is of type 'unknown'.
+
+195       throw new Error(`Failed to create user: ${error.message}`);
+                                                    ~~~~~
+
+server/storage.ts:199:46 - error TS2304: Cannot find name 'InsertUser'.
+
+199   async updateUser(id: number, data: Partial<InsertUser>): Promise<User> {
+                                                 ~~~~~~~~~~
+
+server/storage.ts:199:68 - error TS2304: Cannot find name 'User'.
+
+199   async updateUser(id: number, data: Partial<InsertUser>): Promise<User> {
+                                                                       ~~~~
+
+server/storage.ts:206:15 - error TS2304: Cannot find name 'users'.
+
+206       .update(users)
+                  ~~~~~
+
+server/storage.ts:211:17 - error TS2304: Cannot find name 'users'.
+
+211       .where(eq(users.id, id))
+                    ~~~~~
+
+server/storage.ts:216:47 - error TS2304: Cannot find name 'User'.
+
+216   async getUsersByRole(role: string): Promise<User[]> {
+                                                  ~~~~
+
+server/storage.ts:217:35 - error TS2304: Cannot find name 'users'.
+
+217     return await db.select().from(users).where(eq(users.role, role));
+                                      ~~~~~
+
+server/storage.ts:217:51 - error TS2304: Cannot find name 'users'.
+
+217     return await db.select().from(users).where(eq(users.role, role));
+                                                      ~~~~~
+
+server/storage.ts:222:64 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+222     const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+                                                                   ~~
+
+
+server/storage.ts:227:64 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "user_id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "user_id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "user_id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "user_id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+227     const [customer] = await db.select().from(customers).where(eq(customers.userId, userId));
+                                                                   ~~
+
+
+server/storage.ts:243:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "customers"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+243       .where(eq(customers.id, id))
+                 ~~
+
+
+server/storage.ts:250:58 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+250     const [order] = await db.select().from(orders).where(eq(orders.id, id));
+                                                             ~~
+
+
+server/storage.ts:263:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "customer_id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "customer_id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "customer_id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "customer_id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+263       .where(eq(orders.customerId, customerId))
+                 ~~
+
+
+server/storage.ts:271:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "salesperson_id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "salesperson_id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "salesperson_id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "salesperson_id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+271       .where(eq(orders.salespersonId, salespersonId))
+                 ~~
+
+
+server/storage.ts:279:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "status"; tableName: "orders"; dataType: "string"; columnType: "PgEnumColumn"; data: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design"; ... 9 more ...; generated: undefined; }, {}, {}>, right: "completed" | ... 8 more ... | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '"completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design" | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<string>, right: string | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "status"; tableName: "orders"; dataType: "string"; columnType: "PgEnumColumn"; data: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design"; ... 9 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<string>'.
+      Type 'PgColumn<{ name: "status"; tableName: "orders"; dataType: "string"; columnType: "PgEnumColumn"; data: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design"; ... 9 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<string>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "status"; tableName: "orders"; dataType: "string"; columnType: "PgEnumColumn"; data: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design"; ... 9 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+279       .where(eq(orders.status, status))
+                 ~~
+
+
+server/storage.ts:324:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+324       .where(eq(orders.id, id))
+                 ~~
+
+
+server/storage.ts:331:66 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+331     const [orderItem] = await db.select().from(orderItems).where(eq(orderItems.id, id));
+                                                                     ~~
+
+
+server/storage.ts:339:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "order_id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "order_id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+339       .where(eq(orderItems.orderId, orderId));
+                 ~~
+
+
+server/storage.ts:354:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+354       .where(eq(orderItems.id, id))
+                 ~~
+
+
+server/storage.ts:362:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "order_items"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+362       .where(eq(orderItems.id, id));
+                 ~~
+
+
+server/storage.ts:367:68 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+367     const [designTask] = await db.select().from(designTasks).where(eq(designTasks.id, id));
+                                                                       ~~
+
+
+server/storage.ts:375:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "order_id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "order_id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+375       .where(eq(designTasks.orderId, orderId))
+                 ~~
+
+
+server/storage.ts:383:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "designer_id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "designer_id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "designer_id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "designer_id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+383       .where(eq(designTasks.designerId, designerId))
+                 ~~
+
+
+server/storage.ts:409:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+409       .where(eq(designTasks.id, id))
+                 ~~
+
+
+server/storage.ts:416:68 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+416     const [designFile] = await db.select().from(designFiles).where(eq(designFiles.id, id));
+                                                                       ~~
+
+
+server/storage.ts:424:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "design_task_id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "design_task_id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "design_task_id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "design_task_id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+424       .where(eq(designFiles.designTaskId, designTaskId))
+                 ~~
+
+
+server/storage.ts:439:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_files"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+439       .where(eq(designFiles.id, id));
+                 ~~
+
+
+server/storage.ts:444:76 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+444     const [productionTask] = await db.select().from(productionTasks).where(eq(productionTasks.id, id));
+                                                                               ~~
+
+
+server/storage.ts:452:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "order_id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "order_id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+452       .where(eq(productionTasks.orderId, orderId))
+                 ~~
+
+
+server/storage.ts:460:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "manufacturer_id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "manufacturer_id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "manufacturer_id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "manufacturer_id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; ... 5 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+460       .where(eq(productionTasks.manufacturerId, manufacturerId))
+                 ~~
+
+
+server/storage.ts:479:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "production_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+479       .where(eq(productionTasks.id, id))
+                 ~~
+
+
+server/storage.ts:486:62 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+486     const [message] = await db.select().from(messages).where(eq(messages.id, id));
+                                                                 ~~
+
+
+server/storage.ts:494:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "sender_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "sender_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "sender_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "sender_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+494       .where(eq(messages.senderId, senderId))
+                 ~~
+
+
+server/storage.ts:502:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "receiver_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "receiver_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "receiver_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "receiver_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+502       .where(eq(messages.receiverId, receiverId))
+                 ~~
+
+
+server/storage.ts:510:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "order_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "order_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: false; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+510       .where(eq(messages.orderId, orderId))
+                 ~~
+
+
+server/storage.ts:529:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+529       .where(eq(messages.id, id))
+                 ~~
+
+
+server/storage.ts:540:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "messages"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+540       .where(eq(messages.id, id))
+                 ~~
+
+
+server/storage.ts:547:62 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+547     const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+                                                                 ~~
+
+
+server/storage.ts:555:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+555       .where(eq(payments.orderId, orderId))
+                 ~~
+
+
+server/storage.ts:574:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+574       .where(eq(payments.id, id))
+                 ~~
+
+
+server/storage.ts:580:83 - error TS2304: Cannot find name 'User'.
+
+580   async updateStripeCustomerId(userId: number, stripeCustomerId: string): Promise<User> {
+                                                                                      ~~~~
+
+server/storage.ts:582:15 - error TS2304: Cannot find name 'users'.
+
+582       .update(users)
+                  ~~~~~
+
+server/storage.ts:584:17 - error TS2304: Cannot find name 'users'.
+
+584       .where(eq(users.id, userId))
+                    ~~~~~
+
+server/storage.ts:617:7 - error TS2322: Type '{ id: string; orderId: string; amount: string; status: "completed" | "pending" | "processing" | "failed" | "refunded"; transactionId: string | null; notes: string | null; stripePaymentId: string | null; stripeClientSecret: string | null; createdAt: Date | null; updatedAt: Date | null; }[]' is not assignable to type '{ id: string; status: "completed" | "pending" | "processing" | "failed" | "refunded"; method: string | null; orderId: string; notes: string | null; createdAt: Date | null; amount: string; updatedAt: Date | null; transactionId: string | null; stripePaymentId: string | null; stripeClientSecret: string | null; }[]'.
+  Property 'method' is missing in type '{ id: string; orderId: string; amount: string; status: "completed" | "pending" | "processing" | "failed" | "refunded"; transactionId: string | null; notes: string | null; stripePaymentId: string | null; stripeClientSecret: string | null; createdAt: Date | null; updatedAt: Date | null; }' but required in type '{ id: string; status: "completed" | "pending" | "processing" | "failed" | "refunded"; method: string | null; orderId: string; notes: string | null; createdAt: Date | null; amount: string; updatedAt: Date | null; transactionId: string | null; stripePaymentId: string | null; stripeClientSecret: string | null; }'.
+
+617       return await db.select({
+          ~~~~~~
+
+server/storage.ts:647:22 - error TS2304: Cannot find name 'users'.
+
+647           firstName: users.firstName,
+                         ~~~~~
+
+server/storage.ts:648:21 - error TS2304: Cannot find name 'users'.
+
+648           lastName: users.lastName,
+                        ~~~~~
+
+server/storage.ts:649:18 - error TS2304: Cannot find name 'users'.
+
+649           email: users.email,
+                     ~~~~~
+
+server/storage.ts:650:20 - error TS2304: Cannot find name 'users'.
+
+650           company: users.company,
+                       ~~~~~
+
+server/storage.ts:651:18 - error TS2304: Cannot find name 'users'.
+
+651           phone: users.phone
+                     ~~~~~
+
+server/storage.ts:654:19 - error TS2304: Cannot find name 'users'.
+
+654         .leftJoin(users, eq(customers.userId, users.id));
+                      ~~~~~
+
+server/storage.ts:654:47 - error TS2304: Cannot find name 'users'.
+
+654         .leftJoin(users, eq(customers.userId, users.id));
+                                                  ~~~~~
+
+server/storage.ts:665:58 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+665     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+                                                             ~~
+
+
+server/storage.ts:671:51 - error TS2304: Cannot find name 'users'.
+
+671     const [manufacturer] = await db.select().from(users).where(eq(users.id, manufacturerId));
+                                                      ~~~~~
+
+server/storage.ts:671:67 - error TS2304: Cannot find name 'users'.
+
+671     const [manufacturer] = await db.select().from(users).where(eq(users.id, manufacturerId));
+                                                                      ~~~~~
+
+server/storage.ts:680:9 - error TS2353: Object literal may only specify known properties, and 'manufacturerId' does not exist in type '{ customerId?: string | SQL<unknown> | PgColumn<ColumnBaseConfig<ColumnDataType, string>, {}, {}> | undefined; orderNumber?: string | SQL<...> | PgColumn<...> | undefined; ... 10 more ...; updatedAt?: Date | ... 3 more ... | undefined; }'.
+
+680         manufacturerId,
+            ~~~~~~~~~~~~~~
+
+server/storage.ts:683:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+683       .where(eq(orders.id, orderId))
+                 ~~
+
+
+server/storage.ts:692:7 - error TS2353: Object literal may only specify known properties, and 'updatedAt' does not exist in type 'Partial<{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; designerId?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | unde...'.
+
+692       updatedAt: new Date()
+          ~~~~~~~~~
+
+server/storage.ts:698:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "design_tasks"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+698       .where(eq(designTasks.id, taskId))
+                 ~~
+
+
+server/storage.ts:719:58 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+719     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+                                                             ~~
+
+
+server/storage.ts:731:14 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "id"; tableName: "orders"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: true; isPrimaryKey: true; isAutoincrement: false; hasRuntimeDefault: false; enumValues: undefined; baseColumn: never; identity: undefined; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+731       .where(eq(orders.id, orderId))
+                 ~~
+
+
+server/storage.ts:735:69 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+735     const existingPayments = await db.select().from(payments).where(eq(payments.orderId, orderId));
+                                                                        ~~
+
+
+server/storage.ts:738:9 - error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { orderId: string | SQL<unknown> | Placeholder<string, any>; amount: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; ... 7 more ...; stripeClientSecret?: string | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Type 'number' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { orderId: string | SQL<unknown> | Placeholder<string, any>; amount: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<...> | undefined; ... 7 more ...; stripeClientSecret?: string | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'orderId' does not exist in type '{ orderId: string | SQL<unknown> | Placeholder<string, any>; amount: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<string, any> | undefined; ... 7 more ...; stripeClientSecret?: string | ... 3 more ... | undefined; }[]'.
+
+738         orderId,
+            ~~~~~~~
+
+  node_modules/drizzle-orm/pg-core/query-builders/insert.d.ts:28:101
+     28 export type PgInsertValue<TTable extends PgTable<TableConfig>, OverrideT extends boolean = false> = {
+                                                                                                            ~
+     29     [Key in keyof InferInsertModel<TTable, {
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ... 
+     35     }>[Key] | SQL | Placeholder;
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     36 } & {};
+        ~
+    The expected type comes from property 'orderId' which is declared here on type '{ orderId: string | SQL<unknown> | Placeholder<string, any>; amount: string | SQL<unknown> | Placeholder<string, any>; id?: string | SQL<unknown> | Placeholder<string, any> | undefined; ... 7 more ...; stripeClientSecret?: string | ... 3 more ... | undefined; }'
+
+server/storage.ts:752:16 - error TS2769: No overload matches this call.
+  Overload 1 of 3, '(left: PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>, right: string | SQLWrapper): SQL<...>', gave the following error.
+    Argument of type 'number' is not assignable to parameter of type 'string | SQLWrapper'.
+  Overload 2 of 3, '(left: Aliased<number>, right: number | SQLWrapper): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'Aliased<number>'.
+      Type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is missing the following properties from type 'Aliased<number>': sql, fieldAlias
+  Overload 3 of 3, '(left: never, right: unknown): SQL<unknown>', gave the following error.
+    Argument of type 'PgColumn<{ name: "order_id"; tableName: "payments"; dataType: "string"; columnType: "PgUUID"; data: string; driverParam: string; notNull: true; hasDefault: false; isPrimaryKey: false; isAutoincrement: false; ... 4 more ...; generated: undefined; }, {}, {}>' is not assignable to parameter of type 'never'.
+
+752         .where(eq(payments.orderId, orderId));
+                   ~~
+
+
+server/supabase-auth.ts:50:31 - error TS2339: Property 'token' does not exist on type 'Session & Partial<SessionData>'.
+
+50     const token = req.session.token || (req.headers.authorization?.startsWith('Bearer ') &&
+                                 ~~~~~
+
+server/supabase-auth.ts:115:7 - error TS2717: Subsequent property declarations must have the same type.  Property 'user' must be of type 'any', but here has type 'SupabaseUser | undefined'.
+
+115       user?: SupabaseUser;
+          ~~~~
+
+  server/routes/auth/auth.ts:8:7
+    8       user?: any;
+            ~~~~
+    'user' was also declared here.
+
+server/supabase-storage.ts:57:18 - error TS2339: Property 'password' does not exist on type '{ id: string; username: string; firstName?: string | null | undefined; lastName?: string | null | undefined; role?: "admin" | "customer" | "salesperson" | "designer" | "manufacturer" | undefined; company?: string | ... 1 more ... | undefined; phone?: string | ... 1 more ... | undefined; }'.
+
+57     if (userData.password) {
+                    ~~~~~~~~
+
+server/supabase-storage.ts:58:16 - error TS2339: Property 'password' does not exist on type '{ id: string; username: string; firstName?: string | null | undefined; lastName?: string | null | undefined; role?: "admin" | "customer" | "salesperson" | "designer" | "manufacturer" | undefined; company?: string | ... 1 more ... | undefined; phone?: string | ... 1 more ... | undefined; }'.
+
+58       userData.password = await hash(userData.password, 10);
+                  ~~~~~~~~
+
+server/supabase-storage.ts:58:47 - error TS2339: Property 'password' does not exist on type '{ id: string; username: string; firstName?: string | null | undefined; lastName?: string | null | undefined; role?: "admin" | "customer" | "salesperson" | "designer" | "manufacturer" | undefined; company?: string | ... 1 more ... | undefined; phone?: string | ... 1 more ... | undefined; }'.
+
+58       userData.password = await hash(userData.password, 10);
+                                                 ~~~~~~~~
+
+server/supabase-storage.ts:76:14 - error TS2339: Property 'password' does not exist on type 'Partial<{ id: string; username: string; firstName?: string | null | undefined; lastName?: string | null | undefined; role?: "admin" | "customer" | "salesperson" | "designer" | "manufacturer" | undefined; company?: string | ... 1 more ... | undefined; phone?: string | ... 1 more ... | undefined; }>'.
+
+76     if (data.password) {
+                ~~~~~~~~
+
+server/supabase-storage.ts:77:12 - error TS2339: Property 'password' does not exist on type 'Partial<{ id: string; username: string; firstName?: string | null | undefined; lastName?: string | null | undefined; role?: "admin" | "customer" | "salesperson" | "designer" | "manufacturer" | undefined; company?: string | ... 1 more ... | undefined; phone?: string | ... 1 more ... | undefined; }>'.
+
+77       data.password = await hash(data.password, 10);
+              ~~~~~~~~
+
+server/supabase-storage.ts:77:39 - error TS2339: Property 'password' does not exist on type 'Partial<{ id: string; username: string; firstName?: string | null | undefined; lastName?: string | null | undefined; role?: "admin" | "customer" | "salesperson" | "designer" | "manufacturer" | undefined; company?: string | ... 1 more ... | undefined; phone?: string | ... 1 more ... | undefined; }>'.
+
+77       data.password = await hash(data.password, 10);
+                                         ~~~~~~~~
+
+server/supabase-storage.ts:236:16 - error TS2339: Property 'createdAt' does not exist on type '{ customerId: string; orderNumber: string; status?: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design" | undefined; ... 6 more ...; paymentDate?: Date | ... 1 more ... | undefined; }'.
+
+236     if (!order.createdAt) {
+                   ~~~~~~~~~
+
+server/supabase-storage.ts:237:13 - error TS2339: Property 'createdAt' does not exist on type '{ customerId: string; orderNumber: string; status?: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design" | undefined; ... 6 more ...; paymentDate?: Date | ... 1 more ... | undefined; }'.
+
+237       order.createdAt = new Date().toISOString();
+                ~~~~~~~~~
+
+server/supabase-storage.ts:239:16 - error TS2339: Property 'updatedAt' does not exist on type '{ customerId: string; orderNumber: string; status?: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design" | undefined; ... 6 more ...; paymentDate?: Date | ... 1 more ... | undefined; }'.
+
+239     if (!order.updatedAt) {
+                   ~~~~~~~~~
+
+server/supabase-storage.ts:240:13 - error TS2339: Property 'updatedAt' does not exist on type '{ customerId: string; orderNumber: string; status?: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design" | undefined; ... 6 more ...; paymentDate?: Date | ... 1 more ... | undefined; }'.
+
+240       order.updatedAt = new Date().toISOString();
+                ~~~~~~~~~
+
+server/supabase-storage.ts:258:10 - error TS2339: Property 'updatedAt' does not exist on type 'Partial<{ customerId: string; orderNumber: string; status?: "completed" | "draft" | "cancelled" | "design_approved" | "design_review" | "design_in_progress" | "in_production" | "pending_production" | "pending_design" | undefined; ... 6 more ...; paymentDate?: Date | ... 1 more ... | undefined; }>'.
+
+258     data.updatedAt = new Date().toISOString();
+             ~~~~~~~~~
+
+server/supabase-storage.ts:391:21 - error TS2339: Property 'createdAt' does not exist on type '{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; designerId?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; }'.
+
+391     if (!designTask.createdAt) {
+                        ~~~~~~~~~
+
+server/supabase-storage.ts:392:18 - error TS2339: Property 'createdAt' does not exist on type '{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; designerId?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; }'.
+
+392       designTask.createdAt = new Date().toISOString();
+                     ~~~~~~~~~
+
+server/supabase-storage.ts:394:21 - error TS2339: Property 'updatedAt' does not exist on type '{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; designerId?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; }'.
+
+394     if (!designTask.updatedAt) {
+                        ~~~~~~~~~
+
+server/supabase-storage.ts:395:18 - error TS2339: Property 'updatedAt' does not exist on type '{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; designerId?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; }'.
+
+395       designTask.updatedAt = new Date().toISOString();
+                     ~~~~~~~~~
+
+server/supabase-storage.ts:413:10 - error TS2339: Property 'updatedAt' does not exist on type 'Partial<{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; designerId?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | unde...'.
+
+413     data.updatedAt = new Date().toISOString();
+             ~~~~~~~~~
+
+server/supabase-storage.ts:456:21 - error TS2339: Property 'createdAt' does not exist on type '{ designTaskId: string; filename: string; fileType: string; filePath: string; uploadedBy: string; }'.
+
+456     if (!designFile.createdAt) {
+                        ~~~~~~~~~
+
+server/supabase-storage.ts:457:18 - error TS2339: Property 'createdAt' does not exist on type '{ designTaskId: string; filename: string; fileType: string; filePath: string; uploadedBy: string; }'.
+
+457       designFile.createdAt = new Date().toISOString();
+                     ~~~~~~~~~
+
+server/supabase-storage.ts:524:25 - error TS2339: Property 'createdAt' does not exist on type '{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; manufacturerId?: string | ... 1 more ... | undefine...'.
+
+524     if (!productionTask.createdAt) {
+                            ~~~~~~~~~
+
+server/supabase-storage.ts:525:22 - error TS2339: Property 'createdAt' does not exist on type '{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; manufacturerId?: string | ... 1 more ... | undefine...'.
+
+525       productionTask.createdAt = new Date().toISOString();
+                         ~~~~~~~~~
+
+server/supabase-storage.ts:527:25 - error TS2339: Property 'updatedAt' does not exist on type '{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; manufacturerId?: string | ... 1 more ... | undefine...'.
+
+527     if (!productionTask.updatedAt) {
+                            ~~~~~~~~~
+
+server/supabase-storage.ts:528:22 - error TS2339: Property 'updatedAt' does not exist on type '{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; manufacturerId?: string | ... 1 more ... | undefine...'.
+
+528       productionTask.updatedAt = new Date().toISOString();
+                         ~~~~~~~~~
+
+server/supabase-storage.ts:546:10 - error TS2339: Property 'updatedAt' does not exist on type 'Partial<{ orderId: string; status?: "completed" | "cancelled" | "pending" | "in_progress" | "rejected" | "submitted" | "approved" | undefined; description?: string | null | undefined; notes?: string | ... 1 more ... | undefined; dueDate?: Date | ... 1 more ... | undefined; manufacturerId?: string | ... 1 more ... | ...'.
+
+546     data.updatedAt = new Date().toISOString();
+             ~~~~~~~~~
+
+server/supabase-storage.ts:615:18 - error TS2339: Property 'createdAt' does not exist on type '{ content: string; senderId: string; receiverId: string; status?: "read" | "sent" | "delivered" | undefined; orderId?: string | null | undefined; designTaskId?: string | null | undefined; subject?: string | ... 1 more ... | undefined; productionTaskId?: string | ... 1 more ... | undefined; }'.
+
+615     if (!message.createdAt) {
+                     ~~~~~~~~~
+
+server/supabase-storage.ts:616:15 - error TS2339: Property 'createdAt' does not exist on type '{ content: string; senderId: string; receiverId: string; status?: "read" | "sent" | "delivered" | undefined; orderId?: string | null | undefined; designTaskId?: string | null | undefined; subject?: string | ... 1 more ... | undefined; productionTaskId?: string | ... 1 more ... | undefined; }'.
+
+616       message.createdAt = new Date().toISOString();
+                  ~~~~~~~~~
+
+server/supabase-storage.ts:689:18 - error TS2339: Property 'createdAt' does not exist on type '{ orderId: string; amount: string; status?: "completed" | "pending" | "processing" | "failed" | "refunded" | undefined; method?: string | null | undefined; notes?: string | null | undefined; transactionId?: string | ... 1 more ... | undefined; stripePaymentId?: string | ... 1 more ... | undefined; stripeClientSecret...'.
+
+689     if (!payment.createdAt) {
+                     ~~~~~~~~~
+
+server/supabase-storage.ts:690:15 - error TS2339: Property 'createdAt' does not exist on type '{ orderId: string; amount: string; status?: "completed" | "pending" | "processing" | "failed" | "refunded" | undefined; method?: string | null | undefined; notes?: string | null | undefined; transactionId?: string | ... 1 more ... | undefined; stripePaymentId?: string | ... 1 more ... | undefined; stripeClientSecret...'.
+
+690       payment.createdAt = new Date().toISOString();
+                  ~~~~~~~~~
+
+server/supabase-storage.ts:692:18 - error TS2339: Property 'updatedAt' does not exist on type '{ orderId: string; amount: string; status?: "completed" | "pending" | "processing" | "failed" | "refunded" | undefined; method?: string | null | undefined; notes?: string | null | undefined; transactionId?: string | ... 1 more ... | undefined; stripePaymentId?: string | ... 1 more ... | undefined; stripeClientSecret...'.
+
+692     if (!payment.updatedAt) {
+                     ~~~~~~~~~
+
+server/supabase-storage.ts:693:15 - error TS2339: Property 'updatedAt' does not exist on type '{ orderId: string; amount: string; status?: "completed" | "pending" | "processing" | "failed" | "refunded" | undefined; method?: string | null | undefined; notes?: string | null | undefined; transactionId?: string | ... 1 more ... | undefined; stripePaymentId?: string | ... 1 more ... | undefined; stripeClientSecret...'.
+
+693       payment.updatedAt = new Date().toISOString();
+                  ~~~~~~~~~
+
+server/supabase-storage.ts:711:10 - error TS2339: Property 'updatedAt' does not exist on type 'Partial<{ orderId: string; amount: string; status?: "completed" | "pending" | "processing" | "failed" | "refunded" | undefined; method?: string | null | undefined; notes?: string | null | undefined; transactionId?: string | ... 1 more ... | undefined; stripePaymentId?: string | ... 1 more ... | undefined; stripeClie...'.
+
+711     data.updatedAt = new Date().toISOString();
+             ~~~~~~~~~
+
+server/supabase-storage.ts:776:16 - error TS2538: Type 'unknown' cannot be used as an index type.
+
+776         counts[status] = (counts[status] || 0) + 1;
+                   ~~~~~~
+
+server/supabase-storage.ts:776:34 - error TS2538: Type 'unknown' cannot be used as an index type.
+
+776         counts[status] = (counts[status] || 0) + 1;
+                                     ~~~~~~
+
+server/supabase-storage.ts:782:5 - error TS2322: Type 'unknown' is not assignable to type '{ status: string; count: number; }[]'.
+
+782     return data;
+        ~~~~~~
+
+server/vite.ts:34:5 - error TS2322: Type '{ middlewareMode: boolean; hmr: { server: Server<typeof IncomingMessage, typeof ServerResponse>; }; allowedHosts: boolean; }' is not assignable to type 'ServerOptions'.
+  Types of property 'allowedHosts' are incompatible.
+    Type 'boolean' is not assignable to type 'true | string[] | undefined'.
+
+34     server: serverOptions,
+       ~~~~~~
+
+
+Found 309 errors in 41 files.
+
+Errors  Files
+     1  client/src/components/auth/RequireAuth.tsx:29
+     1  client/src/components/customer/CustomerLayout.tsx:7
+     1  client/src/components/design/FileUpload.tsx:95
+     4  client/src/components/messaging/MessageCenter.tsx:86
+     2  client/src/components/orders/OrderForm.tsx:154
+     1  client/src/components/ui/error-boundary.tsx:68
+     1  client/src/components/ui/use-toast.tsx:86
+     2  client/src/pages/AdminOversightDashboard.tsx:1
+     1  client/src/pages/DesignTasks.tsx:94
+     1  client/src/pages/Orders.tsx:73
+     7  client/src/pages/Payments.tsx:56
+     5  client/src/pages/Production.tsx:79
+     2  client/src/pages/Register.tsx:41
+    13  client/src/pages/admin/CatalogPage.tsx:374
+     2  client/src/pages/admin/CustomerInvitesPage.tsx:398
+     1  client/src/pages/admin/NewOrderInquiriesPage.tsx:87
+    18  client/src/pages/admin/SettingsPage.tsx:290
+     6  client/src/pages/admin/UserPermissionsPage.tsx:364
+     1  client/src/pages/customer/OrdersPage.tsx:194
+     2  client/src/pages/orders/OrderManagePage.tsx:626
+     1  server/db.ts:67
+    15  server/design.ts:21
+     4  server/imageUpload.ts:42
+     4  server/index.ts:218
+     5  server/messaging.ts:31
+     8  server/middleware/adminAuth.ts:7
+     1  server/middleware/errorHandler.ts:275
+     2  server/middleware/security.ts:15
+     1  server/onboarding.ts:3
+    12  server/routes.ts:464
+     6  server/routes/admin/admin.ts:81
+     1  server/routes/api/customerRoutes.ts:51
+     5  server/routes/api/dataAccessRoutes.ts:34
+     2  server/routes/api/imageRoutes.ts:265
+     2  server/routes/api/invitationRoutes.ts:22
+     8  server/routes/api/productLibrary.ts:60
+     8  server/routes/auth/auth.ts:125
+   116  server/storage.ts:21
+     2  server/supabase-auth.ts:50
+    33  server/supabase-storage.ts:57
+     1  server/vite.ts:34

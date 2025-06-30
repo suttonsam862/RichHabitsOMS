@@ -92,7 +92,7 @@ export function FileUpload({ designTaskId, onSuccess }: FileUploadProps) {
       console.error("Upload error:", error);
       toast({
         title: "Upload Failed",
-        description: error.message || "An error occurred during file upload",
+        description: (error as Error)?.message || "An error occurred during file upload",
         variant: "destructive",
       });
     } finally {

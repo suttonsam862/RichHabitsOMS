@@ -26,7 +26,7 @@ export function RequireAuth({ allowedRoles = [], children }: RequireAuthProps) {
   }
 
   // If roles are specified and user doesn't have permission
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role as any)) {
     // Redirect to the user's appropriate dashboard
     return <Navigate to={`/dashboard/${user.role}`} replace />;
   }
