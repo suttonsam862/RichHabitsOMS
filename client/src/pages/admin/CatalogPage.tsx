@@ -482,7 +482,7 @@ export default function CatalogPage() {
     refetchOnMount: true,
   });
 
-  // Fetch manufacturers
+  // Fetch manufacturers only
   const { data: manufacturersData, isError: manufacturersError, isLoading: manufacturersLoading } = useQuery({
     queryKey: ["admin", "manufacturers"],
     queryFn: async () => {
@@ -491,7 +491,7 @@ export default function CatalogPage() {
         throw new Error("No authentication token");
       }
 
-      const response = await fetch("/api/users?role=manufacturer", {
+      const response = await fetch("/api/users/manufacturers", {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -515,7 +515,7 @@ export default function CatalogPage() {
     refetchOnWindowFocus: false
   });
 
-  // Safe fallback for manufacturers data
+  // Safe fallback for manufacturers data - only manufacturer role users
   const manufacturers = React.useMemo(() => {
     if (manufacturersError) {
       console.warn('Manufacturers data error:', manufacturersError);
@@ -528,11 +528,11 @@ export default function CatalogPage() {
 
     // Handle both array response and object with users property
     if (Array.isArray(manufacturersData)) {
-      return manufacturersData;
+      return manufacturersData.filter(user => user.role === 'manufacturer');
     }
 
     if (manufacturersData.users && Array.isArray(manufacturersData.users)) {
-      return manufacturersData.users;
+      return manufacturersData.users.filter(user => user.role === 'manufacturer');
     }
 
     return [];

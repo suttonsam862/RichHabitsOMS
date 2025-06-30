@@ -140,10 +140,12 @@ app.use((req, res, next) => {
 });
 
 // Import API routes
-import catalogRoutes from './routes/api/catalogRoutes';
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
+import catalogRoutes from './routes/api/catalogRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import imageRoutes from './routes/api/imageRoutes';
+import invitationRoutes from './routes/api/invitationRoutes';
+import userRolesRoutes from './routes/api/userRolesRoutes';
 
 (async () => {
   try {
@@ -162,10 +164,12 @@ import imageRoutes from './routes/api/imageRoutes';
     const server = await registerRoutes(app);
 
     // Register catalog routes
-    app.use('/api/catalog', catalogRoutes);
     app.use('/api/catalog-options', catalogOptionsRoutes);
+    app.use('/api/catalog', catalogRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/images', imageRoutes);
+    app.use('/api/invitations', invitationRoutes);
+    app.use('/api/users', userRolesRoutes);
 
     // Add authentication middleware after routes that don't need auth
     app.use('/api', authenticateRequest);

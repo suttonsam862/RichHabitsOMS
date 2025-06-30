@@ -42,7 +42,10 @@ import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
 import CustomerListPage from "@/pages/admin/CustomerListPage";
 import CustomerDetailsPage from "@/pages/admin/CustomerDetailsPage";
 import CustomerEditPage from "@/pages/admin/CustomerEditPage";
-import SettingsPage from "@/pages/admin/SettingsPage";
+import SettingsPage from './pages/admin/SettingsPage';
+import CatalogPage from './pages/admin/CatalogPage';
+import CustomerListPage from './pages/admin/CustomerListPage';
+import UserPermissionsPage from './pages/admin/UserPermissionsPage';
 import AnalyticsPage from "@/pages/admin/AnalyticsPage";
 import LegalManagementPage from "@/pages/admin/LegalManagementPage";
 import CustomerInvitesPage from "@/pages/admin/CustomerInvitesPage";
@@ -59,14 +62,14 @@ function App() {
             <Routes>
               {/* Redirect from root to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />
-              
+
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/setup-password" element={<SetupPassword />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
               <Route path="/payment-cancel" element={<PaymentCancel />} />
-              
+
               {/* Main dashboard route that redirects to role-specific dashboard */}
               <Route 
                 path="/dashboard" 
@@ -76,7 +79,7 @@ function App() {
                   </RequireAuth>
                 } 
               />
-              
+
               {/* Protected routes with layout */}
               <Route element={<AppLayout />}>
                 {/* Admin routes */}
@@ -88,7 +91,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 {/* Salesperson routes */}
                 <Route 
                   path="/dashboard/salesperson" 
@@ -98,7 +101,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 {/* Designer routes */}
                 <Route 
                   path="/dashboard/designer" 
@@ -108,7 +111,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 {/* Manufacturer routes */}
                 <Route 
                   path="/dashboard/manufacturer" 
@@ -118,7 +121,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 {/* Customer routes */}
                 <Route 
                   path="/dashboard/customer" 
@@ -128,7 +131,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/customer/orders" 
                   element={
@@ -137,7 +140,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/customer/messages" 
                   element={
@@ -146,7 +149,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 {/* Shared routes with role-based access */}
                 <Route 
                   path="/orders" 
@@ -156,7 +159,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/orders/create" 
                   element={
@@ -165,7 +168,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/orders/:id" 
                   element={
@@ -174,7 +177,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/orders/edit/:id" 
                   element={
@@ -183,7 +186,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/messages" 
                   element={
@@ -192,7 +195,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/design-tasks" 
                   element={
@@ -201,7 +204,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/production" 
                   element={
@@ -210,7 +213,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/payments" 
                   element={
@@ -219,7 +222,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/product-library" 
                   element={
@@ -228,7 +231,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/manufacturer-assignment" 
                   element={
@@ -237,9 +240,9 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
-                
-                
+
+
+
                 <Route 
                   path="/admin/catalog" 
                   element={
@@ -248,7 +251,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/admin/customers" 
                   element={
@@ -257,7 +260,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/admin/customers/:customerId" 
                   element={
@@ -266,7 +269,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/admin/customers/edit/:customerId" 
                   element={
@@ -275,7 +278,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/admin/settings" 
                   element={
@@ -284,7 +287,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/settings" 
                   element={
@@ -293,7 +296,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/admin/analytics" 
                   element={
@@ -302,7 +305,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/admin/legal" 
                   element={
@@ -311,7 +314,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/admin/invites" 
                   element={
@@ -320,7 +323,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 <Route 
                   path="/admin/inquiries" 
                   element={
@@ -329,8 +332,9 @@ function App() {
                     </RequireAuth>
                   } 
                 />
+                <Route path="/admin/user-permissions" element={<UserPermissionsPage />} />
               </Route>
-              
+
               {/* Catch-all for 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>

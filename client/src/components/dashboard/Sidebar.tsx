@@ -21,7 +21,8 @@ import {
   FileText,
   PlusCircle,
   Scale,
-  Package
+  Package,
+  Shield
 } from "lucide-react";
 
 // Navigation items for different roles

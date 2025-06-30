@@ -61,10 +61,10 @@ export default function AdminManufacturerAssignment() {
     queryFn: () => apiRequest('GET', '/api/orders?status=design_approved').then(res => res.json()),
   });
 
-  // Fetch manufacturers
+  // Fetch manufacturers only
   const { data: manufacturersData, isLoading: isLoadingManufacturers } = useQuery({
-    queryKey: ['/api/users', 'manufacturer'],
-    queryFn: () => apiRequest('GET', '/api/users?role=manufacturer').then(res => res.json()),
+    queryKey: ['/api/users', 'manufacturers'],
+    queryFn: () => apiRequest('GET', '/api/users/manufacturers').then(res => res.json()),
   });
 
   // Safely extract manufacturers array
