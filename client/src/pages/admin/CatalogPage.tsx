@@ -990,15 +990,20 @@ function CatalogPageContent() {
         return;
       }
 
-      // Validate measurement requirements
-      if (data.hasMeasurements && !data.measurementInstructions?.trim() && !data.measurementChartUrl?.trim()) {
+      // Validate measurement requirements only if measurements are required
+      if (data.hasMeasurements) {
         const fileInput = document.getElementById('measurement-chart-upload') as HTMLInputElement;
         const selectedMeasurementFile = (fileInput as any)?.selectedMeasurementFile;
+        
+        // Allow if there's either instructions, a URL, or an uploaded file
+        const hasInstructions = data.measurementInstructions?.trim();
+        const hasChartUrl = data.measurementChartUrl?.trim();
+        const hasUploadedFile = selectedMeasurementFile;
 
-        if (!selectedMeasurementFile) {
+        if (!hasInstructions && !hasChartUrl && !hasUploadedFile) {
           toast({
             title: "Missing Measurement Info",
-            description: "Items requiring measurements must have either instructions or a measurement chart",
+            description: "Items requiring measurements must have either instructions or a measurement chart image",
             variant: "destructive",
           });
           return;
@@ -1014,7 +1019,8 @@ function CatalogPageContent() {
         measurementInstructions: data.measurementInstructions?.trim() || '',
         name: data.name.trim(),
         sku: data.sku.trim().toUpperCase(),
-        etaDays: data.etaDays.trim()
+        etaDays: data.etaDays.trim(),
+        hasMeasurements: Boolean(data.hasMeasurements) // Ensure it's a proper boolean
       };
 
       // Check if we're editing an existing item
@@ -1469,10 +1475,9 @@ function CatalogPageContent() {
                             </FormDescription>
                           </div>
                           <FormControl>
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={field.value}
-                              onChange={field.onChange}
+                              onCheckedChange={field.onChange}
                               className="accent-neon-blue"
                             />
                           </FormControl>

@@ -169,13 +169,9 @@ export async function createCatalogItem(req: Request, res: Response) {
       });
     }
 
-    // Validate measurement requirements - only if hasMeasurements is explicitly true
-    if (hasMeasurements === true && !measurementInstructions?.trim() && !measurementChartUrl?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Items requiring measurements must have either instructions or measurement chart URL'
-      });
-    }
+    // For items requiring measurements, we'll allow the validation to pass here
+    // and handle measurement chart uploads separately after item creation
+    // This allows for file uploads which are processed after the item is created
 
     const newItem = {
       name: name.trim(),
