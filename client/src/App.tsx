@@ -2,55 +2,55 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "./components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/context/AuthContext";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { RequireAuth } from "@/components/auth/RequireAuth";
-import { MainDashboardRouter } from "@/components/auth/MainDashboardRouter";
+import { TooltipProvider } from "./components/ui/tooltip";
+import { AuthProvider } from "./context/AuthContext";
+import { AppLayout } from "./components/layout/AppLayout";
+import { RequireAuth } from "./components/auth/RequireAuth";
+import { MainDashboardRouter } from "./components/auth/MainDashboardRouter";
 
 // Dashboard components
-import AdminDashboard from "@/pages/dashboard/AdminDashboard";
-import SalespersonDashboard from "@/pages/dashboard/SalespersonDashboard";
-import DesignerDashboard from "@/pages/dashboard/DesignerDashboard";
-import ManufacturerDashboard from "@/pages/dashboard/ManufacturerDashboard";
-import CustomerDashboard from "@/pages/dashboard/CustomerDashboard";
+import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import SalespersonDashboard from "./pages/dashboard/SalespersonDashboard";
+import DesignerDashboard from "./pages/dashboard/DesignerDashboard";
+import ManufacturerDashboard from "./pages/dashboard/ManufacturerDashboard";
+import CustomerDashboard from "./pages/dashboard/CustomerDashboard";
 
 // Customer pages
-import CustomerOrdersPage from "@/pages/customer/OrdersPage";
-import CustomerMessagesPage from "@/pages/customer/MessagesPage";
+import CustomerOrdersPage from "./pages/customer/OrdersPage";
+import CustomerMessagesPage from "./pages/customer/MessagesPage";
 
 // Other pages
-import { NotFound } from "@/pages/not-found";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import SetupPassword from "@/pages/SetupPassword";
-import Orders from "@/pages/Orders";
-import OrderDetail from "@/pages/OrderDetail";
-import OrderEditor from "@/pages/OrderEditor";
-import OrderCreatePage from "@/pages/orders/OrderCreatePage";
-import OrderManagePage from "@/pages/orders/OrderManagePage";
-import OrdersHub from "@/pages/OrdersHub";
-import DesignTasks from "@/pages/DesignTasks";
-import Messages from "@/pages/Messages";
-import Production from "@/pages/Production";
-import Payments from "@/pages/Payments";
-import PaymentSuccess from "@/pages/PaymentSuccess";
-import PaymentCancel from "@/pages/PaymentCancel";
-import AdminManufacturerAssignment from "@/pages/AdminManufacturerAssignment";
+import { NotFound } from "./pages/not-found";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import SetupPassword from "./pages/SetupPassword";
+import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
+import OrderEditor from "./pages/OrderEditor";
+import OrderCreatePage from "./pages/orders/OrderCreatePage";
+import OrderManagePage from "./pages/orders/OrderManagePage";
+import OrdersHub from "./pages/OrdersHub";
+import DesignTasks from "./pages/DesignTasks";
+import Messages from "./pages/Messages";
+import Production from "./pages/Production";
+import Payments from "./pages/Payments";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
+import AdminManufacturerAssignment from "./pages/AdminManufacturerAssignment";
 
 // CustomerList is already imported via CustomerListPage
-import CustomerListPage from "@/pages/admin/CustomerListPage";
-import CustomerDetailsPage from "@/pages/admin/CustomerDetailsPage";
-import CustomerEditPage from "@/pages/admin/CustomerEditPage";
+import CustomerListPage from "./pages/admin/CustomerListPage";
+import CustomerDetailsPage from "./pages/admin/CustomerDetailsPage";
+import CustomerEditPage from "./pages/admin/CustomerEditPage";
 import SettingsPage from './pages/admin/SettingsPage';
 import UserPermissionsPage from './pages/admin/UserPermissionsPage';
 import CustomPermissionsBuilder from './pages/admin/CustomPermissionsBuilder';
 import CatalogPage from './pages/admin/CatalogPage';
-import AnalyticsPage from "@/pages/admin/AnalyticsPage";
-import LegalManagementPage from "@/pages/admin/LegalManagementPage";
-import CustomerInvitesPage from "@/pages/admin/CustomerInvitesPage";
-import NewOrderInquiriesPage from "@/pages/admin/NewOrderInquiriesPage";
-import ProductLibrary from "@/pages/ProductLibrary";
+import AnalyticsPage from "./pages/admin/AnalyticsPage";
+import LegalManagementPage from "./pages/admin/LegalManagementPage";
+import CustomerInvitesPage from "./pages/admin/CustomerInvitesPage";
+import NewOrderInquiriesPage from "./pages/admin/NewOrderInquiriesPage";
+import ProductLibrary from "./pages/ProductLibrary";
 
 function App() {
   return (

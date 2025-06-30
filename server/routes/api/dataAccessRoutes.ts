@@ -1,7 +1,4 @@
 
-<file_path>server/routes/api/dataAccessRoutes.ts</file_path>
-<line_number>1</line_number>
-
 import { Request, Response, Router } from 'express';
 import { supabase } from '../../db';
 import { requireAuth, requireRole } from '../auth/auth';
