@@ -460,8 +460,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (linkError) {
             console.error('Error generating recovery link:', linkError);
-          } else if (linkData?.properties && linkData.properties.action_link) {
-            inviteUrl = linkData.properties.action_link;
+          } else if (linkData?.properties?.action_link) {
+            inviteUrl = (linkData.properties as any).action_link;
           }
         } catch (linkErr) {
           console.error('Failed to generate invite link:', linkErr);
@@ -500,8 +500,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: shouldSendInvite 
           ? 'Customer created and invite will be sent' 
           : 'Customer created successfully',
-        customer: createdProfile ? createdProfile[0] : { 
-          id: data.user.id,
+        customer: (createdProfile && createdProfile[0]) ? createdProfile[0] : { 
+          id: data.user?.id || '',
           email: customerEmail,
           first_name: customerFirstName,
           last_name: customerLastName
