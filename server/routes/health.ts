@@ -48,4 +48,13 @@ router.get('/ready', async (req: Request, res: Response) => {
   }
 });
 
+// Root health check for deployment
+router.get('/', (req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    message: 'ThreadCraft API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
 export default router;

@@ -1,0 +1,35 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ThreadCraft</title>
+    <script type="module" crossorigin src="/assets/index.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index.css">
+  </head>
+  <body>
+    <div id="root">
+      <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
+        <h1>ThreadCraft Loading...</h1>
+        <p>If this message persists, there may be a JavaScript error. Check the browser console.</p>
+      </div>
+    </div>
+    <script>
+      // Basic error handling for deployment debugging
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.error);
+        document.getElementById('root').innerHTML = 
+          '<div style="padding: 20px; color: red; font-family: Arial, sans-serif;">' +
+          '<h2>Application Error</h2>' +
+          '<p>Error: ' + e.message + '</p>' +
+          '<p>Check browser console for details</p>' +
+          '</div>';
+      });
+      
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled promise rejection:', e.reason);
+      });
+    </script>
+  </body>
+</html>

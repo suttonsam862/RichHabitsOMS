@@ -296,7 +296,7 @@ import healthRoutes from './routes/health';
     app.use(globalErrorHandler);
 
     // Static file serving and client-side routing should come AFTER all API routes
-    if (app.get("env") === "development") {
+    if (process.env.NODE_ENV === "development") {
       await setupVite(app, server);
     } else {
       serveStatic(app);
