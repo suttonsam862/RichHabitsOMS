@@ -1,24 +1,33 @@
 import { Request, Response, Router } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs/promises';
-import { v4 as uuidv4 } from 'uuid';
-import { db } from '../../db';
-import { activityLogs } from '../../../shared/schema';
-import { supabase } from '../../db';
-import { 
-  handleCatalogImageUpload, 
-  handleOrderItemImageUpload, 
-  getImageUrl, 
-  deleteImageFile, 
-  extractFilenameFromUrl 
-} from '../../imageUpload';
 import { requireAuth, requireRole } from '../auth/auth';
+import { supabase } from '../../db';
+import { supabaseImageStorage } from '../../supabaseImageStorage';
+import multer from 'multer';
 
 const router = Router();
 
+// Memory storage for processing with Supabase
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|webp/;
+    const extname = allowedTypes.test(file.originalname.toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPEG, PNG, WebP) are allowed'));
+    }
+  }
+});
+
 // Upload image for catalog item
-router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'designer']), handleCatalogImageUpload, async (req: Request, res: Response) => {
+router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'designer']), upload.single('image'), async (req: Request, res: Response) => {
   try {
     const { catalogItemId } = req.params;
 
@@ -29,13 +38,30 @@ router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'desig
       });
     }
 
+    // Upload image to Supabase Storage
+    const { data, error: uploadError } = await supabase
+      .storage
+      .from('catalog-images')
+      .upload(`${catalogItemId}/${req.file.originalname}`, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image to Supabase'
+      });
+    }
+
     // Generate image URL
-    const imageUrl = getImageUrl(req.file.filename, 'catalog');
+    const imageUrl = supabase.storage.from('catalog-images').getPublicUrl(data.path).data.publicUrl;
 
     // Update catalog item with new image URL
     const { data: updatedItem, error } = await supabase
       .from('catalog_items')
-      .update({ 
+      .update({
         base_image_url: imageUrl,
         updated_at: new Date().toISOString()
       })
@@ -44,11 +70,10 @@ router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'desig
       .single();
 
     if (error) {
-      // Clean up uploaded file if database update fails
-      deleteImageFile(req.file.filename, 'catalog');
+      console.error('Supabase update error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to update catalog item with image'
+        message: 'Failed to update catalog item with image URL'
       });
     }
 
@@ -58,7 +83,7 @@ router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'desig
       data: {
         catalogItem: updatedItem,
         imageUrl: imageUrl,
-        filename: req.file.filename
+        filename: req.file.originalname
       }
     });
 
@@ -72,7 +97,7 @@ router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'desig
 });
 
 // Upload measurement chart for catalog item
-router.post('/catalog/:catalogItemId/measurement', requireAuth, requireRole(['admin', 'designer']), handleCatalogImageUpload, async (req: Request, res: Response) => {
+router.post('/catalog/:catalogItemId/measurement', requireAuth, requireRole(['admin', 'designer']), upload.single('image'), async (req: Request, res: Response) => {
   try {
     const { catalogItemId } = req.params;
 
@@ -83,13 +108,30 @@ router.post('/catalog/:catalogItemId/measurement', requireAuth, requireRole(['ad
       });
     }
 
+    // Upload image to Supabase Storage
+    const { data, error: uploadError } = await supabase
+      .storage
+      .from('measurement-charts')
+      .upload(`${catalogItemId}/${req.file.originalname}`, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload measurement chart to Supabase'
+      });
+    }
+
     // Generate image URL
-    const imageUrl = getImageUrl(req.file.filename, 'catalog');
+    const imageUrl = supabase.storage.from('measurement-charts').getPublicUrl(data.path).data.publicUrl;
 
     // Update catalog item with new measurement chart URL
     const { data: updatedItem, error } = await supabase
       .from('catalog_items')
-      .update({ 
+      .update({
         measurement_chart_url: imageUrl,
         updated_at: new Date().toISOString()
       })
@@ -98,11 +140,10 @@ router.post('/catalog/:catalogItemId/measurement', requireAuth, requireRole(['ad
       .single();
 
     if (error) {
-      // Clean up uploaded file if database update fails
-      deleteImageFile(req.file.filename, 'catalog');
+      console.error('Supabase update error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to update catalog item with measurement chart'
+        message: 'Failed to update catalog item with measurement chart URL'
       });
     }
 
@@ -112,7 +153,7 @@ router.post('/catalog/:catalogItemId/measurement', requireAuth, requireRole(['ad
       data: {
         catalogItem: updatedItem,
         imageUrl: imageUrl,
-        filename: req.file.filename
+        filename: req.file.originalname
       }
     });
   } catch (error) {
@@ -125,7 +166,7 @@ router.post('/catalog/:catalogItemId/measurement', requireAuth, requireRole(['ad
 });
 
 // Upload custom image for order item
-router.post('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'salesperson', 'designer']), handleOrderItemImageUpload, async (req: Request, res: Response) => {
+router.post('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'salesperson', 'designer']), upload.single('image'), async (req: Request, res: Response) => {
   try {
     const { orderItemId } = req.params;
 
@@ -136,13 +177,30 @@ router.post('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sale
       });
     }
 
+    // Upload image to Supabase Storage
+    const { data, error: uploadError } = await supabase
+      .storage
+      .from('order-item-images')
+      .upload(`${orderItemId}/${req.file.originalname}`, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image to Supabase'
+      });
+    }
+
     // Generate image URL
-    const imageUrl = getImageUrl(req.file.filename, 'order-item');
+    const imageUrl = supabase.storage.from('order-item-images').getPublicUrl(data.path).data.publicUrl;
 
     // Update order item with custom image URL
     const { data: updatedItem, error } = await supabase
       .from('order_items')
-      .update({ 
+      .update({
         custom_image_url: imageUrl
       })
       .eq('id', orderItemId)
@@ -150,11 +208,10 @@ router.post('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sale
       .single();
 
     if (error) {
-      // Clean up uploaded file if database update fails
-      deleteImageFile(req.file.filename, 'order-item');
+      console.error('Supabase update error:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to update order item with custom image'
+        message: 'Failed to update order item with custom image URL'
       });
     }
 
@@ -164,21 +221,15 @@ router.post('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sale
       data: {
         orderItem: updatedItem,
         imageUrl: imageUrl,
-        filename: req.file.filename
+        filename: req.file.originalname
       }
     });
 
   } catch (error) {
     console.error('Error uploading order item image:', error);
-
-    // Clean up uploaded file on error
-    if (req.file) {
-      deleteImageFile(req.file.filename, 'order-item');
-    }
-
     return res.status(500).json({
       success: false,
-      message: 'Internal server error during image upload'
+      message: 'Failed to upload image'
     });
   }
 });
@@ -209,25 +260,40 @@ router.delete('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'des
       });
     }
 
-    // Extract filename from URL and delete file
-    const filename = extractFilenameFromUrl(catalogItem.base_image_url as string);
-    if (filename) {
-      deleteImageFile(filename, 'catalog');
+    // Extract filename from URL (Supabase version)
+    const imageUrl = catalogItem.base_image_url;
+    const pathParts = imageUrl.split('/');
+    const bucketName = pathParts[4];
+    const imagePath = `${pathParts[5]}/${pathParts[6]}`;
+
+    // Delete file from Supabase storage
+     const { error: deleteError } = await supabase
+      .storage
+      .from('catalog-images')
+      .remove([`${catalogItemId}/${imagePath.split('/').pop()}`]);
+
+    if (deleteError) {
+      console.error('Supabase delete error:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete image from Supabase'
+      });
     }
 
     // Update catalog item to remove image URL
     const { error: updateError } = await supabase
       .from('catalog_items')
-      .update({ 
+      .update({
         base_image_url: null,
         updated_at: new Date().toISOString()
       })
       .eq('id', catalogItemId);
 
     if (updateError) {
+      console.error('Supabase update error:', updateError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to remove image from catalog item'
+        message: 'Failed to remove image URL from catalog item'
       });
     }
 
@@ -271,10 +337,24 @@ router.delete('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sa
       });
     }
 
-    // Extract filename from URL and delete file
-    const filename = extractFilenameFromUrl(orderItem.custom_image_url as string);
-    if (filename) {
-      deleteImageFile(filename, 'order-item');
+        // Extract filename from URL (Supabase version)
+    const imageUrl = orderItem.custom_image_url;
+    const pathParts = imageUrl.split('/');
+    const bucketName = pathParts[4];
+    const imagePath = `${pathParts[5]}/${pathParts[6]}`;
+
+    // Delete file from Supabase storage
+     const { error: deleteError } = await supabase
+      .storage
+      .from('order-item-images')
+      .remove([`${orderItemId}/${imagePath.split('/').pop()}`]);
+
+    if (deleteError) {
+      console.error('Supabase delete error:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete image from Supabase'
+      });
     }
 
     // Update order item to remove custom image URL
@@ -284,9 +364,10 @@ router.delete('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sa
       .eq('id', orderItemId);
 
     if (updateError) {
+      console.error('Supabase update error:', updateError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to remove custom image from order item'
+        message: 'Failed to remove custom image URL from order item'
       });
     }
 

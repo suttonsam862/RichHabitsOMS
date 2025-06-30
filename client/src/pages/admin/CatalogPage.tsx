@@ -648,7 +648,7 @@ function CatalogPageContent() {
 
       toast({
         title: "Success",
-        description: "Catalog item added successfully",
+        description: "Catalog item and images uploaded successfully",
       });
     },
     onError: (error) => {
@@ -1683,17 +1683,20 @@ function CatalogPageContent() {
                 {/* Product Image */}
                 <div className="space-y-2">
                   <h3 className="text-sm font-medium text-muted-foreground">Product Image</h3>
-                  {selectedItem.imageUrl ? (
+                  {(selectedItem.imageUrl || selectedItem.base_image_url) ? (
                     <img 
-                      src={selectedItem.imageUrl} 
+                      src={selectedItem.imageUrl || selectedItem.base_image_url} 
                       alt={selectedItem.name}
                       className="w-full h-48 object-cover rounded-lg border border-glass-border"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
                     />
-                  ) : (
-                    <div className="w-full h-48 glass-panel flex items-center justify-center rounded-lg">
-                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                  )}
+                  ) : null}
+                  <div className={`w-full h-48 glass-panel flex items-center justify-center rounded-lg ${(selectedItem.imageUrl || selectedItem.base_image_url) ? 'hidden' : ''}`}>
+                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                  </div>
                 </div>
 
                 {/* Basic Info */}
@@ -2059,17 +2062,20 @@ function CatalogPageContent() {
                     <TableRow key={item.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
-                          {item.imageUrl ? (
+                          {(item.imageUrl || item.base_image_url) ? (
                             <img 
-                              src={item.imageUrl} 
+                              src={item.imageUrl || item.base_image_url} 
                               alt={item.name}
-                              className="w-10 h-10 object-cover border border-glass-border"
+                              className="w-10 h-10 object-cover rounded border border-glass-border"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
                             />
-                          ) : (
-                            <div className="w-10 h-10 glass-panel flex items-center justify-center">
-                              <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                          )}
+                          ) : null}
+                          <div className={`w-10 h-10 glass-panel flex items-center justify-center rounded ${(item.imageUrl || item.base_image_url) ? 'hidden' : ''}`}>
+                            <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                          </div>
                           <div>
                             <div className="font-medium text-foreground">{item.name}</div>
                             <div className="text-xs text-muted-foreground">
