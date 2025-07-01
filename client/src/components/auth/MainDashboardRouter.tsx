@@ -9,11 +9,19 @@ import { useAuth } from "@/hooks/use-auth";
 export const MainDashboardRouter = () => {
   const { user, role, loading } = useAuth();
 
-  // Decide which dashboard to show based on user role
+  // Decide which dashboard to show based on user role with improved loading UX
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <div className="animate-spin w-12 h-12 border-4 border-[#00d1ff] border-t-transparent rounded-full"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#00d1ff]/20 to-[#00ff9f]/20 blur-md"></div>
+          </div>
+          <div className="text-white/70 text-sm font-medium">
+            Loading dashboard...
+          </div>
+        </div>
       </div>
     );
   }

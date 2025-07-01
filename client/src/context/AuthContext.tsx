@@ -42,48 +42,100 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  // Removed wouter dependency
+  const [initialized, setInitialized] = useState(false);
 
-  // Check if user is already authenticated
+  // Check if user is already authenticated with improved error handling
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
+        setLoading(true);
+        
         // Check for stored token in localStorage
         const storedToken = localStorage.getItem('authToken');
+        const storedRole = localStorage.getItem('userRole');
+        const storedUserId = localStorage.getItem('userId');
 
         if (!storedToken) {
           console.log('No auth token found in localStorage');
           setUser(null);
           setLoading(false);
+          setInitialized(true);
           return;
         }
 
-        // The server handles token validation with Supabase Auth
-        const res = await fetch("/api/auth/me", {
-          headers: {
-            Authorization: `Bearer ${storedToken}`
-          },
-          credentials: 'include'
-        });
-
-        if (!res.ok) {
-          console.log('Auth validation failed, clearing session');
+        // Validate token expiration
+        const tokenExpires = localStorage.getItem('tokenExpires');
+        if (tokenExpires && new Date(tokenExpires) < new Date()) {
+          console.log('Token expired, clearing session');
           localStorage.removeItem('authToken');
           localStorage.removeItem('tokenExpires');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userId');
           setUser(null);
           setLoading(false);
+          setInitialized(true);
           return;
         }
 
-        const userData = await res.json();
-        if (userData && userData.success && userData.user) {
-          console.log('User session validated successfully');
-          console.log('Already authenticated as:', userData.user.role);
-          setUser(userData.user);
-        } else {
-          console.log('Invalid user data received');
+        // Add timeout to prevent hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+        try {
+          // The server handles token validation with Supabase Auth
+          const res = await fetch("/api/auth/me", {
+            headers: {
+              Authorization: `Bearer ${storedToken}`
+            },
+            credentials: 'include',
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+            console.log('Auth validation failed, clearing session');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('tokenExpires');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            setUser(null);
+            setLoading(false);
+            setInitialized(true);
+            return;
+          }
+
+          const userData = await res.json();
+          if (userData && userData.success && userData.user) {
+            console.log('User session validated successfully');
+            console.log('Already authenticated as:', userData.user.role);
+            setUser(userData.user);
+            
+            // Update localStorage with fresh data
+            localStorage.setItem('userRole', userData.user.role);
+            localStorage.setItem('userId', userData.user.id.toString());
+          } else {
+            console.log('Invalid user data received');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('tokenExpires');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            setUser(null);
+          }
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          
+          if (fetchError.name === 'AbortError') {
+            console.log('Auth check timed out, clearing session');
+          } else {
+            console.error('Auth fetch error:', fetchError);
+          }
+          
+          // Clear potentially invalid tokens
           localStorage.removeItem('authToken');
           localStorage.removeItem('tokenExpires');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userId');
           setUser(null);
         }
       } catch (error) {
@@ -96,11 +148,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUser(null);
       } finally {
         setLoading(false);
+        setInitialized(true);
       }
     };
 
-    checkAuthStatus();
-  }, []);
+    // Only run once on mount
+    if (!initialized) {
+      checkAuthStatus();
+    }
+  }, [initialized]);
 
   // Login function
   const login = async (email: string, password: string) => {
@@ -252,11 +308,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  // Show loading spinner while checking auth state
-  if (loading) {
+  // Show loading spinner while checking auth state with improved UX
+  if (loading || !initialized) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <div className="flex flex-col items-center space-y-6">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#00d1ff]"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#00d1ff]/20 to-[#00ff9f]/20 blur-md"></div>
+          </div>
+          <div className="text-white/70 text-lg font-medium">
+            Verifying authentication...
+          </div>
+        </div>
       </div>
     );
   }
