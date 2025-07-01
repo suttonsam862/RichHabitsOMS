@@ -157,6 +157,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       // Store token in localStorage for future auth checks
       localStorage.setItem('authToken', data.session.token);
+      localStorage.setItem('userRole', data.user.role);
+      localStorage.setItem('userId', data.user.id.toString());
       if (data.session.expiresAt) {
         localStorage.setItem('tokenExpires', data.session.expiresAt.toString());
       }
@@ -197,8 +199,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await apiRequest("POST", "/api/auth/logout");
       setUser(null);
-      // Clear any cached data in localStorage
-      localStorage.clear();
+      // Clear authentication data from localStorage
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('tokenExpires');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
       // Redirect to login page
       window.location.href = "/login";
     } catch (error) {

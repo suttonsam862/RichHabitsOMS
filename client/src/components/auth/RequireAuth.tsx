@@ -20,13 +20,19 @@ export function RequireAuth({ allowedRoles = [], children }: RequireAuthProps) {
     );
   }
 
-  // If not authenticated, redirect to login
+  // If not authenticated, redirect to login but preserve the intended destination
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // If roles are specified and user doesn't have permission
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role as any)) {
+    // Check for custom roles
+    if (user.customRole && allowedRoles.includes(user.customRole as any)) {
+      // Custom role has access, allow through
+      return <>{children}</>;
+    }
+    
     // Redirect to the user's appropriate dashboard
     return <Navigate to={`/dashboard/${user.role}`} replace />;
   }
