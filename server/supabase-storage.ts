@@ -11,17 +11,17 @@ import type {
   Payment, InsertPayment
 } from "../shared/schema";
 import { IStorage } from './storage';
-import { hash, compare } from 'bcrypt';
 
 /**
  * Supabase implementation of storage interface
  * This uses the Supabase JS SDK to communicate over HTTPS instead of direct PostgreSQL connections
+ * All IDs are UUIDs (strings) as per the database schema
  */
 export class SupabaseStorage implements IStorage {
   // User methods
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     const { data, error } = await supabase
-      .from('users')
+      .from('user_profiles')
       .select('*')
       .eq('id', id)
       .single();
@@ -31,19 +31,15 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-    
-    if (error || !data) return undefined;
-    return data as User;
+    // Note: user_profiles table doesn't contain email field in our schema
+    // This method is not applicable to current schema structure
+    console.warn('getUserByEmail called but user_profiles table does not contain email field');
+    return undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const { data, error } = await supabase
-      .from('users')
+      .from('user_profiles')
       .select('*')
       .eq('username', username)
       .single();
@@ -53,13 +49,8 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createUser(userData: InsertUser): Promise<User> {
-    // Hash password if provided
-    if (userData.password) {
-      userData.password = await hash(userData.password, 10);
-    }
-
     const { data, error } = await supabase
-      .from('users')
+      .from('user_profiles')
       .insert(userData)
       .select()
       .single();
@@ -71,14 +62,9 @@ export class SupabaseStorage implements IStorage {
     return data as User;
   }
 
-  async updateUser(id: number, data: Partial<InsertUser>): Promise<User> {
-    // Hash password if it's being updated
-    if (data.password) {
-      data.password = await hash(data.password, 10);
-    }
-
+  async updateUser(id: string, data: Partial<InsertUser>): Promise<User> {
     const { data: updatedUser, error } = await supabase
-      .from('users')
+      .from('user_profiles')
       .update(data)
       .eq('id', id)
       .select()
@@ -93,7 +79,7 @@ export class SupabaseStorage implements IStorage {
 
   async getUsersByRole(role: string): Promise<User[]> {
     const { data, error } = await supabase
-      .from('users')
+      .from('user_profiles')
       .select('*')
       .eq('role', role);
     
@@ -105,7 +91,7 @@ export class SupabaseStorage implements IStorage {
   }
   
   // Customer methods
-  async getCustomer(id: number): Promise<Customer | undefined> {
+  async getCustomer(id: string): Promise<Customer | undefined> {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
@@ -116,7 +102,7 @@ export class SupabaseStorage implements IStorage {
     return data as Customer;
   }
 
-  async getCustomerByUserId(userId: number): Promise<Customer | undefined> {
+  async getCustomerByUserId(userId: string): Promise<Customer | undefined> {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
@@ -141,7 +127,7 @@ export class SupabaseStorage implements IStorage {
     return data as Customer;
   }
 
-  async updateCustomer(id: number, data: Partial<InsertCustomer>): Promise<Customer> {
+  async updateCustomer(id: string, data: Partial<InsertCustomer>): Promise<Customer> {
     const { data: updatedCustomer, error } = await supabase
       .from('customers')
       .update(data)
@@ -157,7 +143,7 @@ export class SupabaseStorage implements IStorage {
   }
   
   // Order methods
-  async getOrder(id: number): Promise<Order | undefined> {
+  async getOrder(id: string): Promise<Order | undefined> {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -179,7 +165,7 @@ export class SupabaseStorage implements IStorage {
     return data as Order;
   }
 
-  async getOrdersByCustomerId(customerId: number): Promise<Order[]> {
+  async getOrdersByCustomerId(customerId: string): Promise<Order[]> {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -192,7 +178,7 @@ export class SupabaseStorage implements IStorage {
     return (data || []) as Order[];
   }
 
-  async getOrdersBySalespersonId(salespersonId: number): Promise<Order[]> {
+  async getOrdersBySalespersonId(salespersonId: string): Promise<Order[]> {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -232,14 +218,6 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
-    // Set timestamps if not provided
-    if (!order.createdAt) {
-      order.createdAt = new Date().toISOString();
-    }
-    if (!order.updatedAt) {
-      order.updatedAt = new Date().toISOString();
-    }
-
     const { data, error } = await supabase
       .from('orders')
       .insert(order)
@@ -253,10 +231,7 @@ export class SupabaseStorage implements IStorage {
     return data as Order;
   }
 
-  async updateOrder(id: number, data: Partial<InsertOrder>): Promise<Order> {
-    // Always update the updatedAt timestamp
-    data.updatedAt = new Date().toISOString();
-
+  async updateOrder(id: string, data: Partial<InsertOrder>): Promise<Order> {
     const { data: updatedOrder, error } = await supabase
       .from('orders')
       .update(data)
@@ -272,7 +247,7 @@ export class SupabaseStorage implements IStorage {
   }
   
   // Order items methods
-  async getOrderItem(id: number): Promise<OrderItem | undefined> {
+  async getOrderItem(id: string): Promise<OrderItem | undefined> {
     const { data, error } = await supabase
       .from('order_items')
       .select('*')
@@ -283,7 +258,7 @@ export class SupabaseStorage implements IStorage {
     return data as OrderItem;
   }
 
-  async getOrderItemsByOrderId(orderId: number): Promise<OrderItem[]> {
+  async getOrderItemsByOrderId(orderId: string): Promise<OrderItem[]> {
     const { data, error } = await supabase
       .from('order_items')
       .select('*')
@@ -310,7 +285,7 @@ export class SupabaseStorage implements IStorage {
     return data as OrderItem;
   }
 
-  async updateOrderItem(id: number, data: Partial<InsertOrderItem>): Promise<OrderItem> {
+  async updateOrderItem(id: string, data: Partial<InsertOrderItem>): Promise<OrderItem> {
     const { data: updatedItem, error } = await supabase
       .from('order_items')
       .update(data)
@@ -325,7 +300,7 @@ export class SupabaseStorage implements IStorage {
     return updatedItem as OrderItem;
   }
 
-  async deleteOrderItem(id: number): Promise<void> {
+  async deleteOrderItem(id: string): Promise<void> {
     const { error } = await supabase
       .from('order_items')
       .delete()
@@ -337,7 +312,7 @@ export class SupabaseStorage implements IStorage {
   }
   
   // Design tasks methods
-  async getDesignTask(id: number): Promise<DesignTask | undefined> {
+  async getDesignTask(id: string): Promise<DesignTask | undefined> {
     const { data, error } = await supabase
       .from('design_tasks')
       .select('*')
@@ -348,7 +323,7 @@ export class SupabaseStorage implements IStorage {
     return data as DesignTask;
   }
 
-  async getDesignTasksByOrderId(orderId: number): Promise<DesignTask[]> {
+  async getDesignTasksByOrderId(orderId: string): Promise<DesignTask[]> {
     const { data, error } = await supabase
       .from('design_tasks')
       .select('*')
@@ -361,7 +336,7 @@ export class SupabaseStorage implements IStorage {
     return (data || []) as DesignTask[];
   }
 
-  async getDesignTasksByDesignerId(designerId: number): Promise<DesignTask[]> {
+  async getDesignTasksByDesignerId(designerId: string): Promise<DesignTask[]> {
     const { data, error } = await supabase
       .from('design_tasks')
       .select('*')
@@ -387,14 +362,6 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createDesignTask(designTask: InsertDesignTask): Promise<DesignTask> {
-    // Set timestamps if not provided
-    if (!designTask.createdAt) {
-      designTask.createdAt = new Date().toISOString();
-    }
-    if (!designTask.updatedAt) {
-      designTask.updatedAt = new Date().toISOString();
-    }
-
     const { data, error } = await supabase
       .from('design_tasks')
       .insert(designTask)
@@ -408,10 +375,7 @@ export class SupabaseStorage implements IStorage {
     return data as DesignTask;
   }
 
-  async updateDesignTask(id: number, data: Partial<InsertDesignTask>): Promise<DesignTask> {
-    // Always update the updatedAt timestamp
-    data.updatedAt = new Date().toISOString();
-
+  async updateDesignTask(id: string, data: Partial<InsertDesignTask>): Promise<DesignTask> {
     const { data: updatedTask, error } = await supabase
       .from('design_tasks')
       .update(data)
@@ -427,7 +391,7 @@ export class SupabaseStorage implements IStorage {
   }
   
   // Design files methods
-  async getDesignFile(id: number): Promise<DesignFile | undefined> {
+  async getDesignFile(id: string): Promise<DesignFile | undefined> {
     const { data, error } = await supabase
       .from('design_files')
       .select('*')
@@ -438,7 +402,7 @@ export class SupabaseStorage implements IStorage {
     return data as DesignFile;
   }
 
-  async getDesignFilesByTaskId(designTaskId: number): Promise<DesignFile[]> {
+  async getDesignFilesByTaskId(designTaskId: string): Promise<DesignFile[]> {
     const { data, error } = await supabase
       .from('design_files')
       .select('*')
@@ -452,11 +416,6 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createDesignFile(designFile: InsertDesignFile): Promise<DesignFile> {
-    // Set timestamp if not provided
-    if (!designFile.createdAt) {
-      designFile.createdAt = new Date().toISOString();
-    }
-
     const { data, error } = await supabase
       .from('design_files')
       .insert(designFile)
@@ -470,7 +429,7 @@ export class SupabaseStorage implements IStorage {
     return data as DesignFile;
   }
 
-  async deleteDesignFile(id: number): Promise<void> {
+  async deleteDesignFile(id: string): Promise<void> {
     const { error } = await supabase
       .from('design_files')
       .delete()
@@ -482,7 +441,7 @@ export class SupabaseStorage implements IStorage {
   }
   
   // Production tasks methods
-  async getProductionTask(id: number): Promise<ProductionTask | undefined> {
+  async getProductionTask(id: string): Promise<ProductionTask | undefined> {
     const { data, error } = await supabase
       .from('production_tasks')
       .select('*')
@@ -493,7 +452,7 @@ export class SupabaseStorage implements IStorage {
     return data as ProductionTask;
   }
 
-  async getProductionTasksByOrderId(orderId: number): Promise<ProductionTask[]> {
+  async getProductionTasksByOrderId(orderId: string): Promise<ProductionTask[]> {
     const { data, error } = await supabase
       .from('production_tasks')
       .select('*')
@@ -506,7 +465,7 @@ export class SupabaseStorage implements IStorage {
     return (data || []) as ProductionTask[];
   }
 
-  async getProductionTasksByManufacturerId(manufacturerId: number): Promise<ProductionTask[]> {
+  async getProductionTasksByManufacturerId(manufacturerId: string): Promise<ProductionTask[]> {
     const { data, error } = await supabase
       .from('production_tasks')
       .select('*')
@@ -520,14 +479,6 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createProductionTask(productionTask: InsertProductionTask): Promise<ProductionTask> {
-    // Set timestamps if not provided
-    if (!productionTask.createdAt) {
-      productionTask.createdAt = new Date().toISOString();
-    }
-    if (!productionTask.updatedAt) {
-      productionTask.updatedAt = new Date().toISOString();
-    }
-
     const { data, error } = await supabase
       .from('production_tasks')
       .insert(productionTask)
@@ -541,10 +492,7 @@ export class SupabaseStorage implements IStorage {
     return data as ProductionTask;
   }
 
-  async updateProductionTask(id: number, data: Partial<InsertProductionTask>): Promise<ProductionTask> {
-    // Always update the updatedAt timestamp
-    data.updatedAt = new Date().toISOString();
-
+  async updateProductionTask(id: string, data: Partial<InsertProductionTask>): Promise<ProductionTask> {
     const { data: updatedTask, error } = await supabase
       .from('production_tasks')
       .update(data)
@@ -560,7 +508,7 @@ export class SupabaseStorage implements IStorage {
   }
   
   // Messages methods
-  async getMessage(id: number): Promise<Message | undefined> {
+  async getMessage(id: string): Promise<Message | undefined> {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
@@ -571,7 +519,7 @@ export class SupabaseStorage implements IStorage {
     return data as Message;
   }
 
-  async getMessagesBySenderId(senderId: number): Promise<Message[]> {
+  async getMessagesBySenderId(senderId: string): Promise<Message[]> {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
@@ -584,7 +532,7 @@ export class SupabaseStorage implements IStorage {
     return (data || []) as Message[];
   }
 
-  async getMessagesByReceiverId(receiverId: number): Promise<Message[]> {
+  async getMessagesByReceiverId(receiverId: string): Promise<Message[]> {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
@@ -597,7 +545,7 @@ export class SupabaseStorage implements IStorage {
     return (data || []) as Message[];
   }
 
-  async getMessagesByOrderId(orderId: number): Promise<Message[]> {
+  async getMessagesByOrderId(orderId: string): Promise<Message[]> {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
@@ -611,11 +559,6 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    // Set timestamp if not provided
-    if (!message.createdAt) {
-      message.createdAt = new Date().toISOString();
-    }
-
     const { data, error } = await supabase
       .from('messages')
       .insert(message)
@@ -629,10 +572,13 @@ export class SupabaseStorage implements IStorage {
     return data as Message;
   }
 
-  async markMessageAsRead(id: number): Promise<Message> {
+  async markMessageAsRead(id: string): Promise<Message> {
     const { data, error } = await supabase
       .from('messages')
-      .update({ readAt: new Date().toISOString() })
+      .update({ 
+        status: 'read',
+        readAt: new Date().toISOString()
+      })
       .eq('id', id)
       .select()
       .single();
@@ -644,7 +590,7 @@ export class SupabaseStorage implements IStorage {
     return data as Message;
   }
 
-  async markMessageAsEmailSent(id: number): Promise<Message> {
+  async markMessageAsEmailSent(id: string): Promise<Message> {
     const { data, error } = await supabase
       .from('messages')
       .update({ emailSent: true })
@@ -653,14 +599,14 @@ export class SupabaseStorage implements IStorage {
       .single();
     
     if (error || !data) {
-      throw new Error(`Failed to mark message email as sent: ${error?.message || 'Unknown error'}`);
+      throw new Error(`Failed to mark message as email sent: ${error?.message || 'Unknown error'}`);
     }
     
     return data as Message;
   }
   
   // Payments methods
-  async getPayment(id: number): Promise<Payment | undefined> {
+  async getPayment(id: string): Promise<Payment | undefined> {
     const { data, error } = await supabase
       .from('payments')
       .select('*')
@@ -671,28 +617,20 @@ export class SupabaseStorage implements IStorage {
     return data as Payment;
   }
 
-  async getPaymentsByOrderId(orderId: number): Promise<Payment[]> {
+  async getPaymentsByOrderId(orderId: string): Promise<Payment[]> {
     const { data, error } = await supabase
       .from('payments')
       .select('*')
       .eq('orderId', orderId);
     
     if (error) {
-      throw new Error(`Failed to get order payments: ${error.message}`);
+      throw new Error(`Failed to get payments by order: ${error.message}`);
     }
     
     return (data || []) as Payment[];
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
-    // Set timestamps if not provided
-    if (!payment.createdAt) {
-      payment.createdAt = new Date().toISOString();
-    }
-    if (!payment.updatedAt) {
-      payment.updatedAt = new Date().toISOString();
-    }
-
     const { data, error } = await supabase
       .from('payments')
       .insert(payment)
@@ -706,10 +644,7 @@ export class SupabaseStorage implements IStorage {
     return data as Payment;
   }
 
-  async updatePayment(id: number, data: Partial<InsertPayment>): Promise<Payment> {
-    // Always update the updatedAt timestamp
-    data.updatedAt = new Date().toISOString();
-
+  async updatePayment(id: string, data: Partial<InsertPayment>): Promise<Payment> {
     const { data: updatedPayment, error } = await supabase
       .from('payments')
       .update(data)
@@ -725,9 +660,9 @@ export class SupabaseStorage implements IStorage {
   }
   
   // Stripe methods
-  async updateStripeCustomerId(userId: number, stripeCustomerId: string): Promise<User> {
+  async updateStripeCustomerId(userId: string, stripeCustomerId: string): Promise<User> {
     const { data, error } = await supabase
-      .from('users')
+      .from('user_profiles')
       .update({ stripeCustomerId })
       .eq('id', userId)
       .select()
@@ -756,122 +691,34 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getOrderStatistics(): Promise<{status: string, count: number}[]> {
-    // Using Supabase's SQL function to get counts by status
-    const { data, error } = await supabase.rpc('get_order_statistics');
+    const { data, error } = await supabase
+      .from('orders')
+      .select('status')
+      .order('status');
     
     if (error) {
-      // Fallback implementation if RPC is not available
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select('status');
-      
-      if (ordersError) {
-        throw new Error(`Failed to get order statistics: ${ordersError.message}`);
-      }
-      
-      // Manual calculation of counts
-      const counts: Record<string, number> = {};
-      orders?.forEach(order => {
-        const status = order.status;
-        counts[status] = (counts[status] || 0) + 1;
-      });
-      
-      return Object.entries(counts).map(([status, count]) => ({ status, count }));
+      throw new Error(`Failed to get order statistics: ${error.message}`);
     }
     
-    return data;
+    // Group by status and count
+    const statusCounts: {[key: string]: number} = {};
+    (data || []).forEach((order: any) => {
+      statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+    });
+    
+    return Object.entries(statusCounts).map(([status, count]) => ({ status, count }));
   }
 
   async getInventoryItems(): Promise<any[]> {
     const { data, error } = await supabase
       .from('inventory')
-      .select('*');
+      .select('*')
+      .order('itemName');
     
     if (error) {
       throw new Error(`Failed to get inventory items: ${error.message}`);
     }
     
     return data || [];
-  }
-
-  // Additional methods for admin dashboard
-  async getAllPayments(): Promise<Payment[]> {
-    const { data, error } = await supabase
-      .from('payments')
-      .select('*')
-      .order('createdAt', { ascending: false });
-    
-    if (error) {
-      throw new Error(`Failed to get all payments: ${error.message}`);
-    }
-    
-    return (data || []) as Payment[];
-  }
-
-  async getAllCustomers(): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .order('createdAt', { ascending: false });
-    
-    if (error) {
-      throw new Error(`Failed to get all customers: ${error.message}`);
-    }
-    
-    return data || [];
-  }
-
-  async assignManufacturerToOrder(orderId: number, manufacturerId: number): Promise<Order> {
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ 
-        manufacturerId,
-        updatedAt: new Date().toISOString()
-      })
-      .eq('id', orderId)
-      .select()
-      .single();
-    
-    if (error || !data) {
-      throw new Error(`Failed to assign manufacturer: ${error?.message || 'Unknown error'}`);
-    }
-    
-    return data as Order;
-  }
-
-  async approveDesignTask(taskId: number): Promise<DesignTask> {
-    const { data, error } = await supabase
-      .from('design_tasks')
-      .update({ 
-        status: 'approved',
-        updatedAt: new Date().toISOString()
-      })
-      .eq('id', taskId)
-      .select()
-      .single();
-    
-    if (error || !data) {
-      throw new Error(`Failed to approve design task: ${error?.message || 'Unknown error'}`);
-    }
-    
-    return data as DesignTask;
-  }
-
-  async markOrderAsPaid(orderId: number): Promise<Order> {
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ 
-        paymentStatus: 'paid',
-        updatedAt: new Date().toISOString()
-      })
-      .eq('id', orderId)
-      .select()
-      .single();
-    
-    if (error || !data) {
-      throw new Error(`Failed to mark order as paid: ${error?.message || 'Unknown error'}`);
-    }
-    
-    return data as Order;
   }
 }
