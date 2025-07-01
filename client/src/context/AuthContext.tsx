@@ -91,6 +91,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Clear potentially invalid tokens
         localStorage.removeItem('authToken');
         localStorage.removeItem('tokenExpires');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userId');
         setUser(null);
       } finally {
         setLoading(false);
@@ -108,6 +110,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Clear any existing tokens/data
       localStorage.removeItem('authToken');
       localStorage.removeItem('tokenExpires');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
 
       // Create a safe fetch request that always returns JSON, even on errors
       const response = await fetch("/api/auth/login", {
@@ -210,7 +214,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error("Logout error:", error);
       // Force logout even if API call fails
       setUser(null);
-      localStorage.clear();
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('tokenExpires');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
       window.location.href = "/login";
     }
   };
