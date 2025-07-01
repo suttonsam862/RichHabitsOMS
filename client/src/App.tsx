@@ -8,6 +8,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { RequireAuth } from "./components/auth/RequireAuth";
 import { MainDashboardRouter } from "./components/auth/MainDashboardRouter";
 import { NavigationManager } from "./components/navigation/NavigationManager";
+import { ErrorBoundary } from "./components/error/ErrorBoundary";
 
 // Dashboard components
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
@@ -55,11 +56,12 @@ import ProductLibrary from "./pages/ProductLibrary";
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Router>
-            <NavigationManager />
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Router>
+              <NavigationManager />
             <Routes>
               {/* Redirect from root to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />
@@ -362,6 +364,7 @@ function App() {
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
