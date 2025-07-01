@@ -54,6 +54,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (!storedToken) {
           console.log('No auth token found in localStorage');
           setUser(null);
+          setLoading(false);
           return;
         }
 
@@ -70,6 +71,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           localStorage.removeItem('authToken');
           localStorage.removeItem('tokenExpires');
           setUser(null);
+          setLoading(false);
           return;
         }
 
@@ -80,6 +82,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(userData.user);
         } else {
           console.log('Invalid user data received');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('tokenExpires');
           setUser(null);
         }
       } catch (error) {
