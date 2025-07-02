@@ -1,0 +1,108 @@
+Critical Database & Authentication Issues
+1. Row Level Security (RLS) Infinite Recursion
+Issue: infinite recursion detected in policy for relation "user_profiles"
+Impact: Prevents user profile creation/updates, breaking authentication flow
+Fix Required: Rewrite RLS policies to eliminate circular dependencies
+2. Missing Dashboard Stats Endpoint
+Issue: 404 NOT FOUND ERROR: /api/dashboard/stats
+Impact: Admin dashboard fails to load statistics
+Fix Required: Implement dashboard statistics API endpoint
+3. Supabase Admin API Access Denied
+Issue: AuthApiError: User not allowed with code not_admin
+Impact: Cannot fetch user lists, manufacturer data incomplete
+Fix Required: Configure proper service role authentication
+Catalog-Specific Critical Issues
+4. Delete Function Non-Operational
+Issue: User reported "delete function in the catalog does not work"
+Impact: Cannot remove catalog items
+Fix Required: Debug and fix delete mutation in CatalogPage.tsx
+5. Inconsistent Data Transformation
+Issue: Mixed camelCase/snake_case between frontend and database
+Impact: Data corruption, display errors
+Fix Required: Standardize data transformation layer
+6. Image Upload Error Handling
+Issue: No proper error handling for failed image uploads
+Impact: Silent failures, orphaned database records
+Fix Required: Implement comprehensive upload error handling
+7. SKU Validation Race Conditions
+Issue: Multiple SKU generation attempts without proper conflict resolution
+Impact: Potential duplicate SKUs, validation failures
+Fix Required: Implement atomic SKU generation with database constraints
+Frontend Integration Flaws
+8. Form State Management Issues
+Issue: Form doesn't properly reset after successful submission
+Impact: Stale data in forms, user confusion
+Fix Required: Implement proper form state cleanup
+9. Missing Category/Sport Validation
+Issue: Frontend validates against local state, not database reality
+Impact: Users can submit invalid categories/sports
+Fix Required: Server-side validation for all dropdowns
+10. Inconsistent Loading States
+Issue: Some operations lack proper loading indicators
+Impact: Users don't know if operations are in progress
+Fix Required: Implement consistent loading states across all operations
+Security & Validation Gaps
+11. Insufficient Input Sanitization
+Issue: JSON specifications field accepts any input without validation
+Impact: Potential code injection, data corruption
+Fix Required: Implement strict JSON schema validation
+12. Missing File Type Validation
+Issue: Image upload only checks file extension, not actual content
+Impact: Security vulnerability, potential malicious uploads
+Fix Required: Implement proper MIME type validation
+13. Weak Authentication Token Handling
+Issue: Token validation inconsistent across routes
+Impact: Authentication bypass possibilities
+Fix Required: Standardize token validation middleware
+Performance & Scalability Issues
+14. Inefficient Query Patterns
+Issue: Multiple unnecessary database calls for dropdown data
+Impact: Slow page loads, excessive database load
+Fix Required: Implement proper data fetching optimization
+15. No Pagination Implementation
+Issue: Loads all catalog items regardless of count
+Impact: Poor performance with large datasets
+Fix Required: Implement server-side pagination
+16. Missing Database Indexes
+Issue: No indexes on frequently queried fields (SKU, category, sport)
+Impact: Slow search and filter operations
+Fix Required: Add appropriate database indexes
+Data Integrity Issues
+17. Cascading Delete Problems
+Issue: No proper handling of foreign key relationships on delete
+Impact: Orphaned records, data integrity violations
+Fix Required: Implement proper cascading delete logic
+18. Price Precision Issues
+Issue: Decimal handling inconsistent between frontend and database
+Impact: Price calculation errors, financial discrepancies
+Fix Required: Standardize decimal precision handling
+19. Missing Audit Trail
+Issue: No tracking of catalog item changes
+Impact: Cannot track who changed what and when
+Fix Required: Implement comprehensive audit logging
+User Experience Critical Flaws
+20. Poor Error Messages
+Issue: Generic error messages don't help users understand problems
+Impact: Users can't resolve issues independently
+Fix Required: Implement specific, actionable error messages
+21. Sorting Logic Incomplete
+Issue: Sports icons and category grouping not fully implemented
+Impact: Poor visual organization, hard to navigate
+Fix Required: Complete sorting and icon implementation
+22. Mobile Responsiveness Issues
+Issue: Form layouts break on smaller screens
+Impact: Unusable on mobile devices
+Fix Required: Implement proper responsive design
+Critical Business Logic Failures
+23. Measurement Requirements Validation
+Issue: Can mark items as requiring measurements without providing instructions
+Impact: Orders fail due to missing measurement data
+Fix Required: Enforce measurement requirements validation
+24. Manufacturer Assignment Logic
+Issue: Preferred manufacturer selection doesn't handle edge cases
+Impact: Production assignments fail
+Fix Required: Implement robust manufacturer assignment logic
+25. Category/Sport Management Inconsistency
+Issue: Can create categories/sports that don't sync across all dropdowns
+Impact: Data inconsistency, user confusion
+Fix Required: Implement proper state management for dynamic options
