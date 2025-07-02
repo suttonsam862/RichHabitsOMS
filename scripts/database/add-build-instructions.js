@@ -51,5 +51,5 @@ addBuildInstructionsColumn()
   })
   .catch((error) => {
     console.error('💥 Unexpected error:', error);
-    process.exit(1);
+    process.exit(1);ocess.exit(1);
   });
