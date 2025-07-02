@@ -1890,11 +1890,11 @@ function CatalogPageContent() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="glass-panel p-4 rounded-lg">
                   <h4 className="text-sm font-medium text-muted-foreground mb-2">Base Price</h4>
-                  <p className="text-2xl font-bold text-neon-green">${selectedItem.basePrice.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-neon-green">${selectedItem.basePrice?.toFixed(2) || '0.00'}</p>
                 </div>
                 <div className="glass-panel p-4 rounded-lg">
                   <h4 className="text-sm font-medium text-muted-foreground mb-2">Unit Cost</h4>
-                  <p className="text-2xl font-bold text-neon-blue">${selectedItem.unitCost.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-neon-blue">${selectedItem.unitCost?.toFixed(2) || '0.00'}</p>
                 </div>
                 <div className="glass-panel p-4 rounded-lg">
                   <h4 className="text-sm font-medium text-muted-foreground mb-2">ETA</h4>
