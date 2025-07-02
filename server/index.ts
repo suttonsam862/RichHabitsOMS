@@ -286,6 +286,72 @@ import healthRoutes from './routes/health';
     app.use('/api/invitations', invitationRoutes);
     app.use('/api/users', userRolesRoutes);
 
+    // Dashboard stats endpoint - Critical fix for 404 error
+    app.get('/api/dashboard/stats', authenticateRequest, async (req: Request, res: Response) => {
+      try {
+        console.log('📊 Fetching dashboard statistics...');
+        
+        // Get comprehensive dashboard statistics
+        const { data: users, error: usersError } = await supabase
+          .from('user_profiles')
+          .select('id, role, created_at');
+        
+        if (usersError) {
+          console.error('Error fetching users:', usersError);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to fetch user statistics'
+          });
+        }
+        
+        // Get catalog statistics
+        const { data: catalogItems, error: catalogError } = await supabase
+          .from('catalog_items')
+          .select('id, created_at');
+        
+        // Get order statistics  
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select('id, status, created_at');
+        
+        // Calculate statistics
+        const totalUsers = users?.length || 0;
+        const customersTotal = users?.filter(u => u.role === 'customer').length || 0;
+        const adminUsers = users?.filter(u => u.role === 'admin').length || 0;
+        const staffUsers = users?.filter(u => ['salesperson', 'designer', 'manufacturer'].includes(u.role)).length || 0;
+        const totalCatalogItems = catalogItems?.length || 0;
+        const totalOrders = orders?.length || 0;
+        const activeOrders = orders?.filter(o => ['draft', 'design', 'production'].includes(o.status)).length || 0;
+        
+        const dashboardStats = {
+          users: totalUsers,
+          analytics: {
+            totalUsers,
+            customersTotal,
+            authAccountsTotal: totalUsers,
+            needsAccountCreation: 0,
+            activeAccounts: totalUsers,
+            adminUsers,
+            customerUsers: customersTotal,
+            staffUsers,
+            totalCatalogItems,
+            totalOrders,
+            activeOrders
+          }
+        };
+        
+        console.log('Dashboard stats generated:', dashboardStats);
+        
+        res.json(dashboardStats);
+      } catch (error) {
+        console.error('Dashboard stats error:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to generate dashboard statistics'
+        });
+      }
+    });
+
     // Serve uploaded images
     app.use('/uploads', express.static('uploads'));
 
