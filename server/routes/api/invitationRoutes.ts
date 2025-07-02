@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { supabase } from '../../db';
 import crypto from 'crypto';
@@ -19,9 +18,11 @@ router.post('/invitations', authenticateUser, requireRole(['admin']), async (req
     }
 
     // Check if user already exists
-    const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
-    
-    if (existingUser.user) {
+    const supabaseAdmin = supabase.auth.admin;
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = users?.users?.find(user => user.email === email);
+
+    if (existingUser) {
       return res.status(400).json({
         success: false,
         message: 'User already exists with this email'
@@ -72,7 +73,7 @@ router.post('/invitations', authenticateUser, requireRole(['admin']), async (req
 
     // TODO: Send invitation email here
     const invitationUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/register?token=${invitationToken}`;
-    
+
     console.log(`✅ Invitation created for ${email}`);
     console.log(`Invitation URL: ${invitationUrl}`);
 

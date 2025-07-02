@@ -168,7 +168,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     // Update session with fresh token info if using session
     if (req.session && req.session.token) {
       req.session.user = req.user;
-      req.session.expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      req.session.expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
     }
 
     next();

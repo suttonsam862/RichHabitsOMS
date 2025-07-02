@@ -18,7 +18,7 @@ if (!process.env.DATABASE_URL) {
 
 // Optimized connection pool for horizontal scaling
 const connectionConfig = {
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL || undefined,
   ssl: { rejectUnauthorized: false },
   // Optimize for multiple instances
   max: 10, // Maximum connections per instance

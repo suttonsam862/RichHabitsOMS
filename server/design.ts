@@ -13,14 +13,14 @@ if (!fs.existsSync(designUploadsDir)) {
 /**
  * Get all design tasks for a designer
  */
-export async function getDesignerTasks(designerId: string) {
+export async function getDesignerTasks(designerId: number) {
   const tasks = await storage.getDesignTasksByDesignerId(designerId);
-  
+
   // Enrich with order data and files
   const enrichedTasks = await Promise.all(tasks.map(async (task) => {
     const order = await storage.getOrder(task.orderId);
     const files = await storage.getDesignFilesByTaskId(task.id);
-    
+
     return {
       ...task,
       order: order ? {
@@ -31,20 +31,20 @@ export async function getDesignerTasks(designerId: string) {
       files: files || []
     };
   }));
-  
+
   return enrichedTasks;
 }
 
 /**
  * Upload a design file for a task
  */
-export async function uploadDesignFile(taskId: string, userId: string, filename: string, fileType: string, filePath: string, notes?: string) {
+export async function uploadDesignFile(taskId: number, userId: number, filename: string, fileType: string, filePath: string, notes?: string) {
   // Get task
   const task = await storage.getDesignTask(taskId);
   if (!task) {
     throw new Error("Design task not found");
   }
-  
+
   // Create design file record
   const designFile = await storage.createDesignFile({
     designTaskId: taskId,
@@ -53,13 +53,13 @@ export async function uploadDesignFile(taskId: string, userId: string, filename:
     filePath,
     uploadedBy: userId
   });
-  
+
   // Update task status to submitted
   const updatedTask = await storage.updateDesignTask(taskId, {
     status: 'submitted',
     notes: notes || task.notes
   });
-  
+
   // Update order status if needed
   const order = await storage.getOrder(task.orderId);
   if (order && (order.status === 'pending_design' || order.status === 'design_in_progress')) {
@@ -67,10 +67,10 @@ export async function uploadDesignFile(taskId: string, userId: string, filename:
       status: 'design_review'
     });
   }
-  
+
   // Send notifications
   await sendNotifications(task, designFile, filename);
-  
+
   return {
     task: updatedTask,
     file: designFile
@@ -80,33 +80,23 @@ export async function uploadDesignFile(taskId: string, userId: string, filename:
 /**
  * Update design task status
  */
-export async function updateDesignTaskStatus(taskId: string, status: 'pending' | 'in_progress' | 'submitted' | 'approved' | 'rejected' | 'completed' | 'cancelled', notes?: string) {
+export async function updateDesignTaskStatus(taskId: number, status: 'pending' | 'in_progress' | 'submitted' | 'approved' | 'rejected' | 'completed' | 'cancelled', notes?: string) {
   // Get task
   const task = await storage.getDesignTask(taskId);
   if (!task) {
     throw new Error("Design task not found");
   }
-  
+
   // Update the task
   const updatedTask = await storage.updateDesignTask(taskId, {
     status,
     notes: notes || task.notes
   });
-  
+
   // Send status notifications
   if (status === 'approved') {
-    // Send approval notification
-    if (task.designerId) {
-      const designerIdNum = parseInt(task.designerId, 10);
-      if (!isNaN(designerIdNum)) {
-        await sendNotification(designerIdNum, {
-          type: 'design_approved',
-          message: `Your design for task ${taskId} has been approved.`,
-          notes: notes
-        });
-      }
-    }
-    
+    await sendStatusNotification(task, 'approved', notes);
+
     // Update order status if needed
     const order = await storage.getOrder(task.orderId);
     if (order && order.status === 'design_review') {
@@ -115,19 +105,9 @@ export async function updateDesignTaskStatus(taskId: string, status: 'pending' |
       });
     }
   } else if (status === 'rejected') {
-    // Send rejection notification
-    if (task.designerId) {
-      const designerIdNum = parseInt(task.designerId, 10);
-      if (!isNaN(designerIdNum)) {
-        await sendNotification(designerIdNum, {
-          type: 'design_rejected',
-          message: `Your design for task ${taskId} has been rejected.`,
-          notes: notes
-        });
-      }
-    }
+    await sendStatusNotification(task, 'rejected', notes);
   }
-  
+
   return updatedTask;
 }
 
@@ -136,12 +116,10 @@ async function sendNotifications(task: any, designFile: any, filename: string) {
   // Get order
   const order = await storage.getOrder(task.orderId);
   if (!order) return;
-  
+
   // Notify salesperson
   if (order.salespersonId) {
-    const salespersonIdNum = parseInt(order.salespersonId, 10);
-    if (!isNaN(salespersonIdNum)) {
-      await sendNotification(salespersonIdNum, {
+    await sendNotification(order.salespersonId, {
       type: 'design_submitted',
       task: {
         id: task.id,
@@ -154,16 +132,12 @@ async function sendNotifications(task: any, designFile: any, filename: string) {
         filePath: designFile.filePath
       }
     });
-    }
   }
-}
-  
+
   // Notify customer
   const customer = await storage.getCustomer(order.customerId);
-  if (customer && customer.userId) {
-    const customerUserIdNum = parseInt(customer.userId, 10);
-    if (!isNaN(customerUserIdNum)) {
-      await sendNotification(customerUserIdNum, {
+  if (customer) {
+    await sendNotification(customer.userId, {
       type: 'design_submitted',
       task: {
         id: task.id,
@@ -172,27 +146,28 @@ async function sendNotifications(task: any, designFile: any, filename: string) {
       },
       message: 'A new design is ready for your review'
     });
-    
+
     // Send email notification
-    if (customer.userId) {
-      const user = await storage.getUser(customer.userId);
-      if (user && user.username) {
-        const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username;
-        // Note: Email functionality disabled due to user profile schema limitations
-        // Email should be obtained from auth service, not user profile
-        console.log(`Would send design approval email to ${displayName} for order ${order.orderNumber}`);
-      }
-    }
+    const user = await storage.getUser(customer.userId);
+    if (user && user.email) {
+      const emailOptions = getDesignApprovalEmailTemplate(
+        order.orderNumber,
+        `${user.firstName} ${user.lastName}`
+      );
+      await sendEmail({
+        ...emailOptions,
+        to: user.email
+      });
     }
   }
 }
 
 async function sendStatusNotification(task: any, status: 'approved' | 'rejected', notes?: string) {
   if (!task.designerId) return;
-  
+
   const order = await storage.getOrder(task.orderId);
   const orderNumber = order?.orderNumber || `Order #${task.orderId}`;
-  
+
   if (status === 'approved') {
     await sendNotification(task.designerId, {
       type: 'design_approved',

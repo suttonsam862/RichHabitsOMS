@@ -101,11 +101,11 @@ export default function DesignTasks() {
     mutationFn: async (data: { taskId: number, formData: FormData }) => {
       setIsUploading(true);
       setUploadProgress(0);
-      
+
       try {
         // Custom implementation with upload progress
         const xhr = new XMLHttpRequest();
-        
+
         const promise = new Promise((resolve, reject) => {
           xhr.upload.addEventListener('progress', (event) => {
             if (event.lengthComputable) {
@@ -113,7 +113,7 @@ export default function DesignTasks() {
               setUploadProgress(percentComplete);
             }
           });
-          
+
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve(JSON.parse(xhr.responseText));
@@ -121,16 +121,16 @@ export default function DesignTasks() {
               reject(new Error(`Upload failed with status ${xhr.status}`));
             }
           };
-          
+
           xhr.onerror = () => {
             reject(new Error('Network error occurred during upload'));
           };
-          
+
           xhr.open('POST', `/api/design-tasks/${data.taskId}/upload`);
           xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('token')}`);
           xhr.send(data.formData);
         });
-        
+
         const result = await promise;
         return result;
       } catch (error) {
@@ -183,15 +183,15 @@ export default function DesignTasks() {
   // Handle file upload
   const handleUpload = (data: UploadFormValues) => {
     if (!selectedTaskId) return;
-    
+
     const file = data.file[0];
     const formData = new FormData();
     formData.append('file', file);
-    
+
     if (data.notes) {
       formData.append('notes', data.notes);
     }
-    
+
     uploadFileMutation.mutate({ taskId: selectedTaskId, formData });
   };
 
@@ -233,7 +233,7 @@ export default function DesignTasks() {
             {form.formState.errors.file.message?.toString()}
           </p>
         )}
-        
+
         {form.watch('file') && form.watch('file')[0] && (
           <div className="flex items-center justify-between bg-muted p-2 rounded-md mt-2">
             <span className="text-sm truncate">
@@ -245,7 +245,7 @@ export default function DesignTasks() {
           </div>
         )}
       </div>
-      
+
       <div className="grid w-full gap-1.5">
         <label htmlFor="notes" className="text-sm font-medium">
           Notes (Optional)
@@ -256,7 +256,7 @@ export default function DesignTasks() {
           {...form.register('notes')}
         />
       </div>
-      
+
       {isUploading && (
         <div className="space-y-2">
           <Progress value={uploadProgress} className="h-2" />
@@ -265,7 +265,7 @@ export default function DesignTasks() {
           </p>
         </div>
       )}
-      
+
       <DialogFooter>
         <DialogClose asChild>
           <Button variant="outline" type="button" disabled={isUploading}>
@@ -303,7 +303,7 @@ export default function DesignTasks() {
           <TabsTrigger value="approved">Approved</TabsTrigger>
           <TabsTrigger value="all">All Tasks</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value={activeTab}>
           <Card>
             <CardHeader>
@@ -343,7 +343,7 @@ export default function DesignTasks() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredTasks.map((task: any) => (
+                      {(designTasks as any[])?.map((task: any) => (
                         <TableRow key={task.id}>
                           <TableCell className="font-medium">{task.order?.orderNumber}</TableCell>
                           <TableCell>{task.description}</TableCell>
@@ -412,7 +412,7 @@ export default function DesignTasks() {
                                   </Dialog>
                                 </>
                               )}
-                              
+
                               {task.status === 'in_progress' && (
                                 <Dialog>
                                   <DialogTrigger asChild>
@@ -436,20 +436,20 @@ export default function DesignTasks() {
                                   </DialogContent>
                                 </Dialog>
                               )}
-                              
+
                               {task.status === 'submitted' && (
                                 <div className="text-sm text-muted-foreground">
                                   Waiting for review
                                 </div>
                               )}
-                              
+
                               {task.status === 'approved' && (
                                 <div className="flex items-center">
                                   <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
                                   <span className="text-sm text-muted-foreground">Approved</span>
                                 </div>
                               )}
-                              
+
                               {task.status === 'rejected' && (
                                 <>
                                   <div className="flex items-center">

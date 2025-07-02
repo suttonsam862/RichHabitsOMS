@@ -92,7 +92,7 @@ export default function NewOrderInquiriesPage() {
        inquiry.customer?.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
        inquiry.product_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
        inquiry.description?.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+
     return matchesStatus && matchesSearch;
   });
 
@@ -103,7 +103,7 @@ export default function NewOrderInquiriesPage() {
         status,
         notes,
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to update inquiry");
@@ -190,13 +190,13 @@ export default function NewOrderInquiriesPage() {
             Manage and process new order requests from customers
           </p>
         </div>
-        
+
         <Button variant="outline" onClick={() => refetch()}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
       </div>
-      
+
       <div className="flex items-center mb-6 space-x-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -208,7 +208,7 @@ export default function NewOrderInquiriesPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        
+
         <Select
           value={statusFilter}
           onValueChange={setStatusFilter}
@@ -228,7 +228,7 @@ export default function NewOrderInquiriesPage() {
           </SelectContent>
         </Select>
       </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Customer Order Inquiries</CardTitle>
@@ -265,7 +265,7 @@ export default function NewOrderInquiriesPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredInquiries.map((inquiry: any) => (
+                  {(inquiries as any[])?.map((inquiry: any) => (
                     <TableRow key={inquiry.id}>
                       <TableCell>
                         <div className="flex flex-col">
@@ -302,7 +302,7 @@ export default function NewOrderInquiriesPage() {
                             <FileText className="h-4 w-4 mr-2" />
                             Details
                           </Button>
-                          
+
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -327,14 +327,14 @@ export default function NewOrderInquiriesPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  ))}
                 )}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
-      
+
       {/* Inquiry Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
         <DialogContent className="sm:max-w-[700px]">
@@ -344,7 +344,7 @@ export default function NewOrderInquiriesPage() {
               Review detailed information about this order inquiry
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedInquiry && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -360,7 +360,7 @@ export default function NewOrderInquiriesPage() {
                   <div>{getStatusBadge(selectedInquiry.status)}</div>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Product Information</h3>
                 <div className="rounded-md border p-3">
@@ -374,19 +374,19 @@ export default function NewOrderInquiriesPage() {
                       <p className="font-medium">{selectedInquiry.quantity}</p>
                     </div>
                   </div>
-                  
+
                   <div className="mb-3">
                     <span className="text-xs text-muted-foreground">Description</span>
                     <p className="text-sm mt-1">{selectedInquiry.description}</p>
                   </div>
-                  
+
                   {selectedInquiry.requirements && (
                     <div className="mb-3">
                       <span className="text-xs text-muted-foreground">Special Requirements</span>
                       <p className="text-sm mt-1">{selectedInquiry.requirements}</p>
                     </div>
                   )}
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     {selectedInquiry.timeline && (
                       <div>
@@ -394,7 +394,7 @@ export default function NewOrderInquiriesPage() {
                         <p className="text-sm mt-1">{selectedInquiry.timeline}</p>
                       </div>
                     )}
-                    
+
                     {selectedInquiry.budget && (
                       <div>
                         <span className="text-xs text-muted-foreground">Budget</span>
@@ -404,7 +404,7 @@ export default function NewOrderInquiriesPage() {
                   </div>
                 </div>
               </div>
-              
+
               {selectedInquiry.attachments && selectedInquiry.attachments.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-1">Attachments</h3>
@@ -425,7 +425,7 @@ export default function NewOrderInquiriesPage() {
                   </div>
                 </div>
               )}
-              
+
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Assignment Notes</h3>
                 <Textarea
@@ -435,7 +435,7 @@ export default function NewOrderInquiriesPage() {
                   rows={3}
                 />
               </div>
-              
+
               <DialogFooter className="flex gap-2">
                 <Select 
                   onValueChange={(value) => handleStatusChange(selectedInquiry.id, value)}
@@ -450,7 +450,7 @@ export default function NewOrderInquiriesPage() {
                     <SelectItem value="rejected">Reject</SelectItem>
                   </SelectContent>
                 </Select>
-                
+
                 <Button onClick={() => setIsDetailsDialogOpen(false)}>Close</Button>
               </DialogFooter>
             </div>

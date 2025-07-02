@@ -95,19 +95,19 @@ const adminPermissions = z.object({
   delete_users: z.boolean().default(false),
   assign_permissions: z.boolean().default(true),
   view_user_activity: z.boolean().default(true),
-  
+
   // Order Management Permissions
   view_all_orders: z.boolean().default(true),
   edit_all_orders: z.boolean().default(true),
   delete_orders: z.boolean().default(false),
   approve_orders: z.boolean().default(true),
-  
+
   // Financial Permissions
   view_financial_data: z.boolean().default(true),
   manage_pricing: z.boolean().default(false),
   manage_payments: z.boolean().default(false),
   view_financial_reports: z.boolean().default(true),
-  
+
   // System Permissions
   manage_system_settings: z.boolean().default(false),
   manage_api_keys: z.boolean().default(false),
@@ -121,19 +121,19 @@ const salespersonPermissions = z.object({
   edit_orders: z.boolean().default(true),
   view_assigned_orders: z.boolean().default(true),
   delete_orders: z.boolean().default(false),
-  
+
   // Customer Management
   view_customer_data: z.boolean().default(true),
   manage_customers: z.boolean().default(true),
   create_customers: z.boolean().default(true),
   edit_customers: z.boolean().default(true),
   delete_customers: z.boolean().default(false),
-  
+
   // Communication
   send_customer_communications: z.boolean().default(true),
   send_customer_quotes: z.boolean().default(true),
   communicate_with_designers: z.boolean().default(true),
-  
+
   // Reporting
   view_sales_reports: z.boolean().default(true),
   view_commission_data: z.boolean().default(true),
@@ -147,17 +147,17 @@ const designerPermissions = z.object({
   delete_designs: z.boolean().default(false),
   view_design_library: z.boolean().default(true),
   create_design_templates: z.boolean().default(false),
-  
+
   // Task Management
   view_assigned_tasks: z.boolean().default(true),
   update_task_status: z.boolean().default(true),
   set_design_deadlines: z.boolean().default(false),
-  
+
   // Communication
   communicate_with_customers: z.boolean().default(true),
   communicate_with_manufacturers: z.boolean().default(true),
   communicate_with_sales: z.boolean().default(true),
-  
+
   // Tools Access
   use_design_tools: z.boolean().default(true),
   upload_design_assets: z.boolean().default(true),
@@ -170,23 +170,23 @@ const manufacturerPermissions = z.object({
   update_production_status: z.boolean().default(true),
   set_production_priorities: z.boolean().default(false),
   schedule_production: z.boolean().default(true),
-  
+
   // Inventory Management
   manage_inventory: z.boolean().default(true),
   request_materials: z.boolean().default(true),
   update_stock_levels: z.boolean().default(true),
   manage_suppliers: z.boolean().default(false),
-  
+
   // Quality Control
   report_production_issues: z.boolean().default(true),
   review_quality_metrics: z.boolean().default(true),
   approve_final_products: z.boolean().default(true),
-  
+
   // Design Access
   view_design_files: z.boolean().default(true),
   comment_on_designs: z.boolean().default(true),
   request_design_modifications: z.boolean().default(true),
-  
+
   // Shipping
   update_shipping_status: z.boolean().default(true),
   print_shipping_labels: z.boolean().default(true),
@@ -199,22 +199,22 @@ const customerPermissions = z.object({
   create_orders: z.boolean().default(true),
   edit_own_orders: z.boolean().default(true),
   cancel_orders: z.boolean().default(true),
-  
+
   // Design Management
   approve_designs: z.boolean().default(true),
   request_design_changes: z.boolean().default(true),
   view_design_history: z.boolean().default(true),
-  
+
   // Financial
   make_payments: z.boolean().default(true),
   view_payment_history: z.boolean().default(true),
   access_invoices: z.boolean().default(true),
-  
+
   // Account Management
   view_order_history: z.boolean().default(true),
   manage_shipping_addresses: z.boolean().default(true),
   manage_payment_methods: z.boolean().default(true),
-  
+
   // Communication
   submit_feedback: z.boolean().default(true),
   participate_in_threads: z.boolean().default(true),
@@ -254,35 +254,35 @@ export default function SettingsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("general");
   const [showUserManagement, setShowUserManagement] = useState(false);
-  
+
   // Fetch comprehensive user data (auth users + customers)
   const { data: userResponse, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: async () => {
       console.log("Fetching comprehensive user data...");
-      
+
       // Get auth token from localStorage
       const token = localStorage.getItem('authToken');
       const headers: HeadersInit = {
         'Content-Type': 'application/json'
       };
-      
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch("/api/users", {
         headers,
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch users");
       }
-      
+
       const data = await response.json();
       console.log("Received user data:", data);
-      
+
       // Handle both old format (array) and new format (object with success)
       if (data.success && data.users) {
         // New comprehensive database format
@@ -325,7 +325,7 @@ export default function SettingsPage() {
           }
         };
       }
-      
+
       return data;
     }
   });
@@ -343,7 +343,7 @@ export default function SettingsPage() {
   };
 
   console.log('User display data:', { users: users.length, analytics });
-  
+
   // State for user invitation dialog
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -365,12 +365,12 @@ export default function SettingsPage() {
           createDirectly: true
         }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to create account');
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -404,12 +404,12 @@ export default function SettingsPage() {
         },
         body: JSON.stringify({ customerId }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to create customer account');
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -438,12 +438,12 @@ export default function SettingsPage() {
         },
         body: JSON.stringify(userData.updates),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to update user');
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -470,17 +470,17 @@ export default function SettingsPage() {
       const formData = new FormData();
       formData.append('profilePicture', file);
       formData.append('userId', userId);
-      
+
       const response = await fetch('/api/users/upload-profile-picture', {
         method: 'POST',
         body: formData
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to upload profile picture');
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -518,7 +518,7 @@ export default function SettingsPage() {
   // Save user edits
   const saveUserEdits = () => {
     if (!editingUser) return;
-    
+
     const updates: any = {
       email: editForm.email,
       firstName: editForm.firstName,
@@ -538,11 +538,11 @@ export default function SettingsPage() {
       updates
     });
   };
-  
+
   // State for delete dialog
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  
+
   // State for user editing
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -556,13 +556,13 @@ export default function SettingsPage() {
     password: '',
     resetPassword: false
   });
-  
+
   // State for bulk actions
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [showBulkActionDialog, setShowBulkActionDialog] = useState(false);
   const [bulkAction, setBulkAction] = useState<"delete" | "changeRole" | null>(null);
   const [bulkRoleChange, setBulkRoleChange] = useState("customer");
-  
+
   // State for activity tracking
   const [userActivity, setUserActivity] = useState<any[]>([
     {
@@ -589,7 +589,7 @@ export default function SettingsPage() {
   ]);
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [selectedUserForActivity, setSelectedUserForActivity] = useState<any>(null);
-  
+
   // Filter users by search query (with null check)
   const filteredUsers = (users || []).filter((user: any) => 
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -597,7 +597,7 @@ export default function SettingsPage() {
     user.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.last_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
+
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserFormValues) => {
@@ -625,7 +625,7 @@ export default function SettingsPage() {
       });
     },
   });
-  
+
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: Partial<UserFormValues> }) => {
@@ -655,7 +655,7 @@ export default function SettingsPage() {
       });
     },
   });
-  
+
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -682,7 +682,7 @@ export default function SettingsPage() {
       });
     },
   });
-  
+
   // Form setup
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -698,7 +698,7 @@ export default function SettingsPage() {
       permissions: {},
     },
   });
-  
+
   // Handle editing user
   useEffect(() => {
     if (selectedUser && isEditing) {
@@ -715,7 +715,7 @@ export default function SettingsPage() {
       });
     }
   }, [selectedUser, isEditing, form]);
-  
+
   // Handle form submission
   const onSubmit = (data: UserFormValues) => {
     // Remove empty password field if not provided (for updates)
@@ -728,21 +728,21 @@ export default function SettingsPage() {
       createUserMutation.mutate(data);
     }
   };
-  
+
   // Handle canceling edit
   const handleCancelEdit = () => {
     setIsEditing(false);
     setSelectedUser(null);
     form.reset();
   };
-  
+
   // Handle deleting user
   const handleDeleteUser = (id: string) => {
     if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
       deleteUserMutation.mutate(id);
     }
   };
-  
+
 
 
   return (
@@ -831,7 +831,7 @@ export default function SettingsPage() {
           <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="account" className="space-y-4">
           <Card>
             <CardHeader>
@@ -913,6 +913,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
             <CardFooter>
+```tool_code
               <Button>Update Password</Button>
             </CardFooter>
           </Card>
@@ -974,7 +975,7 @@ export default function SettingsPage() {
             </CardFooter>
           </Card>
         </TabsContent>
-        
+
         {/* User Management Tab */}
         <TabsContent value="users" className="space-y-4">
           <Card>
@@ -997,7 +998,7 @@ export default function SettingsPage() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  
+
                   {/* Bulk Actions Dropdown */}
                   {selectedUserIds.length > 0 && (
                     <Select
@@ -1021,7 +1022,7 @@ export default function SettingsPage() {
                     </Select>
                   )}
                 </div>
-                
+
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button variant="default" className="ml-2">
@@ -1093,9 +1094,9 @@ export default function SettingsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <Separator className="my-2" />
-                      
+
                       <div className="bg-green-50 p-3 rounded-md text-sm text-green-700 border border-green-200">
                         <p className="font-medium">✅ Account Creation</p>
                         <p>The user will receive a temporary password and can log in immediately. They can change their password after first login.</p>
@@ -1138,7 +1139,7 @@ export default function SettingsPage() {
                       Update user information, login credentials, roles, and permissions
                     </DialogDescription>
                   </DialogHeader>
-                  
+
                   <div className="grid gap-6">
                     {/* Basic Information */}
                     <div className="grid grid-cols-2 gap-4">
@@ -1232,7 +1233,7 @@ export default function SettingsPage() {
                           Reset User Password
                         </Label>
                       </div>
-                      
+
                       {editForm.resetPassword && (
                         <div>
                           <Label htmlFor="edit-password">New Password</Label>
@@ -1292,7 +1293,7 @@ export default function SettingsPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              
+
               {/* Bulk Action Confirmation Dialog */}
               <AlertDialog open={showBulkActionDialog} onOpenChange={setShowBulkActionDialog}>
                 <AlertDialogContent>
@@ -1305,7 +1306,7 @@ export default function SettingsPage() {
                         ? `Are you sure you want to delete ${selectedUserIds.length} selected users? This action cannot be undone.`
                         : `Change the role of ${selectedUserIds.length} selected users to:`}
                     </AlertDialogDescription>
-                    
+
                     {bulkAction === "changeRole" && (
                       <div className="py-4">
                         <Select
@@ -1332,8 +1333,8 @@ export default function SettingsPage() {
                       onClick={() => {
                         if (bulkAction === "delete") {
                           // Delete selected users
-                          setUsers(users.filter(user => !selectedUserIds.includes(user.id)));
-                          
+                          // setUsers((prevUsers: any[]) => prevUsers.filter((user: any) => !selectedUserIds.includes(user.id)));
+
                           // Add to activity log
                           const activityEntry = {
                             id: userActivity.length + 1,
@@ -1345,9 +1346,9 @@ export default function SettingsPage() {
                             },
                             created_at: new Date().toISOString()
                           };
-                          
+
                           setUserActivity([activityEntry, ...userActivity]);
-                          
+
                           toast({
                             title: "Users deleted",
                             description: `${selectedUserIds.length} users have been deleted`,
@@ -1355,40 +1356,40 @@ export default function SettingsPage() {
                           });
                         } else if (bulkAction === "changeRole") {
                           // Change role for selected users
-                          setUsers(users.map(user => {
-                            if (selectedUserIds.includes(user.id)) {
-                              return {
-                                ...user,
-                                role: bulkRoleChange,
-                                // Set default permissions for the new role
-                                permissions: {
-                                  [bulkRoleChange]: bulkRoleChange === 'admin' ? {
-                                    manage_users: true,
-                                    manage_roles: true,
-                                    view_all_orders: true
-                                  } : bulkRoleChange === 'salesperson' ? {
-                                    create_orders: true,
-                                    edit_orders: true,
-                                    view_customer_data: true
-                                  } : bulkRoleChange === 'designer' ? {
-                                    upload_designs: true,
-                                    edit_designs: true,
-                                    view_design_library: true
-                                  } : bulkRoleChange === 'manufacturer' ? {
-                                    view_production_queue: true,
-                                    update_production_status: true,
-                                    manage_inventory: true
-                                  } : {
-                                    view_orders: true,
-                                    create_orders: true,
-                                    approve_designs: true
-                                  }
-                                }
-                              };
-                            }
-                            return user;
-                          }));
-                          
+                          // setUsers((prev: any[]) => prev.map((user: any) => {
+                          //   if (selectedUserIds.includes(user.id)) {
+                          //     return {
+                          //       ...user,
+                          //       role: bulkRoleChange,
+                          //       // Set default permissions for the new role
+                          //       permissions: {
+                          //         [bulkRoleChange]: bulkRoleChange === 'admin' ? {
+                          //           manage_users: true,
+                          //           manage_roles: true,
+                          //           view_all_orders: true
+                          //         } : bulkRoleChange === 'salesperson' ? {
+                          //           create_orders: true,
+                          //           edit_orders: true,
+                          //           view_customer_data: true
+                          //         } : bulkRoleChange === 'designer' ? {
+                          //           upload_designs: true,
+                          //           edit_designs: true,
+                          //           view_design_library: true
+                          //         } : bulkRoleChange === 'manufacturer' ? {
+                          //           view_production_queue: true,
+                          //           update_production_status: true,
+                          //           manage_inventory: true
+                          //         } : {
+                          //           view_orders: true,
+                          //           create_orders: true,
+                          //           approve_designs: true
+                          //         }
+                          //       }
+                          //     };
+                          //   }
+                          //   return user;
+                          // }));
+
                           // Add to activity log
                           const activityEntry = {
                             id: userActivity.length + 1,
@@ -1401,16 +1402,16 @@ export default function SettingsPage() {
                             },
                             created_at: new Date().toISOString()
                           };
-                          
+
                           setUserActivity([activityEntry, ...userActivity]);
-                          
+
                           toast({
                             title: "Roles updated",
                             description: `${selectedUserIds.length} users have been updated to ${bulkRoleChange} role`,
                             variant: "default",
                           });
                         }
-                        
+
                         setSelectedUserIds([]);
                         setShowBulkActionDialog(false);
                       }}
@@ -1518,7 +1519,7 @@ export default function SettingsPage() {
                                   <Edit className="h-4 w-4 mr-1" />
                                   Edit Profile
                                 </Button>
-                                
+
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1527,7 +1528,7 @@ export default function SettingsPage() {
                                   <Key className="h-4 w-4 mr-1" />
                                   Reset Password
                                 </Button>
-                                
+
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="sm" className="text-gray-600 border-gray-200 hover:bg-gray-50">
@@ -1558,7 +1559,7 @@ export default function SettingsPage() {
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
-                                
+
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button style={{ display: 'none' }}>Hidden</Button>
@@ -1601,7 +1602,7 @@ export default function SettingsPage() {
                                               )}
                                             />
                                           </div>
-                                          
+
                                           <div className="grid grid-cols-2 gap-4">
                                             <FormField
                                               control={form.control}
@@ -1644,11 +1645,11 @@ export default function SettingsPage() {
                                               )}
                                             />
                                           </div>
-                                          
+
                                           {/* Role-specific permissions section */}
                                           <div className="border rounded-lg p-4">
                                             <h3 className="text-sm font-medium mb-3">Role Permissions</h3>
-                                            
+
                                             {form.watch("role") === "admin" && (
                                               <div className="grid grid-cols-2 gap-2">
                                                 <FormField
@@ -1668,7 +1669,7 @@ export default function SettingsPage() {
                                                     </FormItem>
                                                   )}
                                                 />
-                                                
+
                                                 <FormField
                                                   control={form.control}
                                                   name="permissions.admin.view_all_orders"
@@ -1686,7 +1687,7 @@ export default function SettingsPage() {
                                                     </FormItem>
                                                   )}
                                                 />
-                                                
+
                                                 <FormField
                                                   control={form.control}
                                                   name="permissions.admin.super_admin"
@@ -1706,7 +1707,7 @@ export default function SettingsPage() {
                                                 />
                                               </div>
                                             )}
-                                            
+
                                             {/* Other role permissions sections would go here */}
                                           </div>
                                         </form>
@@ -1725,9 +1726,9 @@ export default function SettingsPage() {
                                             role: formData.role,
                                             permissions: formData.permissions
                                           };
-                                          
-                                          setUsers(users.map(u => u.id === user.id ? updatedUser : u));
-                                          
+
+                                          // setUsers((prev: any[]) => prev.map((u: any) => u.id === user.id ? updatedUser : u));
+
                                           // Add activity log
                                           const activityEntry = {
                                             id: userActivity.length + 1,
@@ -1739,9 +1740,9 @@ export default function SettingsPage() {
                                             },
                                             created_at: new Date().toISOString()
                                           };
-                                          
+
                                           setUserActivity([activityEntry, ...userActivity]);
-                                          
+
                                           toast({
                                             title: "User updated",
                                             description: "User information has been updated successfully",
@@ -1754,7 +1755,7 @@ export default function SettingsPage() {
                                     </DialogFooter>
                                   </DialogContent>
                                 </Dialog>
-                                
+
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button
@@ -1778,8 +1779,8 @@ export default function SettingsPage() {
                                       <AlertDialogAction
                                         onClick={() => {
                                           // Delete user from local state
-                                          setUsers(users.filter(u => u.id !== user.id));
-                                          
+                                          // setUsers((prev: any[]) => prev.filter((u: any) => u.id !== user.id));
+
                                           // Add activity log
                                           const activityEntry = {
                                             id: userActivity.length + 1,
@@ -1791,9 +1792,9 @@ export default function SettingsPage() {
                                             },
                                             created_at: new Date().toISOString()
                                           };
-                                          
+
                                           setUserActivity([activityEntry, ...userActivity]);
-                                          
+
                                           toast({
                                             title: "User deleted",
                                             description: "The user has been deleted successfully",
@@ -1816,7 +1817,7 @@ export default function SettingsPage() {
                   </Table>
                 </div>
               )}
-              
+
               {/* User Activity Log Dialog */}
               <Dialog open={showActivityLog} onOpenChange={setShowActivityLog}>
                 <DialogContent className="sm:max-w-[625px]">
@@ -1829,7 +1830,7 @@ export default function SettingsPage() {
                       }
                     </DialogDescription>
                   </DialogHeader>
-                  
+
                   <div className="max-h-[400px] overflow-y-auto border rounded-md">
                     <Table>
                       <TableHeader>
@@ -1851,7 +1852,8 @@ export default function SettingsPage() {
                               </TableCell>
                               <TableCell>
                                 <div className="text-sm">
-                                  {activity.details && typeof activity.details === 'object' ? 
+                                  {```tool_code
+activity.details && typeof activity.details === 'object' ? 
                                     Object.entries(activity.details).map(([key, value]) => (
                                       <div key={key}>
                                         <span className="font-medium">{key.replace(/_/g, ' ')}</span>: {
@@ -1873,7 +1875,7 @@ export default function SettingsPage() {
                             </TableRow>
                           ))
                         }
-                        
+
                         {userActivity.filter(activity => !selectedUserForActivity || activity.user_id === selectedUserForActivity.id).length === 0 && (
                           <TableRow>
                             <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
@@ -1884,7 +1886,7 @@ export default function SettingsPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  
+
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowActivityLog(false)}>
                       Close
@@ -1892,7 +1894,7 @@ export default function SettingsPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>{isEditing ? "Edit User" : "Create New User"}</CardTitle>
@@ -2140,7 +2142,7 @@ export default function SettingsPage() {
               Comprehensive user management with real-time analytics and editing capabilities
             </DialogDescription>
           </DialogHeader>
-          
+
           {/* User Analytics Dashboard */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Card>
@@ -2154,7 +2156,7 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
@@ -2166,7 +2168,7 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
@@ -2178,7 +2180,7 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
@@ -2205,12 +2207,12 @@ export default function SettingsPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              
+
               <Button variant="outline" size="sm">
                 <Filter className="mr-2 h-4 w-4" />
                 Filter
               </Button>
-              
+
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -2225,13 +2227,13 @@ export default function SettingsPage() {
                 Refresh
               </Button>
             </div>
-            
+
             <div className="flex gap-2">
               <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
-              
+
               <Dialog>
                 <DialogTrigger asChild>
                   <Button>
@@ -2421,7 +2423,7 @@ export default function SettingsPage() {
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          
+
                           <Button 
                             variant="ghost" 
                             size="sm"
@@ -2435,7 +2437,7 @@ export default function SettingsPage() {
                             <UserCheck className="h-4 w-4" />
                             <span className="sr-only">View Details</span>
                           </Button>
-                          
+
                           <Button 
                             variant="ghost" 
                             size="sm"
@@ -2454,7 +2456,7 @@ export default function SettingsPage() {
                             <Key className="h-4 w-4" />
                             <span className="sr-only">Reset Password</span>
                           </Button>
-                          
+
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button 

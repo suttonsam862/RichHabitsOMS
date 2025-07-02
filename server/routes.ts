@@ -863,6 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       return res.json({ 
+```tool_code
         success: true, 
         message: 'User updated successfully',
         user: profile

@@ -114,13 +114,13 @@ export default function CustomerInvitesPage() {
     onSuccess: (data) => {
       // Extract the invitation URL from the response to display to the user
       const inviteUrl = data.invite?.inviteUrl;
-      
+
       toast({
         title: "Invitation created",
         description: "The customer invitation has been created successfully",
         variant: "default",
       });
-      
+
       // If we have an invite URL, show it in a separate toast that can be clicked to copy
       if (inviteUrl) {
         setTimeout(() => {
@@ -147,7 +147,7 @@ export default function CustomerInvitesPage() {
           });
         }, 500);
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invites"] });
       form.reset();
       setIsDialogOpen(false);
@@ -216,7 +216,7 @@ export default function CustomerInvitesPage() {
   const getStatusBadge = (expiresAt: string) => {
     const now = new Date();
     const expiry = new Date(expiresAt);
-    
+
     if (now > expiry) {
       return (
         <Badge variant="destructive" className="flex items-center">
@@ -225,7 +225,7 @@ export default function CustomerInvitesPage() {
         </Badge>
       );
     }
-    
+
     return (
       <Badge variant="outline" className="bg-primary/10 text-primary flex items-center">
         <CheckCircle className="h-3 w-3 mr-1" />
@@ -243,13 +243,13 @@ export default function CustomerInvitesPage() {
             Send and manage invitations for new customers
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -264,7 +264,7 @@ export default function CustomerInvitesPage() {
                   Send an invitation email to a potential customer
                 </DialogDescription>
               </DialogHeader>
-              
+
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -295,7 +295,7 @@ export default function CustomerInvitesPage() {
                       )}
                     />
                   </div>
-                  
+
                   <FormField
                     control={form.control}
                     name="email"
@@ -309,7 +309,7 @@ export default function CustomerInvitesPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="company"
@@ -323,7 +323,7 @@ export default function CustomerInvitesPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="message"
@@ -343,7 +343,7 @@ export default function CustomerInvitesPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <DialogFooter>
                     <Button type="submit" disabled={sendInviteMutation.isPending}>
                       {sendInviteMutation.isPending ? (
@@ -365,7 +365,7 @@ export default function CustomerInvitesPage() {
           </Dialog>
         </div>
       </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Active Invitations</CardTitle>
@@ -402,7 +402,7 @@ export default function CustomerInvitesPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  invites.map((invite: any) => (
+                  {(invites as any[])?.map((invite: any) => (
                     <TableRow key={invite.id}>
                       <TableCell>
                         <div className="flex flex-col">
@@ -446,7 +446,7 @@ export default function CustomerInvitesPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  ))}
                 )}
               </TableBody>
             </Table>

@@ -38,8 +38,7 @@ export default function Register() {
               role: data.invitation.role,
               expires: new Date(data.invitation.expiresAt).getTime(),
               timestamp: Date.now(),
-              token: inviteToken
-            });
+            } as InvitationData);
           } else {
             setInvitationError(data.message || 'Invalid invitation link.');
           }
@@ -112,7 +111,7 @@ export default function Register() {
             </p>
           )}
         </div>
-        <AuthForm type="register" invitationData={invitationData} />
+        <AuthForm type="register" invitationData={invitationData || undefined} />
       </div>
     </div>
   );

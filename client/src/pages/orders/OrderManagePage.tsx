@@ -129,7 +129,7 @@ export default function OrderManagePage() {
         if (item.sizes) {
           return item;
         }
-        
+
         // Otherwise, migrate from old format to new sizes format
         const migratedItem = {
           ...item,
@@ -148,7 +148,7 @@ export default function OrderManagePage() {
             'No Sizes': 0
           }
         };
-        
+
         // If there was an old size and quantity, put it in the appropriate size
         if ((item as any).size && (item as any).quantity) {
           const oldSize = (item as any).size;
@@ -157,11 +157,11 @@ export default function OrderManagePage() {
             migratedItem.sizes[oldSize as keyof typeof migratedItem.sizes] = oldQuantity;
           }
         }
-        
+
         return migratedItem;
       }) || []
     };
-    
+
     setEditingOrder(migratedOrder);
     setEditDialogOpen(true);
   };
@@ -174,10 +174,10 @@ export default function OrderManagePage() {
         const lineTotal = totalQuantity * item.unitPrice;
         return sum + lineTotal;
       }, 0) || 0;
-      
+
       const tax = itemsTotal * 0.08; // 8% tax
       const finalTotal = itemsTotal + tax;
-      
+
       // Update all item totals before saving
       const updatedItems = editingOrder.items?.map(item => {
         const totalQuantity = Object.values(item.sizes).reduce((qty, sizeQty) => qty + sizeQty, 0);
@@ -186,21 +186,21 @@ export default function OrderManagePage() {
           totalPrice: totalQuantity * item.unitPrice
         };
       }) || [];
-      
+
       const updatedOrder = {
         ...editingOrder,
         items: updatedItems,
         totalAmount: finalTotal,
         tax: tax
       };
-      
+
       console.log('Saving order with calculated totals:', {
         itemsTotal,
         tax,
         finalTotal,
         itemCount: updatedItems.length
       });
-      
+
       updateOrder.mutate(updatedOrder);
     }
   };
@@ -208,7 +208,7 @@ export default function OrderManagePage() {
   // Handle logo file upload
   const handleLogoUpload = async (file: File) => {
     if (!editingOrder) return;
-    
+
     // Validate file type
     if (!file.type.includes('webp') && !file.type.includes('image')) {
       toast({
@@ -220,17 +220,17 @@ export default function OrderManagePage() {
     }
 
     setUploadingLogo(true);
-    
+
     try {
       const formData = new FormData();
       formData.append('logo', file);
       formData.append('customerId', editingOrder.customerId);
-      
+
       const response = await fetch('/api/upload/logo', {
         method: 'POST',
         body: formData
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         setEditingOrder({
@@ -238,7 +238,7 @@ export default function OrderManagePage() {
           logoUrl: result.logoUrl,
           companyName: result.companyName || editingOrder.companyName
         });
-        
+
         toast({
           title: "Success",
           description: "Logo uploaded successfully"
@@ -260,7 +260,7 @@ export default function OrderManagePage() {
   // Handle item image upload
   const handleItemImageUpload = async (file: File, itemIndex: number) => {
     if (!editingOrder) return;
-    
+
     // Validate file type
     if (!file.type.includes('image')) {
       toast({
@@ -272,18 +272,18 @@ export default function OrderManagePage() {
     }
 
     setUploadingItemImage(itemIndex);
-    
+
     try {
       const formData = new FormData();
       formData.append('itemImage', file);
       formData.append('orderId', editingOrder.id);
       formData.append('itemIndex', itemIndex.toString());
-      
+
       const response = await fetch('/api/upload/item-image', {
         method: 'POST',
         body: formData
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         const updatedItems = [...editingOrder.items];
@@ -291,12 +291,12 @@ export default function OrderManagePage() {
           ...updatedItems[itemIndex], 
           imageUrl: result.imageUrl 
         };
-        
+
         setEditingOrder({
           ...editingOrder,
           items: updatedItems
         });
-        
+
         toast({
           title: "Success",
           description: "Product image uploaded successfully"
@@ -323,7 +323,7 @@ export default function OrderManagePage() {
         hasImage: true
       };
     }
-    
+
     // Fallback to initials if no logo
     return {
       company: order.companyName || 'Custom Clothing Co.',
@@ -356,7 +356,7 @@ export default function OrderManagePage() {
       default:
         return;
     }
-    
+
     updateOrder.mutate({ id: orderId, status: newStatus });
   };
 
@@ -387,7 +387,7 @@ export default function OrderManagePage() {
           <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
           <p className="text-gray-600">View and manage all orders</p>
         </div>
-        
+
         <div className="flex gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -599,7 +599,7 @@ export default function OrderManagePage() {
                   <p className="text-lg font-semibold">{formatCurrency(selectedOrder.totalAmount)}</p>
                 </div>
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-gray-500">Notes</Label>
                 <p className="mt-1 text-sm text-gray-700">{selectedOrder.notes || "No notes"}</p>
@@ -623,9 +623,9 @@ export default function OrderManagePage() {
                       {selectedOrder.items?.map((item, index) => (
                         <tr key={index}>
                           <td className="px-4 py-2 text-sm text-gray-900">{item.productName}</td>
-                          <td className="px-4 py-2 text-sm text-gray-500">{item.size}</td>
+                          <td className="px-4 py-2 text-sm text-gray-500">{(item as any).size || 'N/A'}</td>
                           <td className="px-4 py-2 text-sm text-gray-500">{item.color}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900 text-right">{item.quantity}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900 text-right">{(item as any).quantity || 0}</td>
                           <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.unitPrice)}</td>
                           <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.totalPrice)}</td>
                         </tr>
@@ -685,7 +685,7 @@ export default function OrderManagePage() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="mt-3">
                       <Label htmlFor="companyName">Company Name</Label>
                       <Input
@@ -699,7 +699,7 @@ export default function OrderManagePage() {
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label>Current Logo Preview</Label>
                     <div className="flex items-center space-x-3 mt-2 p-3 border rounded-lg bg-white">
@@ -772,7 +772,7 @@ export default function OrderManagePage() {
                   <p className="text-xs text-gray-500 mt-1">This amount updates automatically from line items</p>
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
@@ -849,7 +849,7 @@ export default function OrderManagePage() {
                       <div className="w-16 px-2 py-2 text-xs font-medium text-gray-500 uppercase text-center">Actions</div>
                     </div>
                   </div>
-                  
+
                   {/* Spreadsheet-style rows */}
                   {editingOrder.items?.map((item, index) => {
                     const calculateItemTotal = () => {
@@ -874,7 +874,7 @@ export default function OrderManagePage() {
                               className="text-sm border-0 p-1 h-8"
                             />
                           </div>
-                          
+
                           {/* Color */}
                           <div className="w-32 px-3 py-2 border-r">
                             <Input
@@ -888,7 +888,7 @@ export default function OrderManagePage() {
                               className="text-sm border-0 p-1 h-8"
                             />
                           </div>
-                          
+
                           {/* Product Image Upload */}
                           <div className="w-24 px-3 py-2 border-r">
                             <div className="flex flex-col items-center space-y-1">
@@ -909,7 +909,7 @@ export default function OrderManagePage() {
                                   <Image className="h-4 w-4 text-gray-400" />
                                 </div>
                               )}
-                              
+
                               <label className="cursor-pointer">
                                 <input
                                   type="file"
@@ -927,7 +927,7 @@ export default function OrderManagePage() {
                               </label>
                             </div>
                           </div>
-                          
+
                           {/* Size quantity inputs */}
                           {(['YS', 'YM', 'YL', 'AXS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'] as const).map((size) => (
                             <div key={size} className="w-16 px-2 py-2 border-r">
@@ -953,7 +953,7 @@ export default function OrderManagePage() {
                               />
                             </div>
                           ))}
-                          
+
                           {/* Unit Price */}
                           <div className="w-20 px-3 py-2 border-r">
                             <Input
@@ -971,14 +971,14 @@ export default function OrderManagePage() {
                               placeholder="0.00"
                             />
                           </div>
-                          
+
                           {/* Total */}
                           <div className="w-24 px-3 py-2 border-r flex items-center justify-center">
                             <div className="text-sm font-medium">
                               {formatCurrency(calculateItemTotal())}
                             </div>
                           </div>
-                          
+
                           {/* Actions */}
                           <div className="w-16 px-2 py-2 flex items-center justify-center">
                             <Button
@@ -1001,7 +1001,7 @@ export default function OrderManagePage() {
                       </div>
                     );
                   })}
-                  
+
                   {editingOrder.items?.length === 0 && (
                     <div className="px-4 py-8 text-center text-gray-500">
                       <p>No items added to this order yet.</p>

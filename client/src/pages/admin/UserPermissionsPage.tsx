@@ -15,10 +15,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
-  Users, Shield, Settings, AlertTriangle, Plus, Edit, Trash2, Search, 
-  UserCheck, Clock, Activity, Archive, Download, Upload, Filter,
-  UserPlus, UserMinus, RotateCcw, AlertCircle, CheckCircle2
+  Loader2, Plus, Edit, Trash2, Package, DollarSign, Tag, Users, AlertCircle, RefreshCw, Image as ImageIcon, PlusCircle, MoreHorizontal, Eye, Search, Trophy, Shirt, Zap, Mountain, Car, Waves, Dumbbell, Target, TreePine, Gamepad2, Shield, Activity
 } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 // Enhanced role schema with validation
 const roleSchema = z.object({

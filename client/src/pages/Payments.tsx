@@ -53,7 +53,7 @@ export default function Payments() {
   }
 
   // Filter orders with payments
-  const paidOrders = orders ? orders.filter((order: any) => 
+  const paidOrders = orders ? (orders as any[])?.filter?.((order: any) => 
     order.status !== 'draft' && order.status !== 'cancelled'
   ) : [];
 
@@ -72,7 +72,7 @@ export default function Payments() {
             <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
             <p className="text-gray-600">View your payment history and manage payment methods.</p>
           </div>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Payment History */}
             <div className="lg:col-span-2">
@@ -133,7 +133,7 @@ export default function Payments() {
                 </CardContent>
               </Card>
             </div>
-            
+
             {/* Payment Methods */}
             <div className="lg:col-span-1">
               <Card>
@@ -158,25 +158,25 @@ export default function Payments() {
                         Edit
                       </Button>
                     </div>
-                    
+
                     <Button variant="outline" className="w-full">
                       Add Payment Method
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="mt-6">
                 <CardHeader>
                   <CardTitle>Billing Address</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1">
-                    <p className="font-medium">{user.firstName} {user.lastName}</p>
-                    <p className="text-sm text-gray-600">{user.company || 'No company'}</p>
+                    <p className="font-medium">{user?.firstName || 'N/A'} {user?.lastName || ''}</p>
+                    <p className="text-sm text-gray-600">{(user as any)?.company || 'No company'}</p>
                     <p className="text-sm text-gray-600">123 Main Street</p>
                     <p className="text-sm text-gray-600">New York, NY 10001</p>
-                    <p className="text-sm text-gray-600 mt-1">{user.phone || 'No phone'}</p>
+                    <p className="text-sm text-gray-600 mt-1">{(user as any)?.phone || 'No phone'}</p>
                   </div>
                   <Button variant="ghost" size="sm" className="mt-4">
                     Edit Address

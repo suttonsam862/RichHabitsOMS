@@ -94,12 +94,12 @@ export default function Production() {
   // Handle submit status update with notes
   const handleSubmitStatusUpdate = () => {
     if (!selectedOrderId) return;
-    
+
     const task = productionTasks.find((t: any) => t.orderId === selectedOrderId);
     if (!task) return;
-    
+
     const newStatus = task.order.status === 'pending_production' ? 'in_production' : 'completed';
-    
+
     updateStatusMutation.mutate({
       orderId: selectedOrderId,
       status: newStatus,
@@ -128,7 +128,7 @@ export default function Production() {
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="all">All Tasks</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value={activeTab} className="space-y-4">
           <Card>
             <CardHeader>
@@ -148,7 +148,7 @@ export default function Production() {
                 <div className="flex justify-center items-center h-64">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : filteredTasks.length === 0 ? (
+              ) : (!(productionTasks as any[]) || (productionTasks as any[])?.length === 0) ? (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">No production tasks found</p>
                 </div>
@@ -166,7 +166,7 @@ export default function Production() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredTasks.map((task: any) => (
+                      {(productionTasks as any[])?.map((task: any) => (
                         <TableRow key={task.id}>
                           <TableCell className="font-medium">{task.order?.orderNumber}</TableCell>
                           <TableCell>{task.order?.customer?.company || 'N/A'}</TableCell>
@@ -202,7 +202,7 @@ export default function Production() {
                                   Start Production
                                 </Button>
                               )}
-                              
+
                               {task.order?.status === 'in_production' && (
                                 <Button
                                   variant="outline"
@@ -213,7 +213,7 @@ export default function Production() {
                                   Mark as Completed
                                 </Button>
                               )}
-                              
+
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -250,7 +250,7 @@ export default function Production() {
                 : 'Mark this order as completed production'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div>
               <Textarea
@@ -261,7 +261,7 @@ export default function Production() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedOrderId(null)}>
               Cancel
@@ -289,7 +289,7 @@ export default function Production() {
               View order information and design files
             </DialogDescription>
           </DialogHeader>
-          
+
           {viewingOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -312,7 +312,7 @@ export default function Production() {
                   <p>${parseFloat(viewingOrder.totalAmount).toFixed(2)}</p>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="font-medium mb-2">Order Items</h3>
                 <div className="rounded-md border mb-4">
@@ -338,7 +338,7 @@ export default function Production() {
                   </Table>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="font-medium mb-2">Design Files</h3>
                 {viewingOrder.designTasks?.length > 0 && viewingOrder.designTasks[0].files?.length > 0 ? (
@@ -373,7 +373,7 @@ export default function Production() {
                   <p className="text-muted-foreground">No design files available</p>
                 )}
               </div>
-              
+
               {viewingOrder.notes && (
                 <div>
                   <h3 className="font-medium mb-1">Notes</h3>
@@ -382,7 +382,7 @@ export default function Production() {
               )}
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewingOrder(null)}>
               Close
