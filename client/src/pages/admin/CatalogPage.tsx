@@ -445,7 +445,9 @@ function CatalogPageContent() {
         throw new Error("No authentication token");
       }
 
-      const response = await fetch("/api/catalog", {
+      // Add timestamp to prevent caching issues
+      const timestamp = Date.now();
+      const response = await fetch(`/api/catalog?_t=${timestamp}`, {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -468,28 +470,37 @@ function CatalogPageContent() {
 
       const data = await response.json();
 
-      // Transform the data to match the CatalogItem type
-      const transformedItems = data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        sport: item.sport,
-        basePrice: item.basePrice != null ? parseFloat(String(item.basePrice)) : (item.base_price != null ? parseFloat(String(item.base_price)) : 0),
-        unitCost: item.unitCost != null ? parseFloat(String(item.unitCost)) : (item.unit_cost != null ? parseFloat(String(item.unit_cost)) : 0),
-        sku: item.sku,
-        status: item.status,
-        imageUrl: item.imageUrl || item.image_url,
-        measurementChartUrl: item.measurementChartUrl || item.measurement_chart_url,
-        hasMeasurements: item.hasMeasurements || item.has_measurements,
-        measurementInstructions: item.measurementInstructions || item.measurement_instructions,
-        etaDays: item.etaDays || item.eta_days,
-        preferredManufacturerId: item.preferredManufacturerId || item.preferred_manufacturer_id,
-        tags: item.tags || [],
-        specifications: item.specifications || {},
-        buildInstructions: item.buildInstructions || item.build_instructions,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-      }));
+      // Transform the data to match the CatalogItem type with safe number parsing
+      const transformedItems = data.map((item: any) => {
+        // Safe number parsing function
+        const safeParseFloat = (value: any, defaultValue: number = 0): number => {
+          if (value === null || value === undefined || value === '') return defaultValue;
+          const parsed = parseFloat(String(value));
+          return isNaN(parsed) ? defaultValue : parsed;
+        };
+
+        return {
+          id: item.id,
+          name: item.name || '',
+          category: item.category || '',
+          sport: item.sport || '',
+          basePrice: safeParseFloat(item.basePrice ?? item.base_price, 0),
+          unitCost: safeParseFloat(item.unitCost ?? item.unit_cost, 0),
+          sku: item.sku || '',
+          status: item.status || 'active',
+          imageUrl: item.imageUrl || item.image_url || null,
+          measurementChartUrl: item.measurementChartUrl || item.measurement_chart_url || null,
+          hasMeasurements: Boolean(item.hasMeasurements || item.has_measurements),
+          measurementInstructions: item.measurementInstructions || item.measurement_instructions || null,
+          etaDays: item.etaDays || item.eta_days || '7',
+          preferredManufacturerId: item.preferredManufacturerId || item.preferred_manufacturer_id || null,
+          tags: Array.isArray(item.tags) ? item.tags : [],
+          specifications: (typeof item.specifications === 'object' && item.specifications !== null) ? item.specifications : {},
+          buildInstructions: item.buildInstructions || item.build_instructions || null,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+        };
+      });
 
       return transformedItems;
     },
@@ -782,6 +793,9 @@ function CatalogPageContent() {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(["admin", "catalog"], context.previousData);
+      } else {
+        // Force refetch if no previous data to restore
+        queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
       }
 
       toast({
@@ -791,28 +805,28 @@ function CatalogPageContent() {
       });
     },
     onSuccess: (data, itemId) => {
-      // Force immediate cache update to ensure item is removed
-      queryClient.setQueryData(["admin", "catalog"], (oldData: CatalogItem[] | undefined) => {
-        if (!oldData || !Array.isArray(oldData)) return [];
-        return oldData.filter((item: CatalogItem) => item.id !== itemId);
-      });
-
       toast({
         title: "Success",
         description: "Catalog item deleted successfully",
       });
     },
-    onSettled: async () => {
-      // Always invalidate and refetch queries after mutation to ensure fresh data
-      await queryClient.invalidateQueries({ 
-        queryKey: ["admin", "catalog"]
-      });
-
-      // Force a refetch to get the latest data from server
-      queryClient.refetchQueries({ 
-        queryKey: ["admin", "catalog"],
-        type: 'active'
-      });
+    onSettled: async (data, error, itemId) => {
+      // Only invalidate if the deletion was successful
+      if (!error) {
+        // Invalidate and refetch to ensure consistency
+        await queryClient.invalidateQueries({ 
+          queryKey: ["admin", "catalog"],
+          exact: true
+        });
+        
+        // Small delay to ensure server has processed the deletion
+        setTimeout(() => {
+          queryClient.refetchQueries({ 
+            queryKey: ["admin", "catalog"],
+            type: 'active'
+          });
+        }, 100);
+      }
     },
   });
 
@@ -2374,7 +2388,13 @@ function CatalogPageContent() {
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-foreground font-mono text-sm">{item.sku}</TableCell>
-                                    <TableCell className="text-foreground">${item.basePrice != null && typeof item.basePrice === 'number' ? item.basePrice.toFixed(2) : '0.00'}</TableCell>
+                                    <TableCell className="text-foreground">
+                                      ${(() => {
+                                        const price = item.basePrice;
+                                        if (price === null || price === undefined || isNaN(price)) return '0.00';
+                                        return Number(price).toFixed(2);
+                                      })()}
+                                    </TableCell>
                                     <TableCell>
                                       <Badge 
                                         variant={item.status === 'active' ? 'default' : 'secondary'}

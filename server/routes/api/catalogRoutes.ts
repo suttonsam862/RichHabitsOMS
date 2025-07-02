@@ -481,26 +481,75 @@ export async function deleteCatalogItem(req: Request, res: Response) {
 
     console.log('Deleting catalog item:', id);
 
-    const { error } = await supabase
+    // First check if the item exists
+    const { data: existingItem, error: checkError } = await supabase
       .from('catalog_items')
-      .delete()
-      .eq('id', id);
+      .select('id, name, sku')
+      .eq('id', id)
+      .single();
 
-    if (error) {
-      logCatalogOperation('delete_catalog_item', req, null, error);
-      console.error('Error deleting catalog item:', error);
+    if (checkError && checkError.code !== 'PGRST116') {
+      logCatalogOperation('delete_catalog_item', req, null, checkError);
+      console.error('Error checking catalog item existence:', checkError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to delete catalog item',
-        error: error.message
+        message: 'Failed to check catalog item existence',
+        error: checkError.message
       });
     }
 
-    logCatalogOperation('delete_catalog_item', req, { itemId: id, success: true });
-    console.log('Catalog item deleted successfully:', id);
+    if (!existingItem) {
+      const notFoundError = new Error('Catalog item not found');
+      logCatalogOperation('delete_catalog_item', req, null, notFoundError);
+      return res.status(404).json({
+        success: false,
+        message: 'Catalog item not found'
+      });
+    }
+
+    console.log('Found item to delete:', existingItem.name, existingItem.sku);
+
+    // Perform the deletion
+    const { data: deletedData, error: deleteError } = await supabase
+      .from('catalog_items')
+      .delete()
+      .eq('id', id)
+      .select();
+
+    if (deleteError) {
+      logCatalogOperation('delete_catalog_item', req, null, deleteError);
+      console.error('Error deleting catalog item:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete catalog item',
+        error: deleteError.message
+      });
+    }
+
+    // Verify deletion was successful
+    if (!deletedData || deletedData.length === 0) {
+      const verificationError = new Error('Item may not have been deleted');
+      logCatalogOperation('delete_catalog_item', req, null, verificationError);
+      console.warn('Delete operation completed but no data returned');
+    }
+
+    logCatalogOperation('delete_catalog_item', req, { 
+      itemId: id, 
+      success: true, 
+      deletedCount: deletedData?.length || 0,
+      itemName: existingItem.name,
+      itemSku: existingItem.sku
+    });
+    
+    console.log('Catalog item deleted successfully:', id, existingItem.name);
+    
     return res.json({
       success: true,
-      message: 'Catalog item deleted successfully'
+      message: 'Catalog item deleted successfully',
+      data: {
+        deletedItem: existingItem,
+        deletedCount: deletedData?.length || 0
+      }
     });
   } catch (error) {
     logCatalogOperation('delete_catalog_item', req, null, error);
