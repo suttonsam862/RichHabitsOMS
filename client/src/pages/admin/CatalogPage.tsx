@@ -731,7 +731,7 @@ function CatalogPageContent() {
         throw new Error(errorData.message || "Failed to delete catalog item");
       }
 
-      return response.json();
+      return { success: true, itemId };
     },
     onMutate: async (itemId) => {
       // Cancel any outgoing refetches to avoid race conditions
@@ -742,7 +742,7 @@ function CatalogPageContent() {
 
       // Optimistically update the cache by removing the item
       queryClient.setQueryData(["admin", "catalog"], (oldData: CatalogItem[] | undefined) => {
-        if (!oldData) return [];
+        if (!oldData || !Array.isArray(oldData)) return [];
         return oldData.filter((item: CatalogItem) => item.id !== itemId);
       });
 
@@ -762,16 +762,27 @@ function CatalogPageContent() {
       });
     },
     onSuccess: (data, itemId) => {
+      // Force immediate cache update to ensure item is removed
+      queryClient.setQueryData(["admin", "catalog"], (oldData: CatalogItem[] | undefined) => {
+        if (!oldData || !Array.isArray(oldData)) return [];
+        return oldData.filter((item: CatalogItem) => item.id !== itemId);
+      });
+
       toast({
         title: "Success",
         description: "Catalog item deleted successfully",
       });
     },
-    onSettled: () => {
-      // Always invalidate queries after mutation to ensure fresh data
-      queryClient.invalidateQueries({ 
+    onSettled: async () => {
+      // Always invalidate and refetch queries after mutation to ensure fresh data
+      await queryClient.invalidateQueries({ 
+        queryKey: ["admin", "catalog"]
+      });
+      
+      // Force a refetch to get the latest data from server
+      queryClient.refetchQueries({ 
         queryKey: ["admin", "catalog"],
-        refetchType: 'all' 
+        type: 'active'
       });
     },
   });
