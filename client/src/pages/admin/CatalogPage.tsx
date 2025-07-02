@@ -447,11 +447,13 @@ function CatalogPageContent() {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
+        credentials: 'include'
       });
 
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('authToken');
+          localStorage.removeItem('tokenExpires');
           window.location.href = '/login';
           throw new Error("Authentication failed");
         }
@@ -460,10 +462,16 @@ function CatalogPageContent() {
 
       return response.json();
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds - shorter for better delete responsiveness
+    gcTime: 2 * 60 * 1000, // 2 minutes
+    refetchOnWindowFocus: true,
     refetchOnMount: true,
+    retry: (failureCount, error) => {
+      if (error?.message?.includes('Authentication failed')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   // Fetch manufacturers only
@@ -721,8 +729,16 @@ function CatalogPageContent() {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, itemId) => {
+      // Immediately update the cache to remove the deleted item
+      queryClient.setQueryData(["admin", "catalog"], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.filter((item: CatalogItem) => item.id !== itemId);
+      });
+      
+      // Also invalidate to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
+      
       toast({
         title: "Success",
         description: "Catalog item deleted successfully",
@@ -766,9 +782,16 @@ function CatalogPageContent() {
     setIsEditItemDialogOpen(true);
   };
 
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<CatalogItem | null>(null);
+
   const handleDeleteItem = (item: CatalogItem) => {
-    if (window.confirm(`Are you sure you want to delete "${item.name}"? This action cannot be undone.`)) {
-      deleteItemMutation.mutate(item.id);
+    setDeleteConfirmItem(item);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmItem) {
+      deleteItemMutation.mutate(deleteConfirmItem.id);
+      setDeleteConfirmItem(null);
     }
   };
 
@@ -2049,6 +2072,62 @@ function CatalogPageContent() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmItem} onOpenChange={() => setDeleteConfirmItem(null)}>
+        <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border">
+          <DialogHeader>
+            <DialogTitle className="text-red-400 flex items-center">
+              <Trash2 className="mr-2 h-5 w-5" />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription className="subtitle text-muted-foreground">
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteConfirmItem && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg border border-red-500/20 bg-red-500/5">
+                <p className="text-sm text-foreground">
+                  Are you sure you want to delete <span className="font-semibold text-neon-blue">"{deleteConfirmItem.name}"</span>?
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  SKU: {deleteConfirmItem.sku}
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDeleteConfirmItem(null)}
+                  disabled={deleteItemMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={confirmDelete}
+                  disabled={deleteItemMutation.isPending}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {deleteItemMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Item
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card className="rich-card">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -2096,10 +2175,27 @@ function CatalogPageContent() {
               <div className="animate-spin w-8 h-8 border-4 border-neon-blue border-t-transparent rounded-full" />
             </div>
           ) : isError ? (
-            <div className="flex justify-center py-8 text-center">
-              <div className="max-w-md">
-                <h3 className="text-lg font-medium mb-2 text-foreground">Unable to load catalog</h3>
-                <p className="text-muted-foreground">There was an error fetching catalog data. Please try again later.</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="glass-panel p-3 mb-4">
+                <AlertCircle className="h-10 w-10 text-red-500" />
+              </div>
+              <h3 className="text-lg font-medium mb-2 text-foreground">Unable to load catalog</h3>
+              <p className="text-muted-foreground mb-4">There was an error fetching catalog data.</p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => refetch()}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Try Again
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => window.location.reload()}
+                >
+                  Reload Page
+                </Button>
               </div>
             </div>
           ) : filteredItems && filteredItems.length > 0 ? (

@@ -42,13 +42,13 @@ export function RequireAuth({ allowedRoles = [], children }: RequireAuthProps) {
       console.log('RequireAuth: Custom role access granted', user.customRole);
       return <>{children}</>;
     }
-    
+
     console.log('RequireAuth: User lacks required role, redirecting to dashboard', {
       userRole: user.role,
       allowedRoles,
       customRole: user.customRole
     });
-    
+
     // Redirect to the user's appropriate dashboard
     return <Navigate to={`/dashboard/${user.role}`} replace />;
   }
