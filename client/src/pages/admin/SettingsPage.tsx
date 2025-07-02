@@ -910,10 +910,9 @@ export default function SettingsPage() {
                 <div className="h-10 px-3 py-2 border rounded-md text-sm">
                   ••••••••••••
                 </div>
-              </div>
+```tool_code
             </CardContent>
             <CardFooter>
-```tool_code
               <Button>Update Password</Button>
             </CardFooter>
           </Card>
@@ -1797,8 +1796,8 @@ export default function SettingsPage() {
 
                                           toast({
                                             title: "User deleted",
-                                            description: "The user has been deleted successfully",
-                                            variant: "default",
+                                            description: "The user has been removed from the system",
+                                            variant: "destructive",
                                           });
                                         }}
                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -1850,10 +1849,8 @@ export default function SettingsPage() {
                                   {activity.action.replace(/_/g, ' ')}
                                 </span>
                               </TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  {```tool_code
-activity.details && typeof activity.details === 'object' ? 
+                              <TableCell>                              <div className="text-sm">
+                                  {activity.details && typeof activity.details === 'object' ? 
                                     Object.entries(activity.details).map(([key, value]) => (
                                       <div key={key}>
                                         <span className="font-medium">{key.replace(/_/g, ' ')}</span>: {
@@ -2494,7 +2491,7 @@ activity.details && typeof activity.details === 'object' ?
                                   if (confirm(`Are you sure you want to delete ${user.first_name || 'this user'}?`)) {
                                     toast({
                                       title: "User Deleted",
-                                      description: `User has been removed from the system`,
+                                      description: "User has been removed from the system",
                                       variant: "destructive",
                                     });
                                   }
