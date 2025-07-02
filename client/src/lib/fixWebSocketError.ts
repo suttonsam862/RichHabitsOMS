@@ -2,8 +2,6 @@
  * This script fixes the WebSocket connection error in Replit environments
  * by patching the WebSocket constructor that Vite uses for HMR.
  */
-
-// Run this code once when the app loads
 export const fixWebSocketConnection = () => {
   if (typeof window !== 'undefined') {
     // Store the original WebSocket constructor
@@ -65,13 +63,6 @@ export const fixWebSocketConnection = () => {
     window.WebSocket.prototype = OriginalWebSocket.prototype;
     Object.defineProperties(window.WebSocket, 
       Object.getOwnPropertyDescriptors(OriginalWebSocket));
-
-    // Add additional logging for errors
-    window.addEventListener('error', (event) => {
-      if (event.message && event.message.includes('WebSocket')) {
-        console.warn('WebSocket error intercepted:', event.message);
-      }
-    });
 
     console.log('WebSocket connection fix applied for Replit environment');
   }

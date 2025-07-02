@@ -911,7 +911,7 @@ export default function SettingsPage() {
                   ••••••••••••
                 </div>
               </div>
-            </Card            </CardContent>
+            </CardContent>
             <CardFooter>
               <Button>Update Password</Button>
             </CardFooter>
