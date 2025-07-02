@@ -474,19 +474,19 @@ function CatalogPageContent() {
         name: item.name,
         category: item.category,
         sport: item.sport,
-        basePrice: item.base_price,
-        unitCost: item.unit_cost,
+        basePrice: item.basePrice != null ? parseFloat(String(item.basePrice)) : (item.base_price != null ? parseFloat(String(item.base_price)) : 0),
+        unitCost: item.unitCost != null ? parseFloat(String(item.unitCost)) : (item.unit_cost != null ? parseFloat(String(item.unit_cost)) : 0),
         sku: item.sku,
         status: item.status,
-        imageUrl: item.image_url,
-        measurementChartUrl: item.measurement_chart_url,
-        hasMeasurements: item.has_measurements,
-        measurementInstructions: item.measurement_instructions,
-        etaDays: item.eta_days,
-        preferredManufacturerId: item.preferred_manufacturer_id,
+        imageUrl: item.imageUrl || item.image_url,
+        measurementChartUrl: item.measurementChartUrl || item.measurement_chart_url,
+        hasMeasurements: item.hasMeasurements || item.has_measurements,
+        measurementInstructions: item.measurementInstructions || item.measurement_instructions,
+        etaDays: item.etaDays || item.eta_days,
+        preferredManufacturerId: item.preferredManufacturerId || item.preferred_manufacturer_id,
         tags: item.tags || [],
         specifications: item.specifications || {},
-        buildInstructions: item.build_instructions,
+        buildInstructions: item.buildInstructions || item.build_instructions,
         created_at: item.created_at,
         updated_at: item.updated_at,
       }));
@@ -2374,7 +2374,7 @@ function CatalogPageContent() {
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-foreground font-mono text-sm">{item.sku}</TableCell>
-                                    <TableCell className="text-foreground">${typeof item.basePrice === 'number' ? item.basePrice.toFixed(2) : '0.00'}</TableCell>
+                                    <TableCell className="text-foreground">${item.basePrice != null && typeof item.basePrice === 'number' ? item.basePrice.toFixed(2) : '0.00'}</TableCell>
                                     <TableCell>
                                       <Badge 
                                         variant={item.status === 'active' ? 'default' : 'secondary'}
