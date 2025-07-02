@@ -80,7 +80,8 @@ export async function getCatalogItems(req: Request, res: Response) {
       tags: item.tags || [],
       specifications: item.specifications || {},
       created_at: item.created_at,
-      updated_at: item.updated_at
+      updated_at: item.updated_at,
+      buildInstructions: item.build_instructions
     }));
 
     logCatalogOperation('get_catalog_items', req, { count: transformedItems.length });
@@ -116,7 +117,8 @@ export async function createCatalogItem(req: Request, res: Response) {
       etaDays,
       preferredManufacturerId,
       tags,
-      specifications
+      specifications,
+      buildInstructions
     } = req.body;
 
     logCatalogOperation('create_catalog_item', req, { requestBody: req.body });
@@ -247,7 +249,8 @@ export async function createCatalogItem(req: Request, res: Response) {
       eta_days: etaDays.trim(),
       preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
       tags: parsedTags,
-      specifications: parsedSpecifications
+      specifications: parsedSpecifications,
+      build_instructions: buildInstructions?.trim() || null
     };
 
     const { data: item, error } = await supabase
@@ -289,7 +292,8 @@ export async function createCatalogItem(req: Request, res: Response) {
         hasMeasurements: item.has_measurements,
         measurementInstructions: item.measurement_instructions,
         etaDays: item.eta_days,
-        preferredManufacturerId: item.preferred_manufacturer_id
+        preferredManufacturerId: item.preferred_manufacturer_id,
+        buildInstructions: item.build_instructions
       }
     });
   } catch (error) {
@@ -322,7 +326,8 @@ export async function updateCatalogItem(req: Request, res: Response) {
       etaDays,
       preferredManufacturerId,
       tags,
-      specifications
+      specifications,
+      buildInstructions
     } = req.body;
 
     logCatalogOperation('update_catalog_item', req, { itemId: id, requestBody: req.body });
@@ -407,6 +412,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
       preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
       tags: parsedTags,
       specifications: parsedSpecifications,
+      build_instructions: buildInstructions?.trim() || null,
       updated_at: new Date().toISOString()
     };
 
@@ -450,7 +456,8 @@ export async function updateCatalogItem(req: Request, res: Response) {
         hasMeasurements: item.has_measurements,
         measurementInstructions: item.measurement_instructions,
         etaDays: item.eta_days,
-        preferredManufacturerId: item.preferred_manufacturer_id
+        preferredManufacturerId: item.preferred_manufacturer_id,
+        buildInstructions: item.build_instructions
       }
     });
   } catch (error) {
@@ -538,7 +545,7 @@ export async function checkSkuExists(req: Request, res: Response) {
     }
 
     const exists = existingItems && existingItems.length > 0;
-    
+
     logCatalogOperation('check_sku', req, { 
       sku, 
       exists, 

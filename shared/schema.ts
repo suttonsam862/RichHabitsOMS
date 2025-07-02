@@ -117,6 +117,7 @@ export const catalogItems = pgTable('catalog_items', {
   preferredManufacturerId: uuid('preferred_manufacturer_id').references(() => userProfiles.id),
   tags: jsonb('tags').default([]),
   specifications: jsonb('specifications').default({}),
+  buildInstructions: text('build_instructions'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

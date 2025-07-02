@@ -36,6 +36,7 @@ interface CatalogItem {
   preferredManufacturerId?: string;
   tags?: string[];
   specifications?: Record<string, any>;
+  buildInstructions?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -64,6 +65,7 @@ const catalogItemSchema = z.object({
       return false;
     }
   }, "Specifications must be valid JSON").optional(),
+  buildInstructions: z.string().max(5000, "Build instructions too long").optional(),
 });
 
 // Image Upload Area Component
@@ -307,6 +309,7 @@ function CatalogPageContent() {
       preferredManufacturerId: "",
       tags: "",
       specifications: "",
+      buildInstructions: "",
     },
     mode: "onChange", // Enable real-time validation
   });
@@ -463,7 +466,32 @@ function CatalogPageContent() {
         throw new Error(`Failed to fetch catalog items: ${response.statusText}`);
       }
 
-      return response.json();
+      const data = await response.json();
+
+      // Transform the data to match the CatalogItem type
+      const transformedItems = data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        sport: item.sport,
+        basePrice: item.base_price,
+        unitCost: item.unit_cost,
+        sku: item.sku,
+        status: item.status,
+        imageUrl: item.image_url,
+        measurementChartUrl: item.measurement_chart_url,
+        hasMeasurements: item.has_measurements,
+        measurementInstructions: item.measurement_instructions,
+        etaDays: item.eta_days,
+        preferredManufacturerId: item.preferred_manufacturer_id,
+        tags: item.tags || [],
+        specifications: item.specifications || {},
+        buildInstructions: item.build_instructions,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      }));
+
+      return transformedItems;
     },
     staleTime: 0, // Always refetch for real-time updates
     gcTime: 30 * 1000, // 30 seconds cache time
@@ -593,6 +621,7 @@ function CatalogPageContent() {
               throw new Error("Invalid JSON in specifications field");
             }
           })() : {},
+        build_instructions: itemData.buildInstructions,
       };
 
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
@@ -754,7 +783,7 @@ function CatalogPageContent() {
       if (context?.previousData) {
         queryClient.setQueryData(["admin", "catalog"], context.previousData);
       }
-      
+
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete catalog item",
@@ -778,7 +807,7 @@ function CatalogPageContent() {
       await queryClient.invalidateQueries({ 
         queryKey: ["admin", "catalog"]
       });
-      
+
       // Force a refetch to get the latest data from server
       queryClient.refetchQueries({ 
         queryKey: ["admin", "catalog"],
@@ -812,6 +841,7 @@ function CatalogPageContent() {
       preferredManufacturerId: item.preferredManufacturerId || "",
       tags: Array.isArray(item.tags) ? item.tags.join(", ") : "",
       specifications: item.specifications ? JSON.stringify(item.specifications, null, 2) : "",
+      buildInstructions: item.buildInstructions || "",
     });
     setIsEditItemDialogOpen(true);
   };
@@ -1001,6 +1031,7 @@ function CatalogPageContent() {
               throw new Error("Invalid JSON in specifications field");
             }
           })() : {},
+        build_instructions: itemData.buildInstructions,
       };
 
       const token = localStorage.getItem('authToken');
@@ -1115,7 +1146,7 @@ function CatalogPageContent() {
         ...data,
         preferredManufacturerId: data.preferredManufacturerId === 'none' ? '' : data.preferredManufacturerId,
         tags: data.tags?.trim() || '',
-        specifications: data.specifications?.trim() || '',
+        buildInstructions: data.buildInstructions?.trim() || '',
         measurementInstructions: data.measurementInstructions?.trim() || '',
         name: data.name.trim(),
         sku: data.sku.trim().toUpperCase(),
@@ -1555,19 +1586,19 @@ function CatalogPageContent() {
 
                   <FormField
                     control={form.control}
-                    name="specifications"
+                    name="buildInstructions"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="subtitle text-muted-foreground text-xs">Specifications (JSON)</FormLabel>
+                        <FormLabel className="subtitle text-muted-foreground text-xs">Build Instructions</FormLabel>
                         <FormControl>
                           <Textarea 
                             {...field} 
                             className="rich-input" 
-                            placeholder='{"material": "Cotton", "weight": "200g"}'
+                            placeholder="Enter detailed build instructions for this item..."
                           />
                         </FormControl>
                         <FormDescription className="subtitle text-muted-foreground text-xs">
-                          Enter specifications in JSON format
+                          Provide step-by-step instructions for manufacturing this item
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -1823,7 +1854,7 @@ function CatalogPageContent() {
                         <span className="text-sm text-muted-foreground">Name:</span>
                         <span className="text-sm text-foreground font-medium">{selectedItem.name}</span>
                       </div>
-                      <div className="flex justify-between">
+                                            <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">SKU:</span>
                         <span className="text-sm text-foreground font-mono">{selectedItem.sku}</span>
                       </div>
@@ -1922,6 +1953,16 @@ function CatalogPageContent() {
                       <div className="glass-panel p-3 rounded-lg">
                         <pre className="text-xs text-foreground overflow-x-auto">
                           {JSON.stringify(selectedItem.specifications, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                   {selectedItem.buildInstructions && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Build Instructions</h3>
+                      <div className="glass-panel p-3 rounded-lg">
+                        <pre className="text-xs text-foreground overflow-x-auto">
+                          {selectedItem.buildInstructions}
                         </pre>
                       </div>
                     </div>
@@ -2084,8 +2125,29 @@ function CatalogPageContent() {
                   )}
                 />
               </div>
+              <FormField
+                  control={form.control}
+                  name="buildInstructions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="subtitle text-muted-foreground text-xs">Build Instructions</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          className="rich-input" 
+                          rows={6}
+                          placeholder="Enter detailed build instructions for this item..."
+                        />
+                      </FormControl>
+                      <FormDescription className="subtitle text-muted-foreground text-xs">
+                        Provide step-by-step instructions for manufacturing this item
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-4">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -2236,7 +2298,7 @@ function CatalogPageContent() {
             <div className="space-y-6">
               {Object.entries(groupedItems).map(([sport, sportItems]) => {
                 const SportIcon = getSportIcon(sport);
-                
+
                 // Group by category within each sport
                 const categorizedItems: { [category: string]: CatalogItem[] } = {};
                 sportItems.forEach((item: CatalogItem) => {
@@ -2260,7 +2322,7 @@ function CatalogPageContent() {
                     {/* Categories within Sport */}
                     {Object.entries(categorizedItems).map(([category, categoryItems]) => {
                       const CategoryIcon = getCategoryIcon(category);
-                      
+
                       return (
                         <div key={`${sport}-${category}`} className="ml-4">
                           {/* Category Header */}
