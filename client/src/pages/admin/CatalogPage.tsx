@@ -792,8 +792,8 @@ function CatalogPageContent() {
 
       return { success: true, itemId };
     },
-    onSuccess: (data, itemId) => {
-      // Immediately remove the item from cache
+    onSuccess: async (data, itemId) => {
+      // Remove item from cache optimistically and permanently
       queryClient.setQueryData(["admin", "catalog"], (oldData: CatalogItem[] | undefined) => {
         if (!oldData || !Array.isArray(oldData)) return [];
         return oldData.filter((item: CatalogItem) => item.id !== itemId);
@@ -804,8 +804,10 @@ function CatalogPageContent() {
         description: "Catalog item deleted successfully",
       });
 
-      // Refetch data to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
+      // Wait a moment then invalidate to ensure the deleted item doesn't reappear
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
+      }, 100);
     },
     onError: (error) => {
       toast({
@@ -1037,6 +1039,8 @@ function CatalogPageContent() {
         build_instructions: itemData.buildInstructions,
       };
 
+      console.log('Update payload being sent:', payload);
+
       const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/catalog/${itemId}`, {
         method: "PUT",
@@ -1048,12 +1052,17 @@ function CatalogPageContent() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update catalog item");
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Update failed:', response.status, errorData);
+        throw new Error(errorData.message || "Failed to update catalog item");
       }
 
-      return response.json();
+      const result = await response.json();
+      console.log('Update response:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Update mutation succeeded:', data);
       queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
       setIsEditItemDialogOpen(false);
       setIsAddItemDialogOpen(false);
@@ -1066,9 +1075,10 @@ function CatalogPageContent() {
       });
     },
     onError: (error) => {
+      console.error('Update mutation failed:', error);
       toast({
         title: "Error",
-        description: "Failed to update catalog item",
+        description: error instanceof Error ? error.message : "Failed to update catalog item",
         variant: "destructive",
       });
     },
@@ -1838,6 +1848,7 @@ function CatalogPageContent() {
                       alt={selectedItem.name}
                       className="w-full h-48 object-cover rounded-lg border border-glass-border"
                       onError={(e) => {
+                        console.log('Detail view image failed to load:', selectedItem.imageUrl);
                         e.currentTarget.style.display = 'none';
                         e.currentTarget.nextElementSibling?.classList.remove('hidden');
                       }}
@@ -2359,6 +2370,7 @@ function CatalogPageContent() {
                                             alt={item.name}
                                             className="w-10 h-10 object-cover rounded border border-glass-border"
                                             onError={(e) => {
+                                              console.log('Image failed to load:', item.imageUrl);
                                               e.currentTarget.style.display = 'none';
                                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                                             }}
