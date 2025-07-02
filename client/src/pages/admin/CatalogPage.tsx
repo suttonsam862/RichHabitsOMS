@@ -470,33 +470,52 @@ function CatalogPageContent() {
 
       const data = await response.json();
 
-      // Transform the data to match the CatalogItem type with safe number parsing
+      // Transform the data to match the CatalogItem type
       const transformedItems = data.map((item: any) => {
-        // Safe number parsing function
-        const safeParseFloat = (value: any, defaultValue: number = 0): number => {
-          if (value === null || value === undefined || value === '') return defaultValue;
-          const parsed = parseFloat(String(value));
-          return isNaN(parsed) ? defaultValue : parsed;
-        };
+        // Safely parse basePrice with fallback
+        let basePrice = 0;
+        try {
+          const rawBasePrice = item.basePrice ?? item.base_price;
+          if (rawBasePrice != null) {
+            const parsed = parseFloat(String(rawBasePrice));
+            basePrice = isNaN(parsed) ? 0 : parsed;
+          }
+        } catch (error) {
+          console.warn('Error parsing basePrice for item:', item.id, error);
+          basePrice = 0;
+        }
+
+        // Safely parse unitCost with fallback
+        let unitCost = 0;
+        try {
+          const rawUnitCost = item.unitCost ?? item.unit_cost;
+          if (rawUnitCost != null) {
+            const parsed = parseFloat(String(rawUnitCost));
+            unitCost = isNaN(parsed) ? 0 : parsed;
+          }
+        } catch (error) {
+          console.warn('Error parsing unitCost for item:', item.id, error);
+          unitCost = 0;
+        }
 
         return {
           id: item.id,
-          name: item.name || '',
-          category: item.category || '',
-          sport: item.sport || '',
-          basePrice: safeParseFloat(item.basePrice ?? item.base_price, 0),
-          unitCost: safeParseFloat(item.unitCost ?? item.unit_cost, 0),
-          sku: item.sku || '',
-          status: item.status || 'active',
-          imageUrl: item.imageUrl || item.image_url || null,
-          measurementChartUrl: item.measurementChartUrl || item.measurement_chart_url || null,
-          hasMeasurements: Boolean(item.hasMeasurements || item.has_measurements),
-          measurementInstructions: item.measurementInstructions || item.measurement_instructions || null,
-          etaDays: item.etaDays || item.eta_days || '7',
-          preferredManufacturerId: item.preferredManufacturerId || item.preferred_manufacturer_id || null,
-          tags: Array.isArray(item.tags) ? item.tags : [],
-          specifications: (typeof item.specifications === 'object' && item.specifications !== null) ? item.specifications : {},
-          buildInstructions: item.buildInstructions || item.build_instructions || null,
+          name: item.name,
+          category: item.category,
+          sport: item.sport,
+          basePrice,
+          unitCost,
+          sku: item.sku,
+          status: item.status,
+          imageUrl: item.imageUrl || item.image_url,
+          measurementChartUrl: item.measurementChartUrl || item.measurement_chart_url,
+          hasMeasurements: item.hasMeasurements || item.has_measurements,
+          measurementInstructions: item.measurementInstructions || item.measurement_instructions,
+          etaDays: item.etaDays || item.eta_days,
+          preferredManufacturerId: item.preferredManufacturerId || item.preferred_manufacturer_id,
+          tags: item.tags || [],
+          specifications: item.specifications || {},
+          buildInstructions: item.buildInstructions || item.build_instructions,
           created_at: item.created_at,
           updated_at: item.updated_at,
         };
@@ -773,60 +792,30 @@ function CatalogPageContent() {
 
       return { success: true, itemId };
     },
-    onMutate: async (itemId) => {
-      // Cancel any outgoing refetches to avoid race conditions
-      await queryClient.cancelQueries({ queryKey: ["admin", "catalog"] });
-
-      // Snapshot the previous value for rollback
-      const previousData = queryClient.getQueryData(["admin", "catalog"]);
-
-      // Optimistically update the cache by removing the item
+    onSuccess: (data, itemId) => {
+      // Immediately remove the item from cache
       queryClient.setQueryData(["admin", "catalog"], (oldData: CatalogItem[] | undefined) => {
         if (!oldData || !Array.isArray(oldData)) return [];
         return oldData.filter((item: CatalogItem) => item.id !== itemId);
       });
 
-      // Return context object for rollback
-      return { previousData, itemId };
-    },
-    onError: (error, itemId, context) => {
-      // Rollback on error
-      if (context?.previousData) {
-        queryClient.setQueryData(["admin", "catalog"], context.previousData);
-      } else {
-        // Force refetch if no previous data to restore
-        queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
-      }
+      toast({
+        title: "Success",
+        description: "Catalog item deleted successfully",
+      });
 
+      // Refetch data to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
+    },
+    onError: (error) => {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete catalog item",
         variant: "destructive",
       });
-    },
-    onSuccess: (data, itemId) => {
-      toast({
-        title: "Success",
-        description: "Catalog item deleted successfully",
-      });
-    },
-    onSettled: async (data, error, itemId) => {
-      // Only invalidate if the deletion was successful
-      if (!error) {
-        // Invalidate and refetch to ensure consistency
-        await queryClient.invalidateQueries({ 
-          queryKey: ["admin", "catalog"],
-          exact: true
-        });
-        
-        // Small delay to ensure server has processed the deletion
-        setTimeout(() => {
-          queryClient.refetchQueries({ 
-            queryKey: ["admin", "catalog"],
-            type: 'active'
-          });
-        }, 100);
-      }
+
+      // Refetch to ensure UI is in sync with server
+      queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
     },
   });
 
@@ -1864,8 +1853,7 @@ function CatalogPageContent() {
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground">Basic Information</h3>
                     <div className="mt-2 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Name:</span>
+                      <div className="flex justify-between"><span className="text-sm text-muted-foreground">Name:</span>
                         <span className="text-sm text-foreground font-medium">{selectedItem.name}</span>
                       </div>
                                             <div className="flex justify-between">
@@ -2388,13 +2376,13 @@ function CatalogPageContent() {
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-foreground font-mono text-sm">{item.sku}</TableCell>
-                                    <TableCell className="text-foreground">
-                                      ${(() => {
-                                        const price = item.basePrice;
-                                        if (price === null || price === undefined || isNaN(price)) return '0.00';
-                                        return Number(price).toFixed(2);
-                                      })()}
-                                    </TableCell>
+                                    <TableCell className="text-foreground">${(() => {
+                                      const price = item.basePrice;
+                                      if (price == null || price === undefined || isNaN(Number(price))) {
+                                        return '0.00';
+                                      }
+                                      return Number(price).toFixed(2);
+                                    })()}</TableCell>
                                     <TableCell>
                                       <Badge 
                                         variant={item.status === 'active' ? 'default' : 'secondary'}
