@@ -792,22 +792,14 @@ function CatalogPageContent() {
 
       return { success: true, itemId };
     },
-    onSuccess: async (data, itemId) => {
-      // Remove item from cache optimistically and permanently
-      queryClient.setQueryData(["admin", "catalog"], (oldData: CatalogItem[] | undefined) => {
-        if (!oldData || !Array.isArray(oldData)) return [];
-        return oldData.filter((item: CatalogItem) => item.id !== itemId);
-      });
+    onSuccess: (data, itemId) => {
+      // Simple cache invalidation - let the server be the source of truth
+      queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
 
       toast({
         title: "Success",
         description: "Catalog item deleted successfully",
       });
-
-      // Wait a moment then invalidate to ensure the deleted item doesn't reappear
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
-      }, 100);
     },
     onError: (error) => {
       toast({

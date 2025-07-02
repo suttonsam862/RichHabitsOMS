@@ -1,7 +1,20 @@
 import { Request, Response, Router } from 'express';
 import { supabase } from '../../db';
 import { CatalogItem, InsertCatalogItem } from '../../../shared/schema';
+import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
+
+// Create service role client for delete operations to bypass RLS
+const supabaseServiceRole = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 import { deleteImageFile, extractFilenameFromUrl } from '../../imageUpload';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
@@ -517,8 +530,8 @@ export async function deleteCatalogItem(req: Request, res: Response) {
 
     console.log('Found item to delete:', existingItem.name, existingItem.sku);
 
-    // Perform the deletion
-    const { data: deletedData, error: deleteError } = await supabase
+    // Perform the deletion using service role to bypass RLS
+    const { data: deletedData, error: deleteError } = await supabaseServiceRole
       .from('catalog_items')
       .delete()
       .eq('id', id)
@@ -536,27 +549,29 @@ export async function deleteCatalogItem(req: Request, res: Response) {
 
     // Verify deletion was successful
     if (!deletedData || deletedData.length === 0) {
-      const verificationError = new Error('Item may not have been deleted');
-      logCatalogOperation('delete_catalog_item', req, null, verificationError);
-      console.warn('Delete operation completed but no data returned');
+      logCatalogOperation('delete_catalog_item', req, null, new Error('Delete failed - no rows affected'));
+      return res.status(500).json({
+        success: false,
+        message: 'Delete operation failed - item may not exist or RLS blocked deletion'
+      });
     }
 
     logCatalogOperation('delete_catalog_item', req, { 
       itemId: id, 
       success: true, 
-      deletedCount: deletedData?.length || 0,
+      deletedCount: deletedData.length,
       itemName: existingItem.name,
       itemSku: existingItem.sku
     });
     
-    console.log('Catalog item deleted successfully:', id, existingItem.name);
+    console.log('Catalog item deleted successfully:', id, existingItem.name, `(${deletedData.length} row(s) affected)`);
     
     return res.json({
       success: true,
       message: 'Catalog item deleted successfully',
       data: {
         deletedItem: existingItem,
-        deletedCount: deletedData?.length || 0
+        deletedCount: deletedData.length
       }
     });
   } catch (error) {
