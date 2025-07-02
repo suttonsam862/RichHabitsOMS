@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Edit, Trash2, Package, DollarSign, Tag, Users, AlertCircle, RefreshCw, Image as ImageIcon, PlusCircle, MoreHorizontal, Eye, Search } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Package, DollarSign, Tag, Users, AlertCircle, RefreshCw, Image as ImageIcon, PlusCircle, MoreHorizontal, Eye, Search, Trophy, Shirt, Zap, Mountain, Car, Waves, Dumbbell, Target, TreePine, Gamepad2, Shield, Activity } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 interface CatalogItem {
@@ -183,6 +183,36 @@ const generateSKU = (category: string, name: string): string => {
 };
 
 type CatalogItemForm = z.infer<typeof catalogItemSchema>;
+
+// Sport icon mapping
+const getSportIcon = (sport: string) => {
+  const sportLower = sport.toLowerCase();
+  if (sportLower.includes('basketball')) return Trophy;
+  if (sportLower.includes('football')) return Shield;
+  if (sportLower.includes('soccer')) return Target;
+  if (sportLower.includes('baseball')) return Activity;
+  if (sportLower.includes('tennis')) return Gamepad2;
+  if (sportLower.includes('golf')) return TreePine;
+  if (sportLower.includes('swimming')) return Waves;
+  if (sportLower.includes('running') || sportLower.includes('track')) return Mountain;
+  if (sportLower.includes('cycling')) return Car;
+  if (sportLower.includes('volleyball')) return Dumbbell;
+  if (sportLower.includes('hockey')) return Zap;
+  if (sportLower.includes('wrestling')) return Shield;
+  return Package; // Default icon for "All Around Item" and others
+};
+
+// Category icon mapping
+const getCategoryIcon = (category: string) => {
+  const categoryLower = category.toLowerCase();
+  if (categoryLower.includes('shirt') || categoryLower.includes('jersey')) return Shirt;
+  if (categoryLower.includes('hoodie') || categoryLower.includes('jacket')) return Package;
+  if (categoryLower.includes('polo')) return Shirt;
+  if (categoryLower.includes('pants') || categoryLower.includes('shorts')) return Package;
+  if (categoryLower.includes('accessories') || categoryLower.includes('hat')) return Tag;
+  if (categoryLower.includes('custom')) return Users;
+  return Package; // Default icon
+};
 
 const initialCategories = [
   "T-Shirts",
@@ -664,16 +694,29 @@ function CatalogPageContent() {
   const deleteItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
       const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error("No authentication token available");
+      }
+
       const response = await fetch(`/api/catalog/${itemId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
+        credentials: 'include'
       });
 
+      if (response.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('tokenExpires');
+        window.location.reload();
+        throw new Error("Authentication expired. Please log in again.");
+      }
+
       if (!response.ok) {
-        throw new Error("Failed to delete catalog item");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to delete catalog item");
       }
 
       return response.json();
@@ -688,7 +731,7 @@ function CatalogPageContent() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to delete catalog item",
+        description: error instanceof Error ? error.message : "Failed to delete catalog item",
         variant: "destructive",
       });
     },
@@ -1086,6 +1129,7 @@ function CatalogPageContent() {
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           item.sport.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            (item.tags && item.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())));
 
       const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
@@ -1093,17 +1137,31 @@ function CatalogPageContent() {
       return matchesSearch && matchesCategory;
     })
     .sort((a: CatalogItem, b: CatalogItem) => {
-      // Primary sort: Category (alphabetical)
+      // Primary sort: Sport (alphabetical, but "All Around Item" first)
+      const aSport = a.sport === "All Around Item" ? "0" : a.sport;
+      const bSport = b.sport === "All Around Item" ? "0" : b.sport;
+      const sportCompare = aSport.localeCompare(bSport);
+      if (sportCompare !== 0) return sportCompare;
+
+      // Secondary sort: Category (alphabetical)
       const categoryCompare = a.category.localeCompare(b.category);
       if (categoryCompare !== 0) return categoryCompare;
-
-      // Secondary sort: Sport (alphabetical)
-      const sportCompare = a.sport.localeCompare(b.sport);
-      if (sportCompare !== 0) return sportCompare;
 
       // Tertiary sort: Name (alphabetical)
       return a.name.localeCompare(b.name);
     });
+
+  // Group items by sport for display
+  const groupedItems = React.useMemo(() => {
+    const groups: { [sport: string]: CatalogItem[] } = {};
+    filteredItems.forEach((item: CatalogItem) => {
+      if (!groups[item.sport]) {
+        groups[item.sport] = [];
+      }
+      groups[item.sport].push(item);
+    });
+    return groups;
+  }, [filteredItems]);
 
   return (
     <div className="container mx-auto py-8">
@@ -2045,99 +2103,145 @@ function CatalogPageContent() {
               </div>
             </div>
           ) : filteredItems && filteredItems.length > 0 ? (
-            <div className="rounded-md border border-glass-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-foreground">Product</TableHead>
-                    <TableHead className="text-foreground">SKU</TableHead>
-                    <TableHead className="text-foreground">Category</TableHead>
-                    <TableHead className="text-foreground">Base Price</TableHead>
-                    <TableHead className="text-foreground">Status</TableHead>
-                    <TableHead className="text-right text-foreground">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredItems.map((item: CatalogItem) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          {item.imageUrl ? (
-                            <img 
-                              src={item.imageUrl} 
-                              alt={item.name}
-                              className="w-10 h-10 object-cover rounded border border-glass-border"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                              }}
-                            />
-                          ) : null}
-                          <div className={`w-10 h-10 glass-panel flex items-center justify-center rounded ${item.imageUrl ? 'hidden' : ''}`}>
-                            <ImageIcon className="h-5 w-5 text-muted-foreground" />
+            <div className="space-y-6">
+              {Object.entries(groupedItems).map(([sport, sportItems]) => {
+                const SportIcon = getSportIcon(sport);
+                
+                // Group by category within each sport
+                const categorizedItems: { [category: string]: CatalogItem[] } = {};
+                sportItems.forEach((item: CatalogItem) => {
+                  if (!categorizedItems[item.category]) {
+                    categorizedItems[item.category] = [];
+                  }
+                  categorizedItems[item.category].push(item);
+                });
+
+                return (
+                  <div key={sport} className="space-y-4">
+                    {/* Sport Header */}
+                    <div className="flex items-center gap-3 px-4 py-2 bg-glass-panel rounded-lg border border-glass-border">
+                      <SportIcon className="h-6 w-6 text-neon-blue" />
+                      <h3 className="text-lg font-semibold text-neon-blue">{sport}</h3>
+                      <Badge variant="outline" className="ml-auto">
+                        {sportItems.length} items
+                      </Badge>
+                    </div>
+
+                    {/* Categories within Sport */}
+                    {Object.entries(categorizedItems).map(([category, categoryItems]) => {
+                      const CategoryIcon = getCategoryIcon(category);
+                      
+                      return (
+                        <div key={`${sport}-${category}`} className="ml-4">
+                          {/* Category Header */}
+                          <div className="flex items-center gap-2 px-3 py-1 mb-2">
+                            <CategoryIcon className="h-4 w-4 text-neon-green" />
+                            <h4 className="text-md font-medium text-neon-green">{category}</h4>
+                            <Badge variant="secondary" className="ml-auto text-xs">
+                              {categoryItems.length}
+                            </Badge>
                           </div>
-                          <div>
-                            <div className="font-medium text-foreground">{item.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.sport} • ETA: {item.etaDays} days
-                            </div>
+
+                          {/* Items Table */}
+                          <div className="rounded-md border border-glass-border mb-4">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-foreground">Product</TableHead>
+                                  <TableHead className="text-foreground">SKU</TableHead>
+                                  <TableHead className="text-foreground">Base Price</TableHead>
+                                  <TableHead className="text-foreground">Status</TableHead>
+                                  <TableHead className="text-right text-foreground">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {categoryItems.map((item: CatalogItem) => (
+                                  <TableRow key={item.id}>
+                                    <TableCell>
+                                      <div className="flex items-center space-x-3">
+                                        {item.imageUrl ? (
+                                          <img 
+                                            src={item.imageUrl} 
+                                            alt={item.name}
+                                            className="w-10 h-10 object-cover rounded border border-glass-border"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = 'none';
+                                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                            }}
+                                          />
+                                        ) : null}
+                                        <div className={`w-10 h-10 glass-panel flex items-center justify-center rounded ${item.imageUrl ? 'hidden' : ''}`}>
+                                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                        </div>
+                                        <div>
+                                          <div className="font-medium text-foreground">{item.name}</div>
+                                          <div className="text-xs text-muted-foreground">
+                                            ETA: {item.etaDays} days
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-foreground font-mono text-sm">{item.sku}</TableCell>
+                                    <TableCell className="text-foreground">${typeof item.basePrice === 'number' ? item.basePrice.toFixed(2) : '0.00'}</TableCell>
+                                    <TableCell>
+                                      <Badge 
+                                        variant={item.status === 'active' ? 'default' : 'secondary'}
+                                        className={
+                                          item.status === 'active' ? 'bg-neon-green text-rich-black' :
+                                          item.status === 'inactive' ? 'bg-yellow-500 text-rich-black' :
+                                          'bg-red-500 text-white'
+                                        }
+                                      >
+                                        {item.status}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="rich-card">
+                                          <DropdownMenuLabel className="text-foreground">Actions</DropdownMenuLabel>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem 
+                                            className="text-foreground hover:glass-panel"
+                                            onClick={() => handleViewDetails(item)}
+                                          >
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            View Details
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem 
+                                            className="text-foreground hover:glass-panel"
+                                            onClick={() => handleEditItem(item)}
+                                          >
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit Item
+                                          </DropdownMenuItem>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem 
+                                            className="text-red-600"
+                                            onClick={() => handleDeleteItem(item)}
+                                            disabled={deleteItemMutation.isPending}
+                                          >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-foreground font-mono text-sm">{item.sku}</TableCell>
-                      <TableCell className="text-foreground">{item.category}</TableCell>
-                      <TableCell className="text-foreground">${typeof item.basePrice === 'number' ? item.basePrice.toFixed(2) : '0.00'}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={item.status === 'active' ? 'default' : 'secondary'}
-                          className={
-                            item.status === 'active' ? 'bg-neon-green text-rich-black' :
-                            item.status === 'inactive' ? 'bg-yellow-500 text-rich-black' :
-                            'bg-red-500 text-white'
-                          }
-                        >
-                          {item.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rich-card">
-                            <DropdownMenuLabel className="text-foreground">Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-foreground hover:glass-panel"
-                              onClick={() => handleViewDetails(item)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-foreground hover:glass-panel"
-                              onClick={() => handleEditItem(item)}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Item
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-red-600"
-                              onClick={() => handleDeleteItem(item)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-center border border-glass-border">
