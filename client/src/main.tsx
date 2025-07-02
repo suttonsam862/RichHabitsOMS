@@ -1,9 +1,13 @@
-import { createRoot } from "react-dom/client";
-import App from "./App";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
-import { fixWebSocketConnection } from './lib/fixWebSocketError'
+import App from "./App.tsx";
+import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "./context/AuthContext";
+import { fixWebSocketConnection } from "./lib/fixWebSocketError";
 
-// Fix WebSocket connection issues in Replit
-fixWebSocketConnection()
+// Fix WebSocket connections for Replit environment
+fixWebSocketConnection();
 
-createRoot(document.getElementById("root")!).render(<App />);
+const queryClient = new QueryClient();

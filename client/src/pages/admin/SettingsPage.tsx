@@ -910,8 +910,8 @@ export default function SettingsPage() {
                 <div className="h-10 px-3 py-2 border rounded-md text-sm">
                   ••••••••••••
                 </div>
-```tool_code
-            </CardContent>
+              </div>
+            </Card            </CardContent>
             <CardFooter>
               <Button>Update Password</Button>
             </CardFooter>

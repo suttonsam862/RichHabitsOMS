@@ -27,7 +27,10 @@ export const fixWebSocketConnection = () => {
           const searchParams = originalUrl.search;
 
           // Construct a proper WebSocket URL with proper port handling
-          const fixedUrl = `${protocol}//${currentHost}:${currentPort}${path}${searchParams}`;
+          // For Replit, we often need to use the current host without explicit port
+          const fixedUrl = currentHost.includes('replit') || currentHost.includes('repl.co') 
+            ? `${protocol}//${currentHost}${path}${searchParams}`
+            : `${protocol}//${currentHost}:${currentPort}${path}${searchParams}`;
 
           // Only log in development to reduce console noise
           if (process.env.NODE_ENV === 'development') {
