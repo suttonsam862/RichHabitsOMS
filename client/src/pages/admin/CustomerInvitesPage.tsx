@@ -402,7 +402,7 @@ export default function CustomerInvitesPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  {(invites as any[])?.map((invite: any) => (
+                  (invites as any[])?.map((invite: any) => (
                     <TableRow key={invite.id}>
                       <TableCell>
                         <div className="flex flex-col">
@@ -446,7 +446,7 @@ export default function CustomerInvitesPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
                 )}
               </TableBody>
             </Table>

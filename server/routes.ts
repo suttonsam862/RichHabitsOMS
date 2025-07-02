@@ -97,17 +97,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Filter for customers and transform to expected format
-      const customers = data.users
-        .filter(user => {
+      const customers = (data.users || [])
+        .filter((user: any) => {
           // Look for users with customer role in metadata
-          const metadata = user.user_metadata || {};
+          const metadata = (user.user_metadata || {}) as Record<string, any>;
           return metadata.role === 'customer';
         })
-        .map(user => {
-          const metadata = user.user_metadata || {};
+        .map((user: any) => {
+          const metadata = (user.user_metadata || {}) as Record<string, any>;
           return {
             id: user.id,
-            firstName: metadata.firstName || '',
+            firstName: (metadata.firstName as string) || '',
             lastName: metadata.lastName || '',
             email: user.email || '',
             company: metadata.company || '',
@@ -863,7 +863,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       return res.json({ 
-```tool_code
         success: true, 
         message: 'User updated successfully',
         user: profile

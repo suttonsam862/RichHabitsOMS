@@ -265,7 +265,7 @@ export default function NewOrderInquiriesPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  {(inquiries as any[])?.map((inquiry: any) => (
+                  (inquiries as any[])?.map((inquiry: any) => (
                     <TableRow key={inquiry.id}>
                       <TableCell>
                         <div className="flex flex-col">
@@ -327,7 +327,7 @@ export default function NewOrderInquiriesPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
                 )}
               </TableBody>
             </Table>
