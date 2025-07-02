@@ -81,7 +81,7 @@ export async function getCatalogItems(req: Request, res: Response) {
       specifications: item.specifications || {},
       created_at: item.created_at,
       updated_at: item.updated_at,
-      buildInstructions: item.build_instructions
+      buildInstructions: item.build_instructions || ''
     }));
 
     logCatalogOperation('get_catalog_items', req, { count: transformedItems.length });
@@ -249,9 +249,13 @@ export async function createCatalogItem(req: Request, res: Response) {
       eta_days: etaDays.trim(),
       preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
       tags: parsedTags,
-      specifications: parsedSpecifications,
-      build_instructions: buildInstructions?.trim() || null
+      specifications: parsedSpecifications
     };
+
+    // Only include build_instructions if it's provided, to avoid schema errors
+    if (buildInstructions !== undefined) {
+      (newItem as any).build_instructions = buildInstructions?.trim() || null;
+    }
 
     const { data: item, error } = await supabase
       .from('catalog_items')
@@ -293,7 +297,7 @@ export async function createCatalogItem(req: Request, res: Response) {
         measurementInstructions: item.measurement_instructions,
         etaDays: item.eta_days,
         preferredManufacturerId: item.preferred_manufacturer_id,
-        buildInstructions: item.build_instructions
+        buildInstructions: item.build_instructions || ''
       }
     });
   } catch (error) {
@@ -412,9 +416,13 @@ export async function updateCatalogItem(req: Request, res: Response) {
       preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
       tags: parsedTags,
       specifications: parsedSpecifications,
-      build_instructions: buildInstructions?.trim() || null,
       updated_at: new Date().toISOString()
     };
+
+    // Only include build_instructions if it's provided, to avoid schema errors
+    if (buildInstructions !== undefined) {
+      (updateData as any).build_instructions = buildInstructions?.trim() || null;
+    }
 
     const { data: item, error } = await supabase
       .from('catalog_items')
@@ -457,7 +465,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
         measurementInstructions: item.measurement_instructions,
         etaDays: item.eta_days,
         preferredManufacturerId: item.preferred_manufacturer_id,
-        buildInstructions: item.build_instructions
+        buildInstructions: item.build_instructions || ''
       }
     });
   } catch (error) {
