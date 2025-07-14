@@ -1,7 +1,19 @@
 import { Request, Response, Router } from 'express';
-import { supabase } from '../../db';
-import { CatalogItem, InsertCatalogItem } from '../../../shared/schema';
+import { supabase } from '../../db.js';
 import { createClient } from '@supabase/supabase-js';
+
+// Use service key for catalog operations to bypass RLS
+const supabaseService = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+import { CatalogItem, InsertCatalogItem } from '../../../shared/schema';
 import { requireAuth, requireRole } from '../auth/auth';
 
 // Create service role client for delete operations to bypass RLS
@@ -63,7 +75,7 @@ export async function getCatalogItems(req: Request, res: Response) {
     console.log('👤 Request user:', (req as any).user?.email, (req as any).user?.role);
     console.log('🔑 Using Supabase client type:', typeof supabase);
 
-    const { data: items, error } = await supabase
+    const { data: items, error } = await supabaseService
       .from('catalog_items')
       .select('*')
       .order('created_at', { ascending: false });
@@ -91,18 +103,18 @@ export async function getCatalogItems(req: Request, res: Response) {
       // Fix image URLs to use correct environment
       let imageUrl = item.base_image_url;
       let measurementChartUrl = item.measurement_chart_url;
-      
+
       if (imageUrl && imageUrl.includes('localhost:5000')) {
         // Replace localhost with the current environment URL
         const currentHost = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://0.0.0.0:5000';
         imageUrl = imageUrl.replace('http://localhost:5000', currentHost);
       }
-      
+
       if (measurementChartUrl && measurementChartUrl.includes('localhost:5000')) {
         const currentHost = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://0.0.0.0:5000';
         measurementChartUrl = measurementChartUrl.replace('http://localhost:5000', currentHost);
       }
-      
+
       return {
         id: item.id,
         name: item.name,
@@ -299,7 +311,7 @@ export async function createCatalogItem(req: Request, res: Response) {
       (newItem as any).build_instructions = buildInstructions?.trim() || null;
     }
 
-    const { data: item, error } = await supabase
+    const { data: item, error } = await supabaseService
       .from('catalog_items')
       .insert([newItem])
       .select()
@@ -469,7 +481,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
           .from('catalog_items')
           .select('build_instructions')
           .limit(1);
-        
+
         if (!testError) {
           (updateData as any).build_instructions = buildInstructions?.trim() || null;
           console.log('✅ build_instructions column exists, including in update');
@@ -480,7 +492,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
       }
     }
 
-    const { data: item, error } = await supabase
+    const { data: item, error } = await supabaseService
       .from('catalog_items')
       .update(updateData)
       .eq('id', id)
@@ -490,7 +502,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
     if (error) {
       logCatalogOperation('update_catalog_item', req, updateData, error);
       console.error('Error updating catalog item:', error);
-      
+
       // Handle specific database errors more gracefully
       if (error.message && error.message.includes('build_instructions')) {
         return res.status(500).json({
@@ -499,7 +511,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
           error: 'Please ensure the database schema is up to date'
         });
       }
-      
+
       return res.status(500).json({
         success: false,
         message: 'Failed to update catalog item',
@@ -616,9 +628,9 @@ export async function deleteCatalogItem(req: Request, res: Response) {
       itemName: existingItem.name,
       itemSku: existingItem.sku
     });
-    
+
     console.log('Catalog item deleted successfully:', id, existingItem.name, `(${deletedData.length} row(s) affected)`);
-    
+
     return res.json({
       success: true,
       message: 'Catalog item deleted successfully',
