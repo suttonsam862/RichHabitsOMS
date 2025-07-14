@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -290,6 +290,7 @@ function CatalogPageContent() {
   const [showAddSport, setShowAddSport] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const authToken = localStorage.getItem('authToken');
 
   const form = useForm<CatalogItemForm>({
     resolver: zodResolver(catalogItemSchema),
@@ -448,7 +449,7 @@ function CatalogPageContent() {
 
       console.log('🔍 Fetching catalog items...');
       console.log('🔑 Using token:', token.substring(0, 20) + '...');
-      
+
       // Add timestamp to prevent caching issues
       const timestamp = Date.now();
       const response = await fetch(`/api/catalog?_t=${timestamp}`, {
@@ -872,7 +873,8 @@ function CatalogPageContent() {
       preferredManufacturerId: item.preferredManufacturerId || "",
       tags: Array.isArray(item.tags) ? item.tags.join(", ") : "",
       specifications: item.specifications ? JSON.stringify(item.specifications, null, 2) : "",
-      buildInstructions: item.buildInstructions || "",
+      buildInstructions: item.buildInstructions```text
+ || "",
     });
     setIsEditItemDialogOpen(true);
   };
@@ -1068,7 +1070,7 @@ function CatalogPageContent() {
       console.log('Update payload being sent:', payload);
 
       const token = localStorage.getItem('authToken');
-      
+
       if (!token) {
         throw new Error("Authentication token not found");
       }
@@ -1092,12 +1094,12 @@ function CatalogPageContent() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Update failed:', response.status, errorData);
-        
+
         // Handle specific database column errors
         if (errorData.message && errorData.message.includes('build_instructions')) {
           throw new Error("Database schema issue: build_instructions column not found. Please contact administrator.");
         }
-        
+
         throw new Error(errorData.message || `Failed to update catalog item (${response.status})`);
       }
 
@@ -1316,6 +1318,57 @@ function CatalogPageContent() {
     });
     return groups;
   }, [filteredItems]);
+
+  // Fetch categories and sports on component mount
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        console.log('🔍 Fetching catalog options...');
+        const [categoriesRes, sportsRes] = await Promise.all([
+          fetch('/api/catalog-options/categories', {
+            headers: { 
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+          }),
+          fetch('/api/catalog-options/sports', {
+            headers: { 
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+          })
+        ]);
+
+        if (categoriesRes.ok) {
+          const categoriesData = await categoriesRes.json();
+          console.log('📂 Categories response:', categoriesData);
+          const categoryList = categoriesData.data?.categories || [];
+          console.log('📂 Setting categories:', categoryList);
+          setCategories(categoryList);
+        } else {
+          console.error('❌ Categories fetch failed:', categoriesRes.status, categoriesRes.statusText);
+        }
+
+        if (sportsRes.ok) {
+          const sportsData = await sportsRes.json();
+          console.log('⚽ Sports response:', sportsData);
+          const sportsList = sportsData.data?.sports || [];
+          console.log('⚽ Setting sports:', sportsList);
+          setSports(sportsList);
+        } else {
+          console.error('❌ Sports fetch failed:', sportsRes.status, sportsRes.statusText);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching options:', error);
+      }
+    };
+
+    if (authToken) {
+      fetchOptions();
+    }
+  }, [authToken]);
 
   return (
     <div className="container mx-auto py-8">
@@ -2119,24 +2172,37 @@ function CatalogPageContent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="subtitle text-muted-foreground text-xs">Category</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger className="rich-input">
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="rich-card">
-                          {allCategories.length > 0 ? (
-                            allCategories.map((category: string) => (
-                              <SelectItem key={category} value={category}>{category}</SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="loading" disabled>
-                              Loading categories...
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      
+<Select value={field.value} onValueChange={(value) => {
+                            if (value === "add-new-category") {
+                              setShowAddCategory(true);
+                            } else {
+                              field.onChange(value);
+                            }
+                          }}>
+                            <FormControl>
+                              <SelectTrigger className="rich-input">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="rich-card">
+                              {allCategories.length > 0 ? (
+                                <>
+                                  {allCategories.map((category: string) => (
+                                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                                  ))}
+                                  <SelectItem value="add-new-category" className="text-neon-blue font-medium">
+                                    + Add Category
+                                  </SelectItem>
+                                </>
+                              ) : (
+                                <SelectItem value="loading" disabled>
+                                  Loading categories...
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          
                       <FormMessage />
                     </FormItem>
                   )}
@@ -2148,7 +2214,8 @@ function CatalogPageContent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="subtitle text-muted-foreground text-xs">Sport</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      
+<Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="rich-input">
                             <SelectValue placeholder="Select sport" />
@@ -2168,6 +2235,7 @@ function CatalogPageContent() {
                           )}
                         </SelectContent>
                       </Select>
+                      
                       <FormMessage />
                     </FormItem>
                   )}
