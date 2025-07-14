@@ -306,9 +306,9 @@ export async function createCatalogItem(req: Request, res: Response) {
       specifications: parsedSpecifications
     };
 
-    // Only include build_instructions if it's provided, to avoid schema errors
+    // Handle build_instructions as long-form text
     if (buildInstructions !== undefined) {
-      (newItem as any).build_instructions = buildInstructions?.trim() || null;
+      (newItem as any).build_instructions = typeof buildInstructions === 'string' ? buildInstructions.trim() || null : null;
     }
 
     const { data: item, error } = await supabaseService
@@ -473,9 +473,9 @@ export async function updateCatalogItem(req: Request, res: Response) {
       updated_at: new Date().toISOString()
     };
 
-    // Handle build_instructions field
+    // Handle build_instructions as long-form text
     if (buildInstructions !== undefined) {
-      (updateData as any).build_instructions = buildInstructions?.trim() || null;
+      (updateData as any).build_instructions = typeof buildInstructions === 'string' ? buildInstructions.trim() || null : null;
     }
 
     const { data: item, error } = await supabaseService

@@ -65,7 +65,7 @@ const catalogItemSchema = z.object({
       return false;
     }
   }, "Specifications must be valid JSON").optional(),
-  buildInstructions: z.string().max(5000, "Build instructions too long").optional(),
+  buildInstructions: z.string().max(10000, "Build instructions too long (max 10,000 characters)").optional(),
 });
 
 // Image Upload Area Component
@@ -2200,9 +2200,9 @@ function CatalogPageContent() {
                       <FormControl>
                         <Textarea 
                           {...field} 
-                          className="rich-input" 
-                          rows={6}
-                          placeholder="Enter detailed build instructions for this item..."
+                          className="rich-input min-h-[150px]" 
+                          rows={8}
+                          placeholder="Enter detailed step-by-step build instructions for this item...&#10;&#10;Example:&#10;1. Cut fabric according to pattern&#10;2. Sew side seams&#10;3. Attach shoulder straps&#10;4. Apply finishing touches"
                         />
                       </FormControl>
                       <FormDescription className="subtitle text-muted-foreground text-xs">
