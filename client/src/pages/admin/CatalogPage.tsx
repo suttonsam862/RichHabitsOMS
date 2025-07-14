@@ -445,6 +445,8 @@ function CatalogPageContent() {
         throw new Error("No authentication token");
       }
 
+      console.log('🔍 Fetching catalog items...');
+      
       // Add timestamp to prevent caching issues
       const timestamp = Date.now();
       const response = await fetch(`/api/catalog?_t=${timestamp}`, {
@@ -469,6 +471,12 @@ function CatalogPageContent() {
       }
 
       const data = await response.json();
+      console.log('📊 Raw catalog data received:', data);
+
+      if (!Array.isArray(data)) {
+        console.warn('⚠️ Expected array but got:', typeof data, data);
+        return [];
+      }
 
       // Transform the data to match the CatalogItem type
       const transformedItems = data.map((item: any) => {

@@ -75,27 +75,44 @@ export async function getCatalogItems(req: Request, res: Response) {
     }
 
     // Transform database snake_case to camelCase for frontend
-    const transformedItems = (items || []).map(item => ({
-      id: item.id,
-      name: item.name,
-      category: item.category,
-      sport: item.sport,
-      basePrice: parseFloat(String(item.base_price)) || 0,
-      unitCost: parseFloat(String(item.unit_cost)) || 0,
-      sku: item.sku,
-      status: item.status,
-      imageUrl: item.base_image_url,
-      measurementChartUrl: item.measurement_chart_url,
-      hasMeasurements: item.has_measurements,
-      measurementInstructions: item.measurement_instructions,
-      etaDays: item.eta_days,
-      preferredManufacturerId: item.preferred_manufacturer_id,
-      tags: item.tags || [],
-      specifications: item.specifications || {},
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      buildInstructions: item.build_instructions || ''
-    }));
+    const transformedItems = (items || []).map(item => {
+      // Fix image URLs to use correct environment
+      let imageUrl = item.base_image_url;
+      let measurementChartUrl = item.measurement_chart_url;
+      
+      if (imageUrl && imageUrl.includes('localhost:5000')) {
+        // Replace localhost with the current environment URL
+        const currentHost = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://0.0.0.0:5000';
+        imageUrl = imageUrl.replace('http://localhost:5000', currentHost);
+      }
+      
+      if (measurementChartUrl && measurementChartUrl.includes('localhost:5000')) {
+        const currentHost = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://0.0.0.0:5000';
+        measurementChartUrl = measurementChartUrl.replace('http://localhost:5000', currentHost);
+      }
+      
+      return {
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        sport: item.sport,
+        basePrice: parseFloat(String(item.base_price)) || 0,
+        unitCost: parseFloat(String(item.unit_cost)) || 0,
+        sku: item.sku,
+        status: item.status,
+        imageUrl: imageUrl,
+        measurementChartUrl: measurementChartUrl,
+        hasMeasurements: item.has_measurements,
+        measurementInstructions: item.measurement_instructions,
+        etaDays: item.eta_days,
+        preferredManufacturerId: item.preferred_manufacturer_id,
+        tags: item.tags || [],
+        specifications: item.specifications || {},
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        buildInstructions: item.build_instructions || ''
+      };
+    });
 
     logCatalogOperation('get_catalog_items', req, { count: transformedItems.length });
     console.log(`Found ${transformedItems.length} catalog items`);
