@@ -1028,12 +1028,17 @@ function CatalogPageContent() {
               throw new Error("Invalid JSON in specifications field");
             }
           })() : {},
-        build_instructions: itemData.buildInstructions,
+        buildInstructions: itemData.buildInstructions, // Use camelCase
       };
 
       console.log('Update payload being sent:', payload);
 
       const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
       const response = await fetch(`/api/catalog/${itemId}`, {
         method: "PUT",
         headers: {
@@ -1043,10 +1048,23 @@ function CatalogPageContent() {
         body: JSON.stringify(payload),
       });
 
+      if (response.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('tokenExpires');
+        window.location.reload();
+        throw new Error("Authentication expired. Please log in again.");
+      }
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Update failed:', response.status, errorData);
-        throw new Error(errorData.message || "Failed to update catalog item");
+        
+        // Handle specific database column errors
+        if (errorData.message && errorData.message.includes('build_instructions')) {
+          throw new Error("Database schema issue: build_instructions column not found. Please contact administrator.");
+        }
+        
+        throw new Error(errorData.message || `Failed to update catalog item (${response.status})`);
       }
 
       const result = await response.json();
@@ -1193,16 +1211,25 @@ function CatalogPageContent() {
         }
 
         // Create new item with or without file uploads
-        if (selectedFile || selectedMeasurementFile) {
-          addItemMutation.mutate({
-            ...processedData,
-            imageUrl: selectedFile ? "" : processedData.imageUrl,
-            measurementChartUrl: selectedMeasurementFile ? "" : processedData.measurementChartUrl,
-            _uploadFile: selectedFile,
-            _uploadMeasurementFile: selectedMeasurementFile
+        try {
+          if (selectedFile || selectedMeasurementFile) {
+            addItemMutation.mutate({
+              ...processedData,
+              imageUrl: selectedFile ? "" : processedData.imageUrl,
+              measurementChartUrl: selectedMeasurementFile ? "" : processedData.measurementChartUrl,
+              _uploadFile: selectedFile,
+              _uploadMeasurementFile: selectedMeasurementFile
+            });
+          } else {
+            addItemMutation.mutate(processedData);
+          }
+        } catch (error) {
+          console.error('Error submitting form:', error);
+          toast({
+            title: "Submission Error",
+            description: "An unexpected error occurred while submitting the form",
+            variant: "destructive",
           });
-        } else {
-          addItemMutation.mutate(processedData);
         }
       }
     } catch (error) {
@@ -2381,11 +2408,17 @@ function CatalogPageContent() {
                                     </TableCell>
                                     <TableCell className="text-foreground font-mono text-sm">{item.sku}</TableCell>
                                     <TableCell className="text-foreground">${(() => {
-                                      const price = item.basePrice;
-                                      if (price == null || price === undefined || isNaN(Number(price))) {
+                                      try {
+                                        const price = item.basePrice;
+                                        if (price == null || price === undefined || isNaN(Number(price))) {
+                                          return '0.00';
+                                        }
+                                        const numPrice = Number(price);
+                                        return numPrice.toFixed(2);
+                                      } catch (error) {
+                                        console.warn('Error formatting price for item:', item.id, error);
                                         return '0.00';
                                       }
-                                      return Number(price).toFixed(2);
                                     })()}</TableCell>
                                     <TableCell>
                                       <Badge 

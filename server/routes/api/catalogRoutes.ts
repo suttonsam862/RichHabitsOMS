@@ -432,21 +432,22 @@ export async function updateCatalogItem(req: Request, res: Response) {
       updated_at: new Date().toISOString()
     };
 
-    // Only include build_instructions if it's provided, to avoid schema errors
+    // Handle build_instructions field safely
     if (buildInstructions !== undefined) {
-      (updateData as any).build_instructions = buildInstructions?.trim() || null;
-    }
-
-    // Remove build_instructions from update if column doesn't exist
-    try {
-      const { data: testColumn } = await supabase
-        .from('catalog_items')
-        .select('build_instructions')
-        .limit(1);
-    } catch (columnError: any) {
-      if (columnError.code === 'PGRST204') {
-        console.log('⚠️ build_instructions column not found, removing from update');
-        delete (updateData as any).build_instructions;
+      // First check if the column exists before trying to update it
+      try {
+        const { data: testColumn, error: testError } = await supabase
+          .from('catalog_items')
+          .select('build_instructions')
+          .limit(1);
+        
+        if (!testError) {
+          (updateData as any).build_instructions = buildInstructions?.trim() || null;
+          console.log('✅ build_instructions column exists, including in update');
+        }
+      } catch (columnError: any) {
+        console.log('⚠️ build_instructions column not found, skipping in update');
+        console.log('Column check error:', columnError.message);
       }
     }
 
@@ -460,6 +461,16 @@ export async function updateCatalogItem(req: Request, res: Response) {
     if (error) {
       logCatalogOperation('update_catalog_item', req, updateData, error);
       console.error('Error updating catalog item:', error);
+      
+      // Handle specific database errors more gracefully
+      if (error.message && error.message.includes('build_instructions')) {
+        return res.status(500).json({
+          success: false,
+          message: 'Database schema issue: build_instructions column not found',
+          error: 'Please ensure the database schema is up to date'
+        });
+      }
+      
       return res.status(500).json({
         success: false,
         message: 'Failed to update catalog item',
