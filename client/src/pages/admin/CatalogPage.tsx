@@ -442,10 +442,12 @@ function CatalogPageContent() {
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
       if (!token) {
+        console.error('❌ No authentication token found');
         throw new Error("No authentication token");
       }
 
       console.log('🔍 Fetching catalog items...');
+      console.log('🔑 Using token:', token.substring(0, 20) + '...');
       
       // Add timestamp to prevent caching issues
       const timestamp = Date.now();
@@ -472,9 +474,14 @@ function CatalogPageContent() {
 
       const data = await response.json();
       console.log('📊 Raw catalog data received:', data);
+      console.log('📊 Response status:', response.status);
+      console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!Array.isArray(data)) {
         console.warn('⚠️ Expected array but got:', typeof data, data);
+        if (data && data.message) {
+          console.error('🚨 API Error Message:', data.message);
+        }
         return [];
       }
 

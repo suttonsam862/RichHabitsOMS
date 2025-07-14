@@ -59,6 +59,10 @@ export async function getCatalogItems(req: Request, res: Response) {
   try {
     logCatalogOperation('get_catalog_items', req);
 
+    console.log('🔍 Attempting to fetch catalog items...');
+    console.log('👤 Request user:', (req as any).user?.email, (req as any).user?.role);
+    console.log('🔑 Using Supabase client type:', typeof supabase);
+
     const { data: items, error } = await supabase
       .from('catalog_items')
       .select('*')
@@ -66,12 +70,20 @@ export async function getCatalogItems(req: Request, res: Response) {
 
     if (error) {
       logCatalogOperation('get_catalog_items', req, null, error);
-      console.error('Error fetching catalog items:', error);
+      console.error('❌ Error fetching catalog items:', error);
+      console.error('   Error code:', error.code);
+      console.error('   Error details:', error.details);
+      console.error('   Error hint:', error.hint);
       return res.status(500).json({ 
         success: false, 
         message: 'Failed to fetch catalog items',
         error: error.message 
       });
+    }
+
+    console.log('📊 Raw items from database:', items?.length || 0);
+    if (items && items.length > 0) {
+      console.log('📝 First raw item:', JSON.stringify(items[0], null, 2));
     }
 
     // Transform database snake_case to camelCase for frontend
