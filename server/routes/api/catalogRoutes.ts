@@ -553,8 +553,8 @@ export async function deleteCatalogItem(req: Request, res: Response) {
 
     console.log('Deleting catalog item:', id);
 
-    // First check if the item exists
-    const { data: existingItem, error: checkError } = await supabase
+    // Use service role client for both check and delete to ensure consistency
+    const { data: existingItem, error: checkError } = await supabaseServiceRole
       .from('catalog_items')
       .select('id, name, sku')
       .eq('id', id)

@@ -807,23 +807,42 @@ function CatalogPageContent() {
 
       return { success: true, itemId };
     },
-    onSuccess: (data, itemId) => {
-      // Simple cache invalidation - let the server be the source of truth
-      queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
+    onMutate: async (itemId) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ["admin", "catalog"] });
 
-      toast({
-        title: "Success",
-        description: "Catalog item deleted successfully",
+      // Snapshot the previous value
+      const previousCatalog = queryClient.getQueryData(["admin", "catalog"]);
+
+      // Optimistically remove the item from the cache
+      queryClient.setQueryData(["admin", "catalog"], (old: CatalogItem[] | undefined) => {
+        if (!old) return [];
+        return old.filter(item => item.id !== itemId);
       });
+
+      // Return a context object with the snapshotted value
+      return { previousCatalog };
     },
-    onError: (error) => {
+    onError: (error, itemId, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousCatalog) {
+        queryClient.setQueryData(["admin", "catalog"], context.previousCatalog);
+      }
+
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete catalog item",
         variant: "destructive",
       });
-
-      // Refetch to ensure UI is in sync with server
+    },
+    onSuccess: (data, itemId) => {
+      toast({
+        title: "Success",
+        description: "Catalog item deleted successfully",
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ["admin", "catalog"] });
     },
   });
