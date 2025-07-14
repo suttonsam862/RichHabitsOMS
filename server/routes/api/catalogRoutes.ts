@@ -473,23 +473,9 @@ export async function updateCatalogItem(req: Request, res: Response) {
       updated_at: new Date().toISOString()
     };
 
-    // Handle build_instructions field safely
+    // Handle build_instructions field
     if (buildInstructions !== undefined) {
-      // First check if the column exists before trying to update it
-      try {
-        const { data: testColumn, error: testError } = await supabase
-          .from('catalog_items')
-          .select('build_instructions')
-          .limit(1);
-
-        if (!testError) {
-          (updateData as any).build_instructions = buildInstructions?.trim() || null;
-          console.log('✅ build_instructions column exists, including in update');
-        }
-      } catch (columnError: any) {
-        console.log('⚠️ build_instructions column not found, skipping in update');
-        console.log('Column check error:', columnError.message);
-      }
+      (updateData as any).build_instructions = buildInstructions?.trim() || null;
     }
 
     const { data: item, error } = await supabaseService
