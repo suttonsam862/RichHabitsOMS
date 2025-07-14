@@ -2172,7 +2172,7 @@ function CatalogPageContent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="subtitle text-muted-foreground text-xs">Category</FormLabel>
-                      
+
 <Select value={field.value} onValueChange={(value) => {
                             if (value === "add-new-category") {
                               setShowAddCategory(true);
@@ -2202,7 +2202,7 @@ function CatalogPageContent() {
                               )}
                             </SelectContent>
                           </Select>
-                          
+
                       <FormMessage />
                     </FormItem>
                   )}
@@ -2214,7 +2214,7 @@ function CatalogPageContent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="subtitle text-muted-foreground text-xs">Sport</FormLabel>
-                      
+
 <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="rich-input">
@@ -2235,7 +2235,7 @@ function CatalogPageContent() {
                           )}
                         </SelectContent>
                       </Select>
-                      
+
                       <FormMessage />
                     </FormItem>
                   )}
