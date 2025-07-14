@@ -63,9 +63,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return;
         }
 
-        // Validate token expiration
+        // Be more lenient with token expiration - give 5 minute buffer
         const tokenExpires = localStorage.getItem('tokenExpires');
-        if (tokenExpires && new Date(tokenExpires) < new Date()) {
+        if (tokenExpires && new Date(tokenExpires).getTime() < (Date.now() - 5 * 60 * 1000)) {
           console.log('Token expired, clearing session');
           localStorage.removeItem('authToken');
           localStorage.removeItem('tokenExpires');
@@ -77,9 +77,54 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return;
         }
 
+        // If we have stored user data, try to use it first while validating in background
+        if (storedRole && storedUserId) {
+          const cachedUser = {
+            id: parseInt(storedUserId),
+            email: localStorage.getItem('userEmail') || '',
+            role: storedRole,
+            username: localStorage.getItem('userName') || '',
+            firstName: localStorage.getItem('userFirstName') || '',
+            lastName: localStorage.getItem('userLastName') || ''
+          };
+          
+          // Set user immediately from cache
+          setUser(cachedUser);
+          setLoading(false);
+          setInitialized(true);
+          
+          // Validate in background without blocking UI
+          setTimeout(async () => {
+            try {
+              const res = await fetch("/api/auth/me", {
+                headers: {
+                  Authorization: `Bearer ${storedToken}`
+                },
+                credentials: 'include'
+              });
+
+              if (res.ok) {
+                const userData = await res.json();
+                if (userData && userData.success && userData.user) {
+                  setUser(userData.user);
+                  // Update cache
+                  localStorage.setItem('userEmail', userData.user.email);
+                  localStorage.setItem('userName', userData.user.username || '');
+                  localStorage.setItem('userFirstName', userData.user.firstName || '');
+                  localStorage.setItem('userLastName', userData.user.lastName || '');
+                }
+              }
+            } catch (error) {
+              console.log('Background auth validation failed, but continuing with cached data');
+            }
+          }, 100);
+          
+          return;
+        }
+
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
         try {
           // The server handles token validation with Supabase Auth
@@ -94,11 +139,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           clearTimeout(timeoutId);
 
           if (!res.ok) {
-            console.log('Auth validation failed, clearing session');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('tokenExpires');
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('userId');
+            console.log('Auth validation failed, but keeping token for retry');
+            // Don't clear immediately - just set as unauthenticated
             setUser(null);
             setLoading(false);
             setInitialized(true);
@@ -114,37 +156,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             // Update localStorage with fresh data
             localStorage.setItem('userRole', userData.user.role);
             localStorage.setItem('userId', userData.user.id.toString());
+            localStorage.setItem('userEmail', userData.user.email);
+            localStorage.setItem('userName', userData.user.username || '');
+            localStorage.setItem('userFirstName', userData.user.firstName || '');
+            localStorage.setItem('userLastName', userData.user.lastName || '');
           } else {
             console.log('Invalid user data received');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('tokenExpires');
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('userId');
             setUser(null);
           }
         } catch (fetchError: any) {
           clearTimeout(timeoutId);
           
           if (fetchError.name === 'AbortError') {
-            console.log('Auth check timed out, clearing session');
+            console.log('Auth check timed out, keeping cached data');
           } else {
             console.error('Auth fetch error:', fetchError);
           }
           
-          // Clear potentially invalid tokens
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('tokenExpires');
-          localStorage.removeItem('userRole');
-          localStorage.removeItem('userId');
+          // Don't clear tokens on network errors - just set as unauthenticated
           setUser(null);
         }
       } catch (error) {
         console.error('Error checking auth status:', error);
-        // Clear potentially invalid tokens
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('tokenExpires');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userId');
         setUser(null);
       } finally {
         setLoading(false);
@@ -215,10 +248,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error("Authentication failed - no token returned");
       }
 
-      // Store token in localStorage for future auth checks
+      // Store token and user data in localStorage for future auth checks
       localStorage.setItem('authToken', data.session.token);
       localStorage.setItem('userRole', data.user.role);
       localStorage.setItem('userId', data.user.id.toString());
+      localStorage.setItem('userEmail', data.user.email);
+      localStorage.setItem('userName', data.user.username || '');
+      localStorage.setItem('userFirstName', data.user.firstName || '');
+      localStorage.setItem('userLastName', data.user.lastName || '');
       if (data.session.expiresAt) {
         localStorage.setItem('tokenExpires', data.session.expiresAt.toString());
       }

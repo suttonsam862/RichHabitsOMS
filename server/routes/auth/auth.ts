@@ -277,18 +277,23 @@ export async function loginUser(req: Request, res: Response) {
       visiblePages: data.user.user_metadata?.visiblePages
     };
 
-    // Store in session with proper expiration
+    // Store in session with proper expiration (extend session time)
+    const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
     req.session.user = user;
     req.session.token = data.session.access_token;
-    req.session.expires = new Date(data.session.expires_at! * 1000); // Use Supabase session expiry
+    req.session.expires = sessionExpiry;
+    req.session.maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
-    console.log('Login successful, token expires at:', new Date(data.session.expires_at! * 1000));
+    console.log('Login successful, session expires at:', sessionExpiry);
 
     return res.json({
       success: true,
       message: 'Login successful',
       user,
-      token: data.session.access_token
+      session: {
+        token: data.session.access_token,
+        expiresAt: sessionExpiry.toISOString()
+      }
     });
 
   } catch (error) {
