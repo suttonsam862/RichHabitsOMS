@@ -437,6 +437,19 @@ export async function updateCatalogItem(req: Request, res: Response) {
       (updateData as any).build_instructions = buildInstructions?.trim() || null;
     }
 
+    // Remove build_instructions from update if column doesn't exist
+    try {
+      const { data: testColumn } = await supabase
+        .from('catalog_items')
+        .select('build_instructions')
+        .limit(1);
+    } catch (columnError: any) {
+      if (columnError.code === 'PGRST204') {
+        console.log('⚠️ build_instructions column not found, removing from update');
+        delete (updateData as any).build_instructions;
+      }
+    }
+
     const { data: item, error } = await supabase
       .from('catalog_items')
       .update(updateData)
