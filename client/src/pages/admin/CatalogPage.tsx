@@ -1417,11 +1417,17 @@ function CatalogPageContent() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {allSports.map((sport: string) => (
-                                <SelectItem key={sport} value={sport}>
-                                  {sport}
+                              {allSports.length > 0 ? (
+                                allSports.map((sport: string) => (
+                                  <SelectItem key={sport} value={sport}>
+                                    {sport}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="loading" disabled>
+                                  Loading sports...
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
                           <Button
@@ -1544,12 +1550,20 @@ function CatalogPageContent() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rich-card">
-                              {allCategories.map((category: string) => (
-                                <SelectItem key={category} value={category}>{category}</SelectItem>
-                              ))}
-                              <SelectItem value="add-new-category" className="text-neon-blue font-medium">
-                                + Add Category
-                              </SelectItem>
+                              {allCategories.length > 0 ? (
+                                <>
+                                  {allCategories.map((category: string) => (
+                                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                                  ))}
+                                  <SelectItem value="add-new-category" className="text-neon-blue font-medium">
+                                    + Add Category
+                                  </SelectItem>
+                                </>
+                              ) : (
+                                <SelectItem value="loading" disabled>
+                                  Loading categories...
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -2112,9 +2126,15 @@ function CatalogPageContent() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="rich-card">
-                          {allCategories.map((category: string) => (
-                            <SelectItem key={category} value={category}>{category}</SelectItem>
-                          ))}
+                          {allCategories.length > 0 ? (
+                            allCategories.map((category: string) => (
+                              <SelectItem key={category} value={category}>{category}</SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="loading" disabled>
+                              Loading categories...
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -2135,11 +2155,17 @@ function CatalogPageContent() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {allSports.map((sport: string) => (
-                            <SelectItem key={sport} value={sport}>
-                              {sport}
+                          {allSports.length > 0 ? (
+                            allSports.map((sport: string) => (
+                              <SelectItem key={sport} value={sport}>
+                                {sport}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="loading" disabled>
+                              Loading sports...
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />

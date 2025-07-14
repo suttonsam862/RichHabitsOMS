@@ -101,7 +101,7 @@ router.post('/categories', requireAuth, requireRole(['admin', 'catalog_manager',
 });
 
 // Get all sports
-router.get('/sports', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), async (req, res) => {
+router.get('/sports', requireAuth, async (req, res) => {
   try {
     const { data: sports, error } = await supabase
       .from('catalog_sports')
