@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS invitations (
   token VARCHAR(255) UNIQUE NOT NULL,
   role VARCHAR(50) NOT NULL DEFAULT 'customer',
   status VARCHAR(50) NOT NULL DEFAULT 'pending',
-  invited_by INTEGER REFERENCES users(id),
+  invited_by UUID REFERENCES auth.users(id),
   expires_at TIMESTAMP NOT NULL,
   used_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS onboarding_progress (
 CREATE TABLE IF NOT EXISTS organization_profiles (
   id SERIAL PRIMARY KEY,
   invitation_id INTEGER REFERENCES invitations(id) ON DELETE CASCADE,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   
   -- Basic Organization Info
   organization_name VARCHAR(255) NOT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS organization_profiles (
 CREATE TABLE IF NOT EXISTS order_preferences (
   id SERIAL PRIMARY KEY,
   invitation_id INTEGER REFERENCES invitations(id) ON DELETE CASCADE,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   
   -- Product Preferences
   primary_product_types TEXT[], -- t-shirts, hoodies, hats, bags, etc.
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS order_preferences (
 CREATE TABLE IF NOT EXISTS tax_exemption_certificates (
   id SERIAL PRIMARY KEY,
   invitation_id INTEGER REFERENCES invitations(id) ON DELETE CASCADE,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_id INTEGER REFERENCES organization_profiles(id) ON DELETE CASCADE,
   
   -- Certificate Details
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS tax_exemption_certificates (
   
   -- Status & Verification
   verification_status VARCHAR(50) DEFAULT 'pending', -- pending, verified, rejected, expired
-  verified_by INTEGER REFERENCES users(id),
+  verified_by UUID REFERENCES auth.users(id),
   verified_at TIMESTAMP NULL,
   rejection_reason TEXT,
   
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS vendor_experience (
 CREATE TABLE IF NOT EXISTS communication_preferences (
   id SERIAL PRIMARY KEY,
   invitation_id INTEGER REFERENCES invitations(id) ON DELETE CASCADE,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   
   -- Communication Channels
   email_notifications BOOLEAN DEFAULT true,
@@ -216,12 +216,12 @@ ALTER TABLE communication_preferences ENABLE ROW LEVEL SECURITY;
 -- Basic RLS policies (to be refined based on business rules)
 CREATE POLICY "Users can view their own invitations" ON invitations FOR SELECT USING (
   auth.email() = email OR 
-  auth.uid()::text IN (SELECT id::text FROM users WHERE role IN ('admin', 'salesperson'))
+  auth.uid() IN (SELECT id FROM user_profiles WHERE role IN ('admin', 'salesperson'))
 );
 
 CREATE POLICY "Users can update their own onboarding" ON onboarding_progress FOR ALL USING (
   auth.email() = email OR 
-  auth.uid()::text IN (SELECT id::text FROM users WHERE role IN ('admin', 'salesperson'))
+  auth.uid() IN (SELECT id FROM user_profiles WHERE role IN ('admin', 'salesperson'))
 );
 
 -- Function to update timestamps
