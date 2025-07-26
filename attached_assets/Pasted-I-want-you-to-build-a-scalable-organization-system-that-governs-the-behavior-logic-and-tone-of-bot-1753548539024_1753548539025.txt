@@ -1,0 +1,13 @@
+I want you to build a scalable organization system that governs the behavior, logic, and tone of both the agent and assistant across all tasks. This system will rely on a structured directory of parameter files (JSON format) that serve as the brain behind how the assistant and agent function. Your first job is to design and implement this structure. Begin by creating a new folder in the root of the project called system_config. Inside that folder, create the following foundational parameter files:
+
+behavior-profile.json — Defines personality, tone, conversational aggressiveness, and how agreeable or blunt the assistant and agent should be. Includes parameters like agreeabilityThreshold, defaultTone, conflictTolerance, and humorAllowance.
+
+execution-policy.json — Defines what standards every implementation must meet. Includes flags for requireErrorHandling, enforceScalability, testCoverageRequired, noHardcodedKeys, and modularStructureRequired.
+
+common-build-rules.json — A library of default logic and UI rules that apply to commonly requested builds. For example, popups must auto-resize, modals must support scrolling, new forms must validate inputs, etc. This will reduce repeated fixes across prompts.
+
+red-flag-detection.json — A library of string patterns or design smells that, if detected in a user request, must be challenged before execution. For example, flag "just store in localStorage" with "insecure storage of sensitive data".
+
+workflow-routes.json — A high-level map of default workflows. For example, when a design is requested, it must pass through idea validation → structural planning → implementation → testing → optional optimization.
+
+Once these files are created, set up a script that loads and parses all of them on agent/assistant initialization. Store them in memory for runtime access. All user prompts must be passed through a centralized function (evaluatePrompt()) that references these config files before action is taken. The assistant and agent should dynamically reference this configuration to guide their behavior in real time, allowing easy scalability as more rules are added later. Include internal documentation in each file, and version every major config file so I can later build a visual editor if needed. Once the directory structure and base files are complete, return to me with a summary of each file’s structure and parameters so I can review and refine.
