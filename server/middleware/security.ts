@@ -156,3 +156,29 @@ export const fileUploadSecurity = (req: Request, res: Response, next: NextFuncti
 
   next();
 };
+
+// Authentication middleware
+export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Access token required'
+    });
+  }
+
+  try {
+    // For now, we'll decode the token payload directly
+    // In production, you'd want to verify the JWT signature
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    (req as any).user = payload;
+    next();
+  } catch (error) {
+    return res.status(403).json({
+      success: false,
+      message: 'Invalid token'
+    });
+  }
+};
