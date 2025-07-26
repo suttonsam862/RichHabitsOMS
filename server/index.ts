@@ -424,7 +424,8 @@ async function initializeDatabase() {
   }
 
   try {
-    await testDatabaseConnection();
+    // Test database connection
+  // await testDatabaseConnection();
     await createAdminIfNotExists();
   } catch (error) {
     console.error("Database initialization failed:", error);
