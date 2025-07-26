@@ -130,6 +130,15 @@ export default function UserManagementPage() {
   const createForm = useForm<CreateUserData>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      role: '',
+      password: '',
+      phone: '',
+      company: '',
+      department: '',
+      title: '',
       sendInvitation: true,
     },
   });
@@ -137,6 +146,15 @@ export default function UserManagementPage() {
   // Update user form
   const updateForm = useForm<UpdateUserData>({
     resolver: zodResolver(updateUserSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      phone: '',
+      company: '',
+      department: '',
+      title: '',
+      status: 'active',
+    },
   });
 
   // Fetch users
@@ -286,6 +304,10 @@ export default function UserManagementPage() {
   });
 
   const handleCreateUser = (data: CreateUserData) => {
+    console.log('🚀 Form submitted with data:', data);
+    console.log('📝 Form errors:', createForm.formState.errors);
+    console.log('🔄 Form is valid:', createForm.formState.isValid);
+    
     createUserMutation.mutate(data);
   };
 
@@ -363,7 +385,12 @@ export default function UserManagementPage() {
             </DialogHeader>
             <div className="flex-1 overflow-y-auto pr-2">
               <Form {...createForm}>
-                <form onSubmit={createForm.handleSubmit(handleCreateUser)} className="space-y-6">
+                <form 
+                  onSubmit={createForm.handleSubmit(handleCreateUser, (errors) => {
+                    console.log('❌ Form validation errors:', errors);
+                  })} 
+                  className="space-y-6"
+                >
                   {/* Basic Information */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-neon-blue">Basic Information</h3>
@@ -684,6 +711,11 @@ export default function UserManagementPage() {
                       type="submit"
                       disabled={createUserMutation.isPending}
                       className="bg-neon-blue hover:bg-neon-blue/80"
+                      onClick={(e) => {
+                        console.log('🖱️ Create User button clicked');
+                        console.log('📝 Form state:', createForm.formState);
+                        console.log('📄 Form values:', createForm.getValues());
+                      }}
                     >
                       {createUserMutation.isPending ? 'Creating...' : 'Create User'}
                     </Button>
