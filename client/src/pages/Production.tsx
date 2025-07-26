@@ -43,8 +43,8 @@ export default function Production() {
   const [notes, setNotes] = useState('');
   const [viewingOrder, setViewingOrder] = useState<any>(null);
 
-  // Fetch production tasks
-  const { data: productionTasks = [], isLoading } = useQuery({
+  // Fetch production tasks  
+  const { data: productionTasks = [] as any[], isLoading } = useQuery({
     queryKey: ['/api/production-tasks'],
     queryFn: getQueryFn({ on401: 'throw' }),
   });

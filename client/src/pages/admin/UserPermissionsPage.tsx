@@ -15,7 +15,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
-  Loader2, Plus, Edit, Trash2, Package, DollarSign, Tag, Users, AlertCircle, RefreshCw, Image as ImageIcon, PlusCircle, MoreHorizontal, Eye, Search, Trophy, Shirt, Zap, Mountain, Car, Waves, Dumbbell, Target, TreePine, Gamepad2, Shield, Activity
+  Loader2, Plus, Edit, Trash2, Package, DollarSign, Tag, Users, AlertCircle, RefreshCw, Image as ImageIcon, PlusCircle, MoreHorizontal, Eye, Search, Trophy, Shirt, Zap, Mountain, Car, Waves, Dumbbell, Target, TreePine, Gamepad2, Shield, Activity, UserPlus, UserCheck, Clock, AlertTriangle
 } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
@@ -364,7 +364,7 @@ function UserPermissionsPageContent() {
                                       onCheckedChange={(checked) => {
                                         const updatedPermissions = checked
                                           ? [...(field.value || []), permission.key]
-                                          : (field.value || []).filter((p) => p !== permission.key);
+                                          : (field.value || []).filter((p: string) => p !== permission.key);
                                         field.onChange(updatedPermissions);
                                         validatePermissions(updatedPermissions);
                                       }}

@@ -287,7 +287,7 @@ export default function SettingsPage() {
       if (data.success && data.users) {
         // New comprehensive database format
         return {
-          users: data.users.map(user => ({
+          users: data.users.map((user: any) => ({
             id: user.id || user.customerId,
             customerId: user.customerId,
             email: user.email,
@@ -315,13 +315,13 @@ export default function SettingsPage() {
           users: data,
           analytics: {
             totalUsers: data.length,
-            customersTotal: data.filter(u => u.role === 'customer').length,
+            customersTotal: data.filter((u: any) => u.role === 'customer').length,
             authAccountsTotal: data.length,
             needsAccountCreation: 0,
-            activeAccounts: data.filter(u => u.email_confirmed).length,
-            adminUsers: data.filter(u => u.role === 'admin').length,
-            customerUsers: data.filter(u => u.role === 'customer').length,
-            staffUsers: data.filter(u => !['customer', 'admin'].includes(u.role)).length
+            activeAccounts: data.filter((u: any) => u.email_confirmed).length,
+            adminUsers: data.filter((u: any) => u.role === 'admin').length,
+            customerUsers: data.filter((u: any) => u.role === 'customer').length,
+            staffUsers: data.filter((u: any) => !['customer', 'admin'].includes(u.role)).length
           }
         };
       }
@@ -333,13 +333,13 @@ export default function SettingsPage() {
   const users = userResponse?.users || [];
   const analytics = userResponse?.analytics || {
     totalUsers: users.length,
-    customersTotal: users.filter(u => u.role === 'customer').length,
+    customersTotal: users.filter((u: any) => u.role === 'customer').length,
     authAccountsTotal: users.length,
     needsAccountCreation: 0,
-    activeAccounts: users.filter(u => u.email_confirmed).length,
-    adminUsers: users.filter(u => u.role === 'admin').length,
-    customerUsers: users.filter(u => u.role === 'customer').length,
-    staffUsers: users.filter(u => !['customer', 'admin'].includes(u.role)).length
+    activeAccounts: users.filter((u: any) => u.email_confirmed).length,
+    adminUsers: users.filter((u: any) => u.role === 'admin').length,
+    customerUsers: users.filter((u: any) => u.role === 'customer').length,
+    staffUsers: users.filter((u: any) => !['customer', 'admin'].includes(u.role)).length
   };
 
   console.log('User display data:', { users: users.length, analytics });
