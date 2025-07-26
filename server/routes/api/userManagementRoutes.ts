@@ -9,19 +9,44 @@ import type {
   UpdateUserData 
 } from '../../../shared/userManagementSchema';
 import { requireAuth, requireRole } from '../auth/auth';
+import { sendEmail, getUserInviteEmailTemplate } from '../../email';
 
 const router = Router();
 
-/**
- * GET /api/users
- * Get all users with comprehensive data for settings page
- */
-router.get('/', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
-  try {
-    console.log('Fetching comprehensive user data...');
+// Schema definitions
+const createUserSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Valid email is required'),
+  role: z.string().min(1, 'Role is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+  department: z.string().optional(),
+  title: z.string().optional(),
+  sendInvitation: z.boolean().default(false),
+});
 
-    // Get all users from enhanced_user_profiles
-    const { data: users, error: usersError } = await supabase
+const updateUserSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+  department: z.string().optional(),
+  title: z.string().optional(),
+  status: z.enum(['active', 'inactive', 'suspended', 'terminated', 'pending_activation']).optional(),
+  role: z.string().optional(),
+});
+
+/**
+ * GET /api/user-management/users
+ * Get all users with comprehensive data
+ */
+router.get('/users', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+  try {
+    const { page = 1, limit = 50, search, status, role } = req.query;
+
+    let query = supabase
       .from('enhanced_user_profiles')
       .select(`
         id,
@@ -44,111 +69,82 @@ router.get('/', requireAuth, requireRole(['admin']), async (req: Request, res: R
       `)
       .order('created_at', { ascending: false });
 
-    if (usersError) {
-      console.error('Error fetching users:', usersError);
+    // Apply filters
+    if (search) {
+      query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
+    }
+
+    if (role && role !== 'all') {
+      query = query.eq('role', role);
+    }
+
+    // Apply pagination
+    const offset = (Number(page) - 1) * Number(limit);
+    query = query.range(offset, offset + Number(limit) - 1);
+
+    const { data: users, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching users:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to fetch users',
-        error: usersError.message
+        message: 'Failed to fetch users'
       });
     }
 
-    // Get user statistics for analytics
-    const totalUsers = users?.length || 0;
-    const activeUsers = users?.filter(u => u.status === 'active').length || 0;
-    const adminUsers = users?.filter(u => u.role === 'admin').length || 0;
-    const customerUsers = users?.filter(u => u.role === 'customer').length || 0;
-    const staffUsers = users?.filter(u => !['customer', 'admin'].includes(u.role)).length || 0;
-
-    const analytics = {
-      totalUsers,
-      customersTotal: customerUsers,
-      authAccountsTotal: totalUsers,
-      needsAccountCreation: 0,
-      activeAccounts: activeUsers,
-      adminUsers,
-      customerUsers,
-      staffUsers
-    };
-
-    console.log(`Returning ${totalUsers} users with analytics:`, analytics);
-
-    return res.json({
+    res.json({
       success: true,
-      users: users?.map(user => ({
-        id: user.id,
-        customerId: user.id,
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        username: user.username,
-        role: user.role,
-        phone: user.phone,
-        company: user.company,
-        created_at: user.created_at,
-        email_confirmed: user.is_email_verified,
-        hasAuthAccount: true,
-        accountStatus: user.status,
-        permissions: user.permissions,
-        lastLogin: user.last_login
-      })) || [],
-      analytics
+      data: {
+        users: users || [],
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / Number(limit))
+        }
+      }
     });
 
   } catch (error) {
-    console.error('Error in user management route:', error);
+    console.error('Error in get users:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Internal server error'
     });
   }
 });
 
 /**
- * POST /api/users/create-account
- * Create a new user account directly
+ * POST /api/user-management/users
+ * Create new user with optional email invitation
  */
-router.post('/create-account', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
-    const { email, firstName, lastName, role, password, createDirectly } = req.body;
-
-    console.log(`Creating new user account: ${email} with role: ${role}`);
-
-    // Validate required fields
-    if (!email || !firstName || !lastName || !role) {
+    const currentUser = (req as any).user;
+    const validationResult = createUserSchema.safeParse(req.body);
+    
+    if (!validationResult.success) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: email, firstName, lastName, and role are required'
+        message: 'Validation failed',
+        errors: validationResult.error.format()
       });
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-      .from('enhanced_user_profiles')
-      .select('id')
-      .eq('email', email)
-      .single();
+    const userData = validationResult.data;
+    const { firstName, lastName, email, role, password, phone, company, department, title, sendInvitation } = userData;
 
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
-    }
+    console.log('Creating user:', email, 'with role:', role);
 
-    // Create user with Supabase Auth
+    // Create auth user first
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
-      password: password || 'TempPassword123!',
-      email_confirm: true,
-      user_metadata: {
-        firstName,
-        lastName,
-        role
-      }
+      password,
+      email_confirm: true
     });
 
     if (authError || !authData.user) {
@@ -170,6 +166,10 @@ router.post('/create-account', requireAuth, requireRole(['admin']), async (req: 
         first_name: firstName,
         last_name: lastName,
         role,
+        phone,
+        company,
+        department,
+        title,
         status: 'active',
         is_email_verified: true,
         permissions: {},
@@ -189,12 +189,66 @@ router.post('/create-account', requireAuth, requireRole(['admin']), async (req: 
       });
     }
 
+    // Send invitation email if requested
+    let emailSent = false;
+    if (sendInvitation) {
+      try {
+        const invitationToken = generateInvitationToken();
+        
+        // Store invitation in database
+        await supabase
+          .from('user_invitations')
+          .insert({
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            role,
+            invitation_token: invitationToken,
+            invited_by: currentUser.id,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+          });
+
+        // Generate email template
+        const emailTemplate = getUserInviteEmailTemplate(
+          email,
+          firstName,
+          lastName,
+          invitationToken,
+          password // Include temporary password
+        );
+
+        // Send email
+        emailSent = await sendEmail(emailTemplate);
+        
+        if (emailSent) {
+          console.log('✅ Invitation email sent successfully to:', email);
+        } else {
+          console.log('⚠️ Failed to send invitation email to:', email);
+        }
+      } catch (emailError) {
+        console.error('Error sending invitation email:', emailError);
+      }
+    }
+
+    // Log audit event
+    await logAuditEvent({
+      userId: currentUser.id,
+      action: 'create',
+      resource: 'user',
+      resourceId: userProfile.id,
+      newValues: userProfile,
+      success: true
+    });
+
     console.log('User created successfully:', userProfile.id);
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
-      user: userProfile
+      message: sendInvitation 
+        ? `User created successfully. ${emailSent ? 'Invitation email sent.' : 'Email sending failed - please send login details manually.'}`
+        : 'User created successfully',
+      data: { user: userProfile },
+      emailSent
     });
 
   } catch (error) {
@@ -208,15 +262,31 @@ router.post('/create-account', requireAuth, requireRole(['admin']), async (req: 
 });
 
 /**
- * PATCH /api/users/:id
+ * PUT /api/user-management/users/:id
  * Update user information
  */
-router.patch('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+router.put('/users/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const currentUser = (req as any).user;
+    const validationResult = updateUserSchema.safeParse(req.body);
+    
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationResult.error.format()
+      });
+    }
 
-    console.log(`Updating user ${id} with:`, updates);
+    const updates = validationResult.data;
+
+    // Get current user data for audit log
+    const { data: currentData } = await supabase
+      .from('enhanced_user_profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
 
     // Update user profile
     const { data: updatedUser, error } = await supabase
@@ -238,22 +308,21 @@ router.patch('/:id', requireAuth, requireRole(['admin']), async (req: Request, r
       });
     }
 
-    // If password is being updated, update auth user too
-    if (updates.password) {
-      const { error: authError } = await supabase.auth.admin.updateUserById(id, {
-        password: updates.password
-      });
-
-      if (authError) {
-        console.error('Error updating auth password:', authError);
-        // Continue anyway since profile was updated
-      }
-    }
+    // Log audit event
+    await logAuditEvent({
+      userId: currentUser.id,
+      action: 'update',
+      resource: 'user',
+      resourceId: id,
+      oldValues: currentData,
+      newValues: updatedUser,
+      success: true
+    });
 
     res.json({
       success: true,
       message: 'User updated successfully',
-      user: updatedUser
+      data: { user: updatedUser }
     });
 
   } catch (error) {
@@ -267,20 +336,24 @@ router.patch('/:id', requireAuth, requireRole(['admin']), async (req: Request, r
 });
 
 /**
- * DELETE /api/users/:id
- * Delete or deactivate user
+ * DELETE /api/user-management/users/:id
+ * Delete user (soft delete by default)
  */
-router.delete('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+router.delete('/users/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { hardDelete = false } = req.query;
+    const { hardDelete } = req.query;
+    const currentUser = (req as any).user;
 
-    console.log(`${hardDelete ? 'Deleting' : 'Deactivating'} user:`, id);
+    // Get current user data for audit log
+    const { data: currentData } = await supabase
+      .from('enhanced_user_profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
 
     if (hardDelete === 'true') {
-      // Hard delete from auth and profile
-      await supabase.auth.admin.deleteUser(id);
-
+      // Hard delete - remove from database
       const { error } = await supabase
         .from('enhanced_user_profiles')
         .delete()
@@ -294,6 +367,9 @@ router.delete('/:id', requireAuth, requireRole(['admin']), async (req: Request, 
           error: error.message
         });
       }
+
+      // Also delete auth user
+      await supabase.auth.admin.deleteUser(id);
     } else {
       // Soft delete - set status to terminated
       const { error } = await supabase
@@ -314,6 +390,16 @@ router.delete('/:id', requireAuth, requireRole(['admin']), async (req: Request, 
       }
     }
 
+    // Log audit event
+    await logAuditEvent({
+      userId: currentUser.id,
+      action: hardDelete === 'true' ? 'delete' : 'deactivate',
+      resource: 'user',
+      resourceId: id,
+      oldValues: currentData,
+      success: true
+    });
+
     res.json({
       success: true,
       message: hardDelete === 'true' ? 'User deleted successfully' : 'User deactivated successfully'
@@ -328,5 +414,39 @@ router.delete('/:id', requireAuth, requireRole(['admin']), async (req: Request, 
     });
   }
 });
+
+// Utility functions
+function generateInvitationToken(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+async function logAuditEvent(event: {
+  userId: string;
+  action: string;
+  resource: string;
+  resourceId?: string;
+  oldValues?: any;
+  newValues?: any;
+  metadata?: any;
+  success: boolean;
+}) {
+  try {
+    await supabase
+      .from('user_audit_logs')
+      .insert({
+        user_id: event.userId,
+        action: event.action,
+        resource: event.resource,
+        resource_id: event.resourceId,
+        old_values: event.oldValues,
+        new_values: event.newValues,
+        metadata: event.metadata,
+        success: event.success,
+        timestamp: new Date().toISOString()
+      });
+  } catch (error) {
+    console.error('Failed to log audit event:', error);
+  }
+}
 
 export default router;

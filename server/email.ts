@@ -55,6 +55,109 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 }
 
 /**
+ * Generate a user invitation email template
+ */
+export function getUserInviteEmailTemplate(
+  email: string,
+  firstName: string,
+  lastName: string,
+  invitationToken: string,
+  temporaryPassword?: string
+): EmailOptions {
+  const subject = '🎉 Welcome to ThreadCraft - Your Account is Ready';
+  const baseUrl = process.env.BASE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}` || 'http://localhost:5000';
+  const loginUrl = `${baseUrl}/login`;
+  
+  const text = `
+Hello ${firstName} ${lastName},
+
+Welcome to ThreadCraft! Your account has been created and you're ready to get started.
+
+LOGIN DETAILS:
+Email: ${email}
+${temporaryPassword ? `Temporary Password: ${temporaryPassword}` : 'Password: Use the password provided separately'}
+
+Please visit: ${loginUrl}
+
+IMPORTANT SECURITY NOTE:
+${temporaryPassword ? 'Please change your temporary password after your first login for security.' : 'Make sure to keep your login credentials secure.'}
+
+WHAT YOU CAN DO NEXT:
+• Access your personalized dashboard
+• Manage custom clothing orders  
+• Track order progress in real-time
+• Collaborate with your team
+
+If you have any questions or need assistance, please contact our support team.
+
+Best regards,
+The ThreadCraft Team
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+        .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 15px 0; }
+        .credentials { background: #e5e7eb; padding: 15px; border-radius: 6px; margin: 15px 0; }
+        .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Welcome to ThreadCraft</h1>
+            <p>Your account is ready to use!</p>
+        </div>
+        <div class="content">
+            <p>Hello <strong>${firstName} ${lastName}</strong>,</p>
+            
+            <p>Welcome to ThreadCraft! Your account has been created and you're ready to get started.</p>
+            
+            <div class="credentials">
+                <h3>🔐 LOGIN DETAILS:</h3>
+                <p><strong>Email:</strong> ${email}</p>
+                ${temporaryPassword ? `<p><strong>Temporary Password:</strong> ${temporaryPassword}</p>` : '<p><strong>Password:</strong> Use the password provided separately</p>'}
+            </div>
+            
+            <p style="text-align: center;">
+                <a href="${loginUrl}" class="button">Login to ThreadCraft</a>
+            </p>
+            
+            ${temporaryPassword ? '<div class="warning"><strong>⚠️ IMPORTANT SECURITY NOTE:</strong><br>Please change your temporary password after your first login for security.</div>' : ''}
+            
+            <h3>🚀 WHAT YOU CAN DO NEXT:</h3>
+            <ul>
+                <li>Access your personalized dashboard</li>
+                <li>Manage custom clothing orders</li>
+                <li>Track order progress in real-time</li>
+                <li>Collaborate with your team</li>
+            </ul>
+            
+            <p>If you have any questions or need assistance, please contact our support team.</p>
+            
+            <p>Best regards,<br><strong>The ThreadCraft Team</strong></p>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+  return {
+    to: email,
+    subject,
+    text,
+    html
+  };
+}
+
+/**
  * Generate a customer invitation email
  */
 export function getCustomerInviteEmailTemplate(
@@ -93,136 +196,48 @@ The ThreadCraft Team
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Custom Clothing</title>
-  <style>
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-      line-height: 1.6; 
-      color: #333; 
-      background-color: #f8fafc;
-      margin: 0;
-      padding: 20px;
-    }
-    .container { 
-      max-width: 600px; 
-      margin: 0 auto; 
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    }
-    .header { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-      color: white; 
-      padding: 40px 30px; 
-      text-align: center; 
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-    }
-    .content { 
-      padding: 40px 30px; 
-    }
-    .content h2 {
-      color: #2d3748;
-      margin-top: 0;
-      font-size: 24px;
-    }
-    .content p {
-      color: #4a5568;
-      margin-bottom: 16px;
-    }
-    .button { 
-      display: inline-block; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white; 
-      padding: 16px 32px; 
-      text-decoration: none; 
-      border-radius: 8px; 
-      margin: 24px 0;
-      font-weight: 600;
-      font-size: 16px;
-      transition: transform 0.2s ease;
-    }
-    .button:hover {
-      transform: translateY(-1px);
-    }
-    .features {
-      background: #f7fafc;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-    .features ul {
-      margin: 0;
-      padding-left: 20px;
-      color: #4a5568;
-    }
-    .features li {
-      margin-bottom: 8px;
-    }
-    .footer { 
-      text-align: center; 
-      padding: 20px 30px;
-      background: #f8fafc;
-      color: #718096; 
-      font-size: 14px; 
-      border-top: 1px solid #e2e8f0;
-    }
-    .warning {
-      background: #fff5f5;
-      border: 1px solid #fed7d7;
-      color: #c53030;
-      padding: 12px;
-      border-radius: 6px;
-      margin: 16px 0;
-      font-size: 14px;
-    }
-  </style>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+        .button { display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 15px 0; }
+        .expiry { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 15px 0; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>🎉 Welcome to Custom Clothing!</h1>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Welcome to ThreadCraft</h1>
+            <p>You're invited to join our platform!</p>
+        </div>
+        <div class="content">
+            <p>Hello <strong>${firstName} ${lastName}</strong>,</p>
+            
+            <p>Welcome to ThreadCraft! You've been invited to join our custom clothing management platform.</p>
+            
+            <p style="text-align: center;">
+                <a href="${registerUrl}" class="button">Complete Account Setup</a>
+            </p>
+            
+            <h3>🚀 This secure link will allow you to:</h3>
+            <ul>
+                <li>Set your account password</li>
+                <li>Access your personalized dashboard</li>
+                <li>Start managing your custom clothing orders</li>
+                <li>Track order progress in real-time</li>
+            </ul>
+            
+            <div class="expiry">
+                <strong>⏰ IMPORTANT:</strong> This link will expire in 7 days for security reasons.
+            </div>
+            
+            <p>If you have any questions or need assistance, please contact our support team.</p>
+            
+            <p>Best regards,<br><strong>The ThreadCraft Team</strong></p>
+        </div>
     </div>
-    <div class="content">
-      <h2>Hello ${firstName} ${lastName},</h2>
-      <p>Welcome to Custom Clothing! You've been invited to join our custom clothing management platform.</p>
-      
-      <p>To complete your account setup and start using your personalized dashboard, please click the button below:</p>
-      
-      <div style="text-align: center;">
-        <a href="${registerUrl}" class="button">Complete Account Setup</a>
-      </div>
-      
-      <div class="features">
-        <p><strong>This secure link will allow you to:</strong></p>
-        <ul>
-          <li>Set your account password</li>
-          <li>Access your personalized dashboard</li>
-          <li>Start managing your custom clothing orders</li>
-          <li>Track order progress in real-time</li>
-        </ul>
-      </div>
-      
-      <div class="warning">
-        <strong>⚠️ Important:</strong> This link will expire in 7 days for security reasons. Please complete your setup soon!
-      </div>
-      
-      <p>If you have any questions or need assistance, please contact our support team.</p>
-      
-      <p>Best regards,<br><strong>The Custom Clothing Team</strong></p>
-    </div>
-    <div class="footer">
-      <p>This email was sent because you were invited to join Custom Clothing.</p>
-      <p>If you believe this was sent in error, please contact our support team.</p>
-      <p>Link: ${registerUrl}</p>
-    </div>
-  </div>
 </body>
 </html>
 `;
@@ -232,140 +247,5 @@ The ThreadCraft Team
     subject,
     text,
     html
-  };
-}
-
-/**
- * Generate an order status change notification email
- */
-export function getOrderStatusChangeEmailTemplate(
-  email: string,
-  firstName: string,
-  orderNumber: string,
-  status: string,
-  statusMessage: string,
-  orderDetailsUrl: string
-): EmailOptions {
-  const subject = `Order #${orderNumber} Status Update: ${status}`;
-  
-  const text = `
-Hello ${firstName},
-
-Your order #${orderNumber} status has been updated to: ${status}
-
-${statusMessage}
-
-View your order details here: ${orderDetailsUrl}
-
-If you have any questions, please contact our support team.
-
-Thank you,
-Custom Clothing Management Team
-`;
-
-  return {
-    to: email,
-    subject,
-    text
-  };
-}
-
-/**
- * Generate a new message notification email
- */
-export function getNewMessageEmailTemplate(
-  email: string,
-  firstName: string,
-  senderName: string,
-  messagePreview: string,
-  threadUrl: string
-): EmailOptions {
-  const subject = `New Message from ${senderName}`;
-  
-  const text = `
-Hello ${firstName},
-
-You have received a new message from ${senderName}.
-
-Message Preview:
-"${messagePreview}"
-
-View and reply to this message: ${threadUrl}
-
-Thank you,
-Custom Clothing Management Team
-`;
-
-  return {
-    to: email,
-    subject,
-    text
-  };
-}
-
-/**
- * Generate a design approval email
- */
-export function getDesignApprovalEmailTemplate(
-  email: string,
-  firstName: string,
-  designName: string,
-  designerName: string,
-  designPreviewUrl: string,
-  approvalUrl: string
-): EmailOptions {
-  const subject = `New Design Ready for Approval: ${designName}`;
-  
-  const text = `
-Hello ${firstName},
-
-A new design "${designName}" from ${designerName} is ready for your review and approval.
-
-Please review the design and provide your feedback: ${approvalUrl}
-
-Thank you,
-Custom Clothing Management Team
-`;
-
-  return {
-    to: email,
-    subject,
-    text
-  };
-}
-
-/**
- * Generate a payment receipt email
- */
-export function getPaymentReceiptEmailTemplate(
-  email: string,
-  firstName: string,
-  orderNumber: string,
-  amount: string,
-  orderItems: string[],
-  receiptUrl: string
-): EmailOptions {
-  const subject = `Payment Receipt for Order #${orderNumber}`;
-  
-  const itemsList = orderItems.map(item => `- ${item}`).join('\n');
-  
-  const text = `
-Hello ${firstName},
-
-Thank you for your payment of ${amount} for order #${orderNumber}.
-
-Order Items:
-${itemsList}
-
-View and download your receipt: ${receiptUrl}
-
-Thank you for your business,
-Custom Clothing Management Team
-`;
-
-  return {
-    to: email,
-    subject,
-    text
   };
 }
