@@ -337,151 +337,328 @@ export default function UserManagementPage() {
               Add User
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border max-w-md">
-            <DialogHeader>
+          <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle className="text-neon-blue">Create New User</DialogTitle>
               <DialogDescription>
-                Add a new user to the system and send them an invitation.
+                Add a new user to the system with comprehensive permissions and send them an invitation.
               </DialogDescription>
             </DialogHeader>
-            <Form {...createForm}>
-              <form onSubmit={createForm.handleSubmit(handleCreateUser)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="rich-input" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="rich-input" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+            <div className="flex-1 overflow-y-auto pr-2">
+              <Form {...createForm}>
+                <form onSubmit={createForm.handleSubmit(handleCreateUser)} className="space-y-6">
+                  {/* Basic Information */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-neon-blue">Basic Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={createForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} className="rich-input" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={createForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} className="rich-input" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
-                <FormField
-                  control={createForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="email" className="rich-input" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={createForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="email" className="rich-input" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={createForm.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="rich-input">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="rich-card">
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="salesperson">Salesperson</SelectItem>
-                          <SelectItem value="designer">Designer</SelectItem>
-                          <SelectItem value="manufacturer">Manufacturer</SelectItem>
-                          <SelectItem value="customer">Customer</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={createForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl>
+                              <Input {...field} className="rich-input" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={createForm.control}
+                        name="company"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company</FormLabel>
+                            <FormControl>
+                              <Input {...field} className="rich-input" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="rich-input" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="company"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="rich-input" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                  {/* Role and Permissions */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-neon-blue">Role & Permissions</h3>
+                    <FormField
+                      control={createForm.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Primary Role</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="rich-input">
+                                <SelectValue placeholder="Select role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="rich-card">
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="salesperson">Salesperson</SelectItem>
+                              <SelectItem value="designer">Designer</SelectItem>
+                              <SelectItem value="manufacturer">Manufacturer</SelectItem>
+                              <SelectItem value="customer">Customer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={createForm.control}
-                  name="sendInvitation"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>Send Invitation</FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          Send an email invitation to the user
+                    {/* Page Access Permissions */}
+                    <div className="space-y-3">
+                      <FormLabel className="text-base font-medium">Page Access Permissions</FormLabel>
+                      <div className="grid grid-cols-2 gap-3 p-4 border rounded-lg">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Admin Pages</h4>
+                          <div className="space-y-1">
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>User Management</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Analytics Dashboard</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>System Settings</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Security Management</span>
+                            </label>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Business Pages</h4>
+                          <div className="space-y-1">
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Catalog Management</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Order Management</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Customer Management</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Production Queue</span>
+                            </label>
+                          </div>
                         </div>
                       </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                    </div>
 
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createUserMutation.isPending}
-                    className="bg-neon-blue hover:bg-neon-blue/80"
-                  >
-                    {createUserMutation.isPending ? 'Creating...' : 'Create User'}
-                  </Button>
-                </div>
-              </form>
-            </Form>
+                    {/* Action Permissions */}
+                    <div className="space-y-3">
+                      <FormLabel className="text-base font-medium">Action Permissions</FormLabel>
+                      <div className="grid grid-cols-3 gap-3 p-4 border rounded-lg">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">User Actions</h4>
+                          <div className="space-y-1">
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Create Users</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Edit Users</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Delete Users</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Reset Passwords</span>
+                            </label>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Order Actions</h4>
+                          <div className="space-y-1">
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Create Orders</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Edit Orders</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Approve Orders</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Cancel Orders</span>
+                            </label>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Financial Actions</h4>
+                          <div className="space-y-1">
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Process Payments</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Issue Refunds</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>View Financial Data</span>
+                            </label>
+                            <label className="flex items-center space-x-2 text-sm">
+                              <input type="checkbox" className="rounded" />
+                              <span>Export Reports</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Advanced Permissions */}
+                    <div className="space-y-3">
+                      <FormLabel className="text-base font-medium">Advanced Permissions</FormLabel>
+                      <div className="grid grid-cols-2 gap-3 p-4 border rounded-lg">
+                        <div className="space-y-1">
+                          <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" className="rounded" />
+                            <span>System Administration</span>
+                          </label>
+                          <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" className="rounded" />
+                            <span>Database Management</span>
+                          </label>
+                          <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" className="rounded" />
+                            <span>Audit Log Access</span>
+                          </label>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" className="rounded" />
+                            <span>API Access</span>
+                          </label>
+                          <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" className="rounded" />
+                            <span>Integration Management</span>
+                          </label>
+                          <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" className="rounded" />
+                            <span>Backup & Restore</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Invitation Settings */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-neon-blue">Invitation Settings</h3>
+                    <FormField
+                      control={createForm.control}
+                      name="sendInvitation"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Send Email Invitation</FormLabel>
+                            <div className="text-sm text-muted-foreground">
+                              Send an email invitation to the user with login instructions
+                            </div>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Require Password Reset</FormLabel>
+                        <div className="text-sm text-muted-foreground">
+                          Force user to set a new password on first login
+                        </div>
+                      </div>
+                      <Switch defaultChecked={true} />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-4 border-t sticky bottom-0 bg-rich-black/90 backdrop-blur-md">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCreateDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createUserMutation.isPending}
+                      className="bg-neon-blue hover:bg-neon-blue/80"
+                    >
+                      {createUserMutation.isPending ? 'Creating...' : 'Create User'}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
