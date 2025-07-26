@@ -65,5 +65,10 @@ async function createAdminUser() {
   console.log('Password: Arlodog2013!');
 }
 
-// Run the function
-createAdminUser().catch(console.error);
+// Export the function for use in other modules
+export const createAdminIfNotExists = createAdminUser;
+
+// Run the function when this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  createAdminUser().catch(console.error);
+}
