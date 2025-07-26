@@ -121,9 +121,16 @@ export function AppLayout() {
     {
       name: 'User Management',
       href: '/admin/user-management',
-      icon: Shield,
+      icon: UserCheck,
       current: location.pathname === '/admin/user-management',
       page: 'user-management',
+    },
+    {
+      name: 'Security',
+      href: '/admin/security',
+      icon: Shield,
+      current: location.pathname === '/admin/security',
+      page: 'security',
     },
   ];
 

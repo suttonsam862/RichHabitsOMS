@@ -97,6 +97,7 @@
     "react-router-dom": "^7.6.0",
     "recharts": "^2.15.2",
     "sharp": "^0.34.2",
+    "speakeasy": "^2.0.0",
     "stripe": "^18.1.0",
     "supertest": "^7.1.1",
     "tailwind-merge": "^2.6.0",
