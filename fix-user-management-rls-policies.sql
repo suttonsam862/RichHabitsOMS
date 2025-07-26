@@ -1,20 +1,79 @@
+-- Fix User Management RLS Infinite Recursion
+-- Run this in Supabase SQL Editor
 
--- Fix RLS policies to prevent infinite recursion
--- Drop existing problematic policies first
-DROP POLICY IF EXISTS "Users can manage profiles with proper roles" ON enhanced_user_profiles;
-DROP POLICY IF EXISTS "Enable read access for admin users" ON enhanced_user_profiles;
-DROP POLICY IF EXISTS "Enable full access for admin users" ON enhanced_user_profiles;
-DROP POLICY IF EXISTS "Admin full access to enhanced_user_profiles" ON enhanced_user_profiles;
+BEGIN;
 
--- Create simple, non-recursive policies
-CREATE POLICY "Admin users have full access to user profiles" ON enhanced_user_profiles
-FOR ALL USING (
-  -- Check if current user has admin role in auth.users metadata
-  (auth.jwt() ->> 'role' = 'admin')
-  OR
-  -- Allow users to see their own profile
-  (auth.uid()::text = id::text)
-);
+-- Disable RLS temporarily to fix policies
+ALTER TABLE enhanced_user_profiles DISABLE ROW LEVEL SECURITY;
+
+-- Drop all existing problematic policies
+DROP POLICY IF EXISTS "Users can view own profile" ON enhanced_user_profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON enhanced_user_profiles;
+DROP POLICY IF EXISTS "Admin can view all profiles" ON enhanced_user_profiles;
+DROP POLICY IF EXISTS "Admin can update all profiles" ON enhanced_user_profiles;
+DROP POLICY IF EXISTS "user_profiles_select_policy" ON enhanced_user_profiles;
+DROP POLICY IF EXISTS "user_profiles_insert_policy" ON enhanced_user_profiles;
+DROP POLICY IF EXISTS "user_profiles_update_policy" ON enhanced_user_profiles;
+DROP POLICY IF EXISTS "user_profiles_delete_policy" ON enhanced_user_profiles;
+DROP POLICY IF EXISTS "simple_user_profiles_select" ON enhanced_user_profiles;
+
+-- Create simple, non-recursive policies that reference auth.users directly
+CREATE POLICY "enhanced_profiles_select" ON enhanced_user_profiles
+  FOR SELECT TO authenticated
+  USING (
+    id = auth.uid() OR 
+    EXISTS (
+      SELECT 1 FROM auth.users 
+      WHERE auth.users.id = auth.uid()
+      AND (
+        auth.users.raw_user_meta_data->>'role' = 'admin' OR
+        auth.users.raw_user_meta_data->>'is_super_admin' = 'true'
+      )
+    )
+  );
+
+CREATE POLICY "enhanced_profiles_insert" ON enhanced_user_profiles
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM auth.users 
+      WHERE auth.users.id = auth.uid()
+      AND (
+        auth.users.raw_user_meta_data->>'role' = 'admin' OR
+        auth.users.raw_user_meta_data->>'is_super_admin' = 'true'
+      )
+    )
+  );
+
+CREATE POLICY "enhanced_profiles_update" ON enhanced_user_profiles
+  FOR UPDATE TO authenticated
+  USING (
+    id = auth.uid() OR 
+    EXISTS (
+      SELECT 1 FROM auth.users 
+      WHERE auth.users.id = auth.uid()
+      AND (
+        auth.users.raw_user_meta_data->>'role' = 'admin' OR
+        auth.users.raw_user_meta_data->>'is_super_admin' = 'true'
+      )
+    )
+  );
+
+CREATE POLICY "enhanced_profiles_delete" ON enhanced_user_profiles
+  FOR DELETE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM auth.users 
+      WHERE auth.users.id = auth.uid()
+      AND (
+        auth.users.raw_user_meta_data->>'role' = 'admin' OR
+        auth.users.raw_user_meta_data->>'is_super_admin' = 'true'
+      )
+    )
+  );
+
+-- Re-enable RLS
+ALTER TABLE enhanced_user_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Custom roles policies
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON custom_roles;
@@ -73,44 +132,7 @@ DROP POLICY IF EXISTS "Admin users can view security incidents" ON security_inci
 CREATE POLICY "Admin users can view security incidents" ON security_incidents
 FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
 
--- Insert some test data to verify the system works
-INSERT INTO enhanced_user_profiles (
-  id,
-  username,
-  email,
-  first_name,
-  last_name,
-  role,
-  status,
-  is_email_verified,
-  permissions,
-  custom_attributes
-) VALUES 
-(
-  gen_random_uuid(),
-  'testadmin',
-  'admin@test.com',
-  'Test',
-  'Admin',
-  'admin',
-  'active',
-  true,
-  '{"*": ["*"]}',
-  '{"system_admin": true}'
-),
-(
-  gen_random_uuid(),
-  'testuser',
-  'user@test.com',
-  'Test',
-  'User',
-  'user',
-  'active',
-  true,
-  '{"profile": ["read", "update"]}',
-  '{}'
-)
-ON CONFLICT (email) DO NOTHING;
-
 -- Verify the setup
 SELECT 'RLS Policies Fixed Successfully' as status;
+
+COMMIT;

@@ -2,6 +2,18 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../db';
 import { createClient } from '@supabase/supabase-js';
+
+// Create admin client with service role key for user management operations
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 import type { 
   EnhancedUserProfile, 
   InsertEnhancedUserProfile,
@@ -55,7 +67,7 @@ router.get('/users', requireAuth, requireRole(['admin']), async (req: Request, r
   try {
     const { page = 1, limit = 50, search, status, role } = req.query;
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('enhanced_user_profiles')
       .select(`
         id,
@@ -153,11 +165,16 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
     const finalPassword = password || generateTemporaryPassword();
     const isTemporaryPassword = !password;
 
-    // Create auth user first
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Create auth user first using admin client
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: finalPassword,
-      email_confirm: true
+      email_confirm: true,
+      user_metadata: {
+        role,
+        firstName,
+        lastName
+      }
     });
 
     if (authError || !authData.user) {
@@ -169,8 +186,8 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
       });
     }
 
-    // Create enhanced user profile
-    const { data: userProfile, error: profileError } = await supabase
+    // Create enhanced user profile using admin client
+    const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('enhanced_user_profiles')
       .insert({
         id: authData.user.id,
@@ -196,7 +213,7 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
     if (profileError) {
       console.error('Profile creation error:', profileError);
       // Cleanup: delete auth user if profile creation fails
-      await supabase.auth.admin.deleteUser(authData.user.id);
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       return res.status(500).json({
         success: false,
         message: 'Failed to create user profile',
