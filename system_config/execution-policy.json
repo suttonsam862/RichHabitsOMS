@@ -1,50 +1,16 @@
-
 {
   "version": "1.0.0",
-  "lastUpdated": "2025-01-26",
-  "internal_documentation": {
-    "purpose": "Defines what standards every implementation must meet",
-    "usage": "Checked before any code implementation or system modification",
-    "enforcement_level": "strict",
-    "override_conditions": "explicit_user_request_with_acknowledgment"
+  "requireErrorHandling": true,
+  "requireScalability": true,
+  "requireSecurity": true,
+  "requireModularStructure": true,
+  "requireInlineComments": true,
+  "testCoverageRequired": true,
+  "techStackStrategy": "auto-select-optimal-stack",
+  "authenticationPolicy": {
+    "adminOnlyAccess": true,
+    "permissionGate": true,
+    "userDataVisibility": "strict-sandbox"
   },
-  "code_quality": {
-    "requireErrorHandling": true,
-    "enforceScalability": true,
-    "testCoverageRequired": false,
-    "noHardcodedKeys": true,
-    "modularStructureRequired": true,
-    "typeScriptRequired": true,
-    "documentationRequired": true
-  },
-  "security_standards": {
-    "authenticationRequired": true,
-    "inputValidationRequired": true,
-    "sqlInjectionPrevention": true,
-    "xssProtection": true,
-    "sensitiveDataEncryption": true,
-    "environmentVariablesForSecrets": true
-  },
-  "architecture_requirements": {
-    "separationOfConcerns": true,
-    "consistentNameConventions": true,
-    "reusableComponents": true,
-    "performanceOptimization": true,
-    "responsiveDesign": true,
-    "accessibilityCompliance": "basic"
-  },
-  "database_standards": {
-    "migrationScripts": true,
-    "indexOptimization": true,
-    "backupStrategy": true,
-    "connectionPooling": true,
-    "queryOptimization": true
-  },
-  "deployment_requirements": {
-    "environmentConfiguration": true,
-    "healthCheckEndpoints": true,
-    "loggingImplementation": true,
-    "monitoringSetup": false,
-    "rollbackCapability": true
-  }
+  "minFixPrefixes": true
 }

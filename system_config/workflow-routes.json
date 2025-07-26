@@ -1,190 +1,31 @@
-
 {
   "version": "1.0.0",
-  "lastUpdated": "2025-01-26",
-  "internal_documentation": {
-    "purpose": "High-level map of default workflows for common development tasks",
-    "usage": "Referenced to ensure proper sequence and completeness of implementation phases",
-    "workflow_types": ["design", "feature_development", "bug_fixes", "database_changes", "deployment"]
-  },
-  "design_workflow": {
-    "phases": [
-      "idea_validation",
-      "structural_planning",
-      "ui_mockup",
-      "implementation",
-      "testing",
-      "optimization"
-    ],
-    "phase_details": {
-      "idea_validation": {
-        "requirements": ["user_story_definition", "acceptance_criteria", "technical_feasibility"],
-        "deliverables": ["validated_requirements", "risk_assessment"],
-        "mandatory": true
-      },
-      "structural_planning": {
-        "requirements": ["architecture_design", "component_breakdown", "data_flow_mapping"],
-        "deliverables": ["technical_specification", "component_hierarchy"],
-        "mandatory": true
-      },
-      "ui_mockup": {
-        "requirements": ["wireframe_creation", "responsive_design_plan", "accessibility_considerations"],
-        "deliverables": ["design_mockups", "interaction_specifications"],
-        "mandatory": false
-      },
-      "implementation": {
-        "requirements": ["code_development", "component_creation", "integration_testing"],
-        "deliverables": ["working_feature", "unit_tests", "documentation"],
-        "mandatory": true
-      },
-      "testing": {
-        "requirements": ["functionality_testing", "edge_case_validation", "user_acceptance_testing"],
-        "deliverables": ["test_results", "bug_reports", "performance_metrics"],
-        "mandatory": true
-      },
-      "optimization": {
-        "requirements": ["performance_analysis", "code_review", "refactoring"],
-        "deliverables": ["optimized_code", "performance_improvements"],
-        "mandatory": false
-      }
-    }
-  },
-  "feature_development_workflow": {
-    "phases": [
-      "requirements_analysis",
-      "technical_design",
-      "database_design",
-      "api_development",
-      "frontend_development",
-      "integration",
-      "testing",
-      "deployment"
-    ],
-    "phase_details": {
-      "requirements_analysis": {
-        "requirements": ["feature_specification", "user_stories", "business_logic_definition"],
-        "deliverables": ["requirements_document", "feature_scope"],
-        "mandatory": true
-      },
-      "technical_design": {
-        "requirements": ["architecture_planning", "technology_selection", "integration_points"],
-        "deliverables": ["technical_design_document", "implementation_plan"],
-        "mandatory": true
-      },
-      "database_design": {
-        "requirements": ["schema_design", "migration_planning", "data_modeling"],
-        "deliverables": ["database_schema", "migration_scripts"],
-        "mandatory": true
-      },
-      "api_development": {
-        "requirements": ["endpoint_creation", "validation_logic", "error_handling"],
-        "deliverables": ["api_endpoints", "api_documentation"],
-        "mandatory": true
-      },
-      "frontend_development": {
-        "requirements": ["component_creation", "state_management", "user_interface"],
-        "deliverables": ["ui_components", "user_flows"],
-        "mandatory": true
-      },
-      "integration": {
-        "requirements": ["api_integration", "data_flow_testing", "component_integration"],
-        "deliverables": ["integrated_feature", "integration_tests"],
-        "mandatory": true
-      },
-      "testing": {
-        "requirements": ["unit_testing", "integration_testing", "user_acceptance_testing"],
-        "deliverables": ["test_suite", "test_results"],
-        "mandatory": true
-      },
-      "deployment": {
-        "requirements": ["environment_setup", "deployment_configuration", "monitoring_setup"],
-        "deliverables": ["deployed_feature", "deployment_documentation"],
-        "mandatory": true
-      }
-    }
-  },
-  "bug_fix_workflow": {
-    "phases": [
-      "issue_reproduction",
-      "root_cause_analysis",
-      "solution_design",
-      "implementation",
-      "testing",
-      "deployment"
-    ],
-    "phase_details": {
-      "issue_reproduction": {
-        "requirements": ["reproduction_steps", "environment_setup", "error_logging"],
-        "deliverables": ["reproduction_guide", "error_analysis"],
-        "mandatory": true
-      },
-      "root_cause_analysis": {
-        "requirements": ["code_investigation", "system_analysis", "dependency_check"],
-        "deliverables": ["root_cause_identification", "impact_assessment"],
-        "mandatory": true
-      },
-      "solution_design": {
-        "requirements": ["fix_strategy", "side_effect_analysis", "testing_plan"],
-        "deliverables": ["solution_specification", "implementation_plan"],
-        "mandatory": true
-      },
-      "implementation": {
-        "requirements": ["code_changes", "fix_implementation", "code_review"],
-        "deliverables": ["fixed_code", "change_documentation"],
-        "mandatory": true
-      },
-      "testing": {
-        "requirements": ["fix_validation", "regression_testing", "edge_case_testing"],
-        "deliverables": ["test_results", "validation_report"],
-        "mandatory": true
-      },
-      "deployment": {
-        "requirements": ["deployment_planning", "rollback_preparation", "monitoring"],
-        "deliverables": ["deployed_fix", "deployment_report"],
-        "mandatory": true
-      }
-    }
-  },
-  "database_changes_workflow": {
-    "phases": [
-      "change_analysis",
-      "migration_design",
-      "backup_strategy",
-      "migration_implementation",
-      "testing",
-      "deployment"
-    ],
-    "phase_details": {
-      "change_analysis": {
-        "requirements": ["impact_assessment", "data_analysis", "dependency_mapping"],
-        "deliverables": ["change_specification", "risk_assessment"],
-        "mandatory": true
-      },
-      "migration_design": {
-        "requirements": ["migration_strategy", "rollback_plan", "data_preservation"],
-        "deliverables": ["migration_scripts", "rollback_procedures"],
-        "mandatory": true
-      },
-      "backup_strategy": {
-        "requirements": ["backup_creation", "backup_verification", "recovery_testing"],
-        "deliverables": ["backup_files", "recovery_procedures"],
-        "mandatory": true
-      },
-      "migration_implementation": {
-        "requirements": ["script_execution", "data_validation", "constraint_verification"],
-        "deliverables": ["migrated_database", "validation_results"],
-        "mandatory": true
-      },
-      "testing": {
-        "requirements": ["functionality_testing", "performance_testing", "data_integrity_check"],
-        "deliverables": ["test_results", "performance_metrics"],
-        "mandatory": true
-      },
-      "deployment": {
-        "requirements": ["production_migration", "monitoring_setup", "rollback_readiness"],
-        "deliverables": ["production_database", "deployment_documentation"],
-        "mandatory": true
-      }
-    }
-  }
+  "defaultFlow": [
+    "validation",
+    "planning",
+    "build",
+    "test",
+    "approve",
+    "ship"
+  ],
+  "bugFixFlow": [
+    "replication",
+    "diagnosis",
+    "fix",
+    "regression test",
+    "confirmation"
+  ],
+  "designRequestFlow": [
+    "scoping",
+    "logic pairing",
+    "ui mock",
+    "build",
+    "feedback loop"
+  ],
+  "shortCircuitCommand": "quick prototype",
+  "shortCircuitFlow": [
+    "light validation",
+    "build",
+    "debug"
+  ]
 }

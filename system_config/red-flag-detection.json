@@ -1,132 +1,33 @@
-
 {
   "version": "1.0.0",
-  "lastUpdated": "2025-01-26",
-  "internal_documentation": {
-    "purpose": "Library of string patterns or design smells that must be challenged before execution",
-    "usage": "Scanned during prompt evaluation to identify potentially problematic requests",
-    "action_required": "Challenge user with explanation and suggest alternatives"
-  },
-  "security_red_flags": {
-    "insecure_storage": {
-      "patterns": [
-        "store in localStorage",
-        "save password in local",
-        "keep secret in browser",
-        "client-side authentication",
-        "store API key in frontend"
-      ],
-      "challenge_message": "Storing sensitive data client-side is insecure. Consider server-side storage with proper encryption.",
-      "severity": "high",
-      "auto_block": true
+  "critical": [
+    {
+      "pattern": "localStorage",
+      "reason": "Do not use localStorage for sensitive data. Use secure server-side tokens or encrypted storage."
     },
-    "authentication_bypass": {
-      "patterns": [
-        "skip authentication",
-        "disable auth check",
-        "hardcode admin access",
-        "bypass login",
-        "remove security"
-      ],
-      "challenge_message": "Bypassing authentication creates security vulnerabilities. Consider implementing proper role-based access.",
-      "severity": "critical",
-      "auto_block": true
+    {
+      "pattern": "dangerouslySetInnerHTML",
+      "reason": "XSS risk. Avoid unless you sanitize all input."
     },
-    "sql_injection_risk": {
-      "patterns": [
-        "raw SQL query",
-        "string concatenation SQL",
-        "user input directly in query",
-        "no parameterized query"
-      ],
-      "challenge_message": "This approach risks SQL injection. Use parameterized queries or ORM methods.",
-      "severity": "high",
-      "auto_block": true
+    {
+      "pattern": "public admin panel",
+      "reason": "Admin panels must be auth-gated and sandboxed with access control layers."
     }
-  },
-  "architecture_red_flags": {
-    "tight_coupling": {
-      "patterns": [
-        "everything in one file",
-        "no separation of concerns",
-        "direct database access from UI",
-        "hardcoded configuration"
-      ],
-      "challenge_message": "This creates tight coupling. Consider modular architecture with proper separation of concerns.",
-      "severity": "medium",
-      "auto_block": false
+  ],
+  "medium": [
+    {
+      "pattern": "nested ternaries",
+      "reason": "Reduces readability. Refactor with clearer logic."
     },
-    "performance_issues": {
-      "patterns": [
-        "no pagination",
-        "load all data at once",
-        "no caching",
-        "synchronous everything",
-        "no lazy loading"
-      ],
-      "challenge_message": "This may cause performance issues. Consider pagination, caching, or lazy loading strategies.",
-      "severity": "medium",
-      "auto_block": false
-    },
-    "scalability_concerns": {
-      "patterns": [
-        "single server",
-        "no load balancing",
-        "monolithic approach",
-        "no microservices consideration"
-      ],
-      "challenge_message": "This approach may not scale well. Consider modular or distributed architecture.",
-      "severity": "low",
-      "auto_block": false
+    {
+      "pattern": "repeating fetch logic",
+      "reason": "Should be abstracted into utility or hook."
     }
-  },
-  "code_quality_red_flags": {
-    "maintainability": {
-      "patterns": [
-        "no comments",
-        "complex nested logic",
-        "magic numbers",
-        "unclear variable names",
-        "duplicate code"
-      ],
-      "challenge_message": "This reduces code maintainability. Consider refactoring for clarity and documentation.",
-      "severity": "medium",
-      "auto_block": false
-    },
-    "error_handling": {
-      "patterns": [
-        "no error handling",
-        "silent failures",
-        "catch and ignore",
-        "no user feedback on errors"
-      ],
-      "challenge_message": "Missing error handling creates poor user experience. Implement comprehensive error management.",
-      "severity": "medium",
-      "auto_block": false
+  ],
+  "low": [
+    {
+      "pattern": "generic variable names",
+      "reason": "Consider using semantic naming to improve readability."
     }
-  },
-  "user_experience_red_flags": {
-    "accessibility": {
-      "patterns": [
-        "no alt text",
-        "poor color contrast",
-        "no keyboard navigation",
-        "missing aria labels"
-      ],
-      "challenge_message": "This impacts accessibility. Consider implementing WCAG guidelines.",
-      "severity": "medium",
-      "auto_block": false
-    },
-    "usability": {
-      "patterns": [
-        "no loading indicators",
-        "no error messages",
-        "unclear navigation",
-        "no confirmation dialogs"
-      ],
-      "challenge_message": "This creates poor user experience. Consider user-friendly interactions and feedback.",
-      "severity": "low",
-      "auto_block": false
-    }
-  }
+  ]
 }
