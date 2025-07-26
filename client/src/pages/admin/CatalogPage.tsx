@@ -873,7 +873,7 @@ function CatalogPageContent() {
       preferredManufacturerId: item.preferredManufacturerId || "",
       tags: Array.isArray(item.tags) ? item.tags.join(", ") : "",
       specifications: item.specifications ? JSON.stringify(item.specifications, null, 2) : "",
-      buildInstructions: item.buildInstructions || "",```text
+      buildInstructions: item.buildInstructions || "",
     });
     setIsEditItemDialogOpen(true);
   };
