@@ -1,4 +1,3 @@
-
 import { Router, Request, Response } from 'express';
 import WorkflowEngine from '../../workflow/WorkflowEngine.js';
 
@@ -155,6 +154,121 @@ router.post('/workflows/:workflowId/check-permissions', async (req: Request, res
     res.status(500).json({
       success: false,
       message: 'Failed to check workflow permissions',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get workflow step requirements
+router.get('/:workflowId/step/:stepId/requirements', async (req: Request, res: Response) => {
+  try {
+    const { workflowId, stepId } = req.params;
+    const requirements = await workflowEngine.getStepRequirements(workflowId, stepId);
+
+    res.json({
+      success: true,
+      data: requirements
+    });
+  } catch (error) {
+    console.error('Error getting step requirements:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get step requirements',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Validate step requirements
+router.post('/:workflowId/step/:stepId/validate', async (req: Request, res: Response) => {
+  try {
+    const { workflowId, stepId } = req.params;
+    const { context } = req.body;
+
+    const validation = await workflowEngine.validateStepRequirements(workflowId, stepId, context);
+
+    res.json({
+      success: true,
+      data: validation
+    });
+  } catch (error) {
+    console.error('Error validating step requirements:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to validate step requirements',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get workflow performance metrics
+router.get('/metrics/:workflowType', async (req: Request, res: Response) => {
+  try {
+    const { workflowType } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const metrics = await workflowEngine.getWorkflowMetrics(
+      workflowType,
+      startDate as string,
+      endDate as string
+    );
+
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    console.error('Error getting workflow metrics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get workflow metrics',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get workflow bottleneck analysis
+router.get('/bottlenecks/:workflowType', async (req: Request, res: Response) => {
+  try {
+    const { workflowType } = req.params;
+
+    const bottlenecks = await workflowEngine.analyzeBottlenecks(workflowType);
+
+    res.json({
+      success: true,
+      data: bottlenecks
+    });
+  } catch (error) {
+    console.error('Error analyzing bottlenecks:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to analyze bottlenecks',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get workflow analytics
+router.get('/analytics/:workflowType', async (req: Request, res: Response) => {
+  try {
+    const { workflowType } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const analytics = await workflowEngine.getWorkflowAnalytics(
+      workflowType,
+      startDate as string,
+      endDate as string
+    );
+
+    res.json({
+      success: true,
+      data: analytics
+    });
+  } catch (error) {
+    console.error('Error getting workflow analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get workflow analytics',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

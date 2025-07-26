@@ -1,4 +1,3 @@
-
 {
   "version": "1.0.0",
   "defaultFlow": [
@@ -32,74 +31,211 @@
   "orderFulfillmentWorkflow": {
     "steps": [
       {
-        "id": "order_received",
-        "name": "Order Received",
-        "actor": "system",
-        "onEnter": ["send_confirmation_email", "assign_order_id"],
-        "transitions": ["design_review"]
+        "id": "draft",
+        "name": "Draft Order",
+        "actor": "customer",
+        "onEnter": ["save_draft", "notify_customer", "validate_order_data"],
+        "transitions": ["design", "payment_pending"],
+        "requirements": ["customer_contact_info", "basic_design_specs"],
+        "timeoutHours": 72
       },
       {
-        "id": "design_review",
-        "name": "Design Review",
+        "id": "payment_pending",
+        "name": "Payment Pending",
+        "actor": "customer", 
+        "onEnter": ["generate_invoice", "send_payment_request", "hold_design_slot"],
+        "transitions": ["design", "cancelled"],
+        "requirements": ["payment_confirmation"],
+        "timeoutHours": 48
+      },
+      {
+        "id": "design",
+        "name": "Design Phase",
         "actor": "internal_staff",
-        "onEnter": ["notify_design_team"],
-        "transitions": ["design_approved", "design_rejected"]
+        "onEnter": ["assign_designer", "create_design_task", "schedule_design_review"],
+        "transitions": ["design_approved", "design_revision", "design_consultation"],
+        "requirements": ["designer_assigned", "design_brief_complete"],
+        "timeoutHours": 120
+      },
+      {
+        "id": "design_consultation",
+        "name": "Design Consultation",
+        "actor": "customer",
+        "onEnter": ["schedule_consultation", "prepare_design_options"],
+        "transitions": ["design", "design_approved"],
+        "requirements": ["consultation_scheduled"],
+        "timeoutHours": 48
       },
       {
         "id": "design_approved",
         "name": "Design Approved",
-        "actor": "internal_staff",
-        "onEnter": ["update_status", "schedule_production"],
-        "transitions": ["in_production"]
+        "actor": "customer",
+        "onEnter": ["notify_customer", "prepare_production", "finalize_materials"],
+        "transitions": ["in_production", "materials_sourcing"],
+        "requirements": ["customer_approval", "final_payment"],
+        "timeoutHours": 24
       },
       {
-        "id": "design_rejected",
-        "name": "Design Rejected",
+        "id": "design_revision",
+        "name": "Design Revision",
         "actor": "internal_staff",
-        "onEnter": ["notify_customer", "request_revision"],
-        "transitions": ["design_review"]
+        "onEnter": ["request_revision", "notify_designer", "document_feedback"],
+        "transitions": ["design", "design_consultation"],
+        "requirements": ["revision_notes"],
+        "timeoutHours": 72
+      },
+      {
+        "id": "materials_sourcing",
+        "name": "Materials Sourcing",
+        "actor": "internal_staff",
+        "onEnter": ["source_materials", "verify_availability", "update_timeline"],
+        "transitions": ["in_production", "materials_delayed"],
+        "requirements": ["materials_confirmed"],
+        "timeoutHours": 168
+      },
+      {
+        "id": "materials_delayed",
+        "name": "Materials Delayed",
+        "actor": "internal_staff",
+        "onEnter": ["notify_customer", "provide_new_timeline", "explore_alternatives"],
+        "transitions": ["materials_sourcing", "cancelled"],
+        "requirements": ["delay_notification"],
+        "timeoutHours": 72
       },
       {
         "id": "in_production",
         "name": "In Production",
-        "actor": "system",
-        "onEnter": ["assign_manufacturer", "update_timeline"],
-        "transitions": ["quality_check"]
+        "actor": "internal_staff",
+        "onEnter": ["assign_manufacturer", "update_timeline", "begin_production"],
+        "transitions": ["quality_check", "production_issue"],
+        "requirements": ["manufacturer_assigned", "production_schedule"],
+        "timeoutHours": 240
+      },
+      {
+        "id": "production_issue",
+        "name": "Production Issue",
+        "actor": "internal_staff",
+        "onEnter": ["log_issue", "assess_impact", "notify_stakeholders"],
+        "transitions": ["in_production", "design_revision", "cancelled"],
+        "requirements": ["issue_resolution"],
+        "timeoutHours": 48
       },
       {
         "id": "quality_check",
         "name": "Quality Check",
         "actor": "internal_staff",
-        "onEnter": ["schedule_inspection"],
-        "transitions": ["quality_passed", "quality_failed"]
+        "onEnter": ["schedule_inspection", "prepare_checklist", "document_process"],
+        "transitions": ["quality_passed", "quality_failed", "quality_review"],
+        "requirements": ["inspection_complete"],
+        "timeoutHours": 24
+      },
+      {
+        "id": "quality_review",
+        "name": "Quality Review",
+        "actor": "internal_staff",
+        "onEnter": ["senior_review", "document_findings"],
+        "transitions": ["quality_passed", "quality_failed"],
+        "requirements": ["senior_approval"],
+        "timeoutHours": 48
       },
       {
         "id": "quality_passed",
         "name": "Quality Passed",
         "actor": "internal_staff",
-        "onEnter": ["prepare_shipping"],
-        "transitions": ["shipped"]
+        "onEnter": ["prepare_shipping", "generate_certificate", "package_item"],
+        "transitions": ["shipped", "shipping_delayed"],
+        "requirements": ["packaging_complete"],
+        "timeoutHours": 24
       },
       {
         "id": "quality_failed",
         "name": "Quality Failed",
         "actor": "internal_staff",
-        "onEnter": ["log_issues", "restart_production"],
-        "transitions": ["in_production"]
+        "onEnter": ["log_issues", "restart_production", "notify_customer"],
+        "transitions": ["in_production", "design_revision"],
+        "requirements": ["failure_analysis"],
+        "timeoutHours": 24
+      },
+      {
+        "id": "shipping_delayed",
+        "name": "Shipping Delayed",
+        "actor": "internal_staff",
+        "onEnter": ["notify_customer", "reschedule_shipping"],
+        "transitions": ["shipped"],
+        "requirements": ["new_shipping_date"],
+        "timeoutHours": 72
       },
       {
         "id": "shipped",
         "name": "Shipped",
         "actor": "system",
-        "onEnter": ["send_tracking_info", "schedule_followup"],
-        "transitions": ["delivered"]
+        "onEnter": ["send_tracking_info", "schedule_followup", "update_inventory"],
+        "transitions": ["delivered", "delivery_issue"],
+        "requirements": ["tracking_number"],
+        "timeoutHours": 168
+      },
+      {
+        "id": "delivery_issue",
+        "name": "Delivery Issue",
+        "actor": "internal_staff",
+        "onEnter": ["investigate_delivery", "contact_carrier"],
+        "transitions": ["shipped", "delivered", "replacement_needed"],
+        "requirements": ["issue_resolution"],
+        "timeoutHours": 72
+      },
+      {
+        "id": "replacement_needed",
+        "name": "Replacement Needed",
+        "actor": "internal_staff",
+        "onEnter": ["authorize_replacement", "fast_track_production"],
+        "transitions": ["in_production"],
+        "requirements": ["replacement_approval"],
+        "timeoutHours": 24
       },
       {
         "id": "delivered",
         "name": "Delivered",
         "actor": "system",
-        "onEnter": ["request_feedback", "close_order"],
-        "transitions": []
+        "onEnter": ["request_feedback", "close_order", "update_customer_history"],
+        "transitions": ["feedback_received", "warranty_claim"],
+        "requirements": ["delivery_confirmation"],
+        "timeoutHours": 0
+      },
+      {
+        "id": "feedback_received",
+        "name": "Feedback Received",
+        "actor": "customer",
+        "onEnter": ["process_feedback", "update_ratings"],
+        "transitions": [],
+        "requirements": [],
+        "timeoutHours": 0
+      },
+      {
+        "id": "warranty_claim",
+        "name": "Warranty Claim",
+        "actor": "customer",
+        "onEnter": ["process_warranty", "assess_claim"],
+        "transitions": ["replacement_needed", "refund_processed"],
+        "requirements": ["warranty_validation"],
+        "timeoutHours": 120
+      },
+      {
+        "id": "refund_processed",
+        "name": "Refund Processed",
+        "actor": "internal_staff",
+        "onEnter": ["process_refund", "close_case"],
+        "transitions": [],
+        "requirements": ["refund_approval"],
+        "timeoutHours": 72
+      },
+      {
+        "id": "cancelled",
+        "name": "Cancelled",
+        "actor": "system",
+        "onEnter": ["process_cancellation", "handle_refund", "release_resources"],
+        "transitions": [],
+        "requirements": ["cancellation_reason"],
+        "timeoutHours": 0
       }
     ]
   },

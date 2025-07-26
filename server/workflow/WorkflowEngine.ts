@@ -1,4 +1,3 @@
-
 import type { WorkflowRoutesConfig } from '../../system_config/types.js';
 import SystemConfigurationManager from '../../system_config/config-loader.js';
 
@@ -63,7 +62,7 @@ class WorkflowEngine {
   ): Promise<WorkflowState> {
     const config = this.configManager.getWorkflowRoutes();
     const workflow = this.getWorkflowDefinition(config, workflowType);
-    
+
     if (!workflow || workflow.length === 0) {
       throw new Error(`Workflow type ${workflowType} not found`);
     }
@@ -88,7 +87,7 @@ class WorkflowEngine {
     };
 
     this.workflowStates.set(workflowId, workflowState);
-    
+
     // Execute onEnter actions for initial step
     await this.executeOnEnterActions(initialStep, workflowState);
 
@@ -125,7 +124,7 @@ class WorkflowEngine {
     workflowState.currentStep = targetStep;
     workflowState.updatedAt = new Date();
     workflowState.metadata = { ...workflowState.metadata, ...transitionMetadata };
-    
+
     // Add history entry
     workflowState.history.push({
       stepId: targetStep,
@@ -172,11 +171,11 @@ class WorkflowEngine {
     action: string
   ): Promise<boolean> {
     const securityPolicies = this.configManager.getSecurityPolicies();
-    
+
     // Get actor role from security policies
     // This would typically involve checking the user's role from the database
     // For now, we'll implement basic role checking
-    
+
     if (actor === 'system') {
       return true; // System always has permissions
     }
@@ -184,7 +183,7 @@ class WorkflowEngine {
     // Check if actor has required permissions based on role
     const actorRole = await this.getActorRole(actor);
     const rolePermissions = securityPolicies.rbac.roles[actorRole]?.permissions || [];
-    
+
     // Check if actor has wildcard permissions or specific workflow permissions
     return rolePermissions.includes('*') || 
            rolePermissions.includes(`workflow:${action}`) ||
@@ -256,7 +255,7 @@ class WorkflowEngine {
     const config = this.configManager.getWorkflowRoutes();
     const workflowType = this.determineWorkflowType(workflowState);
     const workflow = this.getWorkflowDefinition(config, workflowType);
-    
+
     // Find current step and check if transition is allowed
     const currentStepDef = workflow?.find(step => step.id === fromStep);
     return currentStepDef?.transitions.includes(toStep) || false;
@@ -324,6 +323,115 @@ class WorkflowEngine {
     console.log(`Scheduling production for ${workflowState.entityType} ${workflowState.entityId}`);
     // Implement production scheduling logic
   }
+
+  /**
+   * Check if step requirements are met
+   */
+  private async validateStepRequirements(
+    workflowId: string,
+    stepId: string,
+    requirements: string[],
+    context: Record<string, any>
+  ): Promise<{ valid: boolean; missing: string[] }> {
+    const missing: string[] = [];
+
+    for (const requirement of requirements) {
+      const isValid = await this.checkRequirement(requirement, context);
+      if (!isValid) {
+        missing.push(requirement);
+      }
+    }
+
+    return {
+      valid: missing.length === 0,
+      missing
+    };
+  }
+
+  /**
+   * Check individual requirement
+   */
+  private async checkRequirement(requirement: string, context: Record<string, any>): Promise<boolean> {
+    switch (requirement) {
+      case 'customer_contact_info':
+        return context.customerEmail && context.customerPhone;
+
+      case 'basic_design_specs':
+        return context.designSpecs && Object.keys(context.designSpecs).length > 0;
+
+      case 'payment_confirmation':
+        return context.paymentStatus === 'confirmed';
+
+      case 'designer_assigned':
+        return context.assignedDesigner && context.assignedDesigner.id;
+
+      case 'customer_approval':
+        return context.customerApprovalStatus === 'approved';
+
+      case 'final_payment':
+        return context.finalPaymentStatus === 'completed';
+
+      case 'manufacturer_assigned':
+        return context.assignedManufacturer && context.assignedManufacturer.id;
+
+      case 'inspection_complete':
+        return context.qualityInspection && context.qualityInspection.status === 'complete';
+
+      case 'packaging_complete':
+        return context.packagingStatus === 'complete';
+
+      case 'tracking_number':
+        return context.trackingNumber && context.trackingNumber.length > 0;
+
+      case 'delivery_confirmation':
+        return context.deliveryStatus === 'confirmed';
+
+      default:
+        // For custom requirements, check if they exist in context
+        return context[requirement] !== undefined && context[requirement] !== null;
+    }
+  }
+
+  /**
+   * Handle step timeouts
+   */
+  private async handleStepTimeout(workflowId: string, stepId: string): Promise<void> {
+    console.log(`⏰ Step timeout reached for workflow ${workflowId}, step ${stepId}`);
+
+    const workflow = await this.getWorkflowInstance(workflowId);
+    if (!workflow) return;
+
+    // Define timeout actions based on step type
+    const timeoutActions: Record<string, string> = {
+      'payment_pending': 'send_payment_reminder',
+      'design': 'escalate_to_design_manager',
+      'needs_info': 'close_for_no_response',
+      'feedback_pending': 'auto_close_satisfied',
+      'materials_sourcing': 'notify_delay'
+    };
+
+    const action = timeoutActions[stepId];
+    if (action) {
+      await this.executeAction(action, workflow.context);
+    }
+
+    // Auto-transition for certain timeouts
+    const autoTransitions: Record<string, string> = {
+      'payment_pending': 'cancelled',
+      'needs_info': 'closed_no_response',
+      'feedback_pending': 'closed_satisfied'
+    };
+
+    const nextStep = autoTransitions[stepId];
+    if (nextStep) {
+      await this.transitionWorkflow(workflowId, nextStep);
+    }
+  }
+
+  /**
+   * Execute full build pipeline based on configuration
+   */
+  async executeBuild(environment: string = 'production'): Promise<BuildResult> {
 }
 
 export default WorkflowEngine;
