@@ -252,56 +252,7 @@ function CatalogPageContent() {
   const [isViewDetailsDialogOpen, setIsViewDetailsDialogOpen] = useState(false);
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
 
-  // Fetch categories and sports from API
-  useEffect(() => {
-    const fetchCatalogOptions = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        const [categoriesRes, sportsRes] = await Promise.all([
-          fetch('/api/catalog-options/categories', {
-            headers: { 'Authorization': `Bearer ${token}` },
-            credentials: 'include'
-          }),
-          fetch('/api/catalog-options/sports', {
-            headers: { 'Authorization': `Bearer ${token}` },
-            credentials: 'include'
-          })
-        ]);
-
-        if (categoriesRes.ok) {
-          const categoriesData = await categoriesRes.json();
-          console.log('📂 Categories response:', categoriesData);
-          const dbCategories = categoriesData.data.categories.map((cat: any) => cat.name);
-          console.log('📂 Setting categories:', dbCategories);
-          // Use database categories if available, otherwise fall back to initial categories
-          setCategories(dbCategories.length > 0 ? dbCategories : initialCategories);
-        } else {
-          console.log('📂 Categories request failed, using initial categories');
-          setCategories(initialCategories);
-        }
-
-        if (sportsRes.ok) {
-          const sportsData = await sportsRes.json();
-          console.log('⚽ Sports response:', sportsData);
-          const dbSports = sportsData.data.sports.map((sport: any) => sport.name);
-          console.log('⚽ Setting sports:', dbSports);
-          // Use database sports if available, otherwise fall back to initial sports
-          setSports(dbSports.length > 0 ? dbSports : initialSports);
-        } else {
-          console.log('⚽ Sports request failed, using initial sports');
-          setSports(initialSports);
-        }
-      } catch (error) {
-        console.error('Error fetching catalog options:', error);
-        // Fallback to initial data if API fails
-        console.log('🔄 Using fallback data due to API error');
-        setCategories(initialCategories);
-        setSports(initialSports);
-      }
-    };
-
-    fetchCatalogOptions();
-  }, []);
+  // React Query handles the data fetching, no need for separate useEffect
   const [newCategory, setNewCategory] = useState("");
   const [newSport, setNewSport] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -643,7 +594,7 @@ function CatalogPageContent() {
         throw new Error("Failed to fetch categories");
       }
       const result = await response.json();
-      return result.categories || [];
+      return result.data?.categories || [];
     }
   });
 
@@ -665,7 +616,7 @@ function CatalogPageContent() {
         throw new Error("Failed to fetch sports");
       }
       const result = await response.json();
-      return result.sports || [];
+      return result.data?.sports || [];
     }
   });
 
@@ -911,18 +862,20 @@ function CatalogPageContent() {
 
   // Combine database categories with local state as fallback and ensure uniqueness
   const allCategories = React.useMemo(() => {
-    const dbCats = dbCategories.length > 0 ? dbCategories.map((cat: any) => cat.name) : [];
+    const dbCats = dbCategories.length > 0 ? 
+      dbCategories.map((cat: any) => typeof cat === 'string' ? cat : cat.name).filter(Boolean) : [];
     const localCats = categories || [];
-    const combined = [...new Set([...dbCats, ...localCats])];
-    return combined.sort();
+    const combined = [...new Set([...dbCats, ...localCats, ...initialCategories])];
+    return combined.filter(Boolean).sort();
   }, [dbCategories, categories]);
 
   // Combine database sports with local state as fallback and ensure uniqueness
   const allSports = React.useMemo(() => {
-    const dbSportsNames = dbSports.length > 0 ? dbSports.map((sport: any) => sport.name) : [];
+    const dbSportsNames = dbSports.length > 0 ? 
+      dbSports.map((sport: any) => typeof sport === 'string' ? sport : sport.name).filter(Boolean) : [];
     const localSports = sports || [];
-    const combined = [...new Set([...dbSportsNames, ...localSports])];
-    return combined.sort();
+    const combined = [...new Set([...dbSportsNames, ...localSports, ...initialSports])];
+    return combined.filter(Boolean).sort();
   }, [dbSports, sports]);
 
   // Add new category handler with database persistence
@@ -1336,56 +1289,7 @@ function CatalogPageContent() {
     return groups;
   }, [filteredItems]);
 
-  // Fetch categories and sports on component mount
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        console.log('🔍 Fetching catalog options...');
-        const [categoriesRes, sportsRes] = await Promise.all([
-          fetch('/api/catalog-options/categories', {
-            headers: { 
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-          }),
-          fetch('/api/catalog-options/sports', {
-            headers: { 
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-          })
-        ]);
-
-        if (categoriesRes.ok) {
-          const categoriesData = await categoriesRes.json();
-          console.log('📂 Categories response:', categoriesData);
-          const categoryList = categoriesData.data?.categories || [];
-          console.log('📂 Setting categories:', categoryList);
-          setCategories(categoryList);
-        } else {
-          console.error('❌ Categories fetch failed:', categoriesRes.status, categoriesRes.statusText);
-        }
-
-        if (sportsRes.ok) {
-          const sportsData = await sportsRes.json();
-          console.log('⚽ Sports response:', sportsData);
-          const sportsList = sportsData.data?.sports || [];
-          console.log('⚽ Setting sports:', sportsList);
-          setSports(sportsList);
-        } else {
-          console.error('❌ Sports fetch failed:', sportsRes.status, sportsRes.statusText);
-        }
-      } catch (error) {
-        console.error('❌ Error fetching options:', error);
-      }
-    };
-
-    if (authToken) {
-      fetchOptions();
-    }
-  }, [authToken]);
+  // Remove duplicate fetch logic since we're using React Query for categories and sports
 
   return (
     <div className="container mx-auto py-8">

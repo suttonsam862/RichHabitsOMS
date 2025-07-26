@@ -1,0 +1,61 @@
+The above error occurred in the <span> component:
+
+    at span
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=0794b6e3:42:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=0794b6e3:955:13
+    at div
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=0794b6e3:42:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=0794b6e3:79:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=0794b6e3:56:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TPYHSINA.js?v=0794b6e3:51:15
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=0794b6e3:38:15)
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=0794b6e3:848:7
+    at _c11 (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/ui/select.tsx:208:13)
+    at div
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=0794b6e3:42:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=0794b6e3:79:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=0794b6e3:56:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TPYHSINA.js?v=0794b6e3:39:15
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=0794b6e3:759:13
+    at div
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=0794b6e3:79:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=0794b6e3:56:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TPYHSINA.js?v=0794b6e3:39:15
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=0794b6e3:38:15)
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=0794b6e3:302:58
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=0794b6e3:79:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-2K77HOHX.js?v=0794b6e3:56:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AXMZZQ2X.js?v=0794b6e3:42:13
+    at https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-C7SZJ2M3.js?v=0794b6e3:260:22
+    at SelectPortal
+    at _c7 (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/ui/select.tsx:123:12)
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=0794b6e3:38:15)
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=0794b6e3:38:15)
+    at CollectionProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TPYHSINA.js?v=0794b6e3:29:13)
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=0794b6e3:38:15)
+    at Provider…
+Error boundary caught an error: 
+Error {}
+ 
+Object {componentStack: "↵    at span↵    at…"}
+
+⚽ Sports response: 
+Object {success: true, data: {…}, meta: {…}}
+⚽ Setting sports: 
+(13) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+📂 Categories response: 
+Object {success: true, data: {…}, meta: {…}}
+📂 Setting categories: 
+(9) ["Accessories", "Custom", "Hoodies", "Jackets", "Jersey", "Pants", "Polo Shirts", "Shorts", "T-Shirts"]
+⚽ Sports response: 
+Object {success: true, data: {…}, meta: {…}}
+⚽ Setting sports: 
+(13) ["All Around Item", "Baseball", "Basketball", "Cycling", "Football", "Golf", "Hockey", "Running", "Soccer", "Swimming", "Tennis", "Volleyball", "Wrestling"]
+📂 Categories response: 
+Object {success: true, data: {…}, meta: {…}}
+📂 Setting categories: 
+(9) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+⚽ Sports response: 
+Object {success: true, data: {…}, meta: {…}}
+⚽ Setting sports: 
+(13) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
