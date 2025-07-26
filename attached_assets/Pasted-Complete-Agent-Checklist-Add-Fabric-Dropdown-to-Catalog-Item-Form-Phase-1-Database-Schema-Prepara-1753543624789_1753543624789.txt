@@ -1,0 +1,219 @@
+Complete Agent Checklist: Add Fabric Dropdown to Catalog Item Form
+Phase 1: Database Schema Preparation
+1.1 Create Fabric Options Table
+ Create catalog_fabrics table in Supabase with columns:
+id (UUID, primary key, default gen_random_uuid())
+name (VARCHAR(100), NOT NULL, UNIQUE)
+description (TEXT, nullable)
+created_at (TIMESTAMP WITH TIME ZONE, default NOW())
+updated_at (TIMESTAMP WITH TIME ZONE, default NOW())
+ Add initial fabric data: Cotton, Polyester, Silk, Linen, Wool, Bamboo, Hemp, Modal, Spandex, Nylon
+ Create indexes on name column for performance
+ Set up Row Level Security (RLS) policies allowing authenticated users to read and admins to modify
+1.2 Update Catalog Items Table
+ Add fabric_id column to catalog_items table (UUID, nullable, foreign key references catalog_fabrics.id)
+ Create foreign key constraint with ON DELETE SET NULL
+ Update existing catalog items to have NULL fabric_id initially
+Phase 2: Backend API Development
+2.1 Create Fabric Options Routes
+ Add new route file server/routes/api/fabricOptionsRoutes.ts
+ Implement GET /api/fabric-options/fabrics endpoint to fetch all fabrics
+ Implement POST /api/fabric-options/fabrics endpoint to create new fabric
+ Add proper authentication middleware requiring admin role for POST
+ Add input validation using Zod schema
+ Add error handling for duplicate fabric names
+ Add request logging and performance monitoring
+2.2 Update Catalog Routes
+ Modify server/routes/api/catalogRoutes.ts to include fabric_id in:
+GET catalog items (join with fabric table to return fabric name)
+POST new catalog item (validate fabric_id exists if provided)
+PUT update catalog item (validate fabric_id exists if provided)
+ Update database queries to include fabric information
+ Add fabric validation in item creation/update logic
+2.3 Register New Routes
+ Add fabric routes to main router in server/routes.ts
+ Ensure proper middleware chain (auth, error handling, performance)
+ Test route registration and accessibility
+Phase 3: Frontend Type Definitions
+3.1 Update TypeScript Interfaces
+ Add FabricOption interface to client/src/lib/types.ts:
+interface FabricOption {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+ Update CatalogItem interface to include:
+fabricId?: string; property
+fabricName?: string; property (for display)
+3.2 Update Form Schema
+ Add fabricId field to catalogItemSchema in CatalogPage.tsx:
+fabricId: z.string().optional()
+ Update CatalogItemForm type to include fabricId field
+Phase 4: Frontend Component Updates
+4.1 Add Fabric Data Fetching
+ Add React Query hook for fetching fabrics in CatalogPage.tsx:
+const { data: dbFabrics = [], refetch: refetchFabrics } = useQuery({
+  queryKey: ["admin", "catalog-fabrics"],
+  queryFn: async () => {
+    // Fetch fabric options implementation
+  }
+});
+ Handle loading states and error states for fabric data
+ Implement fabric data caching and invalidation
+4.2 Create Fabric Management State
+ Add state variables for fabric management:
+const [newFabric, setNewFabric] = useState("");
+const [showAddFabric, setShowAddFabric] = useState(false);
+ Add fabric array combining database and local state
+ Implement fabric uniqueness checking
+4.3 Add Fabric Field to Form
+ Insert fabric FormField after sport field but before unit cost field
+ Implement fabric dropdown with "Add New Fabric" option
+ Add fabric field validation and error handling
+ Ensure proper form tab order and accessibility
+4.4 Create Add New Fabric Functionality
+ Create addNewFabric async function with:
+Input validation (trim, length check)
+API call to POST fabric endpoint
+Error handling and user feedback
+Fabric list refresh after successful creation
+Auto-selection of newly created fabric
+ Add fabric creation dialog component
+ Implement fabric creation form validation
+Phase 5: UI Components Implementation
+5.1 Fabric Dropdown Component
+ Add fabric FormField with Select component:
+<FormField
+  control={form.control}
+  name="fabricId"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel className="subtitle text-muted-foreground text-xs">Fabric</FormLabel>
+      <Select value={field.value} onValueChange={(value) => {
+        if (value === "add-new-fabric") {
+          setShowAddFabric(true);
+        } else {
+          field.onChange(value);
+        }
+      }}>
+        <FormControl>
+          <SelectTrigger className="rich-input">
+            <SelectValue placeholder="Select fabric (optional)" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent className="rich-card">
+          <SelectItem value="">No fabric specified</SelectItem>
+          {allFabrics.map((fabric) => (
+            <SelectItem key={fabric.id} value={fabric.id}>
+              {fabric.name}
+            </SelectItem>
+          ))}
+          <SelectItem value="add-new-fabric" className="text-neon-blue font-medium">
+            + Add Fabric
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+5.2 Add Fabric Dialog
+ Create "Add New Fabric" dialog matching existing pattern
+ Include fabric name input field with validation
+ Add optional description field for fabric details
+ Implement proper dialog open/close state management
+ Add keyboard navigation support (Enter to submit, Escape to cancel)
+Phase 6: Form Integration Updates
+6.1 Update Form Default Values
+ Add fabricId: "" to form defaultValues
+ Update form reset logic to include fabric field
+ Ensure fabric field is properly cleared on form submission
+6.2 Update Submit Logic
+ Modify onSubmit function to handle fabricId field
+ Add fabric validation to form submission validation
+ Update both add and edit item mutations to include fabric data
+ Ensure fabric field is included in API payload
+6.3 Update Edit Item Logic
+ Modify handleEditItem to populate fabric field from existing item
+ Ensure fabric dropdown shows current selection when editing
+ Handle cases where fabric was deleted after item creation
+Phase 7: Display Integration
+7.1 Update Item Display
+ Add fabric information to item details view dialog
+ Include fabric in item table display (optional column)
+ Add fabric to item search/filter functionality
+ Update item tooltips to show fabric information
+7.2 Update Item Grouping (Optional)
+ Consider adding fabric-based grouping in catalog display
+ Add fabric filter to catalog search functionality
+ Update item sorting to include fabric consideration
+Phase 8: Data Migration
+8.1 Handle Existing Data
+ Ensure existing catalog items work with NULL fabric_id
+ Create migration script for any existing items needing fabric assignment
+ Test backwards compatibility with items without fabric
+Phase 9: Testing Requirements
+9.1 Backend Testing
+ Test fabric CRUD operations via API
+ Test catalog item creation/update with fabric
+ Test authentication and authorization for fabric endpoints
+ Test error handling for invalid fabric IDs
+ Test foreign key constraints and cascade behavior
+9.2 Frontend Testing
+ Test fabric dropdown functionality
+ Test "Add New Fabric" workflow
+ Test form validation with fabric field
+ Test fabric selection in edit mode
+ Test fabric display in item details
+ Test error handling and loading states
+9.3 Integration Testing
+ Test complete add item workflow with fabric
+ Test edit item workflow with fabric changes
+ Test fabric deletion impact on catalog items
+ Test fabric search and filtering
+ Test performance with large fabric lists
+Phase 10: UI/UX Validation
+10.1 Visual Consistency
+ Ensure fabric field matches existing form field styling
+ Verify proper spacing and alignment in form layout
+ Test responsive behavior on mobile devices
+ Validate color scheme and theming consistency
+10.2 User Experience
+ Test fabric selection workflow is intuitive
+ Ensure add fabric dialog doesn't disrupt form completion
+ Verify error messages are clear and helpful
+ Test keyboard accessibility and screen reader support
+Phase 11: Performance Optimization
+11.1 Data Loading
+ Implement fabric data caching strategy
+ Add fabric data preloading on catalog page load
+ Optimize database queries for fabric joins
+ Test performance with large fabric datasets
+11.2 Form Performance
+ Ensure fabric dropdown doesn't impact form render performance
+ Test fabric validation performance
+ Optimize fabric search/filter performance
+Phase 12: Documentation and Cleanup
+12.1 Code Documentation
+ Add JSDoc comments to fabric-related functions
+ Document fabric API endpoints
+ Update README with fabric feature description
+ Add fabric field to API documentation
+12.2 Code Quality
+ Run TypeScript compilation checks
+ Verify ESLint passes for all new code
+ Ensure proper error boundaries handle fabric-related errors
+ Remove any temporary debugging code
+Phase 13: Deployment Preparation
+13.1 Database Migration
+ Create migration scripts for production deployment
+ Test migration on staging environment
+ Prepare rollback procedures if needed
+13.2 Production Readiness
+ Verify all environment variables are set
+ Test fabric functionality in production-like environment
+ Ensure proper monitoring and logging is in place
+ Prepare deployment checklist for fabric feature
+This comprehensive checklist ensures the fabric dropdown is implemented with full integration into the existing catalog system, maintaining code quality, user experience, and system performance.
