@@ -1,0 +1,106 @@
+Agent Task: Complete Codebase Syntax Diagnostic & Cleanup
+
+Please perform a comprehensive diagnostic review of the entire ThreadCraft codebase to identify and fix simple syntax errors, with special focus on template literal issues and other common JavaScript/TypeScript syntax problems.
+
+Primary Focus Areas:
+1. Template Literal Issues
+Malformed backticks: Look for instances like `text without proper variable interpolation
+Orphaned backticks: Single backticks that should be quotes or are incomplete template literals
+Mixed quote types: Inconsistent use of single quotes, double quotes, and backticks
+Broken interpolation: Template literals missing ${} syntax or with malformed expressions
+2. Common Syntax Errors to Check:
+Missing semicolons in critical locations
+Unmatched brackets - (), [], {}
+Missing commas in object literals and arrays
+Incorrect JSX syntax - self-closing tags, attribute formatting
+Type assertion errors in TypeScript files
+Import/export syntax issues
+3. Files to Prioritize:
+client/src/pages/admin/CatalogPage.tsx (recently fixed)
+client/src/pages/admin/SettingsPage.tsx
+client/src/pages/admin/UserPermissionsPage.tsx
+client/src/pages/Production.tsx
+server/routes/api/*.ts
+server/routes.ts
+4. Diagnostic Process:
+Step 1: Template Literal Scan
+
+Search for all instances of backticks (`) in the codebase
+Verify each template literal has proper opening/closing backticks
+Check for proper ${} interpolation syntax
+Look for cases where regular quotes should be used instead
+Step 2: JavaScript/TypeScript Syntax Validation
+
+Check for missing semicolons after statements
+Verify all brackets are properly matched
+Ensure object literal syntax is correct
+Validate function declarations and arrow function syntax
+Step 3: JSX/TSX Specific Issues
+
+Check for properly closed JSX tags
+Verify attribute syntax (camelCase, proper quotes)
+Look for mixed HTML/JSX attribute naming
+Step 4: Import/Export Issues
+
+Verify all import statements are complete
+Check for circular dependencies
+Ensure export syntax is correct
+5. Specific Pattern Searches:
+Look for these problematic patterns:
+
+// Bad template literals
+`text without interpolation`
+`broken ${variable` 
+`another broken ${variable}}}`
+```text
+// This should not exist in code
+// Mixed quotes in same context
+const str1 = "double";
+const str2 = template ${str1}; // OK if interpolating
+const str3 = just text; // Should be quotes
+
+// Missing semicolons in critical spots
+import React from 'react' // Missing semicolon
+const value = getData() // Missing semicolon before newline
+
+// Malformed JSX
+
+<div className=improper> // Missing quotes <Component /> // Should be <Component /> ```
+6. Output Requirements:
+For each issue found, provide:
+
+File path and line number
+Issue description
+Current (broken) code
+Corrected code
+Severity level (Critical/High/Medium/Low)
+7. Auto-Fix Criteria:
+Automatically fix these low-risk issues:
+
+Template literals that should be regular strings
+Missing semicolons (where safe)
+Quote consistency within files
+Basic JSX formatting
+8. Manual Review Required:
+Flag for manual review:
+
+Complex template literal interpolations
+Type assertion changes
+Logic-affecting syntax changes
+Import/export modifications
+9. Testing After Fixes:
+After making changes:
+
+Run TypeScript compilation check
+Test application startup
+Verify no new console errors
+Check that frontend renders properly
+10. Documentation:
+Create a summary report showing:
+
+Total issues found and fixed
+File-by-file breakdown
+Remaining issues requiring manual attention
+Recommendations for preventing future syntax errors
+Expected Outcome: A clean codebase free of simple syntax errors, with particular attention to the template literal issues that have been causing compilation failures.
+
