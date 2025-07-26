@@ -77,7 +77,13 @@ export async function getCatalogItems(req: Request, res: Response) {
 
     const { data: items, error } = await supabaseService
       .from('catalog_items')
-      .select('*')
+      .select(`
+        *,
+        catalog_fabrics (
+          id,
+          name
+        )
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -134,7 +140,9 @@ export async function getCatalogItems(req: Request, res: Response) {
         specifications: item.specifications || {},
         created_at: item.created_at,
         updated_at: item.updated_at,
-        buildInstructions: item.build_instructions || ''
+        buildInstructions: item.build_instructions || '',
+        fabricId: item.fabric_id,
+        fabricName: item.catalog_fabrics?.name || null
       };
     });
 
@@ -172,7 +180,8 @@ export async function createCatalogItem(req: Request, res: Response) {
       preferredManufacturerId,
       tags,
       specifications,
-      buildInstructions
+      buildInstructions,
+      fabricId
     } = req.body;
 
     logCatalogOperation('create_catalog_item', req, { requestBody: req.body });
@@ -288,6 +297,25 @@ export async function createCatalogItem(req: Request, res: Response) {
     // and handle measurement chart uploads separately after item creation
     // This allows for file uploads which are processed after the item is created
 
+    // Validate fabric_id if provided
+    if (fabricId && fabricId.trim()) {
+      const { data: fabricExists } = await supabaseService
+        .from('catalog_fabrics')
+        .select('id')
+        .eq('id', fabricId.trim())
+        .eq('is_active', true)
+        .single();
+      
+      if (!fabricExists) {
+        const error = new Error('Invalid fabric ID: fabric does not exist or is inactive');
+        logCatalogOperation('create_catalog_item', req, null, error);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid fabric ID: fabric does not exist or is inactive'
+        });
+      }
+    }
+
     const newItem = {
       name: name.trim(),
       category: category.trim(),
@@ -303,7 +331,8 @@ export async function createCatalogItem(req: Request, res: Response) {
       eta_days: etaDays.trim(),
       preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
       tags: parsedTags,
-      specifications: parsedSpecifications
+      specifications: parsedSpecifications,
+      fabric_id: fabricId?.trim() || null
     };
 
     // Handle build_instructions as long-form text
@@ -351,7 +380,9 @@ export async function createCatalogItem(req: Request, res: Response) {
         measurementInstructions: item.measurement_instructions,
         etaDays: item.eta_days,
         preferredManufacturerId: item.preferred_manufacturer_id,
-        buildInstructions: item.build_instructions || ''
+        buildInstructions: item.build_instructions || '',
+        fabricId: item.fabric_id,
+        fabricName: null // Will be populated if fabric lookup is needed
       }
     });
   } catch (error) {
@@ -385,7 +416,8 @@ export async function updateCatalogItem(req: Request, res: Response) {
       preferredManufacturerId,
       tags,
       specifications,
-      buildInstructions
+      buildInstructions,
+      fabricId
     } = req.body;
 
     logCatalogOperation('update_catalog_item', req, { itemId: id, requestBody: req.body });
@@ -455,6 +487,25 @@ export async function updateCatalogItem(req: Request, res: Response) {
       }
     }
 
+    // Validate fabric_id if provided
+    if (fabricId && fabricId.trim()) {
+      const { data: fabricExists } = await supabaseService
+        .from('catalog_fabrics')
+        .select('id')
+        .eq('id', fabricId.trim())
+        .eq('is_active', true)
+        .single();
+      
+      if (!fabricExists) {
+        const error = new Error('Invalid fabric ID: fabric does not exist or is inactive');
+        logCatalogOperation('update_catalog_item', req, null, error);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid fabric ID: fabric does not exist or is inactive'
+        });
+      }
+    }
+
     const updateData = {
       name: name.trim(),
       category: category.trim(),
@@ -470,6 +521,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
       preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
       tags: parsedTags,
       specifications: parsedSpecifications,
+      fabric_id: fabricId?.trim() || null,
       updated_at: new Date().toISOString()
     };
 
@@ -529,7 +581,9 @@ export async function updateCatalogItem(req: Request, res: Response) {
         measurementInstructions: item.measurement_instructions,
         etaDays: item.eta_days,
         preferredManufacturerId: item.preferred_manufacturer_id,
-        buildInstructions: item.build_instructions || ''
+        buildInstructions: item.build_instructions || '',
+        fabricId: item.fabric_id,
+        fabricName: null // Will be populated if fabric lookup is needed
       }
     });
   } catch (error) {

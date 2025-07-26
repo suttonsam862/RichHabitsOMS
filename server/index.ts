@@ -185,6 +185,7 @@ app.use((req, res, next) => {
 
 // Import API routes
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
+import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import catalogRoutes from './routes/api/catalogRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import imageRoutes from './routes/api/imageRoutes';
@@ -272,6 +273,7 @@ import healthRoutes from './routes/health';
 
     // Add authentication middleware for protected routes
     app.use('/api/catalog-options', authenticateRequest);
+    app.use('/api/fabric-options', authenticateRequest);
     app.use('/api/catalog', authenticateRequest);
     app.use('/api/customers', authenticateRequest);
     app.use('/api/images', authenticateRequest);
@@ -280,6 +282,7 @@ import healthRoutes from './routes/health';
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
+    app.use('/api/fabric-options', fabricOptionsRoutes);
     app.use('/api/catalog', catalogRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/images', imageRoutes);
@@ -318,10 +321,10 @@ import healthRoutes from './routes/health';
         const totalUsers = users?.length || 0;
         const customersTotal = users?.filter(u => u.role === 'customer').length || 0;
         const adminUsers = users?.filter(u => u.role === 'admin').length || 0;
-        const staffUsers = users?.filter(u => ['salesperson', 'designer', 'manufacturer'].includes(u.role)).length || 0;
+        const staffUsers = users?.filter(u => ['salesperson', 'designer', 'manufacturer'].includes(u.role as string)).length || 0;
         const totalCatalogItems = catalogItems?.length || 0;
         const totalOrders = orders?.length || 0;
-        const activeOrders = orders?.filter(o => ['draft', 'design', 'production'].includes(o.status)).length || 0;
+        const activeOrders = orders?.filter(o => ['draft', 'design', 'production'].includes(o.status as string)).length || 0;
         
         const dashboardStats = {
           users: totalUsers,

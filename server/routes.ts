@@ -25,6 +25,7 @@ import {
 } from './routes/api/catalogRoutes';
 import imageRoutes from './routes/api/imageRoutes';
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
+import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import { createClient } from '@supabase/supabase-js';
 import express from 'express';
 import cors from 'cors';
@@ -2015,6 +2016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // API routes (auth required)
   router.use('/api/catalog-options', catalogOptionsRoutesRefactored);
+  router.use('/api/fabric-options', fabricOptionsRoutes);
   router.use('/api/catalog', catalogRoutesRefactored);
   router.use('/api/customers', customerRoutesRefactored);
   router.use('/api/images', imageRoutesRefactored);

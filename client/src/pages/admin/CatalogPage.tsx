@@ -37,6 +37,8 @@ interface CatalogItem {
   tags?: string[];
   specifications?: Record<string, any>;
   buildInstructions?: string;
+  fabricId?: string;
+  fabricName?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -55,6 +57,7 @@ const catalogItemSchema = z.object({
   measurementInstructions: z.string().max(1000, "Instructions too long").optional(),
   etaDays: z.string().min(1, "ETA is required").regex(/^\d+$/, "ETA must be a number"),
   preferredManufacturerId: z.string().optional(),
+  fabricId: z.string().optional(),
   tags: z.string().max(500, "Tags too long").optional(),
   specifications: z.string().refine((val) => {
     if (!val || val.trim() === '') return true;
@@ -277,6 +280,7 @@ function CatalogPageContent() {
       measurementInstructions: "",
       etaDays: "7",
       preferredManufacturerId: "",
+      fabricId: "",
       tags: "",
       specifications: "",
       buildInstructions: "",
@@ -498,6 +502,8 @@ function CatalogPageContent() {
           measurementInstructions: item.measurementInstructions || item.measurement_instructions,
           etaDays: item.etaDays || item.eta_days,
           preferredManufacturerId: item.preferredManufacturerId || item.preferred_manufacturer_id,
+          fabricId: item.fabricId || item.fabric_id,
+          fabricName: item.fabricName || item.fabric_name,
           tags: item.tags || [],
           specifications: item.specifications || {},
           buildInstructions: item.buildInstructions || item.build_instructions,
@@ -617,6 +623,28 @@ function CatalogPageContent() {
       }
       const result = await response.json();
       return result.data?.sports || [];
+    }
+  });
+
+  // Fetch fabrics from database
+  const { data: dbFabrics = [], refetch: refetchFabrics } = useQuery({
+    queryKey: ["admin", "catalog-fabrics"],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch("/api/fabric-options/fabrics", {
+        headers,
+        credentials: "include"
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch fabrics");
+      }
+      const result = await response.json();
+      return result.data?.fabrics || [];
     }
   });
 
@@ -840,6 +868,7 @@ function CatalogPageContent() {
       measurementInstructions: item.measurementInstructions || "",
       etaDays: item.etaDays,
       preferredManufacturerId: item.preferredManufacturerId || "",
+      fabricId: item.fabricId || "",
       tags: Array.isArray(item.tags) ? item.tags.join(", ") : "",
       specifications: item.specifications ? JSON.stringify(item.specifications, null, 2) : "",
       buildInstructions: item.buildInstructions || "",
@@ -1504,6 +1533,33 @@ function CatalogPageContent() {
                     )}
                   />
 
+                  {/* Fabric Selection */}
+                  <FormField
+                    control={form.control}
+                    name="fabricId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="subtitle text-muted-foreground text-xs">Fabric</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="rich-input">
+                              <SelectValue placeholder="Select fabric (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">No fabric specified</SelectItem>
+                            {dbFabrics.map((fabric: any) => (
+                              <SelectItem key={fabric.id} value={fabric.id}>
+                                {fabric.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -1920,6 +1976,12 @@ function CatalogPageContent() {
                         <span className="text-sm text-muted-foreground">Sport:</span>
                         <span className="text-sm text-foreground">{selectedItem.sport}</span>
                       </div>
+                      {selectedItem.fabricName && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Fabric:</span>
+                          <span className="text-sm text-foreground">{selectedItem.fabricName}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Status:</span>
                         <Badge 
