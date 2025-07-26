@@ -429,9 +429,118 @@ class WorkflowEngine {
   }
 
   /**
-   * Execute full build pipeline based on configuration
+   * Get workflow instance by ID
    */
-  async executeBuild(environment: string = 'production'): Promise<BuildResult> {
+  private async getWorkflowInstance(workflowId: string): Promise<{ context: Record<string, any> } | null> {
+    const workflowState = this.workflowStates.get(workflowId);
+    if (!workflowState) {
+      return null;
+    }
+    
+    return {
+      context: workflowState.metadata
+    };
+  }
+
+  /**
+   * Get step requirements for a workflow step
+   */
+  public async getStepRequirements(workflowId: string, stepId: string): Promise<string[]> {
+    const workflowState = this.workflowStates.get(workflowId);
+    if (!workflowState) {
+      throw new Error(`Workflow ${workflowId} not found`);
+    }
+
+    const config = this.configManager.getWorkflowRoutes();
+    const workflowType = this.determineWorkflowType(workflowState);
+    const workflow = this.getWorkflowDefinition(config, workflowType);
+    const step = workflow?.find(s => s.id === stepId);
+
+    return (step as any)?.requirements || [];
+  }
+
+  /**
+   * Get workflow metrics for analytics
+   */
+  public async getWorkflowMetrics(
+    workflowType: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<any> {
+    // Implementation for workflow metrics
+    const workflows = Array.from(this.workflowStates.values())
+      .filter(w => this.determineWorkflowType(w) === workflowType);
+
+    return {
+      total: workflows.length,
+      completed: workflows.filter(w => w.currentStep === 'completed').length,
+      inProgress: workflows.filter(w => w.currentStep !== 'completed' && w.currentStep !== 'cancelled').length,
+      cancelled: workflows.filter(w => w.currentStep === 'cancelled').length,
+      averageCompletionTime: 0 // Calculate based on history
+    };
+  }
+
+  /**
+   * Analyze workflow bottlenecks
+   */
+  public async analyzeBottlenecks(workflowType: string): Promise<any> {
+    const workflows = Array.from(this.workflowStates.values())
+      .filter(w => this.determineWorkflowType(w) === workflowType);
+
+    const stepDurations: Record<string, number[]> = {};
+    
+    workflows.forEach(workflow => {
+      workflow.history.forEach((entry, index) => {
+        if (index > 0) {
+          const duration = entry.timestamp.getTime() - workflow.history[index - 1].timestamp.getTime();
+          if (!stepDurations[entry.stepId]) {
+            stepDurations[entry.stepId] = [];
+          }
+          stepDurations[entry.stepId].push(duration);
+        }
+      });
+    });
+
+    return Object.entries(stepDurations).map(([stepId, durations]) => ({
+      stepId,
+      averageDuration: durations.reduce((a, b) => a + b, 0) / durations.length,
+      maxDuration: Math.max(...durations),
+      count: durations.length
+    }));
+  }
+
+  /**
+   * Get workflow analytics
+   */
+  public async getWorkflowAnalytics(
+    workflowType: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<any> {
+    const metrics = await this.getWorkflowMetrics(workflowType, startDate, endDate);
+    const bottlenecks = await this.analyzeBottlenecks(workflowType);
+
+    return {
+      metrics,
+      bottlenecks,
+      recommendations: this.generateOptimizationRecommendations(bottlenecks)
+    };
+  }
+
+  /**
+   * Generate optimization recommendations
+   */
+  private generateOptimizationRecommendations(bottlenecks: any[]): string[] {
+    const recommendations: string[] = [];
+    
+    bottlenecks.forEach(bottleneck => {
+      if (bottleneck.averageDuration > 86400000) { // 24 hours
+        recommendations.push(`Step "${bottleneck.stepId}" takes too long on average. Consider automation or process improvement.`);
+      }
+    });
+
+    return recommendations;
+  }
 }
 
 export default WorkflowEngine;

@@ -435,6 +435,7 @@ async function initializeDatabase() {
 import dataAccessRoutes from './routes/api/dataAccessRoutes.js';
 import workflowRoutes from './routes/api/workflowRoutes.js';
 import aiRoutes from './routes/api/aiRoutes.js';
+import monitoringRoutes from './routes/api/monitoringRoutes.js';
 
 // Import routes
 app.use('/api/auth', authRoutes);
@@ -450,4 +451,9 @@ app.use('/api/security', securityRoutes);
 app.use('/api/data-access', dataAccessRoutes);
 app.use('/api/user-roles', userRolesRoutes);
 app.use('/api/workflow', workflowRoutes);
+
+// AI routes
 app.use('/api/ai', aiRoutes);
+
+// Monitoring routes
+app.use('/api/monitoring', monitoringRoutes);
