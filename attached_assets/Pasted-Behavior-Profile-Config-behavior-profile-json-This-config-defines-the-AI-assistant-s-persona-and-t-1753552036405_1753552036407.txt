@@ -1,0 +1,644 @@
+Behavior Profile Config (behavior-profile.json)
+This config defines the AI assistant’s persona and tone for both customer-facing and internal roles. It controls language style, assertiveness, and LLM parameters. Externalizing these settings allows easy tuning of the assistant’s behavior (e.g. making it more formal or casual) without modifying code. Using persona profiles is a common technique to guide LLMs’ tone and style
+medium.com
+. The JSON structure can also include LLM model parameters (like temperature), similar to persona configurations used in other AI systems
+docs.hpc.gwdg.de
+.
+jsonc
+Copy
+Edit
+{
+  // Default persona profile used if none specified (e.g., for customers)
+  "defaultPersona": "customerSupportAgent",
+
+  // Definition of each persona the assistant can adopt
+  "personas": {
+    "customerSupportAgent": {
+      "description": "AI assistant helping external customers with orders and support inquiries.",
+      "tone": "friendly and professional",
+      "assertiveness": "medium",      // How strongly to lead the conversation (low/medium/high)
+      "guidelines": [
+        "Use a polite and helpful tone in responses",
+        "Keep answers concise and focused on resolving the customer's issue",
+        "Ask clarifying questions if needed, but don't overwhelm the user"
+      ]
+    },
+    "internalDevAssistant": {
+      "description": "AI agent assisting internal staff with development and operations tasks.",
+      "tone": "technical and direct",
+      "assertiveness": "high",       // More assertive for internal use (e.g., making proactive suggestions)
+      "guidelines": [
+        "Use technical terms and detail when appropriate for developers",
+        "Offer solutions proactively and flag any code or security concerns clearly",
+        "Maintain a concise, no-nonsense style to save time"
+      ]
+    }
+  },
+
+  // LLM model and parameters for generating responses (can be overridden per env or persona)
+  "llmConfig": {
+    "provider": "OpenAI",
+    "model": "gpt-4",               // Default model to use for the assistant
+    "temperature": 0.3,             // Creativity vs. consistency (lower for reliable tone):contentReference[oaicite:4]{index=4}
+    "maxTokens": 1024,              // Response length limit for efficiency
+    "top_p": 1.0                    // Use full distribution (can adjust for creativity)
+  }
+}
+Rationale: The personas section defines two roles: a default customer-facing assistant and an internal devops assistant. Each has a tone and style guidelines that shape the LLM’s responses. This approach aligns with persona prompt engineering, where assigning a role like “supportive mentor” or “math expert” guides the model’s behavior
+medium.com
+. For example, the customer support agent is configured to be friendly yet concise, ensuring a professional but approachable style. The LLM parameters like temperature are set low (e.g. 0.3) to favor consistent, on-brand responses
+docs.hpc.gwdg.de
+. By adjusting these values or adding new personas, the company can refine how the AI interacts with different user groups without code changes.
+Execution Policy Config (execution-policy.json)
+This config enforces code quality, testing, and security policies during code generation or development. It acts as an “AI agent governance” and CI/CD quality gate definition
+infoq.com
+. If the AI assistant can write code or trigger actions, these rules ensure it adheres to engineering standards. In the CI/CD pipeline, these settings serve as automated quality gates that code must pass before deployment
+infoq.com
+. For example, we require a minimum test coverage and passing security scans, reflecting industry best practices of incorporating testing and security early in the pipeline
+infoq.com
+.
+jsonc
+Copy
+Edit
+{
+  // ==== Code Quality Gates ====
+  "requireCodeReview": true,         // All changes (even AI-generated) must be reviewed by a human
+  "minCodeCoverage": 0.80,           // Minimum 80% test coverage required on new code:contentReference[oaicite:10]{index=10}:contentReference[oaicite:11]{index=11}
+  "maxCyclomaticComplexity": 10,     // Complexity threshold per function to maintain readability
+  "linting": {
+    "enabled": true,
+    "config": "eslint:recommended",  // Use a standard ESLint config to catch issues early
+    "strict": true                  // Treat lint warnings as errors to enforce style
+  },
+
+  // ==== Testing Policy ====
+  "requireAllTestsPass": true,       // Pipeline blocks unless all tests pass
+  "requiredTestTypes": ["unit", "integration"],  // Types of tests that must be present
+  "testTimeoutSeconds": 30,          // Fail tests that hang longer than 30s
+
+  // ==== Security Scanning ====
+  "securityScans": {
+    "enabled": true,
+    "tools": ["SAST", "DependencyCheck"],  // Static analysis and dependency vulnerability scan
+    "failOnHighSeverity": true            // Any high-severity issue fails the pipeline
+  },
+
+  // ==== Build & Deployment Gates ====
+  "requireGreenBuild": true,         // The code must compile/build without errors
+  "allowManualOverride": false,      // If true, admins could override a failed gate (default false for automation):contentReference[oaicite:12]{index=12}
+  "requiredApprovals": 1,           // At least 1 approval required for deployment (if using PRs or changes)
+  "enforcePipelinePolicy": true      // Ensure these policies are enforced in CI/CD (no bypass in dev env)
+}
+Rationale: This config encodes a “quality gate” approach where code must meet certain criteria before progressing
+infoq.com
+. For instance, minCodeCoverage: 0.80 and requireAllTestsPass: true mean that at least 80% of new code is covered by tests and all tests pass, echoing the concept that automated tests are a must in modern CI pipelines
+infoq.com
+infoq.com
+. Security is treated with equal importance: we enable static code analysis and dependency vulnerability scanning, failing the build if any high-severity issue is found (it’s recommended to add security scans as quality gates early in the pipeline
+infoq.com
+). Linting and complexity checks ensure the AI (or developers) follow coding standards, preventing sloppy code from creeping in. The config also allows (but by default disallows) manual overrides – a manual approval step can be toggled if absolutely needed for urgent fixes, though avoiding manual steps is preferred for a fully automated pipeline
+infoq.com
+.
+Red-Flag Detection Config (red-flag-detection.json)
+This file defines guardrails and triggers for potentially harmful or unwanted actions/content. It is essentially a moderation and safety policy for both user inputs and AI outputs. If the AI assistant or agent encounters certain keywords or behaviors defined here, it will flag or prevent the action. This helps prevent compliance or safety issues by catching them in real-time. For example, we filter disallowed content (profane or illegal terms) and dangerous actions (like a request to delete all data). Such red-flag keyword filtering is a known guardrail technique to block or intercept unsafe prompts
+openxcell.com
+openxcell.com
+.
+jsonc
+Copy
+Edit
+{
+  // Keywords or phrases that trigger a content red flag (case-insensitive substrings)
+  "flaggedKeywords": [
+    "hate speech",
+    "credit card number",
+    "SSN",
+    "bomb", 
+    "attack",
+    "delete all data",
+    "drop database"
+  ],
+
+  // If user input or AI output contains flagged keywords, specify actions:
+  "onFlagDetection": {
+    "blockResponse": true,        // Default: block the AI's response or user request if it contains red-flag content
+    "alertAdmin": true,           // Notify administrators/security team
+    "alertChannels": {            // Channels for sending alerts (could be expanded to Slack, etc.)
+      "email": "security@ourcompany.com",
+      "sms": "+15551230000"
+    },
+    "escalation": "require_human_approval"  // Escalation policy: route conversation to human if flagged
+  },
+
+  // Pattern-based guards for known exploit or unsafe requests
+  "promptInjectionGuards": true,   // Enable detection of prompt injection attempts:contentReference[oaicite:20]{index=20}
+  "codeInjectionGuards": true,     // Detect if a prompt is trying to inject or execute malicious code:contentReference[oaicite:21]{index=21}
+
+  // Logging for red-flag events
+  "logFlags": true,                // Log all red-flag incidents for auditing
+  "logSampleSize": 500             // Store up to 500 characters of context around the flagged content for review
+}
+Rationale: We list flaggedKeywords that represent content the assistant should not process normally – including hate speech, sensitive personal data (PII) like credit card or SSN, or dangerous instructions (like database deletion commands). When such a phrase is detected (either in a user query or an AI draft response), the onFlagDetection rules apply. By default, the system blocks the response or action and alerts an admin, escalating to require human approval. This aligns with best practices for LLM guardrails, where inputs containing banned keywords are filtered or trigger intervention
+openxcell.com
+. Additional guards like promptInjectionGuards and codeInjectionGuards are enabled, which correspond to detecting attempts to manipulate the AI or execute harmful code
+openxcell.com
+openxcell.com
+. Every flagged incident is logged for audit purposes, which helps in reviewing incidents and improving the filters over time.
+Common Build Rules Config (common-build-rules.json)
+This config sets common front-end and back-end build parameters to ensure consistency across environments. It includes performance budgets (like max bundle size), target environments, and whether certain optimizations are enabled. By centralizing these rules, developers maintain a shared understanding of build expectations and performance targets – reinforcing that front-end performance and code quality are a shared responsibility
+github.com
+. This file can be referenced by build scripts (Webpack, etc.) or CI jobs to enforce uniform behavior.
+jsonc
+Copy
+Edit
+{
+  "targetEnvironments": ["web", "mobile"],    // Platforms to optimize for (e.g., responsive web, possibly mobile app)
+  "outputDirectory": "dist",                 // Unified output directory for builds
+  "sourceMaps": {
+    "development": true,   // Enable source maps in dev for debugging
+    "production": false    // Disable source maps in prod for performance & security
+  },
+
+  // Performance budgets and optimizations
+  "bundleSizeLimitKB": 5120,    // Max bundle size ~5MB, to ensure fast load times (warn if exceed)
+  "optimizeImages": true,       // Compress images during build
+  "minifyAssets": true,         // Minify JS/CSS/HTML in production builds
+  "transpileTargets": "defaults", // Use default Babel/TypeScript target (can be set to browserlist query)
+  "enableTreeShaking": true,    // Remove dead code
+  "progressiveEnhancement": true, // Build supports progressive enhancement (for older browsers)
+
+  // Pre-build and post-build hooks (could tie into CI/CD)
+  "preBuildTasks": ["lint", "unitTests"],   // Tasks to run before building (ensure lint and basic tests pass)
+  "postBuildTasks": ["bundleAnalyze"],      // Tasks after build (e.g., analyze bundle for large modules)
+
+  // Enforce linting and style checks as part of build
+  "lintOnBuild": true,
+  "styleCheck": true,           // e.g., run stylelint or equivalent for CSS
+
+  // Toggle certain build modes
+  "debugSymbols": false,        // Strip debug symbols by default
+  "experimentalFeatures": []    // List experimental build features toggled on (empty by default)
+}
+Rationale: Key settings here ensure that all developers and the CI system use the same build standards. For example, bundleSizeLimitKB: 5120 sets an approximate 5MB limit on the application bundle size; this is to enforce performance budgets so that the app remains fast for users (performance is considered a front-end responsibility too
+github.com
+). We differentiate source map generation by environment (on in dev, off in prod) to balance debugging needs with performance and security. Features like minifyAssets and enableTreeShaking are defaulted to true for production to optimize load speed. We also include preBuildTasks like linting and running unit tests – this ties the build process to quality, preventing builds if basic issues exist. Uniform linting (lintOnBuild) and style checks further guarantee code consistency (e.g., using a shared ESLint and Stylelint config). All these rules are defined once and reused, supporting developer experience by reducing surprise build issues and encouraging code that is efficient and standard.
+UI/UX Logic Config (ui-ux.json)
+This config centralizes common UI/UX behavior across the web application, such as form validation strategy, modal dialog behavior, and responsive design settings for popups. By configuring these in one place, the application ensures a consistent user experience and makes it easy to tweak UX policies globally. For instance, form validation can be toggled between inline or on-submit validation via this config rather than hard-coding it in many components. This approach makes the UX consistent and easier to update based on user feedback or new best practices.
+jsonc
+Copy
+Edit
+{
+  "formValidation": {
+    "strategy": "inline",       // "inline" = validate as user fills (recommended), "on-submit" = validate on form submit
+    "validateOnBlur": true,     // Perform validation when a field loses focus (in addition to on-submit)
+    "highlightErrors": true,    // Highlight fields with errors (e.g., red outline)
+    "errorMessagesPlacement": "inline"  // Show error message next to field
+  },
+  "modalDialog": {
+    "overlayClose": false,      // If true, clicking outside a modal closes it. Default false to force deliberate action.
+    "escapeKeyClose": true,     // Allow closing modal with ESC key for accessibility
+    "animationDurationMs": 300, // Fade/slide animation duration for modals
+    "maxWidth": "600px",        // Max width for modal dialogs on large screens
+    "useForCriticalAlerts": false // Whether modals are used for critical alerts (should be sparingly used):contentReference[oaicite:27]{index=27}
+  },
+  "popup": {
+    "autoPosition": true,       // Auto-adjust popups to stay within viewport
+    "responsive": true,         // If true, popups adjust layout on small screens (e.g., full-width on mobile)
+    "maxConcurrent": 2          // Limit how many popups can be open at once to avoid overwhelm
+  },
+  "tooltip": {
+    "showDelayMs": 500,         // Delay before showing tooltips on hover/focus
+    "hideDelayMs": 100,
+    "maxWidth": "250px"
+  }
+}
+Rationale: The UI/UX config ensures best practices are followed by default. For example, formValidation.strategy is set to inline validation, meaning as soon as a user finishes a field, validation occurs – this is recommended to reduce user frustration by catching errors early
+nngroup.com
+. We highlight errors and place messages inline with the fields, which research shows helps users fix mistakes without having to hunt around
+nngroup.com
+. Modal dialogs are configured not to close on outside clicks by default (to ensure important confirmations aren’t skipped accidentally), and a reasonable animation duration is set for a smooth feel. We include an option to allow ESC key closing for usability. We also note in comments that modals should be used sparingly for critical alerts (too many modals can be disruptive
+nngroup.com
+). The popup settings enforce responsive behavior (popups reposition or resize on mobile) and limit maxConcurrent popups to prevent overwhelming the user with too many overlapping elements. By adjusting these values, the team can fine-tune the app’s UX globally (for instance, making validation more/less strict or changing modal behavior) without editing multiple UI components.
+API Governance Config (api-governance.json)
+This configuration governs the public API behavior and standards, including rate limiting, required headers, and naming conventions. It helps enforce consistent API design and security across internal and external APIs. Defining these rules in config means that both documentation and runtime checks (via middleware or API gateway) can draw from the same source of truth. The goal is to ensure all endpoints follow best practices for RESTful design, performance, and security. For example, requiring certain headers in requests and responses (like correlation IDs, content type) and enabling rate limiting to prevent abuse are standard API governance measures
+docs.treblle.com
+.
+jsonc
+Copy
+Edit
+{
+  "rateLimiting": {
+    "requestsPerMinute": 100,    // Global rate limit per client (e.g., IP or API key):contentReference[oaicite:32]{index=32}
+    "burstCapacity": 20,         // Burst capacity for short spikes
+    "responseHeaders": true      // If true, include rate-limit info headers in responses (e.g., X-Rate-Limit-Remaining)
+  },
+  "requiredRequestHeaders": ["X-Request-ID", "Authorization"], 
+  "requiredResponseHeaders": ["Content-Type", "X-Request-ID"],
+  "enforceJSONContentType": true,     // Require Content-Type: application/json for requests/responses:contentReference[oaicite:33]{index=33}
+
+  // API Endpoint design rules
+  "namingConvention": "RESTful",      // Enforce RESTful naming (lowercase, hyphen-separated, nouns for resources)
+  "usePluralResourceNames": true,     // e.g., "/orders" instead of "/order" for collection endpoints:contentReference[oaicite:34]{index=34}
+  "versioningStrategy": "urlPath",    // e.g., prefix routes with /v1/, /v2/ for versioning:contentReference[oaicite:35]{index=35}
+  "allowDeprecatedEndpoints": false,  // If false, deprecated endpoints must be removed/not served
+
+  // Response standards
+  "enforceStatusCodes": true,        // Ensure appropriate HTTP status codes are used (not always 200 for errors, etc.)
+  "requireErrorBody": true,          // Require error responses to have a JSON body with error message/code
+  "paginationDefaultLimit": 50,      // Default page size for paginated endpoints
+  "maxPageSize": 200,                // Max allowed page size to prevent overload
+
+  // Security and compliance
+  "securityHeaders": {
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",  // HSTS header for HTTPS enforcement
+    "X-Content-Type-Options": "nosniff",   // Prevent MIME sniffing
+    "X-Frame-Options": "DENY",            // Prevent clickjacking by disallowing framing
+    "Content-Security-Policy": "default-src 'self'"  // Basic CSP
+  },
+  "requireAuth": true,                // All API endpoints must have some auth (e.g., JWT or API key) unless explicitly public
+  "auditLogsEnabled": true            // Log all API requests for auditing (could integrate with audit logging config)
+}
+Rationale: The API governance config encodes many industry best practices for API design and security. Rate limiting is set (100 requests/minute) to protect against abuse and ensure fair usage
+docs.treblle.com
+, with support for burst handling. The config mandates certain headers: for instance, every request should carry an X-Request-ID for traceability, and Content-Type: application/json is enforced on requests and responses for consistency
+docs.treblle.com
+. We enforce RESTful naming conventions, like using plural nouns for resource endpoints (e.g., /users rather than /user)
+docs.treblle.com
+ and including a version in the URL path
+docs.treblle.com
+ to manage breaking changes. Response rules ensure proper HTTP status codes and error payloads, improving client integration and alignment with API design best practices
+docs.treblle.com
+docs.treblle.com
+ (for example, no returning 200 OK on errors, use 4xx/5xx appropriately, and include error details). Security headers like HSTS, X-Content-Type-Options, X-Frame-Options, and CSP are included by default to harden the API against common web attacks. Finally, requireAuth: true means endpoints must check authentication (unless explicitly overridden for public endpoints), and auditLogsEnabled ties into our audit logging to record API usage, which is critical for compliance and troubleshooting.
+Workflow Routes Config (workflow-routes.json)
+This config describes business workflows and their routing logic in a declarative manner. Workflows are sequences of steps (possibly corresponding to application states or process tasks) and this JSON defines the order of steps, roles involved, and conditions for transitions. By modeling workflows in config, non-developers (or the AI agent) could review or even modify business processes without touching code. It also allows the AI assistant to understand the application’s processes (if integrated) and follow the prescribed flows. Each workflow has an identifier and a list of steps with optional conditions or roles. This design is similar to how cloud workflow engines or BPM systems define flows in JSON/YAML
+learn.microsoft.com
+.
+jsonc
+Copy
+Edit
+{
+  "orderFulfillmentWorkflow": {
+    "description": "Process for custom clothing order from submission to delivery",
+    "steps": [
+      { "id": "order_submitted", "next": "design_review", "actor": "customer", 
+        "onEnter": "sendConfirmationEmail" },
+      { "id": "design_review", "next": "payment_processing", "actor": "internal_staff",
+        "onEnter": "validateDesignFiles" },
+      { "id": "payment_processing", "next": "production_queue", "actor": "system",
+        "onEnter": "chargeCreditCard" },
+      { "id": "production_queue", "next": "manufacturing", "actor": "internal_staff",
+        "onEnter": "scheduleProductionSlot" },
+      { "id": "manufacturing", "next": "quality_check", "actor": "internal_staff",
+        "onEnter": "updateOrderStatus('In Production')" },
+      { "id": "quality_check", "next": "shipping", "actor": "internal_staff",
+        "onEnter": "inspectProductQuality" },
+      { "id": "shipping", "next": "completed", "actor": "internal_staff",
+        "onEnter": "shipOrder" },
+      { "id": "completed", "next": null, "actor": "system",
+        "onEnter": "sendCompletionNotification" }
+    ]
+  },
+
+  "supportTicketWorkflow": {
+    "description": "Workflow for handling customer support tickets",
+    "steps": [
+      { "id": "ticket_opened", "next": "agent_assignment", "actor": "customer",
+        "onEnter": "acknowledgeTicket" },
+      { "id": "agent_assignment", "next": "in_progress", "actor": "internal_staff",
+        "onEnter": "assignSupportAgent" },
+      { "id": "in_progress", "next": "resolved", "actor": "internal_staff",
+        "onEnter": null },  // agent works on issue, no specific action on enter
+      { "id": "resolved", "next": "closed", "actor": "internal_staff",
+        "onEnter": "notifyCustomerResolution" },
+      { "id": "closed", "next": null, "actor": "system",
+        "onEnter": "archiveTicket" }
+    ]
+  }
+}
+Rationale: We show two workflows: Order Fulfillment and Support Ticket. Each is a sequence of steps with defined transitions. For example, in orderFulfillmentWorkflow, when an order is submitted by a customer, the next step is design_review (handled by internal staff). The config can specify an onEnter action for each step (like triggering emails or status updates). By externalizing this, the company can adjust processes (e.g., insert an extra quality check step) by editing config rather than code. This structure is akin to how Azure Logic Apps or other workflow engines represent workflows in JSON
+learn.microsoft.com
+ – each workflow has a JSON definition file. Using a config-driven workflow also means the AI agent can reference these steps; for instance, the AI could guide a staff member by saying "The order is now in design_review stage, next you'll proceed to payment_processing," reflecting the config. It decouples business logic from implementation. Each step’s actor indicates who (customer, internal, system) is responsible, which can be used for routing (e.g., UI might only show certain steps to staff users). The clarity and modularity here improve maintainability and allow scaling or adding workflows as the business grows.
+Security Policies Config (security-policies.json)
+This config centralizes security-related policies such as Role-Based Access Control (RBAC) roles and permissions, authentication settings, and audit logging preferences. By having roles and permissions in a config file, we avoid hard-coding authorization logic and can easily update or add roles. Authentication settings (like token expiration or password policy) are defined for consistency across the app. Audit logging settings ensure we capture necessary security events for compliance and analysis. Storing these in config makes it easier to apply environment-specific security adjustments (for example, maybe less strict password rules in a dev environment) and supports reviews by security teams.
+jsonc
+Copy
+Edit
+{
+  "rbac": {
+    "roles": [
+      {
+        "name": "admin",
+        "permissions": ["*"]   // admin has wildcard access to all actions
+      },
+      {
+        "name": "staff",
+        "permissions": [
+          "order:manage",      // can create/update orders
+          "order:view", 
+          "user:view",         // can view user info
+          "support:manage"
+        ]
+      },
+      {
+        "name": "customer",
+        "permissions": [
+          "order:create",
+          "order:view:own",    // can view their own orders
+          "support:create"
+        ]
+      }
+    ]
+  },
+
+  "authentication": {
+    "method": "jwt",                // Using JWTs for stateless auth (could be "session" or "oauth2" etc.)
+    "tokenExpirationMinutes": 60,   // JWT expiration time (60 minutes)
+    "refreshTokenEnabled": true,
+    "passwordPolicy": {
+      "minLength": 8,
+      "requireNumbers": true,
+      "requireSpecialChars": false,
+      "allowCommonPasswords": false
+    },
+    "maxLoginAttempts": 5,          // Lockout after 5 failed attempts
+    "twoFactorAuth": false          // 2FA can be toggled on if needed
+  },
+
+  "auditLogging": {
+    "enabled": true,
+    "logTypes": ["security", "admin_actions", "data_changes"], // Categories of events to log
+    "captureFields": ["timestamp", "userId", "action", "resource", "outcome"],  // Fields to record for each event:contentReference[oaicite:49]{index=49}:contentReference[oaicite:50]{index=50}
+    "retentionDays": 90,           // Keep audit logs for 90 days by default:contentReference[oaicite:51]{index=51}:contentReference[oaicite:52]{index=52}
+    "storage": "database",         // Where to store logs: "file", "database", etc.
+    "encryptLogs": true,           // Encrypt log entries for security:contentReference[oaicite:53]{index=53}
+    "alertOnSuspicious": true      // Send alert if suspicious activity detected (e.g., repeated failed logins)
+  }
+}
+Rationale: The RBAC roles defined here illustrate a typical permission structure: admin (full access), staff (limited internal capabilities), and customer (only their own data). This mirrors best practices as seen in frameworks where roles and permissions are listed in config files
+medium.com
+medium.com
+. By listing permissions as strings (like order:manage), the application can check these against actions, and adding a new permission or role is as simple as updating this JSON. The authentication section ensures consistency in how users authenticate and how tokens are managed – for example, a standard 60-minute JWT expiry and a password policy requiring a mix of characters for security. The auditLogging config is critical for security compliance: we enable it by default and log key details for each event – who did what, when, and the outcome
+digitalguardian.com
+. We follow best practices by including user ID, action, resource affected, and outcome (success/failure) in logs
+digitalguardian.com
+digitalguardian.com
+. We set a retention period (90 days, which is a common minimum for audit logs
+digitalguardian.com
+) and enforce log integrity via encryption. Alerts on suspicious events (like multiple failed logins) help in early breach detection. These settings collectively enforce principle of least privilege (via RBAC) and maintain an audit trail for accountability and compliance, aligning with common security standards.
+CI/CD Hooks Config (ci-cd-hooks.json)
+This config defines hooks and task sequences in the Continuous Integration/Continuous Deployment pipeline, as well as how certain tasks are routed to executors or environments. It allows the development team to configure what happens at various stages (e.g., on commit, on pull request, on deploy) without editing pipeline code, making the CI/CD process more transparent and easier to adjust. This modular approach to CI/CD is akin to having a pipeline-as-code, but extracted parameters that can be tweaked per environment or project needs. It improves developer experience by making pipeline behavior explicit and version-controlled.
+jsonc
+Copy
+Edit
+{
+  // Git hooks or local dev hooks
+  "preCommit": ["run-linters", "run-unit-tests"],   // tasks to run before a commit is finalized (e.g., via a git hook)
+  "prePush": ["staticCodeAnalysis"],                // tasks to run before pushing code (could integrate with tools)
+
+  // CI pipeline stages
+  "ciPipeline": {
+    "onPullRequest": [
+      "installDependencies",
+      "runUnitTests",
+      "runIntegrationTests",
+      "runSecurityScan"
+    ],
+    "onMergeToMain": [
+      "buildArtifact",
+      "runE2ETests",
+      "deployToStaging"
+    ],
+    "onDeployToProd": [
+      "backupDatabase",
+      "runMigrations",
+      "deployToProduction",
+      "smokeTest"
+    ]
+  },
+
+  // Task routing: which executor or context runs certain tasks (useful in distributed CI systems)
+  "taskRunners": {
+    "runUnitTests": "ci-runner-small",        // smaller runner for unit tests
+    "runIntegrationTests": "ci-runner-medium",
+    "buildArtifact": "ci-runner-medium",
+    "runE2ETests": "ci-runner-large",         // use a larger runner for end-to-end tests
+    "deployToProduction": "deploy-runner"     // a runner with production access
+  },
+
+  // Notifications and manual approvals
+  "notifications": {
+    "onPipelineSuccess": ["#dev-team-slack"],
+    "onPipelineFailure": ["#dev-team-slack", "email:ci-alerts@ourcompany.com"]
+  },
+  "manualApprovalStages": [
+    {
+      "stage": "onDeployToProd",
+      "required": true,
+      "approvers": ["tech-lead", "devops-manager"]   // require approval from one of these roles before prod deploy
+    }
+  ]
+}
+Rationale: This config enumerates CI/CD steps in a clear way. For example, on every pull request to the repository, the pipeline will install dependencies, run unit and integration tests, and perform a security scan (like SAST). On merging to main (which we treat as a staging deployment trigger), it will build the artifact, run end-to-end tests, and deploy to a staging environment. Deployment to production (perhaps triggered manually or by a tag) includes backing up the database and running DB migrations before the final deploy and a post-deploy smoke test. By listing tasks under these keys, developers can easily see which checks are enforced at each stage (e.g., tests and scans on PR – aligning with shift-left testing principles
+blazemeter.com
+, and backups before prod deploy). The taskRunners map assigns certain tasks to specific runners; this could correspond to different Jenkins agents or GitHub Actions runners optimized for those tasks, ensuring efficient use of resources. Notifications are configured to inform the team via Slack or email on successes or failures. We also include a manualApprovalStages entry: here we indicate that before deploying to production, a manual approval is required by a tech lead or devops manager. This aligns with best practices of having a human gate for critical deployments while keeping it within the pipeline config
+infoq.com
+ (ensuring accountability and that emergency bypass, if needed, is deliberate). By adjusting this file, the team can quickly change the CI/CD process (e.g., add a new test stage or change approvers) and the pipeline will follow suit, providing a high level of flexibility and transparency.
+Database Migration Config (db-migration.json)
+This config manages rules for database schema migrations across environments. It specifies how migrations are applied, safety checks like backups and rollbacks, and environment-specific behaviors (e.g., auto-migrate on startup in dev, but not in prod). By clearly defining these policies, we reduce the risk of schema changes and ensure that both the AI agent (if it generates DB changes) and human developers follow safe procedures. This is critical in a production environment where mistakes in migrations can be catastrophic. The config follows best practices such as always having explicit down-migrations (for rollback), testing those rollbacks, and avoiding automatic destructive changes in production
+reddit.com
+.
+jsonc
+Copy
+Edit
+{
+  // General migration settings
+  "migrationTool": "Prisma",        // Example migration tool or ORM (could be Flyway, Liquibase, etc.)
+  "allowAutoMigration": false,      // Master switch: default disallow automatic schema migrations in code (especially for prod):contentReference[oaicite:63]{index=63}:contentReference[oaicite:64]{index=64}
+  "requireApprovalInProd": true,    // In production, schema changes require explicit approval (manual step)
+  "backupBeforeMigrating": true,    // Always backup the database before applying migrations in critical envs
+
+  // Environment-specific overrides
+  "environments": {
+    "development": {
+      "allowAutoMigration": true,   // In dev, allow auto-run of migrations on startup for convenience
+      "backupBeforeMigrating": false, // No need for backups on local dev database
+      "resetOnStart": false         // Optionally, could drop and recreate schema on each start (false by default)
+    },
+    "staging": {
+      "allowAutoMigration": true,   // Staging can auto-migrate (to mimic prod as closely as possible, but safer)
+      "backupBeforeMigrating": true // Backup staging DB before migration (as staging may have test data)
+    },
+    "production": {
+      "allowAutoMigration": false,  // In prod, never auto-apply migrations without review:contentReference[oaicite:65]{index=65}
+      "backupBeforeMigrating": true,
+      "requireApprovalInProd": true
+    }
+  },
+
+  // Migration execution policy
+  "transactionalMigrations": true,   // Wrap each migration in a DB transaction if possible
+  "stopOnFailure": true,            // Stop the migration batch if any migration fails
+  "enableDownMigrations": true,     // Ensure down (rollback) scripts are provided for each up migration:contentReference[oaicite:66]{index=66}
+  "autoGenerateDownSQL": false,     // Do not auto-generate rollback; require explicit scripts (safer)
+
+  "verification": {
+    "postMigrationSmokeTest": true,  // Run a simple query or check after migrations to verify success
+    "schemaDriftCheck": true        // Check if actual DB schema matches expected schema after migration
+  }
+}
+Rationale: The database migration config is designed to prevent mishaps in schema changes. We prohibit automatic migrations in production (allowAutoMigration: false for prod) and require manual approval, reflecting the caution that one should “never trust auto-rollbacks with production data” and generally not auto-apply irreversible changes in prod without oversight
+reddit.com
+. For development and staging, we loosen this: dev can auto-migrate for developer convenience (spinning up local environments easily), and staging can auto-migrate to ensure our pipeline tests the migrations fully before prod. We always backup the DB before migrations in staging/prod; this aligns with the practice of having backups or snapshots in case a rollback is needed beyond what the migration scripts can do
+reddit.com
+. We enforce transactionalMigrations to ensure each migration either fully applies or not at all, reducing partial failure issues. The config requires down-migration scripts (enableDownMigrations: true and auto-generation off), meaning developers must write rollback scripts for each migration – a recommended practice to have a safe way to revert changes
+reddit.com
+. The verification section runs a smoke test and checks for schema drift after migrations, which helps catch any issues immediately. By adjusting this config, DBAs or developers can tweak how aggressive or safe the migrations are (for instance, turning on resetOnStart in dev to always rebuild the schema, or changing the backup strategy). Overall, this codifies a conservative migration strategy: backward-compatible changes when possible, backups, explicit rollbacks, and testing – all aligning with DevOps best practices for database changes
+reddit.com
+reddit.com
+.
+Configuration Loader (config-loader.ts)
+The config-loader.ts is a TypeScript module responsible for loading and merging the various config files, applying environment overrides, and exposing a unified configuration object to the application. It demonstrates how scoped configuration is assembled in a scalable way. We first load the base JSON files for each domain, then load any environment-specific files (e.g., *.development.json, *.production.json) if they exist, and deep-merge them into the base config. This approach means we can keep defaults in one place and only override differences, following a layering strategy similar to popular config libraries
+github.com
+. We also optionally apply overrides from environment variables for sensitive or deployment-specific settings as the final layer
+github.com
+. The loader uses TypeScript interfaces to provide type safety and IntelliSense to developers.
+typescript
+Copy
+Edit
+// config-loader.ts
+
+import fs from 'fs';
+import path from 'path';
+
+// Define TypeScript interfaces for strong typing (simplified for brevity)
+interface BehaviorProfileConfig { /* ... define shape matching behavior-profile.json ... */ }
+interface ExecutionPolicyConfig { /* ... define shape matching execution-policy.json ... */ }
+interface RedFlagConfig { /* ... */ }
+interface BuildRulesConfig { /* ... */ }
+interface UiUxConfig { /* ... */ }
+interface ApiGovConfig { /* ... */ }
+interface WorkflowRoutesConfig { /* ... */ }
+interface SecurityPoliciesConfig { /* ... */ }
+interface CiCdHooksConfig { /* ... */ }
+interface DbMigrationConfig { /* ... */ }
+
+interface AppConfig {
+  behavior: BehaviorProfileConfig;
+  executionPolicy: ExecutionPolicyConfig;
+  redFlag: RedFlagConfig;
+  buildRules: BuildRulesConfig;
+  uiUx: UiUxConfig;
+  apiGovernance: ApiGovConfig;
+  workflows: WorkflowRoutesConfig;
+  security: SecurityPoliciesConfig;
+  ciCd: CiCdHooksConfig;
+  dbMigration: DbMigrationConfig;
+}
+
+// Helper function to load JSON (with comments) and parse it
+function loadJsonConfig<T>(filePath: string): T {
+  const jsonContent = fs.readFileSync(filePath, 'utf-8');
+  // Remove JSON comments (// or /**/) for strict JSON parsing:
+  const contentNoComments = jsonContent.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+  return JSON.parse(contentNoComments) as T;
+}
+
+// Determine environment (e.g., development, staging, production)
+const env = process.env.NODE_ENV || 'development';
+
+// Load base configs
+const baseConfig: AppConfig = {
+  behavior: loadJsonConfig<BehaviorProfileConfig>(path.join(__dirname, 'behavior-profile.json')),
+  executionPolicy: loadJsonConfig<ExecutionPolicyConfig>(path.join(__dirname, 'execution-policy.json')),
+  redFlag: loadJsonConfig<RedFlagConfig>(path.join(__dirname, 'red-flag-detection.json')),
+  buildRules: loadJsonConfig<BuildRulesConfig>(path.join(__dirname, 'common-build-rules.json')),
+  uiUx: loadJsonConfig<UiUxConfig>(path.join(__dirname, 'ui-ux.json')),
+  apiGovernance: loadJsonConfig<ApiGovConfig>(path.join(__dirname, 'api-governance.json')),
+  workflows: loadJsonConfig<WorkflowRoutesConfig>(path.join(__dirname, 'workflow-routes.json')),
+  security: loadJsonConfig<SecurityPoliciesConfig>(path.join(__dirname, 'security-policies.json')),
+  ciCd: loadJsonConfig<CiCdHooksConfig>(path.join(__dirname, 'ci-cd-hooks.json')),
+  dbMigration: loadJsonConfig<DbMigrationConfig>(path.join(__dirname, 'db-migration.json'))
+};
+
+// Apply environment-specific overrides if available (each overrides only relevant keys):contentReference[oaicite:74]{index=74}
+const config: AppConfig = baseConfig;
+const envSuffix = `${env}.json`;
+const configFiles = [
+  'behavior-profile', 'execution-policy', 'red-flag-detection',
+  'common-build-rules', 'ui-ux', 'api-governance',
+  'workflow-routes', 'security-policies', 'ci-cd-hooks', 'db-migration'
+];
+for (const name of configFiles) {
+  const envFile = path.join(__dirname, `${name}.${envSuffix}`);
+  if (fs.existsSync(envFile)) {
+    const override = loadJsonConfig<any>(envFile);
+    // Deep merge override into base (simple recursive merge implementation for demo)
+    config[name.replace(/-([a-z])/g, (m, w) => w.toUpperCase()) as keyof AppConfig] = deepMerge(
+      config[name as keyof AppConfig],
+      override
+    );
+  }
+}
+
+// (Pseudo-code) Also allow environment variable overrides for certain settings
+if (process.env.MAX_BUNDLE_SIZE_KB) {
+  config.buildRules.bundleSizeLimitKB = Number(process.env.MAX_BUNDLE_SIZE_KB);
+}
+if (process.env.FORCE_2FA === 'true') {
+  config.security.authentication.twoFactorAuth = true;
+}
+// ...additional env var overrides as needed...
+
+export default config;
+
+// Utility: Deep merge two objects/arrays (for simplicity, not handling all edge cases here)
+function deepMerge(target: any, source: any): any {
+  if (source && typeof source === 'object') {
+    for (const key of Object.keys(source)) {
+      const value = source[key];
+      if (Array.isArray(value)) {
+        // Replace arrays completely (no partial merge for arrays)
+        target[key] = value;
+      } else if (value && typeof value === 'object') {
+        if (!target[key]) target[key] = {};
+        target[key] = deepMerge(target[key], value);
+      } else {
+        target[key] = value;
+      }
+    }
+  }
+  return target;
+}
+Rationale: The loader uses a consistent pattern to load each config file and then apply environment-specific overrides. For example, if the application is running in Staging, it will look for files like behavior-profile.staging.json, execution-policy.staging.json, etc. Those files would contain only the keys that differ from the base, following a parameter-by-parameter override strategy
+github.com
+. This way, the base config holds most values, and environment files tweak as needed (like turning off debugging, or increasing limits in prod). The code above also strips out comments from JSON files (since we document them richly) before parsing, which is a technique supported by some config libraries (e.g., jsonc comments are ignored
+github.com
+). We also demonstrate overriding certain settings via environment variables (like forcing 2FA on via an env var), which provides an immediate override mechanism if something must change urgently in production without a config file update
+github.com
+. The final exported config object is typed (AppConfig interface) so developers get compile-time checking and auto-completion when accessing config values, improving the developer experience. This approach – using a default config and layering environment-specific differences – is a proven pattern in configuration management
+github.com
+, and one commenter describes a similar approach of having a “master” config and dynamically loading overrides for environment
+reddit.com
+. It ensures scalability (new config sections can be added easily), modularity (each concern in its own file), and clarity (one can read the JSON files to understand system behavior, or even generate documentation from them).
+Sources: The configuration architecture and default values are informed by industry best practices in software architecture and operations. For instance, the importance of quality gates in CI/CD
+infoq.com
+ and security scan integration
+infoq.com
+ influenced the execution-policy settings. API governance rules draw on RESTful design guidelines and tools like Treblle
+docs.treblle.com
+docs.treblle.com
+. UI/UX defaults (like inline form validation) are based on user experience research
+nngroup.com
+. Persona and tone management follows known LLM prompting techniques
+medium.com
+. Security and RBAC config reflect common patterns in access control
+medium.com
+medium.com
+ and audit logging recommendations to record crucial details
+digitalguardian.com
+digitalguardian.com
+. Database migration safeguards echo DevOps advice for safe deployments (backups, tested rollbacks)
+reddit.com
+reddit.com
+. By combining these sources and patterns, the configuration blueprint aims to maximize scalability, safety, and developer productivity.
