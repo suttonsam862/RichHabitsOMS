@@ -1203,6 +1203,7 @@ function CatalogPageContent() {
       const processedData = {
         ...data,
         preferredManufacturerId: data.preferredManufacturerId === 'none' ? '' : data.preferredManufacturerId,
+        fabricId: data.fabricId === 'none' ? '' : data.fabricId,
         tags: data.tags?.trim() || '',
         buildInstructions: data.buildInstructions?.trim() || '',
         measurementInstructions: data.measurementInstructions?.trim() || '',
@@ -1513,7 +1514,7 @@ function CatalogPageContent() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="subtitle text-muted-foreground text-xs">Preferred Manufacturer</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select value={field.value || undefined} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger className="rich-input">
                               <SelectValue placeholder="Select manufacturer (optional)" />
@@ -1540,14 +1541,14 @@ function CatalogPageContent() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="subtitle text-muted-foreground text-xs">Fabric</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select value={field.value || undefined} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger className="rich-input">
                               <SelectValue placeholder="Select fabric (optional)" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No fabric specified</SelectItem>
+                            <SelectItem value="none">No fabric specified</SelectItem>
                             {dbFabrics.map((fabric: any) => (
                               <SelectItem key={fabric.id} value={fabric.id}>
                                 {fabric.name}
@@ -2155,37 +2156,35 @@ function CatalogPageContent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="subtitle text-muted-foreground text-xs">Category</FormLabel>
-
-<Select value={field.value} onValueChange={(value) => {
-                            if (value === "add-new-category") {
-                              setShowAddCategory(true);
-                            } else {
-                              field.onChange(value);
-                            }
-                          }}>
-                            <FormControl>
-                              <SelectTrigger className="rich-input">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="rich-card">
-                              {allCategories.length > 0 ? (
-                                <>
-                                  {allCategories.map((category: string) => (
-                                    <SelectItem key={category} value={category}>{category}</SelectItem>
-                                  ))}
-                                  <SelectItem value="add-new-category" className="text-neon-blue font-medium">
-                                    + Add Category
-                                  </SelectItem>
-                                </>
-                              ) : (
-                                <SelectItem value="loading" disabled>
-                                  Loading categories...
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-
+                      <Select value={field.value || undefined} onValueChange={(value) => {
+                        if (value === "add-new-category") {
+                          setShowAddCategory(true);
+                        } else {
+                          field.onChange(value);
+                        }
+                      }}>
+                        <FormControl>
+                          <SelectTrigger className="rich-input">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rich-card">
+                          {allCategories.length > 0 ? (
+                            <>
+                              {allCategories.map((category: string) => (
+                                <SelectItem key={category} value={category}>{category}</SelectItem>
+                              ))}
+                              <SelectItem value="add-new-category" className="text-neon-blue font-medium">
+                                + Add Category
+                              </SelectItem>
+                            </>
+                          ) : (
+                            <SelectItem value="loading" disabled>
+                              Loading categories...
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -2197,8 +2196,7 @@ function CatalogPageContent() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="subtitle text-muted-foreground text-xs">Sport</FormLabel>
-
-<Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value || undefined} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="rich-input">
                             <SelectValue placeholder="Select sport" />
@@ -2218,7 +2216,6 @@ function CatalogPageContent() {
                           )}
                         </SelectContent>
                       </Select>
-
                       <FormMessage />
                     </FormItem>
                   )}
