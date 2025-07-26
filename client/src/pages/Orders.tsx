@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { getQueryFn } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   PlusCircle, 
   Search, 
@@ -44,9 +45,11 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { Order } from '@/types';
+import { AlertTriangle } from 'lucide-react';
 
-export default function Orders() {
+function OrdersContent() {
   const navigate = useNavigate();
   const { role } = useAuth();
   const [search, setSearch] = useState('');
@@ -57,12 +60,31 @@ export default function Orders() {
     queryKey: ['/api/orders'],
     queryFn: getQueryFn({ on401: 'throw' }),
   });
+
+  // Fetch catalog items for future integration
+  const { data: catalogItems = [] } = useQuery({
+    queryKey: ['/api/catalog'],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest('GET', '/api/catalog');
+        return response || [];
+      } catch (error) {
+        console.warn('Catalog not yet available:', error);
+        return [];
+      }
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   
   // Filter orders based on search term and status
   const filteredOrders = orders.filter(order => {
+    if (!order) return false;
+    
     const matchesSearch = search === '' || 
-      order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      (order.customer?.user.firstName + ' ' + order.customer?.user.lastName).toLowerCase().includes(search.toLowerCase());
+      (order.orderNumber && order.orderNumber.toLowerCase().includes(search.toLowerCase())) ||
+      (order.customer?.user?.firstName && order.customer?.user?.lastName && 
+       (order.customer.user.firstName + ' ' + order.customer.user.lastName).toLowerCase().includes(search.toLowerCase()));
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
@@ -162,8 +184,8 @@ export default function Orders() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                {statuses.map(status => (
-                  <SelectItem key={status} value={status || "unknown"}>
+                {statuses.filter(status => status && status.trim() !== '').map(status => (
+                  <SelectItem key={status} value={status}>
                     {getStatusLabel(status)}
                   </SelectItem>
                 ))}
@@ -231,7 +253,7 @@ export default function Orders() {
                       >
                         <TableCell className="font-medium text-primary">{order.orderNumber}</TableCell>
                         <TableCell>
-                          {order.customer ? 
+                          {order.customer?.user?.firstName && order.customer?.user?.lastName ? 
                             `${order.customer.user.firstName} ${order.customer.user.lastName}` : 
                             'Unknown Customer'}
                         </TableCell>
@@ -349,7 +371,7 @@ export default function Orders() {
                     <div className="mb-3">
                       <div className="text-sm text-gray-500 flex items-center gap-1.5">
                         <User className="h-3.5 w-3.5" />
-                        {order.customer ? 
+                        {order.customer?.user?.firstName && order.customer?.user?.lastName ? 
                           `${order.customer.user.firstName} ${order.customer.user.lastName}` : 
                           'Unknown Customer'}
                       </div>
@@ -403,6 +425,27 @@ export default function Orders() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+export default function Orders() {
+  return (
+    <div className="min-h-screen">
+      <ErrorBoundary
+        fallback={
+          <div className="flex flex-col items-center justify-center min-h-screen">
+            <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+            <p className="text-gray-600 mb-4">There was an error loading the orders page.</p>
+            <Button onClick={() => window.location.reload()}>
+              Refresh Page
+            </Button>
+          </div>
+        }
+      >
+        <OrdersContent />
+      </ErrorBoundary>
     </div>
   );
 }

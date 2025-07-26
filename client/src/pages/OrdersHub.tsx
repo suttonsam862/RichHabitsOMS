@@ -35,12 +35,23 @@ export default function OrdersHub() {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Fetch order statistics for the overview
-  const { data: statsData, isLoading: loadingStats } = useQuery({
+  const { data: statsData, isLoading: loadingStats, error: statsError } = useQuery({
     queryKey: ['/api/orders/stats'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/orders/stats');
-      if (!response.ok) {
-        // If stats endpoint doesn't exist, return mock data for layout
+      try {
+        const response = await apiRequest('GET', '/api/orders/stats');
+        if (!response.ok) {
+          // If stats endpoint doesn't exist, return mock data for layout
+          return {
+            total_orders: 0,
+            pending_orders: 0,
+            completed_orders: 0,
+            total_revenue: 0
+          };
+        }
+        return response.json();
+      } catch (error) {
+        console.warn('Stats endpoint not available:', error);
         return {
           total_orders: 0,
           pending_orders: 0,
@@ -48,8 +59,9 @@ export default function OrdersHub() {
           total_revenue: 0
         };
       }
-      return response.json();
     },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const stats = statsData || {

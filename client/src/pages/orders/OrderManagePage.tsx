@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Eye, Edit, Trash2, Plus, Search, Filter, ChevronDown, Send, Palette, Factory, CheckCircle, XCircle, Upload, Image } from "lucide-react";
+import { Eye, Edit, Trash2, Plus, Search, Filter, ChevronDown, Send, Palette, Factory, CheckCircle, XCircle, Upload, Image, AlertTriangle } from "lucide-react";
 
 interface OrderItem {
   id?: number;
@@ -116,6 +116,14 @@ export default function OrderManagePage() {
   });
 
   const handleViewOrder = (order: Order) => {
+    if (!order || !order.id) {
+      toast({
+        title: "Error",
+        description: "Invalid order data",
+        variant: "destructive",
+      });
+      return;
+    }
     setSelectedOrder(order);
     setViewDialogOpen(true);
   };
@@ -333,6 +341,15 @@ export default function OrderManagePage() {
   };
 
   const handleWorkflowAction = (orderId: string, action: string) => {
+    if (!orderId || !action) {
+      toast({
+        title: "Error",
+        description: "Invalid workflow action parameters",
+        variant: "destructive",
+      });
+      return;
+    }
+
     let newStatus = '';
     switch (action) {
       case 'send_to_designer':
@@ -354,6 +371,11 @@ export default function OrderManagePage() {
         newStatus = 'cancelled';
         break;
       default:
+        toast({
+          title: "Error",
+          description: "Unknown workflow action",
+          variant: "destructive",
+        });
         return;
     }
 
@@ -497,13 +519,15 @@ export default function OrderManagePage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start">
-                            <DropdownMenuItem 
-                              onClick={() => handleWorkflowAction(order.id, 'send_to_designer')}
-                              className="flex items-center"
-                            >
-                              <Palette className="mr-2 h-4 w-4" />
-                              Send to Designer
-                            </DropdownMenuItem>
+                            {order.status !== 'pending_design' && (
+                              <DropdownMenuItem 
+                                onClick={() => handleWorkflowAction(order.id, 'send_to_designer')}
+                                className="flex items-center"
+                              >
+                                <Palette className="mr-2 h-4 w-4" />
+                                Send to Designer
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem 
                               onClick={() => handleWorkflowAction(order.id, 'approve_design')}
                               className="flex items-center"
