@@ -32,3 +32,44 @@
     "keyboardNav": true
   }
 }
+{
+  "version": "1.0.0",
+  "targetEnvironments": [
+    "development",
+    "staging", 
+    "production"
+  ],
+  "performanceBudgets": {
+    "bundleSizeLimit": "2MB",
+    "loadTimeTarget": "3s"
+  },
+  "optimizations": {
+    "minify": true,
+    "treeShaking": true,
+    "imageCompression": true
+  },
+  "buildTasks": {
+    "preBuild": [
+      "npm run lint",
+      "npm run type-check"
+    ],
+    "postBuild": [
+      "npm run test",
+      "npm run analyze-bundle"
+    ]
+  },
+  "transpilation": {
+    "target": "ES2020",
+    "progressiveEnhancement": true
+  },
+  "assetOptimization": {
+    "compressImages": true,
+    "optimizeFonts": true,
+    "generateWebP": false
+  },
+  "caching": {
+    "staticAssets": "1y",
+    "apiResponses": "5m",
+    "htmlPages": "no-cache"
+  }
+}

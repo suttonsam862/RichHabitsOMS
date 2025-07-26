@@ -14,3 +14,36 @@
   },
   "minFixPrefixes": true
 }
+{
+  "version": "1.0.0",
+  "requireErrorHandling": true,
+  "requireScalability": true,
+  "requireSecurity": true,
+  "requireModularStructure": true,
+  "requireInlineComments": true,
+  "testCoverageRequired": true,
+  "techStackStrategy": "maintain_consistency",
+  "authenticationPolicy": {
+    "adminOnlyAccess": true,
+    "permissionGate": true,
+    "userDataVisibility": "role_based"
+  },
+  "minFixPrefixes": true,
+  "codeQuality": {
+    "enforceTypeScript": true,
+    "requireJSDoc": false,
+    "maxComplexity": 10,
+    "maxFileLines": 500
+  },
+  "performanceRequirements": {
+    "maxResponseTime": 2000,
+    "maxMemoryUsage": "512MB",
+    "requireCaching": true
+  },
+  "deploymentPolicy": {
+    "requireTests": true,
+    "requireCodeReview": false,
+    "allowHotfixes": true,
+    "requireBackup": true
+  }
+}
