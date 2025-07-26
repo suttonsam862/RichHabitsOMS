@@ -6,22 +6,6 @@
   "requireModularStructure": true,
   "requireInlineComments": true,
   "testCoverageRequired": true,
-  "techStackStrategy": "auto-select-optimal-stack",
-  "authenticationPolicy": {
-    "adminOnlyAccess": true,
-    "permissionGate": true,
-    "userDataVisibility": "strict-sandbox"
-  },
-  "minFixPrefixes": true
-}
-{
-  "version": "1.0.0",
-  "requireErrorHandling": true,
-  "requireScalability": true,
-  "requireSecurity": true,
-  "requireModularStructure": true,
-  "requireInlineComments": true,
-  "testCoverageRequired": true,
   "techStackStrategy": "maintain_consistency",
   "authenticationPolicy": {
     "adminOnlyAccess": true,
