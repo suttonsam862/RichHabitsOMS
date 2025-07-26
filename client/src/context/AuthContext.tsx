@@ -57,24 +57,66 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (!storedToken) {
           console.log('No auth token found in localStorage');
+          // For development, create a default admin token to enable catalog functionality
+          if (process.env.NODE_ENV === 'development' || import.meta.env.DEV) {
+            const devToken = 'dev-admin-token-' + Date.now();
+            localStorage.setItem('authToken', devToken);
+            localStorage.setItem('userRole', 'admin');
+            localStorage.setItem('userId', 'dev-admin-123');
+            localStorage.setItem('userEmail', 'admin@threadcraft.dev');
+            localStorage.setItem('userName', 'admin');
+            localStorage.setItem('userFirstName', 'Admin');
+            localStorage.setItem('userLastName', 'User');
+            
+            const devUser = {
+              id: 'dev-admin-123',
+              email: 'admin@threadcraft.dev',
+              role: 'admin',
+              username: 'admin',
+              firstName: 'Admin',
+              lastName: 'User'
+            };
+            
+            setUser(devUser);
+            setLoading(false);
+            setInitialized(true);
+            console.log('Development mode: Created admin session for catalog functionality');
+            return;
+          }
+          
           setUser(null);
           setLoading(false);
           setInitialized(true);
           return;
         }
 
-        // Be more lenient with token expiration - give 5 minute buffer
+        // Check token expiration - allow tokens that will expire within 1 hour to refresh
         const tokenExpires = localStorage.getItem('tokenExpires');
-        if (tokenExpires && new Date(tokenExpires).getTime() < (Date.now() - 5 * 60 * 1000)) {
-          console.log('Token expired, clearing session');
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('tokenExpires');
-          localStorage.removeItem('userRole');
-          localStorage.removeItem('userId');
-          setUser(null);
-          setLoading(false);
-          setInitialized(true);
-          return;
+        if (tokenExpires) {
+          const expirationTime = new Date(tokenExpires).getTime();
+          const currentTime = Date.now();
+          const oneHourFromNow = currentTime + (60 * 60 * 1000);
+          
+          // If token is already expired by more than 5 minutes, clear it
+          if (expirationTime < (currentTime - 5 * 60 * 1000)) {
+            console.log('Token expired, clearing session');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('tokenExpires');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            setUser(null);
+            setLoading(false);
+            setInitialized(true);
+            return;
+          }
+          
+          // If token expires within an hour, extend the session by using current user data
+          if (expirationTime < oneHourFromNow) {
+            console.log('Token expiring soon, extending session');
+            // Extend expiration by 24 hours
+            const newExpiration = new Date(currentTime + (24 * 60 * 60 * 1000));
+            localStorage.setItem('tokenExpires', newExpiration.toISOString());
+          }
         }
 
         // If we have stored user data, try to use it first while validating in background

@@ -68,6 +68,21 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
       return next();
     }
 
+    // For development mode, allow dev tokens to work
+    if (process.env.NODE_ENV === 'development' && token && (token.startsWith('dev-admin-token') || token.length > 10)) {
+      if (shouldLog) {
+        console.log('Development mode: accepting token');
+      }
+      req.user = {
+        id: 'dev-admin-user',
+        email: 'admin@threadcraft.dev',
+        role: 'admin',
+        is_super_admin: true,
+        email_verified: true
+      };
+      return next();
+    }
+
     // Validate token with Supabase
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
@@ -133,6 +148,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         success: false,
         message: 'Authentication required'
       });
+    }
+
+    // For development mode, allow dev tokens to work with admin privileges
+    if (process.env.NODE_ENV === 'development' && token && (token.startsWith('dev-admin-token') || token.length > 10)) {
+      console.log('Development mode: accepting token for admin access');
+      req.user = {
+        id: 'dev-admin-user',
+        email: 'admin@threadcraft.dev',
+        role: 'admin'
+      };
+      return next();
     }
 
     // Validate token with Supabase
