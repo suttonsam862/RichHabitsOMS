@@ -70,11 +70,21 @@ const createUserSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   role: z.string(),
+  password: z.string().optional(),
   phone: z.string().optional(),
   company: z.string().optional(),
   department: z.string().optional(),
   title: z.string().optional(),
   sendInvitation: z.boolean().default(true),
+}).refine((data) => {
+  // If password is provided, it should be at least 6 characters
+  if (data.password && data.password.length < 6) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Password must be at least 6 characters if provided",
+  path: ["password"]
 });
 
 const updateUserSchema = z.object({
@@ -142,7 +152,7 @@ export default function UserManagementPage() {
         ...(roleFilter !== 'all' && { role: roleFilter }),
       });
 
-      const response = await fetch(`/api/users?${params}`, {
+      const response = await fetch(`/api/user-management/users?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -161,7 +171,7 @@ export default function UserManagementPage() {
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserData) => {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/users/create-account', {
+      const response = await fetch('/api/user-management/users', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -177,10 +187,17 @@ export default function UserManagementPage() {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      let description = response.message;
+      
+      // Show temporary password if one was generated and not emailed
+      if (response.data?.temporaryPassword) {
+        description += `\n\nTemporary Password: ${response.data.temporaryPassword}\n\nPlease provide this password to the user securely.`;
+      }
+      
       toast({
         title: 'Success',
-        description: 'User created successfully',
+        description,
       });
       setIsCreateDialogOpen(false);
       createForm.reset();
@@ -199,8 +216,8 @@ export default function UserManagementPage() {
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateUserData }) => {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/users/${id}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/user-management/users/${id}`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -238,7 +255,7 @@ export default function UserManagementPage() {
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/users/${id}`, {
+      const response = await fetch(`/api/user-management/users/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -606,9 +623,33 @@ export default function UserManagementPage() {
                     </div>
                   </div>
 
-                  {/* Invitation Settings */}
+                  {/* Authentication Settings */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-neon-blue">Invitation Settings</h3>
+                    <h3 className="text-lg font-semibold text-neon-blue">Authentication Settings</h3>
+                    
+                    <FormField
+                      control={createForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password (Optional)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="password" 
+                              className="rich-input" 
+                              placeholder="Leave blank to require user to set password on first login"
+                            />
+                          </FormControl>
+                          <div className="text-sm text-muted-foreground">
+                            If left blank, the user will be required to set up their password upon first login.
+                            If provided, minimum 6 characters required.
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={createForm.control}
                       name="sendInvitation"
@@ -629,15 +670,6 @@ export default function UserManagementPage() {
                         </FormItem>
                       )}
                     />
-                    <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>Require Password Reset</FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          Force user to set a new password on first login
-                        </div>
-                      </div>
-                      <Switch defaultChecked={true} />
-                    </div>
                   </div>
 
                   <div className="flex justify-end space-x-2 pt-4 border-t sticky bottom-0 bg-rich-black/90 backdrop-blur-md">

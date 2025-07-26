@@ -19,12 +19,21 @@ const createUserSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Valid email is required'),
   role: z.string().min(1, 'Role is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().optional(),
   phone: z.string().optional(),
   company: z.string().optional(),
   department: z.string().optional(),
   title: z.string().optional(),
   sendInvitation: z.boolean().default(false),
+}).refine((data) => {
+  // If password is provided, it should be at least 6 characters
+  if (data.password && data.password.length < 6) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Password must be at least 6 characters if provided",
+  path: ["password"]
 });
 
 const updateUserSchema = z.object({
@@ -140,10 +149,14 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
 
     console.log('Creating user:', email, 'with role:', role);
 
+    // Generate temporary password if none provided
+    const finalPassword = password || generateTemporaryPassword();
+    const isTemporaryPassword = !password;
+
     // Create auth user first
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
-      password,
+      password: finalPassword,
       email_confirm: true
     });
 
@@ -170,10 +183,12 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
         company,
         department,
         title,
-        status: 'active',
+        status: isTemporaryPassword ? 'pending_activation' : 'active',
         is_email_verified: true,
         permissions: {},
-        custom_attributes: {}
+        custom_attributes: {
+          requires_password_setup: isTemporaryPassword
+        }
       })
       .select()
       .single();
@@ -214,7 +229,7 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
           firstName,
           lastName,
           invitationToken,
-          password // Include temporary password
+          isTemporaryPassword ? finalPassword : undefined // Only include password if it's temporary
         );
 
         // Send email
@@ -247,7 +262,10 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
       message: sendInvitation 
         ? `User created successfully. ${emailSent ? 'Invitation email sent.' : 'Email sending failed - please send login details manually.'}`
         : 'User created successfully',
-      data: { user: userProfile },
+      data: { 
+        user: userProfile,
+        temporaryPassword: isTemporaryPassword && !sendInvitation ? finalPassword : undefined
+      },
       emailSent
     });
 
@@ -418,6 +436,26 @@ router.delete('/users/:id', requireAuth, requireRole(['admin']), async (req: Req
 // Utility functions
 function generateInvitationToken(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+function generateTemporaryPassword(): string {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const symbols = '!@#$%&*';
+  const allChars = uppercase + lowercase + numbers + symbols;
+  
+  let password = '';
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += symbols[Math.floor(Math.random() * symbols.length)];
+  
+  for (let i = 4; i < 12; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+  
+  return password.split('').sort(() => 0.5 - Math.random()).join('');
 }
 
 async function logAuditEvent(event: {
