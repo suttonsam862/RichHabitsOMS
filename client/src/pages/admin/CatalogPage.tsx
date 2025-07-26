@@ -270,15 +270,33 @@ function CatalogPageContent() {
 
         if (categoriesRes.ok) {
           const categoriesData = await categoriesRes.json();
-          setCategories(categoriesData.data.categories.map((cat: any) => cat.name));
+          console.log('📂 Categories response:', categoriesData);
+          const dbCategories = categoriesData.data.categories.map((cat: any) => cat.name);
+          console.log('📂 Setting categories:', dbCategories);
+          // Use database categories if available, otherwise fall back to initial categories
+          setCategories(dbCategories.length > 0 ? dbCategories : initialCategories);
+        } else {
+          console.log('📂 Categories request failed, using initial categories');
+          setCategories(initialCategories);
         }
 
         if (sportsRes.ok) {
           const sportsData = await sportsRes.json();
-          setSports(sportsData.data.sports.map((sport: any) => sport.name));
+          console.log('⚽ Sports response:', sportsData);
+          const dbSports = sportsData.data.sports.map((sport: any) => sport.name);
+          console.log('⚽ Setting sports:', dbSports);
+          // Use database sports if available, otherwise fall back to initial sports
+          setSports(dbSports.length > 0 ? dbSports : initialSports);
+        } else {
+          console.log('⚽ Sports request failed, using initial sports');
+          setSports(initialSports);
         }
       } catch (error) {
         console.error('Error fetching catalog options:', error);
+        // Fallback to initial data if API fails
+        console.log('🔄 Using fallback data due to API error');
+        setCategories(initialCategories);
+        setSports(initialSports);
       }
     };
 

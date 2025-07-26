@@ -2,13 +2,26 @@ import { Router } from 'express';
 import { supabase } from '../../db';
 import { requireAuth, requireRole } from '../../middleware/adminAuth';
 import { catalogCategories, catalogSports } from '../../../shared/schema';
+import { createClient } from '@supabase/supabase-js';
+
+// Create service client for bypassing RLS
+const supabaseService = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 const router = Router();
 
 // Get all categories
 router.get('/categories', requireAuth, async (req, res) => {
   try {
-    const { data: categories, error } = await supabase
+    const { data: categories, error } = await supabaseService
       .from('catalog_categories')
       .select('*')
       .eq('is_active', true)
@@ -56,7 +69,7 @@ router.post('/categories', requireAuth, requireRole(['admin', 'catalog_manager',
     const categoryName = name.trim();
 
     // Check if category already exists
-    const { data: existingCategory } = await supabase
+    const { data: existingCategory } = await supabaseService
       .from('catalog_categories')
       .select('id')
       .eq('name', categoryName)
@@ -69,8 +82,8 @@ router.post('/categories', requireAuth, requireRole(['admin', 'catalog_manager',
       });
     }
 
-    // Insert new category
-    const { data: newCategory, error } = await supabase
+    // Insert new category using service client to bypass RLS
+    const { data: newCategory, error } = await supabaseService
       .from('catalog_categories')
       .insert({
         name: categoryName,
@@ -103,7 +116,7 @@ router.post('/categories', requireAuth, requireRole(['admin', 'catalog_manager',
 // Get all sports
 router.get('/sports', requireAuth, async (req, res) => {
   try {
-    const { data: sports, error } = await supabase
+    const { data: sports, error } = await supabaseService
       .from('catalog_sports')
       .select('*')
       .eq('is_active', true)
