@@ -77,13 +77,7 @@ export async function getCatalogItems(req: Request, res: Response) {
 
     const { data: items, error } = await supabaseService
       .from('catalog_items')
-      .select(`
-        *,
-        catalog_fabrics (
-          id,
-          name
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -141,8 +135,8 @@ export async function getCatalogItems(req: Request, res: Response) {
         created_at: item.created_at,
         updated_at: item.updated_at,
         buildInstructions: item.build_instructions || '',
-        fabricId: item.fabric_id,
-        fabricName: item.catalog_fabrics?.name || null
+        fabricId: item.fabric_id || null,
+        fabricName: null
       };
     });
 
