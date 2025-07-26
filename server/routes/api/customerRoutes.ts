@@ -290,10 +290,17 @@ export async function createCustomer(req: Request, res: Response) {
       is_active: true
     };
     
-    // Insert profile into database
+    // Insert profile into database - use snake_case columns for insert
     const { data: insertedProfile, error: profileError } = await supabaseAdmin
-      .from('profiles') // Use the actual table name in your Supabase
-      .insert(profileData)
+      .from('customers')
+      .insert({
+        id: data.user.id,
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        company: company || '',
+        phone: phone || ''
+      })
       .select();
     
     if (profileError) {

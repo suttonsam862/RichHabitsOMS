@@ -82,10 +82,11 @@ class SystemMonitor {
    * Evaluate monitoring thresholds
    */
   private evaluateThresholds(): void {
-    const ciCdConfig = this.configManager.getCiCdHooks();
-    const thresholds = ciCdConfig.monitoring?.performanceThresholds;
+    try {
+      const ciCdConfig = this.configManager.getCiCdHooks();
+      const thresholds = ciCdConfig.monitoring?.performanceThresholds;
 
-    if (!thresholds || this.performanceHistory.length === 0) return;
+      if (!thresholds || this.performanceHistory.length === 0) return;
 
     const latest = this.performanceHistory[this.performanceHistory.length - 1];
 
@@ -123,6 +124,10 @@ class SystemMonitor {
         value: latest.errorRate,
         threshold: thresholds.errorRate.warning
       });
+    }
+    } catch (error) {
+      // Silently handle configuration not ready - monitoring will continue when config is available
+      console.debug('SystemMonitor: Configuration not ready yet, skipping threshold evaluation');
     }
   }
 
