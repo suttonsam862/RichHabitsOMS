@@ -37,15 +37,6 @@ const createUserSchema = z.object({
   department: z.string().optional(),
   title: z.string().optional(),
   sendInvitation: z.boolean().default(false),
-}).refine((data) => {
-  // If password is provided, it should be at least 6 characters
-  if (data.password && data.password.length < 6) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Password must be at least 6 characters if provided",
-  path: ["password"]
 });
 
 const updateUserSchema = z.object({
