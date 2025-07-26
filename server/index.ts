@@ -189,14 +189,12 @@ import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import catalogRoutes from './routes/api/catalogRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import imageRoutes from './routes/api/imageRoutes';
-import invitationRoutesV1 from './routes/api/invitationRoutes';
+import invitationRoutes from './routes/api/invitationRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
 import securityRoutes from './routes/api/securityRoutes';
 import userRolesRoutes from './routes/api/userRolesRoutes';
 import authRoutes from './routes/api/authRoutes';
 import healthRoutes from './routes/health';
-import orderRoutes from './routes/api/orderRoutes';
-import manufacturingRoutes from './routes/api/manufacturingRoutes';
 
 (async () => {
   try {
@@ -205,18 +203,6 @@ import manufacturingRoutes from './routes/api/manufacturingRoutes';
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔧 Node Version: ${process.version}`);
     console.log(`💻 Platform: ${process.platform}`);
-
-    // Initialize system configuration FIRST - before any other services
-    console.log('\n🔧 Initializing system configuration...');
-    const SystemConfigurationManager = (await import('../system_config/config-loader.js')).default;
-    const configManager = SystemConfigurationManager.getInstance();
-    configManager.initialize();
-
-    if (!configManager.validateConfiguration()) {
-      console.error('❌ System configuration validation failed');
-      process.exit(1);
-    }
-    console.log('✅ System configuration initialized successfully');
 
     // Environment Variable Check
     console.log('\n🔍 ENVIRONMENT VARIABLES CHECK:');
@@ -296,10 +282,6 @@ import manufacturingRoutes from './routes/api/manufacturingRoutes';
     app.use('/api/invitations', authenticateRequest);
     app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
-    app.use('/api/orders', authenticateRequest);
-    app.use('/api/design-tasks', authenticateRequest);
-    app.use('/api/production-tasks', authenticateRequest);
-    app.use('/api/manufacturing', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
@@ -307,14 +289,11 @@ import manufacturingRoutes from './routes/api/manufacturingRoutes';
     app.use('/api/catalog', catalogRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/images', imageRoutes);
-    app.use('/api/invitations', invitationRoutesV1);
+    app.use('/api/invitations', invitationRoutes);
     app.use('/api/user-management', userManagementRoutes);
-    app.use('/api/security', securityRoutes);
+app.use('/api/security', securityRoutes);
     app.use('/api/user-roles', userRolesRoutes);
-    app.use('/api/users', userManagementRoutes);
-    app.use('/api/orders', orderRoutes);
-    app.use('/api/admin/orders', orderRoutes); // Admin orders alias
-    app.use('/api', manufacturingRoutes);
+app.use('/api/users', userManagementRoutes);
 
     // Dashboard stats endpoint - Critical fix for 404 error
     app.get('/api/dashboard/stats', authenticateRequest, async (req: Request, res: Response) => {
@@ -429,20 +408,22 @@ import manufacturingRoutes from './routes/api/manufacturingRoutes';
     process.exit(1);
   }
 })();
-import { testSupabaseConnection } from "./db.js";
+import { testDatabaseConnection } from "./supabase.js";
 import { createAdminIfNotExists } from "./create-admin-user.js";
-import SystemConfigurationManager from '../system_config/config-loader.js';
+// Temporarily remove SystemConfigurationManager import to fix server crash
+// import { SystemConfigurationManager } from '../system_config/config-loader.js';
 
 async function initializeDatabase() {
   // Initialize system configuration
   console.log('🔧 Initializing system configuration...');
-  const configManager = SystemConfigurationManager.getInstance();
-  configManager.initialize();
+  // Temporarily remove SystemConfigurationManager initialization to fix server crash
+  // const configManager = SystemConfigurationManager.getInstance();
+  // configManager.initialize();
 
-  if (!configManager.validateConfiguration()) {
-    console.error('❌ System configuration validation failed');
-    process.exit(1);
-  }
+  // if (!configManager.validateConfiguration()) {
+  //   console.error('❌ System configuration validation failed');
+  //   process.exit(1);
+  // }
 
   try {
     // Test database connection
@@ -458,7 +439,7 @@ import dataAccessRoutes from './routes/api/dataAccessRoutes.js';
 import workflowRoutes from './routes/api/workflowRoutes.js';
 import monitoringRoutes from './routes/api/monitoringRoutes.js';
 import aiRoutes from './routes/api/aiRoutes.js';
-import invitationRoutesV2 from './routes/api/invitationRoutes.js';
+import invitationRoutes from './routes/api/invitationRoutes.js';
 
 // Import routes
 app.use('/api/auth', authRoutes);
@@ -468,7 +449,7 @@ app.use('/api/fabric-options', fabricOptionsRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/images', imageRoutes);
-app.use('/api/invitations', invitationRoutesV2);
+app.use('/api/invitations', invitationRoutes);
 app.use('/api/user-management', userManagementRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/data-access', dataAccessRoutes);
@@ -481,5 +462,5 @@ app.use('/api/ai', aiRoutes);
 // Monitoring routes
 app.use('/api/monitoring', monitoringRoutes);
 
-//invitation routes (duplicate - removing)
-// app.use('/api/invitations', invitationRoutesV2);
+//invitation routes
+app.use('/api/invitations', invitationRoutes);

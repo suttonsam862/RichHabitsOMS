@@ -1,59 +1,93 @@
-/**
- * Order management routes - Phase 5 of Database Synchronization Checklist
- */
+
 import { Request, Response, Router } from 'express';
-import { supabase } from '../../db.js';
-import { requireAuth, requireRole } from '../auth/auth.js';
+import { createClient } from '@supabase/supabase-js';
+import { requireAuth, requireRole } from '../auth/auth';
 
 const router = Router();
 
-/**
- * GET /api/orders - List orders with filters and pagination
- */
-export async function getOrders(req: Request, res: Response) {
-  try {
-    console.log('📋 Fetching orders...');
-    
-    const { 
-      page = 1, 
-      limit = 20, 
-      status, 
-      customerId,
-      startDate,
-      endDate
-    } = req.query;
+// Create service role client for admin operations
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
-    let query = supabase
+interface OrderItem {
+  id?: string;
+  order_id?: string;
+  product_name: string;
+  description: string;
+  color: string;
+  unit_price: number;
+  total_price: number;
+  image_url?: string;
+  sizes: {
+    YS: number;
+    YM: number;
+    YL: number;
+    AXS: number;
+    S: number;
+    M: number;
+    L: number;
+    XL: number;
+    '2XL': number;
+    '3XL': number;
+    '4XL': number;
+    'No Sizes': number;
+  };
+}
+
+interface Order {
+  id?: string;
+  order_number: string;
+  customer_id: string;
+  status: string;
+  total_amount: number;
+  tax?: number;
+  notes?: string;
+  logo_url?: string;
+  company_name?: string;
+  items?: OrderItem[];
+}
+
+/**
+ * Get all orders with customer and item details
+ */
+async function getAllOrders(req: Request, res: Response) {
+  try {
+    console.log('📦 Fetching all orders with relationships...');
+
+    const { data: orders, error } = await supabaseAdmin
       .from('orders')
       .select(`
         *,
-        customers(first_name, last_name, email, company),
-        order_items(id, product_name, quantity, unit_price, total_price)
+        customers:customer_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          company
+        ),
+        order_items (
+          id,
+          product_name,
+          description,
+          color,
+          unit_price,
+          total_price,
+          image_url,
+          sizes
+        )
       `)
       .order('created_at', { ascending: false });
 
-    // Apply filters
-    if (status) {
-      query = query.eq('status', status);
-    }
-    if (customerId) {
-      query = query.eq('customerId', customerId);
-    }
-    if (startDate) {
-      query = query.gte('created_at', startDate);
-    }
-    if (endDate) {
-      query = query.lte('created_at', endDate);
-    }
-
-    // Apply pagination
-    const offset = (Number(page) - 1) * Number(limit);
-    query = query.range(offset, offset + Number(limit) - 1);
-
-    const { data: orders, error, count } = await query;
-
     if (error) {
-      console.error('Error fetching orders:', error);
+      console.error('❌ Error fetching orders:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch orders',
@@ -61,110 +95,80 @@ export async function getOrders(req: Request, res: Response) {
       });
     }
 
-    res.json({
-      success: true,
-      data: orders || [],
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total: count || 0,
-        pages: Math.ceil((count || 0) / Number(limit))
-      }
-    });
-  } catch (error: any) {
-    console.error('Orders fetch failed:', error);
-    res.status(500).json({
+    // Transform data for frontend
+    const transformedOrders = orders?.map(order => ({
+      id: order.id,
+      orderNumber: order.order_number,
+      customerId: order.customer_id,
+      status: order.status,
+      totalAmount: parseFloat(order.total_amount) || 0,
+      tax: parseFloat(order.tax) || 0,
+      notes: order.notes || '',
+      logoUrl: order.logo_url,
+      companyName: order.company_name || order.customers?.company || 'Unknown Company',
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
+      customer: order.customers,
+      items: order.order_items || []
+    })) || [];
+
+    console.log(`✅ Successfully fetched ${transformedOrders.length} orders`);
+
+    return res.json(transformedOrders);
+  } catch (error) {
+    console.error('💥 Unexpected error in getAllOrders:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Internal server error',
-      error: error.message
+      message: 'Internal server error'
     });
   }
 }
 
 /**
- * GET /api/orders/:id - Get specific order details
+ * Create a new order with items
  */
-export async function getOrder(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
-
-    const { data: order, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        customers(first_name, last_name, email, company, phone),
-        order_items(*),
-        design_tasks(*),
-        production_tasks(*)
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({
-          success: false,
-          message: 'Order not found'
-        });
-      }
-      throw error;
-    }
-
-    res.json({
-      success: true,
-      data: order
-    });
-  } catch (error: any) {
-    console.error('Order fetch failed:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch order',
-      error: error.message
-    });
-  }
-}
-
-/**
- * POST /api/orders - Create new order
- */
-export async function createOrder(req: Request, res: Response) {
+async function createOrder(req: Request, res: Response) {
   try {
     const {
-      customerId,
       orderNumber,
+      customerId,
       status = 'draft',
-      totalAmount = '0',
-      tax = '0',
-      notes,
+      totalAmount,
+      tax = 0,
+      notes = '',
+      logoUrl,
+      companyName,
       items = []
-    } = req.body;
+    }: Order = req.body;
+
+    console.log('📝 Creating new order:', { orderNumber, customerId, itemCount: items.length });
 
     // Validate required fields
-    if (!customerId) {
+    if (!orderNumber || !customerId || !totalAmount) {
       return res.status(400).json({
         success: false,
-        message: 'Customer ID is required'
+        message: 'Missing required fields: orderNumber, customerId, totalAmount'
       });
     }
 
-    // Create order with auto-generated order number if not provided
-    const finalOrderNumber = orderNumber || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-
-    const { data: newOrder, error: orderError } = await supabase
+    // Start transaction
+    const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .insert({
+        order_number: orderNumber,
         customer_id: customerId,
-        order_number: finalOrderNumber,
         status,
         total_amount: totalAmount,
         tax,
-        notes
+        notes,
+        logo_url: logoUrl,
+        company_name: companyName
       })
       .select()
       .single();
 
     if (orderError) {
-      console.error('Order creation error:', orderError);
+      console.error('❌ Error creating order:', orderError);
       return res.status(500).json({
         success: false,
         message: 'Failed to create order',
@@ -172,150 +176,262 @@ export async function createOrder(req: Request, res: Response) {
       });
     }
 
-    // Create order items if provided
-    if (items.length > 0) {
-      const orderItems = items.map((item: any) => ({
-        order_id: newOrder.id,
-        product_name: item.productName,
+    // Add order items if provided
+    if (items && items.length > 0) {
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_name: item.product_name,
         description: item.description,
-        size: item.size,
         color: item.color,
-        quantity: item.quantity || '1',
-        unit_price: item.unitPrice,
-        total_price: item.totalPrice || item.unitPrice,
-        catalog_item_id: item.catalogItemId
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        image_url: item.image_url,
+        sizes: item.sizes
       }));
 
-      const { error: itemsError } = await supabase
+      const { error: itemsError } = await supabaseAdmin
         .from('order_items')
         .insert(orderItems);
 
       if (itemsError) {
-        console.error('Order items creation error:', itemsError);
-        // Don't fail the entire order creation, just log the error
+        console.error('❌ Error creating order items:', itemsError);
+        // Rollback order creation
+        await supabaseAdmin.from('orders').delete().eq('id', order.id);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create order items',
+          error: itemsError.message
+        });
       }
     }
 
-    res.status(201).json({
+    console.log('✅ Order created successfully:', order.id);
+
+    return res.status(201).json({
       success: true,
-      data: newOrder,
-      message: 'Order created successfully'
+      message: 'Order created successfully',
+      order: {
+        id: order.id,
+        orderNumber: order.order_number,
+        customerId: order.customer_id,
+        status: order.status,
+        totalAmount: parseFloat(order.total_amount),
+        items: items
+      }
     });
-  } catch (error: any) {
-    console.error('Order creation failed:', error);
-    res.status(500).json({
+  } catch (error) {
+    console.error('💥 Unexpected error in createOrder:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Internal server error',
-      error: error.message
+      message: 'Internal server error'
     });
   }
 }
 
 /**
- * PUT /api/orders/:id - Update order
+ * Update an existing order
  */
-export async function updateOrder(req: Request, res: Response) {
+async function updateOrder(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Remove read-only fields
-    delete updateData.id;
-    delete updateData.created_at;
-    
-    // Add updated timestamp
-    updateData.updated_at = new Date().toISOString();
+    console.log('✏️ Updating order:', { id, updateData });
 
-    const { data: updatedOrder, error } = await supabase
+    // Remove items from update data as they need separate handling
+    const { items, ...orderData } = updateData;
+
+    // Update order
+    const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({
-          success: false,
-          message: 'Order not found'
-        });
-      }
-      throw error;
-    }
-
-    res.json({
-      success: true,
-      data: updatedOrder,
-      message: 'Order updated successfully'
-    });
-  } catch (error: any) {
-    console.error('Order update failed:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update order',
-      error: error.message
-    });
-  }
-}
-
-/**
- * PUT /api/orders/:id/status - Update order status
- */
-export async function updateOrderStatus(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: 'Status is required'
-      });
-    }
-
-    const { data: updatedOrder, error } = await supabase
-      .from('orders')
-      .update({ 
-        status,
+      .update({
+        order_number: orderData.orderNumber,
+        customer_id: orderData.customerId,
+        status: orderData.status,
+        total_amount: orderData.totalAmount,
+        tax: orderData.tax,
+        notes: orderData.notes,
+        logo_url: orderData.logoUrl,
+        company_name: orderData.companyName,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .select()
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({
-          success: false,
-          message: 'Order not found'
-        });
-      }
-      throw error;
+    if (orderError) {
+      console.error('❌ Error updating order:', orderError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update order',
+        error: orderError.message
+      });
     }
 
-    res.json({
+    // Update order items if provided
+    if (items && Array.isArray(items)) {
+      // Delete existing items
+      await supabaseAdmin.from('order_items').delete().eq('order_id', id);
+
+      // Insert updated items
+      if (items.length > 0) {
+        const orderItems = items.map(item => ({
+          order_id: id,
+          product_name: item.productName,
+          description: item.description,
+          color: item.color,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice,
+          image_url: item.imageUrl,
+          sizes: item.sizes
+        }));
+
+        const { error: itemsError } = await supabaseAdmin
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) {
+          console.error('❌ Error updating order items:', itemsError);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to update order items',
+            error: itemsError.message
+          });
+        }
+      }
+    }
+
+    console.log('✅ Order updated successfully:', id);
+
+    return res.json({
       success: true,
-      data: updatedOrder,
-      message: 'Order status updated successfully'
+      message: 'Order updated successfully',
+      order
     });
-  } catch (error: any) {
-    console.error('Order status update failed:', error);
-    res.status(500).json({
+  } catch (error) {
+    console.error('💥 Unexpected error in updateOrder:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Failed to update order status',
-      error: error.message
+      message: 'Internal server error'
     });
   }
 }
 
-// Apply authentication middleware
-router.use(requireAuth);
+/**
+ * Delete an order
+ */
+async function deleteOrder(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
 
-// Order routes
-router.get('/', getOrders);
-router.get('/:id', getOrder);
-router.post('/', createOrder);
-router.put('/:id', updateOrder);
-router.put('/:id/status', updateOrderStatus);
+    console.log('🗑️ Deleting order:', id);
+
+    // Delete order (order_items will be cascade deleted)
+    const { error } = await supabaseAdmin
+      .from('orders')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('❌ Error deleting order:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete order',
+        error: error.message
+      });
+    }
+
+    console.log('✅ Order deleted successfully:', id);
+
+    return res.json({
+      success: true,
+      message: 'Order deleted successfully'
+    });
+  } catch (error) {
+    console.error('💥 Unexpected error in deleteOrder:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+/**
+ * Get a single order by ID
+ */
+async function getOrder(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    console.log('🔍 Fetching order:', id);
+
+    const { data: order, error } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        customers:customer_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          company
+        ),
+        order_items (
+          id,
+          product_name,
+          description,
+          color,
+          unit_price,
+          total_price,
+          image_url,
+          sizes
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('❌ Error fetching order:', error);
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+        error: error.message
+      });
+    }
+
+    console.log('✅ Order fetched successfully:', id);
+
+    return res.json({
+      success: true,
+      order: {
+        id: order.id,
+        orderNumber: order.order_number,
+        customerId: order.customer_id,
+        status: order.status,
+        totalAmount: parseFloat(order.total_amount),
+        tax: parseFloat(order.tax) || 0,
+        notes: order.notes,
+        logoUrl: order.logo_url,
+        companyName: order.company_name,
+        createdAt: order.created_at,
+        customer: order.customers,
+        items: order.order_items || []
+      }
+    });
+  } catch (error) {
+    console.error('💥 Unexpected error in getOrder:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Configure routes
+router.get('/', requireAuth, getAllOrders);
+router.post('/', requireAuth, requireRole(['admin', 'salesperson']), createOrder);
+router.get('/:id', requireAuth, getOrder);
+router.put('/:id', requireAuth, requireRole(['admin', 'salesperson']), updateOrder);
+router.delete('/:id', requireAuth, requireRole(['admin']), deleteOrder);
 
 export default router;

@@ -2045,6 +2045,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.use('/', router);
+  
+  import workflowRoutes from './routes/api/workflowRoutes.js';
+import orderRoutes from './routes/api/orderRoutes.js';
+  app.use('/api/workflow', workflowRoutes);
+  app.use('/api/orders', orderRoutes);
 
   return httpServer;
 }
