@@ -1,0 +1,72 @@
+
+{
+  "version": "1.0.0",
+  "gitHooks": {
+    "preCommit": [
+      "lint",
+      "test:unit",
+      "type-check"
+    ],
+    "prePush": [
+      "security:scan",
+      "test:integration"
+    ],
+    "postMerge": [
+      "install:dependencies",
+      "db:migrate"
+    ]
+  },
+  "ciPipeline": {
+    "pullRequest": {
+      "stages": [
+        "test",
+        "security-scan",
+        "code-quality"
+      ],
+      "requireAllChecks": true
+    },
+    "mainBranch": {
+      "stages": [
+        "build",
+        "test",
+        "security-scan",
+        "deploy:staging"
+      ],
+      "manualApprovalRequired": false
+    },
+    "production": {
+      "stages": [
+        "build",
+        "security-scan",
+        "deploy:production"
+      ],
+      "manualApprovalRequired": true
+    }
+  },
+  "taskRouting": {
+    "small": {
+      "maxCpu": "1",
+      "maxMemory": "2GB",
+      "timeout": "10m"
+    },
+    "medium": {
+      "maxCpu": "2",
+      "maxMemory": "4GB",
+      "timeout": "20m"
+    },
+    "large": {
+      "maxCpu": "4",
+      "maxMemory": "8GB",
+      "timeout": "45m"
+    }
+  },
+  "notifications": {
+    "channels": ["email", "slack"],
+    "events": [
+      "build:failure",
+      "deploy:success",
+      "deploy:failure",
+      "security:alert"
+    ]
+  }
+}

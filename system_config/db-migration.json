@@ -1,0 +1,44 @@
+
+{
+  "version": "1.0.0",
+  "migrationPolicy": {
+    "autoMigrationEnabled": {
+      "development": true,
+      "staging": false,
+      "production": false
+    },
+    "requireBackup": {
+      "development": false,
+      "staging": true,
+      "production": true
+    },
+    "transactionalMigrations": true,
+    "rollbackScriptRequired": true
+  },
+  "safetyChecks": {
+    "maxTableSizeForAlter": "1GB",
+    "requireApprovalForDestructive": true,
+    "validateForeignKeys": true,
+    "checkIndexPerformance": true
+  },
+  "environmentOverrides": {
+    "development": {
+      "skipBackup": true,
+      "allowDataLoss": true
+    },
+    "staging": {
+      "requireApproval": false,
+      "backupRetentionDays": 7
+    },
+    "production": {
+      "requireApproval": true,
+      "backupRetentionDays": 30,
+      "maintenanceWindow": "02:00-04:00 UTC"
+    }
+  },
+  "rollback": {
+    "autoRollbackOnFailure": true,
+    "maxRollbackTimeMinutes": 30,
+    "preserveDataOnRollback": true
+  }
+}

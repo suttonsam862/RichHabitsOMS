@@ -1,3 +1,4 @@
+
 {
   "version": "1.0.0",
   "defaultFlow": [
@@ -27,5 +28,206 @@
     "light validation",
     "build",
     "debug"
-  ]
+  ],
+  "orderFulfillmentWorkflow": {
+    "steps": [
+      {
+        "id": "order_received",
+        "name": "Order Received",
+        "actor": "system",
+        "onEnter": ["send_confirmation_email", "assign_order_id"],
+        "transitions": ["design_review"]
+      },
+      {
+        "id": "design_review",
+        "name": "Design Review",
+        "actor": "internal_staff",
+        "onEnter": ["notify_design_team"],
+        "transitions": ["design_approved", "design_rejected"]
+      },
+      {
+        "id": "design_approved",
+        "name": "Design Approved",
+        "actor": "internal_staff",
+        "onEnter": ["update_status", "schedule_production"],
+        "transitions": ["in_production"]
+      },
+      {
+        "id": "design_rejected",
+        "name": "Design Rejected",
+        "actor": "internal_staff",
+        "onEnter": ["notify_customer", "request_revision"],
+        "transitions": ["design_review"]
+      },
+      {
+        "id": "in_production",
+        "name": "In Production",
+        "actor": "system",
+        "onEnter": ["assign_manufacturer", "update_timeline"],
+        "transitions": ["quality_check"]
+      },
+      {
+        "id": "quality_check",
+        "name": "Quality Check",
+        "actor": "internal_staff",
+        "onEnter": ["schedule_inspection"],
+        "transitions": ["quality_passed", "quality_failed"]
+      },
+      {
+        "id": "quality_passed",
+        "name": "Quality Passed",
+        "actor": "internal_staff",
+        "onEnter": ["prepare_shipping"],
+        "transitions": ["shipped"]
+      },
+      {
+        "id": "quality_failed",
+        "name": "Quality Failed",
+        "actor": "internal_staff",
+        "onEnter": ["log_issues", "restart_production"],
+        "transitions": ["in_production"]
+      },
+      {
+        "id": "shipped",
+        "name": "Shipped",
+        "actor": "system",
+        "onEnter": ["send_tracking_info", "schedule_followup"],
+        "transitions": ["delivered"]
+      },
+      {
+        "id": "delivered",
+        "name": "Delivered",
+        "actor": "system",
+        "onEnter": ["request_feedback", "close_order"],
+        "transitions": []
+      }
+    ]
+  },
+  "supportTicketWorkflow": {
+    "steps": [
+      {
+        "id": "ticket_created",
+        "name": "Ticket Created",
+        "actor": "customer",
+        "onEnter": ["auto_acknowledge", "assign_priority"],
+        "transitions": ["under_review"]
+      },
+      {
+        "id": "under_review",
+        "name": "Under Review",
+        "actor": "internal_staff",
+        "onEnter": ["assign_agent", "start_timer"],
+        "transitions": ["in_progress", "escalated"]
+      },
+      {
+        "id": "in_progress",
+        "name": "In Progress",
+        "actor": "internal_staff",
+        "onEnter": ["notify_customer_progress"],
+        "transitions": ["resolved", "escalated"]
+      },
+      {
+        "id": "escalated",
+        "name": "Escalated",
+        "actor": "internal_staff",
+        "onEnter": ["notify_supervisor", "update_priority"],
+        "transitions": ["in_progress"]
+      },
+      {
+        "id": "resolved",
+        "name": "Resolved",
+        "actor": "internal_staff",
+        "onEnter": ["notify_resolution", "request_feedback"],
+        "transitions": ["closed"]
+      },
+      {
+        "id": "closed",
+        "name": "Closed",
+        "actor": "system",
+        "onEnter": ["archive_ticket", "update_metrics"],
+        "transitions": []
+      }
+    ]
+  },
+  "customClothingProductionWorkflow": {
+    "steps": [
+      {
+        "id": "design_submitted",
+        "name": "Design Submitted",
+        "actor": "customer",
+        "onEnter": ["validate_design_files", "estimate_timeline"],
+        "transitions": ["design_review"]
+      },
+      {
+        "id": "design_review",
+        "name": "Design Review",
+        "actor": "internal_staff",
+        "onEnter": ["technical_feasibility_check"],
+        "transitions": ["approved_for_production", "revision_required"]
+      },
+      {
+        "id": "revision_required",
+        "name": "Revision Required",
+        "actor": "internal_staff",
+        "onEnter": ["send_revision_notes"],
+        "transitions": ["design_submitted"]
+      },
+      {
+        "id": "approved_for_production",
+        "name": "Approved for Production",
+        "actor": "internal_staff",
+        "onEnter": ["create_manufacturing_tasks"],
+        "transitions": ["material_sourcing"]
+      },
+      {
+        "id": "material_sourcing",
+        "name": "Material Sourcing",
+        "actor": "internal_staff",
+        "onEnter": ["order_materials", "update_timeline"],
+        "transitions": ["cutting_pattern"]
+      },
+      {
+        "id": "cutting_pattern",
+        "name": "Cutting Pattern",
+        "actor": "internal_staff",
+        "onEnter": ["assign_cutting_task"],
+        "transitions": ["sewing"]
+      },
+      {
+        "id": "sewing",
+        "name": "Sewing",
+        "actor": "internal_staff",
+        "onEnter": ["assign_sewing_task"],
+        "transitions": ["quality_control"]
+      },
+      {
+        "id": "quality_control",
+        "name": "Quality Control",
+        "actor": "internal_staff",
+        "onEnter": ["inspect_garment"],
+        "transitions": ["finishing", "rework_required"]
+      },
+      {
+        "id": "rework_required",
+        "name": "Rework Required",
+        "actor": "internal_staff",
+        "onEnter": ["document_issues"],
+        "transitions": ["sewing"]
+      },
+      {
+        "id": "finishing",
+        "name": "Finishing",
+        "actor": "internal_staff",
+        "onEnter": ["final_touches", "prepare_packaging"],
+        "transitions": ["ready_for_shipping"]
+      },
+      {
+        "id": "ready_for_shipping",
+        "name": "Ready for Shipping",
+        "actor": "system",
+        "onEnter": ["generate_shipping_label", "notify_customer"],
+        "transitions": []
+      }
+    ]
+  }
 }

@@ -1,0 +1,41 @@
+
+{
+  "version": "1.0.0",
+  "rateLimiting": {
+    "requestsPerMinute": 100,
+    "burstCapacity": 20,
+    "windowSizeMs": 60000,
+    "skipSuccessfulGET": false
+  },
+  "requiredHeaders": [
+    "X-Request-ID",
+    "Authorization",
+    "Content-Type"
+  ],
+  "restfulConventions": {
+    "enforceResourcePlurals": true,
+    "urlVersioning": "v1",
+    "standardHttpMethods": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    "consistentErrorFormat": true
+  },
+  "securityHeaders": {
+    "hsts": "max-age=31536000; includeSubDomains",
+    "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+    "xFrameOptions": "SAMEORIGIN",
+    "xContentTypeOptions": "nosniff",
+    "referrerPolicy": "strict-origin-when-cross-origin"
+  },
+  "auditLogging": {
+    "enabled": true,
+    "logLevel": "info",
+    "includeRequestBody": false,
+    "includeResponseBody": false,
+    "retentionDays": 90
+  },
+  "cors": {
+    "allowedOrigins": ["*"],
+    "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allowedHeaders": ["Content-Type", "Authorization", "X-Request-ID"],
+    "allowCredentials": true
+  }
+}

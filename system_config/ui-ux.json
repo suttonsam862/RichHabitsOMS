@@ -1,0 +1,36 @@
+
+{
+  "version": "1.0.0",
+  "formValidation": {
+    "strategy": "inline",
+    "showErrorsOnFocus": true,
+    "validateOnBlur": true,
+    "highlightInvalidFields": true
+  },
+  "modalBehavior": {
+    "allowOverlayClose": false,
+    "escapeKeyEnabled": true,
+    "focusTrap": true,
+    "animationDuration": 300
+  },
+  "popupManagement": {
+    "autoPosition": true,
+    "responsive": true,
+    "maxConcurrent": 2,
+    "zIndexBase": 1000
+  },
+  "tooltips": {
+    "showDelay": 500,
+    "hideDelay": 200,
+    "maxWidth": 250,
+    "placement": "auto"
+  },
+  "responsive": {
+    "breakpoints": {
+      "mobile": 768,
+      "tablet": 1024,
+      "desktop": 1280
+    },
+    "touchTargetMinSize": 44
+  }
+}

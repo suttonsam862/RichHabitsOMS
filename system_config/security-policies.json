@@ -1,0 +1,74 @@
+
+{
+  "version": "1.0.0",
+  "rbac": {
+    "roles": {
+      "admin": {
+        "permissions": ["*"],
+        "description": "Full system access"
+      },
+      "staff": {
+        "permissions": [
+          "orders:read",
+          "orders:write",
+          "customers:read",
+          "catalog:read",
+          "production:read",
+          "production:write"
+        ],
+        "description": "Limited staff access"
+      },
+      "customer": {
+        "permissions": [
+          "orders:read:own",
+          "orders:write:own",
+          "profile:read:own",
+          "profile:write:own"
+        ],
+        "description": "Customer self-service access"
+      }
+    },
+    "resourceOwnership": {
+      "enforceOwnership": true,
+      "ownershipField": "userId",
+      "adminBypass": true
+    }
+  },
+  "authentication": {
+    "jwt": {
+      "expiryMinutes": 60,
+      "refreshTokenEnabled": true,
+      "refreshExpiryDays": 7
+    },
+    "sessionManagement": {
+      "maxConcurrentSessions": 3,
+      "sessionTimeoutMinutes": 120
+    }
+  },
+  "passwordPolicy": {
+    "minLength": 8,
+    "requireNumbers": true,
+    "requireSymbols": false,
+    "requireUppercase": true,
+    "requireLowercase": true,
+    "preventReuse": 5
+  },
+  "auditLogging": {
+    "enabled": true,
+    "events": [
+      "login",
+      "logout",
+      "password_change",
+      "permission_change",
+      "data_access",
+      "failed_auth"
+    ],
+    "retentionDays": 90,
+    "encryptLogs": true
+  },
+  "dataProtection": {
+    "encryptSensitiveFields": true,
+    "maskPII": true,
+    "gdprCompliant": true
+  }
+}
