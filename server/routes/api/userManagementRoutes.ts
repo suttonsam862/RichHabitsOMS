@@ -1,6 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../../db';
+import { createClient } from '@supabase/supabase-js';
+import type { 
+  EnhancedUserProfile, 
+  InsertEnhancedUserProfile,
+  CreateUserData,
+  UpdateUserData 
+} from '../../../shared/userManagementSchema';
 import { requireAuth, requireRole } from '../auth/auth';
 
 const router = Router();
