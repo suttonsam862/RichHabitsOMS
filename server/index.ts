@@ -292,18 +292,19 @@ import healthRoutes from './routes/health';
     app.use('/api/invitations', invitationRoutes);
     app.use('/api/user-management', userManagementRoutes);
 app.use('/api/security', securityRoutes);
-    app.use('/api/users', userRolesRoutes);
+    app.use('/api/user-roles', userRolesRoutes);
+app.use('/api/users', userManagementRoutes);
 
     // Dashboard stats endpoint - Critical fix for 404 error
     app.get('/api/dashboard/stats', authenticateRequest, async (req: Request, res: Response) => {
       try {
         console.log('📊 Fetching dashboard statistics...');
-        
+
         // Get comprehensive dashboard statistics
         const { data: users, error: usersError } = await supabase
           .from('user_profiles')
           .select('id, role, created_at');
-        
+
         if (usersError) {
           console.error('Error fetching users:', usersError);
           return res.status(500).json({
@@ -311,17 +312,17 @@ app.use('/api/security', securityRoutes);
             error: 'Failed to fetch user statistics'
           });
         }
-        
+
         // Get catalog statistics
         const { data: catalogItems, error: catalogError } = await supabase
           .from('catalog_items')
           .select('id, created_at');
-        
+
         // Get order statistics  
         const { data: orders, error: ordersError } = await supabase
           .from('orders')
           .select('id, status, created_at');
-        
+
         // Calculate statistics
         const totalUsers = users?.length || 0;
         const customersTotal = users?.filter(u => u.role === 'customer').length || 0;
@@ -330,7 +331,7 @@ app.use('/api/security', securityRoutes);
         const totalCatalogItems = catalogItems?.length || 0;
         const totalOrders = orders?.length || 0;
         const activeOrders = orders?.filter(o => ['draft', 'design', 'production'].includes(o.status as string)).length || 0;
-        
+
         const dashboardStats = {
           users: totalUsers,
           analytics: {
@@ -347,9 +348,9 @@ app.use('/api/security', securityRoutes);
             activeOrders
           }
         };
-        
+
         console.log('Dashboard stats generated:', dashboardStats);
-        
+
         res.json(dashboardStats);
       } catch (error) {
         console.error('Dashboard stats error:', error);

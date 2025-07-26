@@ -142,7 +142,7 @@ export default function UserManagementPage() {
         ...(roleFilter !== 'all' && { role: roleFilter }),
       });
 
-      const response = await fetch(`/api/user-management/users?${params}`, {
+      const response = await fetch(`/api/users?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -161,7 +161,7 @@ export default function UserManagementPage() {
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserData) => {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/user-management/users', {
+      const response = await fetch('/api/users/create-account', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -199,8 +199,8 @@ export default function UserManagementPage() {
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateUserData }) => {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/user-management/users/${id}`, {
-        method: 'PUT',
+      const response = await fetch(`/api/users/${id}`, {
+        method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -238,7 +238,7 @@ export default function UserManagementPage() {
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/user-management/users/${id}`, {
+      const response = await fetch(`/api/users/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
