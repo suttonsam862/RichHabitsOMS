@@ -211,4 +211,187 @@ router.delete('/invitations/:id', authenticateUser, requireRole(['admin']), asyn
   }
 });
 
+// Enhanced onboarding endpoints
+
+// Get onboarding progress
+router.get('/onboarding/progress', async (req, res) => {
+  try {
+    const token = req.query.token as string;
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invitation token is required'
+      });
+    }
+
+    const { data: progress, error } = await supabase
+      .from('customer_onboarding_progress')
+      .select('*')
+      .eq('invitation_token', token)
+      .single();
+
+    if (error || !progress) {
+      // Create initial progress record
+      const { data: newProgress, error: createError } = await supabase
+        .from('customer_onboarding_progress')
+        .insert({
+          invitation_token: token,
+          current_step: 1,
+          total_steps: 6
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to initialize onboarding progress'
+        });
+      }
+
+      return res.json({
+        success: true,
+        progress: newProgress
+      });
+    }
+
+    res.json({
+      success: true,
+      progress
+    });
+
+  } catch (error) {
+    console.error('Error fetching onboarding progress:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Update onboarding step
+router.post('/onboarding/step', async (req, res) => {
+  try {
+    const { token, stepData, stepNumber } = req.body;
+
+    // Update progress based on step
+    const stepField = `step_${stepData.stepType}`;
+    const updateData: any = {
+      [stepField]: true,
+      current_step: stepNumber + 1,
+      last_activity: new Date().toISOString()
+    };
+
+    if (stepNumber === 6) {
+      updateData.completed_at = new Date().toISOString();
+    }
+
+    const { error: progressError } = await supabase
+      .from('customer_onboarding_progress')
+      .update(updateData)
+      .eq('invitation_token', token);
+
+    if (progressError) {
+      console.error('Error updating progress:', progressError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update progress'
+      });
+    }
+
+    // Handle specific step data
+    switch (stepData.stepType) {
+      case 'organization_info':
+        const { data: org, error: orgError } = await supabase
+          .from('customer_organizations')
+          .insert(stepData.organizationData)
+          .select()
+          .single();
+
+        if (orgError) {
+          console.error('Error saving organization:', orgError);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to save organization data'
+          });
+        }
+        break;
+
+      case 'ordering_preferences':
+        const { error: prefError } = await supabase
+          .from('customer_ordering_preferences')
+          .insert({
+            ...stepData.preferencesData,
+            customer_id: stepData.customerId
+          });
+
+        if (prefError) {
+          console.error('Error saving preferences:', prefError);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to save ordering preferences'
+          });
+        }
+        break;
+    }
+
+    res.json({
+      success: true,
+      message: 'Step completed successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating onboarding step:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Document upload endpoint
+router.post('/onboarding/documents', async (req, res) => {
+  try {
+    const { customerId, organizationId, documentType, fileName, fileData } = req.body;
+
+    // Here you would handle file upload to your storage system
+    // For now, we'll simulate the file path
+    const filePath = `customer-documents/${customerId}/${documentType}/${fileName}`;
+
+    const { data: document, error } = await supabase
+      .from('customer_documents')
+      .insert({
+        customer_id: customerId,
+        organization_id: organizationId,
+        document_type: documentType,
+        document_name: fileName,
+        file_path: filePath,
+        status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving document:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to save document'
+      });
+    }
+
+    res.json({
+      success: true,
+      document
+    });
+
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 export default router;
