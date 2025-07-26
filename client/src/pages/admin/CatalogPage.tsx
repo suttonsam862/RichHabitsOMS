@@ -1549,11 +1549,13 @@ function CatalogPageContent() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">No fabric specified</SelectItem>
-                            {dbFabrics.map((fabric: any) => (
-                              <SelectItem key={fabric.id} value={fabric.id}>
-                                {fabric.name}
-                              </SelectItem>
-                            ))}
+                            {dbFabrics
+                              .filter((fabric: any) => fabric.id && fabric.name)
+                              .map((fabric: any) => (
+                                <SelectItem key={fabric.id} value={fabric.id}>
+                                  {fabric.name}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />

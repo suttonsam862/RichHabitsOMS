@@ -17,7 +17,8 @@ import {
   Bell,
   DollarSign,
   ChevronRight,
-  Package
+  Package,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,13 @@ export function AppLayout() {
       icon: Settings,
       current: location.pathname === '/admin/settings',
       page: 'settings',
+    },
+    {
+      name: 'User Management',
+      href: '/admin/user-management',
+      icon: Shield,
+      current: location.pathname === '/admin/user-management',
+      page: 'user-management',
     },
   ];
 

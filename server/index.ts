@@ -190,6 +190,7 @@ import catalogRoutes from './routes/api/catalogRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import imageRoutes from './routes/api/imageRoutes';
 import invitationRoutes from './routes/api/invitationRoutes';
+import userManagementRoutes from './routes/api/userManagementRoutes';
 import userRolesRoutes from './routes/api/userRolesRoutes';
 import authRoutes from './routes/api/authRoutes';
 import healthRoutes from './routes/health';
@@ -278,6 +279,7 @@ import healthRoutes from './routes/health';
     app.use('/api/customers', authenticateRequest);
     app.use('/api/images', authenticateRequest);
     app.use('/api/invitations', authenticateRequest);
+    app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
 
     // Register protected API routes
@@ -287,6 +289,7 @@ import healthRoutes from './routes/health';
     app.use('/api/customers', customerRoutes);
     app.use('/api/images', imageRoutes);
     app.use('/api/invitations', invitationRoutes);
+    app.use('/api/user-management', userManagementRoutes);
     app.use('/api/users', userRolesRoutes);
 
     // Dashboard stats endpoint - Critical fix for 404 error

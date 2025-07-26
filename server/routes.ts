@@ -26,6 +26,7 @@ import {
 import imageRoutes from './routes/api/imageRoutes';
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
+import userManagementRoutes from './routes/api/userManagementRoutes';
 import { createClient } from '@supabase/supabase-js';
 import express from 'express';
 import cors from 'cors';

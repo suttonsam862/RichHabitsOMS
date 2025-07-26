@@ -47,6 +47,7 @@ import CustomerEditPage from "./pages/admin/CustomerEditPage";
 import SettingsPage from './pages/admin/SettingsPage';
 import UserPermissionsPage from './pages/admin/UserPermissionsPage';
 import CustomPermissionsBuilder from './pages/admin/CustomPermissionsBuilder';
+import UserManagementPage from './pages/admin/UserManagementPage';
 import CatalogPage from './pages/admin/CatalogPage';
 import AnalyticsPage from "./pages/admin/AnalyticsPage";
 import LegalManagementPage from "./pages/admin/LegalManagementPage";
@@ -351,6 +352,15 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin']}>
                       <CustomPermissionsBuilder />
+                    </RequireAuth>
+                  } 
+                />
+
+                <Route 
+                  path="/admin/user-management" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <UserManagementPage />
                     </RequireAuth>
                   } 
                 />
