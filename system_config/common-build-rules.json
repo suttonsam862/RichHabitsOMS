@@ -1,0 +1,105 @@
+
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-26",
+  "internal_documentation": {
+    "purpose": "Library of default logic and UI rules that apply to commonly requested builds",
+    "usage": "Applied automatically to reduce repeated fixes across prompts",
+    "rule_categories": ["ui_components", "forms", "navigation", "data_handling", "authentication"]
+  },
+  "ui_components": {
+    "modals": {
+      "auto_resize": true,
+      "scroll_support": true,
+      "escape_key_close": true,
+      "backdrop_click_close": true,
+      "focus_management": true,
+      "aria_labels": true
+    },
+    "buttons": {
+      "loading_states": true,
+      "disabled_states": true,
+      "keyboard_navigation": true,
+      "hover_feedback": true,
+      "consistent_sizing": true
+    },
+    "tables": {
+      "sorting_capability": true,
+      "pagination_for_large_datasets": true,
+      "responsive_design": true,
+      "loading_skeletons": true,
+      "empty_state_handling": true
+    },
+    "forms": {
+      "client_side_validation": true,
+      "server_side_validation": true,
+      "error_message_display": true,
+      "success_feedback": true,
+      "field_focus_management": true,
+      "auto_save_for_long_forms": false
+    }
+  },
+  "navigation": {
+    "breadcrumbs": {
+      "required_for_deep_pages": true,
+      "dynamic_generation": true,
+      "clickable_ancestors": true
+    },
+    "sidebar": {
+      "collapse_capability": true,
+      "active_state_indication": true,
+      "keyboard_navigation": true,
+      "mobile_responsive": true
+    },
+    "pagination": {
+      "page_size_options": true,
+      "jump_to_page": true,
+      "total_count_display": true,
+      "url_state_preservation": true
+    }
+  },
+  "data_handling": {
+    "api_calls": {
+      "loading_indicators": true,
+      "error_handling": true,
+      "retry_mechanisms": true,
+      "timeout_handling": true,
+      "caching_strategy": true
+    },
+    "file_uploads": {
+      "progress_indicators": true,
+      "file_type_validation": true,
+      "size_limit_enforcement": true,
+      "preview_capability": true,
+      "error_feedback": true
+    }
+  },
+  "authentication": {
+    "login_forms": {
+      "password_visibility_toggle": true,
+      "remember_me_option": true,
+      "forgot_password_link": true,
+      "registration_link": true,
+      "social_login_options": false
+    },
+    "protected_routes": {
+      "redirect_after_login": true,
+      "session_timeout_handling": true,
+      "role_based_access": true,
+      "unauthorized_feedback": true
+    }
+  },
+  "performance": {
+    "lazy_loading": {
+      "images": true,
+      "components": true,
+      "routes": true
+    },
+    "optimization": {
+      "code_splitting": true,
+      "bundle_size_monitoring": false,
+      "compression": true,
+      "caching_headers": true
+    }
+  }
+}
