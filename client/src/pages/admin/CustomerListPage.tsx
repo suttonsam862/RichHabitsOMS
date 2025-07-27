@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
@@ -101,23 +101,45 @@ export default function CustomerListPage() {
     }
   });
 
+  // Enhanced data processing with better error handling
+  const processCustomerData = useCallback((data: any) => {
+    console.log('Processing customer data:', data);
+
+    if (!data) {
+      console.log('No data provided');
+      return [];
+    }
+
+    console.log('Data type:', typeof data, 'Is array:', Array.isArray(data));
+
+    // Handle different response formats
+    let customersArray = [];
+
+    if (Array.isArray(data)) {
+      customersArray = data;
+    } else if (data && typeof data === 'object') {
+      if (data.data && Array.isArray(data.data)) {
+        customersArray = data.data;
+      } else if (data.customers && Array.isArray(data.customers)) {
+        customersArray = data.customers;
+      } else {
+        console.warn('Unexpected data format, returning empty array:', data);
+        return [];
+      }
+    } else {
+      console.warn('Data is not an object or array:', data);
+      return [];
+    }
+
+    console.log('Customer data length:', customersArray?.length || 0);
+
+    return customersArray || [];
+  }, []);
+
   // Extract customers array from API response
   const customers = React.useMemo(() => {
-    if (!customersResponse) return [];
-
-    // Handle {success: true, data: [...]} structure
-    if (customersResponse.success && Array.isArray(customersResponse.data)) {
-      return customersResponse.data;
-    }
-
-    // Handle direct array
-    if (Array.isArray(customersResponse)) {
-      return customersResponse;
-    }
-
-    console.error("Unexpected customer data structure:", customersResponse);
-    return [];
-  }, [customersResponse]);
+    return processCustomerData(customersResponse);
+  }, [customersResponse, processCustomerData]);
 
   // Filter customers based on search term
   const filteredCustomers = React.useMemo(() => {
