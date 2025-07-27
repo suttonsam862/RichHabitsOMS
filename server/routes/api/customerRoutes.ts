@@ -384,41 +384,53 @@ async function getAllCustomers(req: Request, res: Response) {
   try {
     console.log('Fetching customers - request received');
 
-    // Try to fetch real customers from Supabase first
+    // Try to fetch real customers from user_profiles table first
     try {
-      console.log('Attempting to fetch real customers from Supabase...');
-      const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+      console.log('Attempting to fetch real customers from user_profiles table...');
+      
+      const { data: customers, error } = await supabaseAdmin
+        .from('user_profiles')
+        .select(`
+          id,
+          username,
+          email,
+          first_name,
+          last_name,
+          company,
+          phone,
+          created_at,
+          updated_at,
+          is_active
+        `)
+        .eq('role', 'customer')
+        .eq('is_active', true);
 
       if (error) {
-        console.error('Error fetching customers from Supabase:', error);
+        console.error('Error fetching customers from user_profiles:', error);
         throw error;
       }
 
-      console.log(`Found ${users.users.length} total users in Supabase auth`);
+      console.log(`Found ${customers?.length || 0} customers in user_profiles table`);
 
-      // Filter for customer role users
-      const customers = users.users
-        .filter(user => user.user_metadata?.role === 'customer')
-        .map(user => ({
-          id: user.id,
-          email: user.email,
-          firstName: user.user_metadata?.firstName || '',
-          lastName: user.user_metadata?.lastName || '',
-          company: user.user_metadata?.company || '',
-          phone: user.user_metadata?.phone || '',
-          created_at: user.created_at,
-          last_sign_in_at: user.last_sign_in_at,
-          email_confirmed_at: user.email_confirmed_at
+      // If we have real customers, return them in the expected format
+      if (customers && customers.length > 0) {
+        const formattedCustomers = customers.map(customer => ({
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.first_name || '',
+          lastName: customer.last_name || '',
+          company: customer.company || '',
+          phone: customer.phone || '',
+          created_at: customer.created_at,
+          last_sign_in_at: customer.updated_at,
+          email_confirmed_at: customer.created_at
         }));
 
-      console.log(`Found ${customers.length} customers with role 'customer'`);
-
-      // If we have real customers, return them
-      if (customers.length > 0) {
+        console.log(`Returning ${formattedCustomers.length} real customers from database`);
         return res.json({
           success: true,
-          data: customers,
-          count: customers.length
+          data: formattedCustomers,
+          count: formattedCustomers.length
         });
       }
 
