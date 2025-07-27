@@ -78,7 +78,6 @@ const steps = [
     title: 'Personal Identity',
     subtitle: 'Let\'s start with the basics',
     icon: User,
-    color: 'from-blue-500 to-cyan-500',
     schema: identitySchema,
   },
   {
@@ -86,7 +85,6 @@ const steps = [
     title: 'Organization Details',
     subtitle: 'Professional information',
     icon: Building2,
-    color: 'from-purple-500 to-indigo-500',
     schema: organizationSchema,
   },
   {
@@ -94,7 +92,6 @@ const steps = [
     title: 'Contact Preferences',
     subtitle: 'How to reach out',
     icon: Phone,
-    color: 'from-green-500 to-emerald-500',
     schema: contactSchema,
   },
   {
@@ -102,7 +99,6 @@ const steps = [
     title: 'Location Information',
     subtitle: 'Physical address details',
     icon: MapPin,
-    color: 'from-orange-500 to-red-500',
     schema: addressSchema,
   },
   {
@@ -110,7 +106,6 @@ const steps = [
     title: 'Preferences & Goals',
     subtitle: 'Customize the experience',
     icon: Target,
-    color: 'from-pink-500 to-rose-500',
     schema: preferencesSchema,
   },
 ];
@@ -213,15 +208,15 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-2xl glass-panel rounded-2xl shadow-2xl overflow-hidden border border-glass-border"
       >
         {/* Header */}
-        <div className={`relative bg-gradient-to-r ${currentStepData.color} p-6 text-white`}>
+        <div className="relative bg-black/40 border-b border-glass-border p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <motion.div
@@ -229,33 +224,34 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                 initial={{ rotate: -180, scale: 0 }}
                 animate={{ rotate: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                className="p-2 rounded-full bg-gradient-to-r from-neon-blue to-neon-green"
               >
-                <currentStepData.icon className="w-8 h-8" />
+                <currentStepData.icon className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
               </motion.div>
               <div>
-                <h2 className="text-2xl font-bold">{currentStepData.title}</h2>
-                <p className="text-white/80">{currentStepData.subtitle}</p>
+                <h2 className="text-lg sm:text-2xl font-bold text-white">{currentStepData.title}</h2>
+                <p className="text-xs sm:text-sm text-white/70">{currentStepData.subtitle}</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-white hover:bg-white/20"
+              className="text-white hover:bg-white/10 h-8 w-8 p-0"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </Button>
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-6 flex space-x-2">
+          <div className="mt-4 sm:mt-6 flex space-x-2">
             {steps.map((_, index) => (
               <div
                 key={index}
-                className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden"
+                className="flex-1 h-1 sm:h-2 bg-white/10 rounded-full overflow-hidden"
               >
                 <motion.div
-                  className="h-full bg-white"
+                  className="h-full bg-gradient-to-r from-neon-blue to-neon-green"
                   initial={{ width: '0%' }}
                   animate={{ 
                     width: index <= currentStep ? '100%' : '0%' 
@@ -268,7 +264,7 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
         </div>
 
         {/* Content */}
-        <div className="relative h-96 overflow-hidden">
+        <div className="relative h-80 sm:h-96 overflow-hidden">
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={currentStep}
@@ -282,61 +278,61 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                 opacity: { duration: 0.2 },
                 scale: { duration: 0.2 },
               }}
-              className="absolute inset-0 p-6"
+              className="absolute inset-0 p-4 sm:p-6"
             >
-              <Card className="h-full border-0 shadow-none">
+              <Card className="h-full border-0 shadow-none bg-transparent">
                 <CardContent className="p-0 h-full flex flex-col">
                   {/* Step Content */}
-                  <div className="flex-1 space-y-4">
+                  <div className="flex-1 space-y-3 sm:space-y-4">
                     {currentStep === 0 && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <Label htmlFor="firstName" className="text-sm font-medium">
+                            <Label htmlFor="firstName" className="text-sm font-medium text-white">
                               First Name *
                             </Label>
                             <Input
                               id="firstName"
                               {...form.register('firstName')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="Enter first name"
                             />
                             {form.formState.errors.firstName && (
-                              <p className="text-sm text-red-500 mt-1">
+                              <p className="text-sm text-red-400 mt-1">
                                 {form.formState.errors.firstName.message}
                               </p>
                             )}
                           </div>
                           <div>
-                            <Label htmlFor="lastName" className="text-sm font-medium">
+                            <Label htmlFor="lastName" className="text-sm font-medium text-white">
                               Last Name *
                             </Label>
                             <Input
                               id="lastName"
                               {...form.register('lastName')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="Enter last name"
                             />
                             {form.formState.errors.lastName && (
-                              <p className="text-sm text-red-500 mt-1">
+                              <p className="text-sm text-red-400 mt-1">
                                 {form.formState.errors.lastName.message}
                               </p>
                             )}
                           </div>
                         </div>
                         <div>
-                          <Label htmlFor="email" className="text-sm font-medium">
+                          <Label htmlFor="email" className="text-sm font-medium text-white">
                             Email Address *
                           </Label>
                           <Input
                             id="email"
                             type="email"
                             {...form.register('email')}
-                            className="mt-1"
+                            className="mt-1 glass-input text-white placeholder:text-white/50"
                             placeholder="Enter email address"
                           />
                           {form.formState.errors.email && (
-                            <p className="text-sm text-red-500 mt-1">
+                            <p className="text-sm text-red-400 mt-1">
                               {form.formState.errors.email.message}
                             </p>
                           )}
@@ -345,38 +341,38 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                     )}
 
                     {currentStep === 1 && (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         <div>
-                          <Label htmlFor="company" className="text-sm font-medium">
+                          <Label htmlFor="company" className="text-sm font-medium text-white">
                             Company/Organization
                           </Label>
                           <Input
                             id="company"
                             {...form.register('company')}
-                            className="mt-1"
+                            className="mt-1 glass-input text-white placeholder:text-white/50"
                             placeholder="Enter company name"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <Label htmlFor="jobTitle" className="text-sm font-medium">
+                            <Label htmlFor="jobTitle" className="text-sm font-medium text-white">
                               Job Title
                             </Label>
                             <Input
                               id="jobTitle"
                               {...form.register('jobTitle')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="Enter job title"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="department" className="text-sm font-medium">
+                            <Label htmlFor="department" className="text-sm font-medium text-white">
                               Department
                             </Label>
                             <Input
                               id="department"
                               {...form.register('department')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="Enter department"
                             />
                           </div>
@@ -385,43 +381,43 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                     )}
 
                     {currentStep === 2 && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           <div>
-                            <Label htmlFor="phone" className="text-sm font-medium">
+                            <Label htmlFor="phone" className="text-sm font-medium text-white">
                               Primary Phone
                             </Label>
                             <Input
                               id="phone"
                               {...form.register('phone')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="(555) 123-4567"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="alternatePhone" className="text-sm font-medium">
+                            <Label htmlFor="alternatePhone" className="text-sm font-medium text-white">
                               Alternate Phone
                             </Label>
                             <Input
                               id="alternatePhone"
                               {...form.register('alternatePhone')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="(555) 987-6543"
                             />
                           </div>
                         </div>
                         <div>
-                          <Label className="text-sm font-medium">Preferred Contact Method</Label>
-                          <div className="flex space-x-4 mt-2">
+                          <Label className="text-sm font-medium text-white">Preferred Contact Method</Label>
+                          <div className="flex flex-wrap gap-3 mt-2">
                             {['email', 'phone', 'both'].map((method) => (
-                              <label key={method} className="flex items-center space-x-2 cursor-pointer">
+                              <label key={method} className="flex items-center space-x-2 cursor-pointer glass-panel p-2 rounded-lg">
                                 <input
                                   type="radio"
                                   value={method}
                                   {...form.register('preferredContact')}
-                                  className="text-blue-500"
+                                  className="text-neon-blue focus:ring-neon-blue"
                                 />
-                                <span className="text-sm capitalize">{method}</span>
+                                <span className="text-sm capitalize text-white">{method}</span>
                               </label>
                             ))}
                           </div>
@@ -430,49 +426,49 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                     )}
 
                     {currentStep === 3 && (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         <div>
-                          <Label htmlFor="address" className="text-sm font-medium">
+                          <Label htmlFor="address" className="text-sm font-medium text-white">
                             Street Address
                           </Label>
                           <Input
                             id="address"
                             {...form.register('address')}
-                            className="mt-1"
+                            className="mt-1 glass-input text-white placeholder:text-white/50"
                             placeholder="Enter street address"
                           />
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                           <div>
-                            <Label htmlFor="city" className="text-sm font-medium">
+                            <Label htmlFor="city" className="text-sm font-medium text-white">
                               City
                             </Label>
                             <Input
                               id="city"
                               {...form.register('city')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="Enter city"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="state" className="text-sm font-medium">
+                            <Label htmlFor="state" className="text-sm font-medium text-white">
                               State
                             </Label>
                             <Input
                               id="state"
                               {...form.register('state')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="Enter state"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="zip" className="text-sm font-medium">
+                            <Label htmlFor="zip" className="text-sm font-medium text-white">
                               ZIP Code
                             </Label>
                             <Input
                               id="zip"
                               {...form.register('zip')}
-                              className="mt-1"
+                              className="mt-1 glass-input text-white placeholder:text-white/50"
                               placeholder="12345"
                             />
                           </div>
@@ -481,10 +477,10 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                     )}
 
                     {currentStep === 4 && (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         <div>
-                          <Label className="text-sm font-medium">Areas of Interest</Label>
-                          <div className="grid grid-cols-3 gap-2 mt-2">
+                          <Label className="text-sm font-medium text-white">Areas of Interest</Label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                             {interestOptions.map((interest) => (
                               <Badge
                                 key={interest}
@@ -493,7 +489,11 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                                     ? 'default' 
                                     : 'outline'
                                 }
-                                className="cursor-pointer justify-center py-2 text-xs"
+                                className={`cursor-pointer justify-center py-2 text-xs transition-all duration-200 ${
+                                  form.watch('interests')?.includes(interest)
+                                    ? 'bg-gradient-to-r from-neon-blue to-neon-green text-black border-transparent'
+                                    : 'border-glass-border text-white hover:border-neon-blue/50 hover:bg-white/5'
+                                }`}
                                 onClick={() => toggleInterest(interest)}
                               >
                                 {interest}
@@ -502,27 +502,27 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                           </div>
                         </div>
                         <div>
-                          <Label htmlFor="communicationFrequency" className="text-sm font-medium">
+                          <Label htmlFor="communicationFrequency" className="text-sm font-medium text-white">
                             Communication Frequency
                           </Label>
                           <select
                             {...form.register('communicationFrequency')}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            className="mt-1 block w-full glass-input text-white"
                           >
-                            <option value="monthly">Monthly</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="daily">Daily</option>
-                            <option value="quarterly">Quarterly</option>
+                            <option value="monthly" className="bg-black text-white">Monthly</option>
+                            <option value="weekly" className="bg-black text-white">Weekly</option>
+                            <option value="daily" className="bg-black text-white">Daily</option>
+                            <option value="quarterly" className="bg-black text-white">Quarterly</option>
                           </select>
                         </div>
                         <div>
-                          <Label htmlFor="notes" className="text-sm font-medium">
+                          <Label htmlFor="notes" className="text-sm font-medium text-white">
                             Additional Notes
                           </Label>
                           <Textarea
                             id="notes"
                             {...form.register('notes')}
-                            className="mt-1"
+                            className="mt-1 glass-input text-white placeholder:text-white/50 resize-none"
                             placeholder="Any additional information..."
                             rows={3}
                           />
@@ -537,25 +537,25 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-gray-50 flex justify-between items-center">
+        <div className="p-4 sm:p-6 bg-black/40 border-t border-glass-border flex flex-col sm:flex-row justify-between items-center gap-3">
           <Button
             variant="outline"
             onClick={prevStep}
             disabled={currentStep === 0}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 glass-button border-glass-border text-white hover:bg-white/10 order-2 sm:order-1"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Previous</span>
+            <span className="hidden sm:inline">Previous</span>
           </Button>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-xs sm:text-sm text-white/70 order-1 sm:order-2">
             Step {currentStep + 1} of {steps.length}
           </div>
 
           <Button
             onClick={nextStep}
             disabled={createCustomerMutation.isPending}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 bg-gradient-to-r from-neon-blue to-neon-green text-black hover:opacity-90 border-0 order-3"
           >
             {currentStep === steps.length - 1 ? (
               <>
