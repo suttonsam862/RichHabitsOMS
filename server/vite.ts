@@ -19,7 +19,7 @@ export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
-    allowedHosts: true,
+    host: true,
   };
   const vite = await createViteServer({
     ...viteConfig,
@@ -72,12 +72,14 @@ export function serveStatic(app: Express) {
     );
   }
   app.use(express.static(distPath));
-  
+
   // Catch-all handler for client-side routing - must come after all API routes
   app.get("*", (req, res) => {
     // Skip API routes - they should have been handled already
-    if (req.path.startsWith('/api')) {
-      return res.status(404).json({ success: false, message: `Route ${req.path} not found` });
+    if (req.path.startsWith("/api")) {
+      return res
+        .status(404)
+        .json({ success: false, message: `Route ${req.path} not found` });
     }
     res.sendFile(path.resolve(distPath, "index.html"));
   });

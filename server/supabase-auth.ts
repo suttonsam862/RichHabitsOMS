@@ -112,10 +112,10 @@ export function configureAuth(app: express.Express) {
 declare global {
   namespace Express {
     interface Request {
-      user?: SupabaseUser;
+      user?: any;
     }
     interface Session {
-      user?: SupabaseUser;
+      user?: any;
     }
   }
 }

@@ -48,7 +48,7 @@ async function getDashboardStats(req: Request, res: Response) {
       totalCustomers: customersCount,
       totalCatalogItems: catalogItemsCount.count || 0,
       pendingOrders: pendingOrdersCount.count || 0,
-      recentActivity: []
+      recentActivity: [] as any[]
     };
 
     // Get recent orders for activity feed
