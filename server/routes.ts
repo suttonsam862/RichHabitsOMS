@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Filter for customers and transform to expected format
-      const customers = (data.user as anys || [])
+      const customers = (data.users || [])
         .filter((user: any) => {
           // Look for users with customer role in metadata
           const metadata = ((user.user_metadata || {}) as Record<string, any>) as Record<string, any>;
@@ -336,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create profile data
       const profileData: Record<string, any> = {
-        id: data.user as any.id,
+        id: (data.user as any).id,
         username: username + Math.floor(Math.random() * 1000), // Add random number to ensure uniqueness
         email: customerEmail,
         first_name: customerFirstName,
@@ -369,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error creating customer profile:', profileError);
 
         // Try to clean up the auth user since profile creation failed
-        await supabase.auth.admin.deleteUser(data.user as any.id);
+        await supabase.auth.admin.deleteUser((data.user as any).id);
 
         return res.status(500).json({
           success: false,
@@ -391,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const setupToken = crypto.randomBytes(32).toString('hex');
 
           // Store the setup token in user metadata for verification
-          await supabase.auth.admin.updateUserById(data.user as any.id, {
+          await supabase.auth.admin.updateUserById((data.user as any).id, {
             user_metadata: { 
               setup_token: setupToken,
               setup_expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
@@ -442,8 +442,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : shouldSendInvite 
             ? 'Customer created but setup email failed to send (SendGrid API key needed)'
             : 'Customer created successfully',
-        customer: createdProfile ? createdProfile[0] : { 
-          id: data.user as any.id,
+        customer: (createdProfile && Array.isArray(createdProfile) && createdProfile.length > 0) ? createdProfile[0] : { 
+          id: (data.user as any).id,
           email: customerEmail,
           first_name: customerFirstName,
           last_name: customerLastName,
@@ -504,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: shouldSendInvite 
           ? 'Customer created and invite will be sent' 
           : 'Customer created successfully',
-        customer: (createdProfile && createdProfile[0]) ? createdProfile[0] : { 
+        customer: (createdProfile && Array.isArray(createdProfile) && createdProfile.length > 0) ? createdProfile[0] : { 
           id: (data.user as any)?.id || '',
           email: customerEmail,
           first_name: customerFirstName,
@@ -1001,7 +1001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (itemsError) {
         console.error('Error creating order items:', itemsError);
         // Try to clean up the order if items failed
-        await supabase.from('orders').delete().eq('id', order.id);
+        await supabase.from('orders').delete().eq('id', (order as any).id);
         return res.status(500).json({
           success: false,
           message: 'Failed to create order items'
@@ -1042,7 +1042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Transform the data to match expected format
-      const transformedOrders = orders.map(order => ({
+      const transformedOrders = (orders || []).map((order: any) => ({
         id: order.id,
         orderNumber: order.order_number,
         status: order.status,
@@ -1050,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: order.notes,
         totalAmount: order.total_amount,
         createdAt: order.created_at,
-        items: order.order_items.map((item: any) => ({
+        items: (order.order_items || []).map((item: any) => ({
           productName: item.product_name,
           description: item.description,
           size: item.size,
@@ -1114,7 +1114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check expiration
-      if (new Date() > new Date(invitation.expires_at)) {
+      if (new Date() > new Date(invitation.expires_at as string)) {
         await supabase
           .from('user_invitations')
           .update({ status: 'expired' })
@@ -1234,7 +1234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
-          id: data.user as any.id,
+          id: (data.user as any).id,
           username: 'samsutton123',
           email,
           first_name: 'Sam',
@@ -1268,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({
         success: true,
         message: 'Test user created successfully',
-        user: { id: data.user as any.id, email },
+        user: { id: (data.user as any).id, email },
         password,
         recoveryLink
       });
@@ -1619,13 +1619,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: 'Account created successfully! User can log in with email: ' + email + ' and temporary password: ' + password,
         user: {
-          id: data.user as any.id,
-          email: data.user as any.email,
+          id: (data.user as any).id,
+          email: (data.user as any).email,
           firstName,
           lastName,
           role,
           tempPassword: password,
-          created_at: data.user as any.created_at
+          created_at: (data.user as any).created_at
         }
       });
 
@@ -1743,7 +1743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
 
           // Profile information
-          username: userMetadata.user as anyname || (customer as any).email.split('@')[0],
+          username: userMetadata.username || (customer as any).email.split('@')[0],
           profilePicture: userMetadata.avatar_url || null,
           lastLogin: authUser?.last_sign_in_at || null,
 
@@ -2046,11 +2046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.use('/', router);
-  
-  import workflowRoutes from './routes/api/workflowRoutes.js';
-import orderRoutes from './routes/api/orderRoutes.js';
-  app.use('/api/workflow', workflowRoutes);
-  app.use('/api/orders', orderRoutes);
+
 
   return httpServer;
 }

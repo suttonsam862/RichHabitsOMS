@@ -249,3 +249,93 @@ The ThreadCraft Team
     html
   };
 }
+/**
+ * Generate a design approval email template
+ */
+export function getDesignApprovalEmailTemplate(
+  orderNumber: string,
+  customerName: string
+): EmailOptions {
+  const subject = `🎨 Your Design is Ready for Review - Order ${orderNumber}`;
+  const baseUrl = process.env.BASE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}` || 'http://localhost:5000';
+  const reviewUrl = `${baseUrl}/orders/${orderNumber}`;
+  
+  const text = `
+Hello ${customerName},
+
+Great news! Your custom design for Order ${orderNumber} is ready for your review.
+
+Our design team has completed your custom artwork and it's now available for your approval.
+
+To review and approve your design, please visit:
+${reviewUrl}
+
+NEXT STEPS:
+• Review the design carefully
+• Provide feedback if changes are needed
+• Approve the design to proceed to production
+• Contact us with any questions
+
+We're excited to show you what we've created!
+
+Best regards,
+The ThreadCraft Design Team
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+        .button { display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 15px 0; }
+        .steps { background: #e5e7eb; padding: 15px; border-radius: 6px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Your Design is Ready!</h1>
+            <p>Order ${orderNumber}</p>
+        </div>
+        <div class="content">
+            <p>Hello <strong>${customerName}</strong>,</p>
+            
+            <p>Great news! Your custom design for Order <strong>${orderNumber}</strong> is ready for your review.</p>
+            
+            <p>Our design team has completed your custom artwork and it's now available for your approval.</p>
+            
+            <p style="text-align: center;">
+                <a href="${reviewUrl}" class="button">Review Your Design</a>
+            </p>
+            
+            <div class="steps">
+                <h3>🚀 NEXT STEPS:</h3>
+                <ul>
+                    <li>Review the design carefully</li>
+                    <li>Provide feedback if changes are needed</li>
+                    <li>Approve the design to proceed to production</li>
+                    <li>Contact us with any questions</li>
+                </ul>
+            </div>
+            
+            <p>We're excited to show you what we've created!</p>
+            
+            <p>Best regards,<br><strong>The ThreadCraft Design Team</strong></p>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+  return {
+    to: '',
+    subject,
+    text,
+    html
+  };
+}
