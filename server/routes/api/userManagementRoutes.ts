@@ -495,24 +495,9 @@ async function logAuditEvent(event: {
   }
 }
 
-export default router;
-import { Router, Request, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
-import { requireAuth, requireRole } from '../auth/auth';
-
-const router = Router();
-
-// Create Supabase admin client
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+// Configure routes for manufacturers and role-based user queries
+router.get('/manufacturers', requireAuth, requireRole(['admin', 'salesperson']), getManufacturers);
+router.get('/role/:role', requireAuth, requireRole(['admin']), getUsersByRole);
 
 /**
  * Get all manufacturers
