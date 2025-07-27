@@ -30,8 +30,16 @@ const upload = multer({
 router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'designer']), upload.single('image'), async (req: Request, res: Response) => {
   try {
     const { catalogItemId } = req.params;
+    
+    console.log('🖼️ Image upload request received for catalog item:', catalogItemId);
+    console.log('📁 Request file info:', req.file ? {
+      filename: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    } : 'No file');
 
     if (!req.file) {
+      console.log('❌ No image file provided in upload request');
       return res.status(400).json({
         success: false,
         message: 'No image file provided'
@@ -76,6 +84,10 @@ router.post('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'desig
         message: 'Failed to update catalog item with image URL'
       });
     }
+
+    console.log('✅ Image upload completed successfully');
+    console.log('🔗 Generated image URL:', imageUrl);
+    console.log('📦 Updated catalog item:', updatedItem?.id);
 
     return res.json({
       success: true,
@@ -261,7 +273,7 @@ router.delete('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'des
     }
 
     // Extract filename from URL (Supabase version)
-    const imageUrl = String(catalogItem.base_image_url);
+    const imageUrl = catalogItem.base_image_url;
     const pathParts = imageUrl.split('/');
     const bucketName = pathParts[4];
     const imagePath = `${pathParts[5]}/${pathParts[6]}`;
@@ -338,7 +350,7 @@ router.delete('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sa
     }
 
         // Extract filename from URL (Supabase version)
-    const imageUrl = String(orderItem.custom_image_url);
+    const imageUrl = orderItem.custom_image_url;
     const pathParts = imageUrl.split('/');
     const bucketName = pathParts[4];
     const imagePath = `${pathParts[5]}/${pathParts[6]}`;

@@ -104,10 +104,16 @@ export async function getCatalogItems(req: Request, res: Response) {
       let imageUrl = item.base_image_url;
       let measurementChartUrl = item.measurement_chart_url;
 
+      // Log image URL for debugging
+      if (imageUrl) {
+        console.log(`Processing image URL for item ${item.id}:`, imageUrl);
+      }
+
       if (imageUrl && imageUrl.includes('localhost:5000')) {
         // Replace localhost with the current environment URL
         const currentHost = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://0.0.0.0:5000';
         imageUrl = imageUrl.replace('http://localhost:5000', currentHost);
+        console.log(`Fixed image URL:`, imageUrl);
       }
 
       if (measurementChartUrl && measurementChartUrl.includes('localhost:5000')) {
