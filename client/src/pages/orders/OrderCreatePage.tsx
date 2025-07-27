@@ -93,40 +93,152 @@ export default function OrderCreatePage() {
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number>(-1);
 
-  // Fetch customers for dropdown
-  const { data: customersResponse, error: customersError } = useQuery({
+  // Fetch customers for dropdown with comprehensive retry and fallback logic
+  const { data: customersResponse, error: customersError, isLoading: customersLoading } = useQuery({
     queryKey: ['/api/customers'],
-    queryFn: getQueryFn({ on401: 'throw' }),
+    queryFn: async () => {
+      console.log('Fetching real customers from API...');
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        // In development, create minimal sample customers for testing
+        if (process.env.NODE_ENV === 'development' || import.meta.env.DEV) {
+          console.log('Development mode: Using sample customers');
+          return { 
+            success: true, 
+            data: [
+              {
+                id: '1',
+                firstName: 'John',
+                lastName: 'Smith',
+                email: 'john@example.com'
+              },
+              {
+                id: '2', 
+                firstName: 'Jane',
+                lastName: 'Doe',
+                email: 'jane@example.com'
+              }
+            ]
+          };
+        }
+        throw new Error('No authentication token available');
+      }
+      
+      const response = await fetch('/api/customers', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Customer API error: ${response.status} - ${errorText}`);
+        throw new Error(`Customer API failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Successfully fetched customer data:', data);
+      return data;
+    },
+    retry: (failureCount, error) => {
+      console.log(`Customer fetch attempt ${failureCount + 1}, error:`, error?.message);
+      return failureCount < 2; // Try 3 times total
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 5000),
   });
 
   // Extract customers array from response, handling different response structures
   const customers = React.useMemo(() => {
-    if (!customersResponse) return [];
+    console.log('Processing customer data:', customersResponse);
+    if (!customersResponse) {
+      console.log('No customers response received');
+      return [];
+    }
     
-    // Handle case where response has a 'data' property
-    if ((customersResponse as any).data && Array.isArray((customersResponse as any).data)) {
-      return (customersResponse as any).data;
+    // Handle case where response has success and data properties
+    if (customersResponse.success && Array.isArray(customersResponse.data)) {
+      console.log('Customer data from success/data structure:', customersResponse.data.length);
+      return customersResponse.data;
+    }
+    
+    // Handle case where response has customers property (from some endpoints)
+    if (customersResponse.customers && Array.isArray(customersResponse.customers)) {
+      console.log('Customer data from customers property:', customersResponse.customers.length);
+      return customersResponse.customers;
     }
     
     // Handle case where response is directly an array
     if (Array.isArray(customersResponse)) {
+      console.log('Customer data direct array:', customersResponse.length);
       return customersResponse;
     }
     
     // Log the actual structure for debugging
-    console.log('Unexpected customers response structure:', customersResponse);
+    console.log('Unexpected customer response structure:', customersResponse);
+    console.log('Customer data length:', 0);
+    
+    // If we got here but there's data, try to extract customers from any nested structure
+    if (typeof customersResponse === 'object') {
+      const possibleCustomers = Object.values(customersResponse).find(value => Array.isArray(value));
+      if (possibleCustomers) {
+        console.log('Found customers in nested structure:', possibleCustomers.length);
+        return possibleCustomers;
+      }
+    }
+    
     return [];
   }, [customersResponse]);
 
-  // Fetch catalog items for selection
-  const { data: catalogResponse } = useQuery<CatalogItemsResponse>({
+  // Fetch catalog items for selection with improved error handling
+  const { data: catalogResponse, isLoading: catalogLoading } = useQuery({
     queryKey: ['/api/catalog'],
-    queryFn: getQueryFn({ on401: 'throw' }),
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+      
+      const response = await fetch('/api/catalog', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      return response.json();
+    },
+    retry: (failureCount, error) => {
+      console.log(`Catalog fetch attempt ${failureCount}, error:`, error);
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const catalogItems = React.useMemo(() => {
-    if (!catalogResponse?.data) return [];
-    return catalogResponse.data.filter(item => item.status === 'active');
+    // Handle different response structures from catalog API
+    if (!catalogResponse) return [];
+    
+    // Check if response has success/data structure
+    if (catalogResponse.success && Array.isArray(catalogResponse.data)) {
+      return catalogResponse.data.filter((item: CatalogItem) => item.status === 'active');
+    }
+    
+    // Check if response is directly an array
+    if (Array.isArray(catalogResponse)) {
+      return catalogResponse.filter((item: CatalogItem) => item.status === 'active');
+    }
+    
+    console.log('Unexpected catalog response structure:', catalogResponse);
+    return [];
   }, [catalogResponse]);
 
   // Initialize the form
@@ -383,13 +495,19 @@ export default function OrderCreatePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {customers.map((customer: any) => (
-                            <SelectItem key={customer.id} value={customer.id.toString()}>
-                              {customer.firstName && customer.lastName 
-                                ? `${customer.firstName} ${customer.lastName}` 
-                                : customer.email || `Customer ${customer.id}`}
-                            </SelectItem>
-                          ))}
+                          {customersLoading ? (
+                            <SelectItem value="loading" disabled>Loading customers...</SelectItem>
+                          ) : customers.length === 0 ? (
+                            <SelectItem value="no-customers" disabled>No customers available</SelectItem>
+                          ) : (
+                            customers.map((customer: any) => (
+                              <SelectItem key={customer.id} value={customer.id.toString()}>
+                                {customer.firstName && customer.lastName 
+                                  ? `${customer.firstName} ${customer.lastName}` 
+                                  : customer.email || `Customer ${customer.id}`}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
