@@ -433,7 +433,7 @@ export default function Orders() {
   return (
     <div className="min-h-screen">
       <ErrorBoundary
-        fallback={
+        fallback={({ error, resetError }) => (
           <div className="flex flex-col items-center justify-center min-h-screen">
             <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
@@ -442,7 +442,7 @@ export default function Orders() {
               Refresh Page
             </Button>
           </div>
-        }
+        )}
       >
         <OrdersContent />
       </ErrorBoundary>

@@ -31,7 +31,7 @@ interface HeaderProps {
 
 export function Header({ onOpenMessages = () => {}, onOpenNotifications = () => {}, title }: HeaderProps) {
   const { user, role, logout } = useAuth();
-  const { notifications } = useWebSocket(user?.id || null);
+  const { notifications } = useWebSocket(user?.id ? parseInt(user.id) : null);
   const [isOpen, setIsOpen] = useState(false);
 
   if (!user) return null;

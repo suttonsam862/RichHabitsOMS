@@ -108,12 +108,12 @@ export default function OrderCreatePage() {
     }
     
     // Handle different response structures
-    if (customersResponse.success && Array.isArray(customersResponse.data)) {
-      return customersResponse.data;
+    if ((customersResponse as any).success && Array.isArray((customersResponse as any).data)) {
+      return (customersResponse as any).data;
     }
     
-    if (customersResponse.customers && Array.isArray(customersResponse.customers)) {
-      return customersResponse.customers;
+    if ((customersResponse as any).customers && Array.isArray((customersResponse as any).customers)) {
+      return (customersResponse as any).customers;
     }
     
     if (Array.isArray(customersResponse)) {
@@ -136,13 +136,13 @@ export default function OrderCreatePage() {
     if (!catalogResponse) return [];
     
     // Check if response has success/data structure
-    if (catalogResponse.success && Array.isArray(catalogResponse.data)) {
-      return catalogResponse.data.filter((item: CatalogItem) => item.status === 'active');
+    if ((catalogResponse as any).success && Array.isArray((catalogResponse as any).data)) {
+      return (catalogResponse as any).data.filter((item: any) => item.status === 'active');
     }
     
     // Check if response is directly an array
     if (Array.isArray(catalogResponse)) {
-      return catalogResponse.filter((item: CatalogItem) => item.status === 'active');
+      return (catalogResponse as any[]).filter((item: any) => item.status === 'active');
     }
     
     console.log('Unexpected catalog response structure:', catalogResponse);
@@ -714,7 +714,7 @@ export default function OrderCreatePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {catalogItems.map((item) => (
+                {catalogItems.map((item: any) => (
                   <Card key={item.id} className="cursor-pointer hover:shadow-lg transition-shadow">
                     <CardContent className="p-4">
                       <div className="space-y-3">

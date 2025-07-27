@@ -84,7 +84,7 @@ export default function NewOrderInquiriesPage() {
   });
 
   // Filter inquiries by status and search query
-  const filteredInquiries = inquiries.filter((inquiry: any) => {
+  const filteredInquiries = (inquiries as any[]).filter((inquiry: any) => {
     const matchesStatus = statusFilter === "all" || inquiry.status === statusFilter;
     const matchesSearch = searchQuery === "" || 
       (inquiry.customer?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||

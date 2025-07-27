@@ -218,7 +218,7 @@ export default function Register() {
       setFormData(prev => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof FormData],
+          ...(prev[parent as keyof typeof prev] as any),
           [child]: value,
         },
       }));

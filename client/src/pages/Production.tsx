@@ -76,7 +76,7 @@ export default function Production() {
   });
 
   // Filter tasks based on status
-  const filteredTasks = productionTasks.filter((task: any) => {
+  const filteredTasks = (productionTasks as any[]).filter((task: any) => {
     if (!task.order) return false;
     if (activeTab === 'all') return true;
     return task.order.status === activeTab;
@@ -95,7 +95,7 @@ export default function Production() {
   const handleSubmitStatusUpdate = () => {
     if (!selectedOrderId) return;
 
-    const task = productionTasks.find((t: any) => t.orderId === selectedOrderId);
+    const task = (productionTasks as any[]).find((t: any) => t.orderId === selectedOrderId);
     if (!task) return;
 
     const newStatus = task.order.status === 'pending_production' ? 'in_production' : 'completed';
@@ -240,12 +240,12 @@ export default function Production() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
+              {(productionTasks as any[]).find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
                 ? 'Start Production' 
                 : 'Complete Production'}
             </DialogTitle>
             <DialogDescription>
-              {productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production'
+              {(productionTasks as any[]).find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production'
                 ? 'Update the status to indicate that production has started'
                 : 'Mark this order as completed production'}
             </DialogDescription>
@@ -272,7 +272,7 @@ export default function Production() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Updating...
                 </>
-              ) : productionTasks.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
+              ) : (productionTasks as any[]).find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
                 ? 'Start Production' 
                 : 'Complete Production'}
             </Button>

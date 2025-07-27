@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 // Using window.location instead of useLocation for consistent navigation
 
 interface User {
-  id: number;
+  id: string;
   email: string;
   username: string;
   firstName?: string;
@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // If we have stored user data, try to use it first while validating in background
         if (storedRole && storedUserId) {
           const cachedUser = {
-            id: parseInt(storedUserId),
+            id: storedUserId,
             email: localStorage.getItem('userEmail') || '',
             role: storedRole,
             username: localStorage.getItem('userName') || '',

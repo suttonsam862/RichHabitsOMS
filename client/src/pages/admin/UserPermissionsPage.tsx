@@ -360,11 +360,11 @@ function UserPermissionsPageContent() {
                                 <FormItem className="flex items-start space-x-2 space-y-0">
                                   <FormControl>
                                     <Checkbox
-                                      checked={field.value?.includes(permission.key)}
+                                      checked={Array.isArray(field.value) && (field.value as string[]).includes(permission.key)}
                                       onCheckedChange={(checked) => {
                                         const updatedPermissions = checked
                                           ? [...(field.value || []), permission.key]
-                                          : (field.value || []).filter((p: string) => p !== permission.key);
+                                          : (field.value || []).filter((p: any) => p !== permission.key);
                                         field.onChange(updatedPermissions);
                                         validatePermissions(updatedPermissions);
                                       }}

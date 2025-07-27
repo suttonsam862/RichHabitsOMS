@@ -136,7 +136,7 @@ export function ComprehensiveOnboarding() {
 
   const fetchInvitationDetails = async () => {
     try {
-      const response = await apiRequest('GET', `/api/invitations/token/${token}`);
+      const response = await apiRequest('GET', `/api/invitations/token/${token}`) as any;
       if (response.success) {
         setInvitation(response.data);
         if (response.data.onboarding_progress) {

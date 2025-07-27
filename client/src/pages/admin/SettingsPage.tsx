@@ -1441,7 +1441,7 @@ export default function SettingsPage() {
                             checked={selectedUserIds.length === filteredUsers.length && filteredUsers.length > 0}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setSelectedUserIds(filteredUsers.map(user => user.id || user.customerId).filter(Boolean));
+                                setSelectedUserIds(filteredUsers.map((user: any) => user.id || user.customerId).filter(Boolean));
                               } else {
                                 setSelectedUserIds([]);
                               }

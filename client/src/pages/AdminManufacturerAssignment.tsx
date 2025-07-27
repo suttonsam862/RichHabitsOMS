@@ -308,7 +308,7 @@ export default function AdminManufacturerAssignment() {
                   <SelectValue placeholder="Select a manufacturer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingManufacturers ? (
+                  {loading ? (
                     <SelectItem value="" disabled>Loading manufacturers...</SelectItem>
                   ) : (
                     <>

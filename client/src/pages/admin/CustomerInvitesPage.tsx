@@ -395,7 +395,7 @@ export default function CustomerInvitesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invites.length === 0 ? (
+                {(invites as any[]).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No invitations have been sent yet

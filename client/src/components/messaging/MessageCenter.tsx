@@ -29,7 +29,7 @@ export function MessageCenter({ fullPage = false, orderId }: MessageCenterProps)
   const [messageText, setMessageText] = useState("");
   const [selectedRecipient, setSelectedRecipient] = useState<number | null>(null);
   const [activeConversation, setActiveConversation] = useState<number | null>(null);
-  const { connected, sendMessage } = useWebSocket(user?.id || null);
+  const { connected, sendMessage } = useWebSocket(user?.id ? parseInt(user.id) : null);
 
   // Fetch messages
   const { data: messages, isLoading: messagesLoading } = useQuery({

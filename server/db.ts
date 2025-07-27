@@ -64,7 +64,7 @@ export const supabase = (() => {
         autoRefreshToken: false
       },
       db: {
-        schema: 'public'
+        schema: undefined
       },
       global: {
         headers: {

@@ -99,20 +99,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Filter for customers and transform to expected format
-      const customers = (data.users || [])
+      const customers = (data.user as anys || [])
         .filter((user: any) => {
           // Look for users with customer role in metadata
-          const metadata = (user.user_metadata || {}) as Record<string, any>;
+          const metadata = ((user.user_metadata || {}) as Record<string, any>) as Record<string, any>;
           return metadata.role === 'customer';
         })
         .map((user: any) => {
-          const metadata = (user.user_metadata || {}) as Record<string, any>;
+          const metadata = ((user.user_metadata || {}) as Record<string, any>) as Record<string, any>;
           return {
             id: user.id,
             firstName: (metadata.firstName as string) || '',
-            lastName: metadata.lastName || '',
+            lastName: (metadata.lastName as string) || "",
             email: user.email || '',
-            company: metadata.company || '',
+            company: (metadata.company as string) || "",
             orders: 0, // Default for new customers
             spent: '$0.00', // Default for new customers
             lastOrder: null,
@@ -336,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create profile data
       const profileData: Record<string, any> = {
-        id: data.user.id,
+        id: data.user as any.id,
         username: username + Math.floor(Math.random() * 1000), // Add random number to ensure uniqueness
         email: customerEmail,
         first_name: customerFirstName,
@@ -369,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error creating customer profile:', profileError);
 
         // Try to clean up the auth user since profile creation failed
-        await supabase.auth.admin.deleteUser(data.user.id);
+        await supabase.auth.admin.deleteUser(data.user as any.id);
 
         return res.status(500).json({
           success: false,
@@ -391,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const setupToken = crypto.randomBytes(32).toString('hex');
 
           // Store the setup token in user metadata for verification
-          await supabase.auth.admin.updateUserById(data.user.id, {
+          await supabase.auth.admin.updateUserById(data.user as any.id, {
             user_metadata: { 
               setup_token: setupToken,
               setup_expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
@@ -443,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? 'Customer created but setup email failed to send (SendGrid API key needed)'
             : 'Customer created successfully',
         customer: createdProfile ? createdProfile[0] : { 
-          id: data.user.id,
+          id: data.user as any.id,
           email: customerEmail,
           first_name: customerFirstName,
           last_name: customerLastName,
@@ -484,9 +484,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Update user metadata to include creation method
         if (data.user) {
-          await supabase.auth.admin.updateUserById(data.user.id, {
+          const user = data.user as any;
+          await supabase.auth.admin.updateUserById(user.id, {
             user_metadata: {
-              ...data.user.user_metadata,
+              ...user.user_metadata,
               created_via: shouldSendInvite ? 'invitation' : 'direct_creation',
               created_by: req.user?.id || null,
               requires_verification: !shouldSendInvite
@@ -504,7 +505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? 'Customer created and invite will be sent' 
           : 'Customer created successfully',
         customer: (createdProfile && createdProfile[0]) ? createdProfile[0] : { 
-          id: data.user?.id || '',
+          id: (data.user as any)?.id || '',
           email: customerEmail,
           first_name: customerFirstName,
           last_name: customerLastName
@@ -549,7 +550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate a password reset token through Supabase Auth
       const { data, error } = await supabase.auth.admin.generateLink({
         type: 'recovery',
-        email: customer.email,
+        email: (customer as any).email,
       });
 
       if (error) {
@@ -571,7 +572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // In a real implementation, we would send this link via email
-      console.log('Invite link for', customer.email, 'generated:', recoveryLink);
+      console.log('Invite link for', (customer as any).email, 'generated:', recoveryLink);
 
       // Return success
       return res.json({
@@ -1153,7 +1154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .update({ 
           status: 'accepted',
           accepted_at: new Date().toISOString(),
-          user_id: data.user?.id
+          user_id: (data.user as any)?.id
         })
         .eq('invitation_token', invitationToken);
 
@@ -1163,8 +1164,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: 'Registration successful',
         user: {
-          id: data.user?.id,
-          email: data.user?.email,
+          id: (data.user as any)?.id,
+          email: (data.user as any)?.email,
           role
         }
       });
@@ -1233,7 +1234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
-          id: data.user.id,
+          id: data.user as any.id,
           username: 'samsutton123',
           email,
           first_name: 'Sam',
@@ -1267,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({
         success: true,
         message: 'Test user created successfully',
-        user: { id: data.user.id, email },
+        user: { id: data.user as any.id, email },
         password,
         recoveryLink
       });
@@ -1301,8 +1302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Debug: Log all users and their metadata
-      console.log('Total users found:', data.users.length);
-      data.users.forEach((user, index) => {
+      console.log('Total users found:', (data.users as any[]).length);
+      (data.users as any[]).forEach((user, index) => {
         console.log('User', index + 1, ':', {
           id: user.id,
           email: user.email,
@@ -1311,28 +1312,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Filter for customers and transform to expected format
-      const customers = data.users
+      const customers = (data.users as any[])
         .filter(user => {
           // Look for users with customer role in metadata
-          const metadata = user.user_metadata || {};
+          const metadata = (user.user_metadata || {}) as Record<string, any>;
           const hasCustomerRole = metadata.role === 'customer';
           console.log('User', user.email, 'has customer role:', hasCustomerRole, 'metadata:', metadata);
           return hasCustomerRole;
         })
         .map(user => {
-          const metadata = user.user_metadata || {};
+          const metadata = (user.user_metadata || {}) as Record<string, any>;
           return {
             id: user.id,
-            firstName: metadata.firstName || '',
-            lastName: metadata.lastName || '',
+            firstName: (metadata.firstName as string) || "",
+            lastName: (metadata.lastName as string) || "",
             email: user.email || '',
-            company: metadata.company || '',
-            phone: metadata.phone || '',
-            address: metadata.address || '',
-            city: metadata.city || '',
-            state: metadata.state || '',
-            zip: metadata.zip || '',
-            country: metadata.country || '',
+            company: (metadata.company as string) || "",
+            phone: (metadata.phone as string) || "",
+            address: (metadata.address as string) || "",
+            city: (metadata.city as string) || "",
+            state: (metadata.state as string) || "",
+            zip: (metadata.zip as string) || "",
+            country: (metadata.country as string) || "",
             orders: 0, // Default for new customers
             spent: '$0.00', // Default for new customers
             lastOrder: null,
@@ -1369,15 +1370,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (!data.user) {
+      if (!data.user as any) {
         return res.status(404).json({ 
           success: false, 
           message: 'Customer not found' 
         });
       }
 
-      const user = data.user;
-      const metadata = user.user_metadata || {};
+      const user = data.user as any;
+      const metadata = (user.user_metadata || {}) as Record<string, any>;
 
       // Check if user is a customer
       if (metadata.role !== 'customer') {
@@ -1390,16 +1391,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Transform to expected format
       const customer = {
         id: user.id,
-        firstName: metadata.firstName || '',
-        lastName: metadata.lastName || '',
+        firstName: (metadata.firstName as string) || "",
+        lastName: (metadata.lastName as string) || "",
         email: user.email || '',
-        phone: metadata.phone || '',
-        company: metadata.company || '',
-        address: metadata.address || '',
-        city: metadata.city || '',
-        state: metadata.state || '',
-        zip: metadata.zip || '',
-        country: metadata.country || '',
+        phone: (metadata.phone as string) || "",
+        company: (metadata.company as string) || "",
+        address: (metadata.address as string) || "",
+        city: (metadata.city as string) || "",
+        state: (metadata.state as string) || "",
+        zip: (metadata.zip as string) || "",
+        country: (metadata.country as string) || "",
         orders: 0,
         spent: '$0.00',
         lastOrder: null,
@@ -1618,13 +1619,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: 'Account created successfully! User can log in with email: ' + email + ' and temporary password: ' + password,
         user: {
-          id: data.user.id,
-          email: data.user.email,
+          id: data.user as any.id,
+          email: data.user as any.email,
           firstName,
           lastName,
           role,
           tempPassword: password,
-          created_at: data.user.created_at
+          created_at: data.user as any.created_at
         }
       });
 
@@ -1713,14 +1714,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process all customers (every customer becomes a user record)
       for (const customer of customers || []) {
-        const authUser = authUsers?.users?.find(u => u.email === customer.email);
+        const authUser = authUsers?.users?.find(u => u.email === (customer as any).email);
         const userMetadata = authUser?.user_metadata || {};
 
         userDatabase.push({
           // Database fields
           id: authUser?.id || null,
           customerId: customer.id,
-          email: customer.email,
+          email: (customer as any).email,
           firstName: customer.firstName || '',
           lastName: customer.lastName || '',
           phone: customer.phone || '',
@@ -1742,7 +1743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
 
           // Profile information
-          username: userMetadata.username || customer.email.split('@')[0],
+          username: userMetadata.user as anyname || (customer as any).email.split('@')[0],
           profilePicture: userMetadata.avatar_url || null,
           lastLogin: authUser?.last_sign_in_at || null,
 
@@ -1755,14 +1756,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add any auth users that don't have customer profiles (staff accounts)
       for (const authUser of authUsers?.users || []) {
-        if (!customers?.find(c => c.email === authUser.email)) {
+        if (!customers?.find(c => c.email === authUser.email as string)) {
           const userMetadata = authUser.user_metadata || {};
 
           userDatabase.push({
             // Database fields
             id: authUser.id,
             customerId: null,
-            email: authUser.email,
+            email: authUser.email as string,
             firstName: userMetadata.firstName || '',
             lastName: userMetadata.lastName || '',
             phone: userMetadata.phone || '',
@@ -1784,7 +1785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
 
             // Profile information
-            username: userMetadata.username || authUser.email.split('@')[0],
+            username: userMetadata.username || (authUser.email as string).split('@')[0],
             profilePicture: userMetadata.avatar_url || null,
             lastLogin: authUser.last_sign_in_at,
 
@@ -1853,7 +1854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create auth account for the customer
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email: customer.email,
+        email: (customer as any).email,
         password,
         email_confirm: true,
         user_metadata: {
@@ -1874,14 +1875,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log('Auth account created for customer:', customer.email);
+      console.log('Auth account created for customer:', (customer as any).email);
 
       return res.status(201).json({
         success: true,
         message: 'Auth account created successfully for ' + customer.firstName + ' ' + customer.lastName,
         user: {
-          id: data.user?.id,
-          email: customer.email,
+          id: (data.user as any)?.id,
+          email: (customer as any).email,
           firstName: customer.firstName,
           lastName: customer.lastName,
           role: 'customer',

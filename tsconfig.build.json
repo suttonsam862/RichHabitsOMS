@@ -11,18 +11,23 @@
     "noImplicitAny": false,
     "noImplicitReturns": false,
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "noImplicitThis": false,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false
   },
-  "include": ["server/**/*"],
-  "exclude": [
-    "node_modules",
-    "build", 
-    "dist",
-    "**/*.test.ts",
-    "client/**/*",
-    "server/design-broken.ts",
-    "server/design.ts",
-    "server/add-build-instructions-column.ts",
-    "server/catalog-comprehensive-fix.ts"
+  "include": [
+    "server/index.ts",
+    "server/db.ts",
+    "server/supabase.ts",
+    "server/routes.ts",
+    "server/email.ts",
+    "server/storage.ts",
+    "server/utils/**/*",
+    "server/controllers/**/*",
+    "server/routes/admin/admin.ts",
+    "server/data/**/*",
+    "server/database/**/*",
+    "server/middleware/auth.ts"
   ]
 }

@@ -254,7 +254,7 @@ export default function CustomerMessagesPage() {
             ) : filteredMessages.length > 0 ? (
               <div className="space-y-4">
                 {filteredMessages.map((msg: Message) => {
-                  const isOutgoing = msg.senderId === user?.id;
+                  const isOutgoing = msg.senderId.toString() === user?.id;
                   
                   return (
                     <div 
