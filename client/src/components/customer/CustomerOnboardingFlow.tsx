@@ -208,12 +208,12 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-start sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-2xl glass-panel rounded-2xl shadow-2xl overflow-hidden border border-glass-border"
+        className="w-full max-w-2xl glass-panel rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border border-glass-border min-h-screen sm:min-h-0 sm:max-h-[90vh] flex flex-col"
       >
         {/* Header */}
         <div className="relative bg-black/40 border-b border-glass-border p-4 sm:p-6">
@@ -264,7 +264,7 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
         </div>
 
         {/* Content */}
-        <div className="relative h-80 sm:h-96 overflow-hidden">
+        <div className="relative flex-1 overflow-hidden min-h-0">
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={currentStep}
@@ -278,12 +278,12 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                 opacity: { duration: 0.2 },
                 scale: { duration: 0.2 },
               }}
-              className="absolute inset-0 p-4 sm:p-6"
+              className="absolute inset-0 p-4 sm:p-6 overflow-y-auto"
             >
               <Card className="h-full border-0 shadow-none bg-transparent">
-                <CardContent className="p-0 h-full flex flex-col">
+                <CardContent className="p-0 h-full flex flex-col min-h-0">
                   {/* Step Content */}
-                  <div className="flex-1 space-y-3 sm:space-y-4">
+                  <div className="flex-1 space-y-3 sm:space-y-4 overflow-y-auto min-h-0 pb-4">
                     {currentStep === 0 && (
                       <div className="space-y-3 sm:space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -408,9 +408,9 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                         </div>
                         <div>
                           <Label className="text-sm font-medium text-white">Preferred Contact Method</Label>
-                          <div className="flex flex-wrap gap-3 mt-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
                             {['email', 'phone', 'both'].map((method) => (
-                              <label key={method} className="flex items-center space-x-2 cursor-pointer glass-panel p-2 rounded-lg">
+                              <label key={method} className="flex items-center space-x-2 cursor-pointer glass-panel p-3 rounded-lg hover:bg-white/5 transition-colors">
                                 <input
                                   type="radio"
                                   value={method}
@@ -480,7 +480,7 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                       <div className="space-y-3 sm:space-y-4">
                         <div>
                           <Label className="text-sm font-medium text-white">Areas of Interest</Label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                             {interestOptions.map((interest) => (
                               <Badge
                                 key={interest}
@@ -489,7 +489,7 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                                     ? 'default' 
                                     : 'outline'
                                 }
-                                className={`cursor-pointer justify-center py-2 text-xs transition-all duration-200 ${
+                                className={`cursor-pointer justify-center py-3 px-2 text-xs transition-all duration-200 whitespace-nowrap overflow-hidden text-ellipsis ${
                                   form.watch('interests')?.includes(interest)
                                     ? 'bg-gradient-to-r from-neon-blue to-neon-green text-black border-transparent'
                                     : 'border-glass-border text-white hover:border-neon-blue/50 hover:bg-white/5'
@@ -522,7 +522,7 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                           <Textarea
                             id="notes"
                             {...form.register('notes')}
-                            className="mt-1 glass-input text-white placeholder:text-white/50 resize-none"
+                            className="mt-1 glass-input text-white placeholder:text-white/50 resize-none min-h-[80px]"
                             placeholder="Any additional information..."
                             rows={3}
                           />
@@ -537,12 +537,12 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-6 bg-black/40 border-t border-glass-border flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div className="p-4 sm:p-6 bg-black/40 border-t border-glass-border flex flex-col sm:flex-row justify-between items-center gap-3 flex-shrink-0">
           <Button
             variant="outline"
             onClick={prevStep}
             disabled={currentStep === 0}
-            className="flex items-center space-x-2 glass-button border-glass-border text-white hover:bg-white/10 order-2 sm:order-1"
+            className="flex items-center space-x-2 glass-button border-glass-border text-white hover:bg-white/10 order-2 sm:order-1 w-full sm:w-auto"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Previous</span>
@@ -555,7 +555,7 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
           <Button
             onClick={nextStep}
             disabled={createCustomerMutation.isPending}
-            className="flex items-center space-x-2 bg-gradient-to-r from-neon-blue to-neon-green text-black hover:opacity-90 border-0 order-3"
+            className="flex items-center space-x-2 bg-gradient-to-r from-neon-blue to-neon-green text-black hover:opacity-90 border-0 order-3 w-full sm:w-auto"
           >
             {currentStep === steps.length - 1 ? (
               <>
