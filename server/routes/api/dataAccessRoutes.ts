@@ -324,9 +324,9 @@ export async function testDataAccess(req: Request, res: Response) {
       fieldAccess: {} as any
     };
 
-    // Check field-level access
-    if (permissions?.field_level_access && permissions.field_level_access[tableName]) {
-      const fieldAccess = permissions.field_level_access[tableName] as any;
+    // Check field-level access  
+    if (permissions?.field_level_access && (permissions.field_level_access as any)[tableName]) {
+      const fieldAccess = (permissions.field_level_access as any)[tableName] as any;
       testResult.fieldAccess = {
         viewable: fieldAccess?.viewable_fields || [],
         editable: fieldAccess?.editable_fields || [],

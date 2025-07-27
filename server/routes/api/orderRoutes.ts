@@ -147,6 +147,7 @@ async function getAllOrders(req: Request, res: Response) {
  */
 async function createOrder(req: Request, res: Response) {
   try {
+    const orderData = req.body;
     const {
       orderNumber,
       customerId,
@@ -157,7 +158,7 @@ async function createOrder(req: Request, res: Response) {
       logoUrl,
       companyName,
       items = []
-    }: Order = req.body;
+    } = orderData;
 
     console.log('📝 Creating new order:', { orderNumber, customerId, itemCount: items.length });
 
@@ -196,7 +197,7 @@ async function createOrder(req: Request, res: Response) {
 
     // Add order items if provided
     if (items && items.length > 0) {
-      const orderItems = items.map(item => ({
+      const orderItems = items.map((item: any) => ({
         order_id: order.id,
         product_name: item.product_name,
         description: item.description,
@@ -293,7 +294,7 @@ async function updateOrder(req: Request, res: Response) {
 
       // Insert updated items
       if (items.length > 0) {
-        const orderItems = items.map(item => ({
+        const orderItems = items.map((item: any) => ({
           order_id: id,
           product_name: item.productName,
           description: item.description,

@@ -307,8 +307,8 @@ export async function loginUser(req: Request, res: Response) {
     const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
     req.session.user = user;
     req.session.token = data.session.access_token;
-    req.session.expires = sessionExpiry;
-    req.session.maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    req.session.expires = sessionExpiry.toISOString();
+    req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
     console.log('Login successful, session expires at:', sessionExpiry);
 

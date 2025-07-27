@@ -56,15 +56,15 @@ export async function getProductLibrary(req: Request, res: Response) {
 
     // Calculate pricing stats for each product
     const productsWithStats = data?.map(product => {
-      const pricing = product.product_pricing_history || [];
-      const prices = pricing.map(p => parseFloat(p.unit_price));
+      const pricing = Array.isArray(product.product_pricing_history) ? product.product_pricing_history : [];
+      const prices = pricing.map((p: any) => parseFloat(p.unit_price));
       
       return {
         ...product,
         pricing_stats: {
           min_price: prices.length > 0 ? Math.min(...prices) : product.base_price,
           max_price: prices.length > 0 ? Math.max(...prices) : product.base_price,
-          avg_price: prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : product.base_price,
+          avg_price: prices.length > 0 ? prices.reduce((a: number, b: number) => a + b, 0) / prices.length : product.base_price,
           total_orders: pricing.length,
           last_price: pricing.length > 0 ? prices[0] : product.base_price
         }
@@ -212,7 +212,7 @@ export async function copyProductToOrder(req: Request, res: Response) {
     await supabase
       .from('product_library')
       .update({
-        total_times_ordered: (product.total_times_ordered || 0) + 1,
+        total_times_ordered: (Number(product.total_times_ordered) || 0) + 1,
         last_ordered_date: new Date().toISOString()
       })
       .eq('id', productId);
@@ -221,9 +221,9 @@ export async function copyProductToOrder(req: Request, res: Response) {
     const orderItem = {
       product_name: product.product_name,
       description: product.description,
-      quantity: parseInt(quantity),
-      unit_price: parseFloat(product.base_price),
-      total_price: parseFloat(product.base_price) * parseInt(quantity),
+      quantity: parseInt(String(quantity)),
+      unit_price: parseFloat(String(product.base_price)),
+      total_price: parseFloat(String(product.base_price)) * parseInt(String(quantity)),
       size: customizations.size || '',
       color: customizations.color || '',
       material: product.material,

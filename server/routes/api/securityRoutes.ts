@@ -113,7 +113,7 @@ router.post('/mfa/verify', requireAuth, async (req: Request, res: Response) => {
     if (mfaDevice.method === 'totp' && mfaDevice.secret) {
       // Verify TOTP token
       isValid = speakeasy.totp.verify({
-        secret: mfaDevice.secret,
+        secret: String(mfaDevice.secret),
         encoding: 'base32',
         token: token,
         window: 2 // Allow some time skew
@@ -238,7 +238,7 @@ router.post('/validate-password', requireAuth, async (req: Request, res: Respons
     const violations: string[] = [];
 
     // Check length
-    if (password.length < policy.min_length) {
+    if (password.length < Number(policy.min_length)) {
       violations.push(`Password must be at least ${policy.min_length} characters long`);
     }
 
@@ -263,7 +263,7 @@ router.post('/validate-password', requireAuth, async (req: Request, res: Respons
     }
 
     // Check password history if preventing reuse
-    if (policy.prevent_reuse > 0) {
+    if (Number(policy.prevent_reuse) > 0) {
       const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
       
       const { data: history } = await supabase
@@ -271,7 +271,7 @@ router.post('/validate-password', requireAuth, async (req: Request, res: Respons
         .select('password_hash')
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false })
-        .limit(policy.prevent_reuse);
+        .limit(Number(policy.prevent_reuse));
 
       if (history?.some(h => h.password_hash === passwordHash)) {
         violations.push(`Password cannot be one of your last ${policy.prevent_reuse} passwords`);

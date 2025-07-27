@@ -261,7 +261,7 @@ router.delete('/catalog/:catalogItemId', requireAuth, requireRole(['admin', 'des
     }
 
     // Extract filename from URL (Supabase version)
-    const imageUrl = catalogItem.base_image_url;
+    const imageUrl = String(catalogItem.base_image_url);
     const pathParts = imageUrl.split('/');
     const bucketName = pathParts[4];
     const imagePath = `${pathParts[5]}/${pathParts[6]}`;
@@ -338,7 +338,7 @@ router.delete('/order-item/:orderItemId', requireAuth, requireRole(['admin', 'sa
     }
 
         // Extract filename from URL (Supabase version)
-    const imageUrl = orderItem.custom_image_url;
+    const imageUrl = String(orderItem.custom_image_url);
     const pathParts = imageUrl.split('/');
     const bucketName = pathParts[4];
     const imagePath = `${pathParts[5]}/${pathParts[6]}`;
