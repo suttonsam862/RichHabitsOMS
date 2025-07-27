@@ -50,7 +50,7 @@ export async function sendUserInvitation(req: Request, res: Response) {
     // Check if user already exists by searching all users
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const userExists = existingUsers?.users?.some(user => user.email === email);
-    
+
     if (userExists) {
       return res.status(400).json({
         success: false,
@@ -171,7 +171,7 @@ export async function verifyInvitation(req: Request, res: Response) {
     // Check if invitation has expired
     const now = new Date();
     const expiresAt = new Date(invitation.expires_at);
-    
+
     if (now > expiresAt) {
       // Mark as expired
       await supabaseAdmin
@@ -234,11 +234,11 @@ export async function createCustomer(req: Request, res: Response) {
 
   try {
     console.log('Creating customer account with email:', email);
-    
+
     // Generate a secure temporary password
     const tempPassword = Math.random().toString(36).substring(2, 10) + 
                          Math.random().toString(36).substring(2, 10);
-    
+
     // Create the user in Supabase Auth using admin privileges
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -250,7 +250,7 @@ export async function createCustomer(req: Request, res: Response) {
         role: 'customer'
       }
     });
-    
+
     if (error) {
       console.error('Error creating customer auth account:', error);
       return res.status(500).json({
@@ -258,18 +258,18 @@ export async function createCustomer(req: Request, res: Response) {
         message: 'Failed to create customer account: ' + error.message
       });
     }
-    
+
     if (!data?.user) {
       return res.status(500).json({
         success: false,
         message: 'Unknown error creating customer account'
       });
     }
-    
+
     // Generate username from first and last name
     const username = (firstName + lastName).toLowerCase().replace(/[^a-z0-9]/g, '') + 
                      Math.floor(Math.random() * 1000); // Add random digits for uniqueness
-    
+
     // Create profile record
     const profileData = {
       id: data.user.id,
@@ -289,7 +289,7 @@ export async function createCustomer(req: Request, res: Response) {
       updated_at: new Date().toISOString(),
       is_active: true
     };
-    
+
     // Insert profile into database - use snake_case columns for insert
     const { data: insertedProfile, error: profileError } = await supabaseAdmin
       .from('customers')
@@ -302,23 +302,23 @@ export async function createCustomer(req: Request, res: Response) {
         phone: phone || ''
       })
       .select();
-    
+
     if (profileError) {
       console.error('Error creating customer profile:', profileError);
-      
+
       // Clean up auth user since profile creation failed
       await supabaseAdmin.auth.admin.deleteUser(data.user.id);
-      
+
       return res.status(500).json({
         success: false,
         message: 'Failed to create customer profile: ' + profileError.message
       });
     }
-    
+
     // Handle sending invitation email if requested
     let inviteUrl = '';
     let inviteSent = false;
-    
+
     if (sendInvite) {
       try {
         // Generate a password reset link for the user to set their own password
@@ -326,12 +326,12 @@ export async function createCustomer(req: Request, res: Response) {
           type: 'recovery',
           email: email,
         });
-        
+
         if (linkError) {
           console.error('Error generating password reset link:', linkError);
         } else if (linkData?.properties?.action_link) {
           inviteUrl = linkData.properties.action_link;
-          
+
           // Send invitation email with the reset link
           try {
             const emailTemplate = getCustomerInviteEmailTemplate(
@@ -340,7 +340,7 @@ export async function createCustomer(req: Request, res: Response) {
               lastName,
               inviteUrl
             );
-            
+
             inviteSent = await sendEmail(emailTemplate);
             console.log(`Invitation email ${inviteSent ? 'sent' : 'failed'} to ${email}`);
           } catch (emailErr) {
@@ -351,7 +351,7 @@ export async function createCustomer(req: Request, res: Response) {
         console.error('Error in invitation process:', err);
       }
     }
-    
+
     // Return success response
     return res.status(201).json({
       success: true,
@@ -367,7 +367,7 @@ export async function createCustomer(req: Request, res: Response) {
         inviteSent
       }
     });
-    
+
   } catch (err: any) {
     console.error('Unexpected error creating customer:', err);
     return res.status(500).json({
@@ -383,12 +383,12 @@ export async function createCustomer(req: Request, res: Response) {
 async function getAllCustomers(req: Request, res: Response) {
   try {
     console.log('Fetching customers - request received');
-    
+
     // Try to fetch real customers from Supabase first
     try {
       console.log('Attempting to fetch real customers from Supabase...');
       const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
-      
+
       if (error) {
         console.error('Error fetching customers from Supabase:', error);
         throw error;
@@ -449,7 +449,7 @@ async function getAllCustomers(req: Request, res: Response) {
             email_confirmed_at: new Date().toISOString()
           }
         ];
-        
+
         return res.json({
           success: true,
           data: sampleCustomers,
@@ -467,7 +467,7 @@ async function getAllCustomers(req: Request, res: Response) {
 
     } catch (supabaseError) {
       console.error('Supabase connection failed:', supabaseError);
-      
+
       // Only fall back to sample data in development mode if Supabase fails
       if (process.env.NODE_ENV === 'development') {
         console.log('Supabase failed, providing sample customers for development');
@@ -495,7 +495,7 @@ async function getAllCustomers(req: Request, res: Response) {
             email_confirmed_at: new Date().toISOString()
           }
         ];
-        
+
         return res.json({
           success: true,
           data: sampleCustomers,
@@ -503,7 +503,7 @@ async function getAllCustomers(req: Request, res: Response) {
           note: 'Fallback sample data - Supabase connection failed'
         });
       }
-      
+
       // In production, return error if Supabase fails
       return res.status(500).json({
         success: false,
