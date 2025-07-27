@@ -36,10 +36,35 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Configure trust proxy for Replit environment - only in production
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+// Configure trust proxy for Replit environment
+app.set('trust proxy', 1);
+
+// Add host validation middleware for Replit
+app.use((req, res, next) => {
+  // Allow all requests in development or if no host restrictions needed
+  if (process.env.NODE_ENV === 'development') {
+    return next();
+  }
+  
+  const host = req.get('host');
+  const origin = req.get('origin');
+  
+  // Allow localhost and Replit domains
+  if (host && (
+    host.includes('localhost') ||
+    host.includes('.replit.dev') ||
+    host.includes('.repl.co')
+  )) {
+    return next();
+  }
+  
+  // If we have a Replit domain in environment, allow it
+  if (process.env.REPLIT_DEV_DOMAIN && host && host.includes(process.env.REPLIT_DEV_DOMAIN)) {
+    return next();
+  }
+  
+  next();
+});
 
 // Apply security headers first
 app.use(securityHeaders);

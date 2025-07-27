@@ -94,10 +94,19 @@ export const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5000',
-      'https://9a09c15e-e041-45c1-b33a-b993b4ad0a54-00-2s8p16rwqqhd6.kirk.replit.dev'
+      'http://localhost:5173',
+      'https://localhost:5000',
+      'https://localhost:5173',
     ];
 
-    if (allowedOrigins.includes(origin) || origin.includes('.replit.dev')) {
+    // Add current Replit domain from environment
+    if (process.env.REPLIT_DEV_DOMAIN) {
+      allowedOrigins.push(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+      allowedOrigins.push(`http://${process.env.REPLIT_DEV_DOMAIN}`);
+    }
+
+    // Allow any Replit domain
+    if (allowedOrigins.includes(origin) || (origin && origin.includes('.replit.dev'))) {
       return callback(null, true);
     }
 
