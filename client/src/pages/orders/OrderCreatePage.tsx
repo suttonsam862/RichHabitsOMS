@@ -101,14 +101,10 @@ export default function OrderCreatePage() {
     retryDelay: 1000,
   });
 
-  // Extract customers array with fallback support
+  // Extract customers array with proper error handling
   const customers = React.useMemo(() => {
     if (!customersResponse) {
-      // Return sample customers if no real data available
-      return [
-        { id: '1', firstName: 'John', lastName: 'Smith', email: 'john@example.com' },
-        { id: '2', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' }
-      ];
+      return [];
     }
     
     // Handle different response structures

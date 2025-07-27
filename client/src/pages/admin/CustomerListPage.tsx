@@ -104,6 +104,14 @@ export default function CustomerListPage() {
       console.log("Received customer data:", data);
       console.log("Data type:", typeof data, "Is array:", Array.isArray(data));
       console.log("Customer count:", data?.data?.length || 0);
+      console.log("Success flag:", data?.success);
+      
+      // Additional validation
+      if (data?.success && data?.data && Array.isArray(data.data)) {
+        console.log("Valid customer response with", data.data.length, "customers");
+        console.log("First customer sample:", data.data[0]);
+      }
+      
       return data;
     },
     staleTime: 0, // Always refetch
@@ -145,10 +153,14 @@ export default function CustomerListPage() {
     return customersArray || [];
   }, []);
 
-  // Extract customers array from API response
+  // Extract customers array from API response - fixed to handle loading state properly
   const customers = React.useMemo(() => {
+    // Don't process data while loading to avoid null states
+    if (isLoading || !customersResponse) {
+      return [];
+    }
     return processCustomerData(customersResponse);
-  }, [customersResponse, processCustomerData]);
+  }, [customersResponse, processCustomerData, isLoading]);
 
   // Filter customers based on search term
   const filteredCustomers = React.useMemo(() => {
