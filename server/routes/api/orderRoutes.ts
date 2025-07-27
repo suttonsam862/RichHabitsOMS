@@ -1,4 +1,3 @@
-
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
@@ -56,12 +55,13 @@ interface Order {
 }
 
 /**
- * Get all orders with customer and item details
+ * Get all orders with customer information
  */
 async function getAllOrders(req: Request, res: Response) {
   try {
-    console.log('📦 Fetching all orders with relationships...');
+    console.log('Fetching all orders...');
 
+    // First try to get orders with customer join
     const { data: orders, error } = await supabaseAdmin
       .from('orders')
       .select(`
@@ -87,11 +87,28 @@ async function getAllOrders(req: Request, res: Response) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('❌ Error fetching orders:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch orders',
-        error: error.message
+      console.error('Error fetching orders with join:', error);
+
+      // Fallback: try to get orders without join
+      const { data: basicOrders, error: basicError } = await supabaseAdmin
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (basicError) {
+        console.error('Error fetching basic orders:', basicError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch orders: ' + basicError.message,
+          data: []
+        });
+      }
+
+      console.log(`Found ${basicOrders?.length || 0} orders (without customer data)`);
+      return res.json({
+        success: true,
+        data: basicOrders || [],
+        count: basicOrders?.length || 0
       });
     }
 
@@ -112,14 +129,15 @@ async function getAllOrders(req: Request, res: Response) {
       items: order.order_items || []
     })) || [];
 
-    console.log(`✅ Successfully fetched ${transformedOrders.length} orders`);
+    console.log(`Found ${orders?.length || 0} orders with customer data`);
+    res.json(transformedOrders);
 
-    return res.json(transformedOrders);
   } catch (error) {
-    console.error('💥 Unexpected error in getAllOrders:', error);
-    return res.status(500).json({
+    console.error('Error in getAllOrders:', error);
+    res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      data: []
     });
   }
 }

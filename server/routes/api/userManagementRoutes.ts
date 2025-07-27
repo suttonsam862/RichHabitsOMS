@@ -496,3 +496,127 @@ async function logAuditEvent(event: {
 }
 
 export default router;
+import { Router, Request, Response } from 'express';
+import { createClient } from '@supabase/supabase-js';
+import { requireAuth, requireRole } from '../auth/auth';
+
+const router = Router();
+
+// Create Supabase admin client
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
+/**
+ * Get all manufacturers
+ */
+async function getManufacturers(req: Request, res: Response) {
+  try {
+    console.log('Fetching manufacturers...');
+
+    // Get all users with manufacturer role
+    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (error) {
+      console.error('Error fetching users:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch manufacturers'
+      });
+    }
+
+    // Filter for manufacturer role users
+    const manufacturers = users.users
+      .filter(user => user.user_metadata?.role === 'manufacturer')
+      .map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.user_metadata?.firstName || '',
+        lastName: user.user_metadata?.lastName || '',
+        company: user.user_metadata?.company || '',
+        phone: user.user_metadata?.phone || '',
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at,
+        status: user.email_confirmed_at ? 'active' : 'pending'
+      }));
+
+    console.log(`Found ${manufacturers.length} manufacturers`);
+
+    res.json({
+      success: true,
+      data: manufacturers,
+      count: manufacturers.length
+    });
+
+  } catch (error) {
+    console.error('Error in getManufacturers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+/**
+ * Get all users by role
+ */
+async function getUsersByRole(req: Request, res: Response) {
+  try {
+    const { role } = req.params;
+    console.log(`Fetching users with role: ${role}`);
+
+    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (error) {
+      console.error('Error fetching users:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch users'
+      });
+    }
+
+    // Filter for specified role
+    const filteredUsers = users.users
+      .filter(user => user.user_metadata?.role === role)
+      .map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.user_metadata?.firstName || '',
+        lastName: user.user_metadata?.lastName || '',
+        company: user.user_metadata?.company || '',
+        phone: user.user_metadata?.phone || '',
+        role: user.user_metadata?.role || '',
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at,
+        status: user.email_confirmed_at ? 'active' : 'pending'
+      }));
+
+    console.log(`Found ${filteredUsers.length} users with role ${role}`);
+
+    res.json({
+      success: true,
+      data: filteredUsers,
+      count: filteredUsers.length
+    });
+
+  } catch (error) {
+    console.error('Error in getUsersByRole:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Configure routes
+router.get('/manufacturers', requireAuth, requireRole(['admin', 'salesperson']), getManufacturers);
+router.get('/role/:role', requireAuth, requireRole(['admin']), getUsersByRole);
+
+export default router;

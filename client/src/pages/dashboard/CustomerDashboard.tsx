@@ -29,7 +29,7 @@ interface CustomerDashboardData {
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
-  
+
   // Get customer dashboard data from dedicated API endpoint
   const { data: dashboardData, isLoading } = useQuery<CustomerDashboardData>({
     queryKey: ['customer', 'dashboard'],
@@ -41,9 +41,9 @@ export default function CustomerDashboard() {
       return response.json();
     }
   });
-  
+
   if (!user) return null;
-  
+
   // Extract dashboard metrics
   const metrics = dashboardData?.metrics || {
     totalOrders: 0,
@@ -51,23 +51,23 @@ export default function CustomerDashboard() {
     designsNeedingApproval: 0,
     totalSpent: '0.00'
   };
-  
+
   const recentOrders = dashboardData?.recentOrders || [];
   const recentMessages = dashboardData?.recentMessages || [];
-  
+
   return (
     <div className="space-y-6">
       <div className="mb-6 border-b pb-4">
         <CustomerNavigation />
       </div>
-    
+
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Customer Dashboard</h1>
         <p className="text-muted-foreground">
           Welcome, {dashboardData?.customer?.firstName || user.firstName || user.username}
         </p>
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -87,7 +87,7 @@ export default function CustomerDashboard() {
             )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
@@ -106,7 +106,7 @@ export default function CustomerDashboard() {
             )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Design Approvals</CardTitle>
@@ -125,7 +125,7 @@ export default function CustomerDashboard() {
             )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
@@ -145,7 +145,7 @@ export default function CustomerDashboard() {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="col-span-1">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -190,7 +190,7 @@ export default function CustomerDashboard() {
             )}
           </CardContent>
         </Card>
-        
+
         <Card className="col-span-1">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Messages</CardTitle>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
@@ -55,21 +55,72 @@ export default function AdminManufacturerAssignment() {
     specialties: ''
   });
 
-  // Fetch orders ready for production assignment
-  const { data: orders = [], isLoading: isLoadingOrders } = useQuery({
-    queryKey: ['/api/orders', 'design_approved'],
-    queryFn: () => apiRequest('GET', '/api/orders?status=design_approved').then(res => res.json()),
-  });
+  const [orders, setOrders] = useState<any[]>([]);
+  const [manufacturers, setManufacturers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch manufacturers only
-  const { data: manufacturersData, isLoading: isLoadingManufacturers } = useQuery({
-    queryKey: ['/api/users', 'manufacturers'],
-    queryFn: () => apiRequest('GET', '/api/users/manufacturers').then(res => res.json()),
-  });
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  // Safely extract manufacturers array
-  const manufacturers = Array.isArray(manufacturersData) ? manufacturersData : 
-                       (manufacturersData?.users && Array.isArray(manufacturersData.users)) ? manufacturersData.users : [];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) {
+        console.error('No auth token found');
+        setOrders([]);
+        setManufacturers([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch orders and manufacturers in parallel
+      const [ordersResponse, manufacturersResponse] = await Promise.all([
+        fetch('/api/orders', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch('/api/users/manufacturers', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      ]);
+
+      // Handle orders response
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json();
+        const ordersArray = Array.isArray(ordersData.data) ? ordersData.data : [];
+        setOrders(ordersArray);
+        console.log('Orders loaded:', ordersArray.length);
+      } else {
+        console.error('Failed to fetch orders:', ordersResponse.status);
+        setOrders([]);
+      }
+
+      // Handle manufacturers response
+      if (manufacturersResponse.ok) {
+        const manufacturersData = await manufacturersResponse.json();
+        const manufacturersArray = Array.isArray(manufacturersData.data) ? manufacturersData.data : [];
+        setManufacturers(manufacturersArray);
+        console.log('Manufacturers loaded:', manufacturersArray.length);
+      } else {
+        console.error('Failed to fetch manufacturers:', manufacturersResponse.status);
+        setManufacturers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setOrders([]);
+      setManufacturers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Add manufacturer mutation
   const addManufacturerMutation = useMutation({
@@ -161,7 +212,7 @@ export default function AdminManufacturerAssignment() {
     addManufacturerMutation.mutate(newManufacturerData);
   };
 
-  const isLoading = isLoadingOrders || isLoadingManufacturers;
+  const isLoading = loading;
 
   return (
     <div className="space-y-6">
@@ -202,7 +253,7 @@ export default function AdminManufacturerAssignment() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order: any) => (
+                  {Array.isArray(orders) && orders.length > 0 ? orders.map((order: any) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">{order.orderNumber}</TableCell>
                       <TableCell>{order.customer?.company || 'N/A'}</TableCell>
@@ -224,7 +275,11 @@ export default function AdminManufacturerAssignment() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8 text-gray-500">
+                      {loading ? 'Loading orders...' : 'No orders found'}
+                    </div>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -241,7 +296,7 @@ export default function AdminManufacturerAssignment() {
               Select a manufacturer to assign to this order for production
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="manufacturer">Manufacturer</Label>
@@ -285,7 +340,7 @@ export default function AdminManufacturerAssignment() {
               </Select>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedOrderId(null)}>
               Cancel
@@ -314,7 +369,7 @@ export default function AdminManufacturerAssignment() {
               Create a new manufacturer profile for production assignments
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -342,7 +397,7 @@ export default function AdminManufacturerAssignment() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email *</Label>
               <Input
@@ -356,7 +411,7 @@ export default function AdminManufacturerAssignment() {
                 placeholder="Enter email address"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="company">Company</Label>
               <Input
@@ -369,7 +424,7 @@ export default function AdminManufacturerAssignment() {
                 placeholder="Enter company name"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
               <Input
@@ -382,7 +437,7 @@ export default function AdminManufacturerAssignment() {
                 placeholder="Enter phone number"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="specialties">Specialties</Label>
               <Textarea
@@ -397,7 +452,7 @@ export default function AdminManufacturerAssignment() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddManufacturerDialog(false)}>
               Cancel

@@ -439,7 +439,6 @@ import dataAccessRoutes from './routes/api/dataAccessRoutes.js';
 import workflowRoutes from './routes/api/workflowRoutes.js';
 import monitoringRoutes from './routes/api/monitoringRoutes.js';
 import aiRoutes from './routes/api/aiRoutes.js';
-import invitationRoutes from './routes/api/invitationRoutes.js';
 
 // Import routes
 app.use('/api/auth', authRoutes);
