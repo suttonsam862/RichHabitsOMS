@@ -387,7 +387,7 @@ async function getAllCustomers(req: Request, res: Response) {
     // Try to fetch real customers from user_profiles table first
     try {
       console.log('Attempting to fetch real customers from user_profiles table...');
-      
+
       const { data: customers, error } = await supabaseAdmin
         .from('user_profiles')
         .select(`
@@ -529,7 +529,56 @@ async function getAllCustomers(req: Request, res: Response) {
 }
 
 // Configure routes - temporarily remove auth middleware for development
-router.get('/', getAllCustomers);
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    console.log('Fetching customers from database...');
+
+    // Query user_profiles table for customers
+    const { data: customers, error, count } = await supabaseAdmin
+      .from('user_profiles')
+      .select('*', { count: 'exact' })
+      .eq('role', 'customer')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Database error fetching customers:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch customers',
+        error: error.message
+      });
+    }
+
+    console.log(`Found ${customers?.length || 0} customers in database`);
+
+    // Transform the data to match expected format
+    const transformedCustomers = customers?.map(customer => ({
+      id: customer.id,
+      email: customer.email,
+      firstName: customer.first_name,
+      lastName: customer.last_name,
+      username: customer.username,
+      company: customer.company,
+      phone: customer.phone,
+      role: customer.role,
+      created_at: customer.created_at,
+      last_sign_in_at: customer.created_at, // Use created_at as fallback
+      email_confirmed_at: customer.created_at // Use created_at as fallback
+    })) || [];
+
+    return res.status(200).json({
+      success: true,
+      data: transformedCustomers,
+      count: count || 0
+    });
+  } catch (err) {
+    console.error('Unexpected error in customer route:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
 router.post('/invite', requireAuth, requireRole(['admin']), sendUserInvitation);
 router.get('/verify/:token', verifyInvitation);
 router.post('/', requireAuth, requireRole(['admin']), createCustomer);
