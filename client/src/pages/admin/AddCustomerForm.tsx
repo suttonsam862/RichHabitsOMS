@@ -15,11 +15,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 interface AddCustomerFormProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void;
 }
 
-export default function AddCustomerForm({ isOpen, onClose }: AddCustomerFormProps) {
+export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: AddCustomerFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -54,12 +55,14 @@ export default function AddCustomerForm({ isOpen, onClose }: AddCustomerFormProp
     onSuccess: (data) => {
       console.log('Customer created successfully:', data);
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
       toast({
         title: "Success!",
         description: "Customer was added successfully",
       });
       resetForm();
-      onClose();
+      if (onSuccess) onSuccess();
+      if (onClose) onClose();
     },
     onError: (error: any) => {
       console.error('Error adding customer:', error);
@@ -95,7 +98,7 @@ export default function AddCustomerForm({ isOpen, onClose }: AddCustomerFormProp
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) onClose();
+      if (!open && onClose) onClose();
     }}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>

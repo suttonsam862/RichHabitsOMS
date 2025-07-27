@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": false,
+    "declaration": false,
+    "sourceMap": false,
+    "incremental": false,
+    "strict": false,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["server/**/*"],
+  "exclude": [
+    "node_modules",
+    "build", 
+    "dist",
+    "**/*.test.ts",
+    "client/**/*",
+    "server/design-broken.ts",
+    "server/design.ts",
+    "server/add-build-instructions-column.ts",
+    "server/catalog-comprehensive-fix.ts"
+  ]
+}

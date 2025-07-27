@@ -53,10 +53,12 @@ export function InvitationManagementPage() {
   });
 
   // Fetch invitations
-  const { data: invitations = [], isLoading } = useQuery({
+  const { data: invitationsResponse, isLoading } = useQuery({
     queryKey: ['/api/invitations/admin/list'],
     queryFn: getQueryFn({ on401: 'throw' }),
   });
+
+  const invitations = Array.isArray(invitationsResponse) ? invitationsResponse : [];
 
   // Create invitation mutation
   const createInvitationMutation = useMutation({
@@ -207,7 +209,7 @@ export function InvitationManagementPage() {
                       <SelectValue placeholder="Select volume" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="small">Small (< 50 items)</SelectItem>
+                      <SelectItem value="small">Small (&lt; 50 items)</SelectItem>
                       <SelectItem value="medium">Medium (50-200 items)</SelectItem>
                       <SelectItem value="large">Large (200-500 items)</SelectItem>
                       <SelectItem value="enterprise">Enterprise (500+ items)</SelectItem>

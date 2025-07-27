@@ -117,7 +117,7 @@ export default function CustomerListPage() {
       return data;
     },
     staleTime: 0, // Always refetch
-    cacheTime: 0  // Don't cache
+    gcTime: 0  // Don't cache (cacheTime was renamed to gcTime in v5)
   });
 
   // Enhanced data processing with better error handling
