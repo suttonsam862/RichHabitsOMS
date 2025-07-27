@@ -1,0 +1,11 @@
+Expand the existing “Add Customer” function in the admin panel of my Rich Habits app into a full-screen, swipe-style animated onboarding flow using React (or Next.js frontend if applicable) and Framer Motion. The flow should be structured as a multi-step card interface with animated transitions, optimized for clean data capture and user engagement. Each step should capture specific, categorized data fields. Start with basic identity info: first name, last name, organization name (required), organization type (radio select: "School", "Club", "Business", "Informal Group", "Individual"). Continue with sport type (dropdown or icon grid), location (city, state), and contact info: primary email and phone (required), with options to add multiple contacts (support dynamic fields or a repeating card group). Then, include a file upload card that allows uploading multiple image or zip files (e.g., logos, design files) using a drag-and-drop component; validate for acceptable formats (PNG, AI, SVG, ZIP). Afterward, gather gear preferences (checkboxes or toggles for singlets, polos, backpacks, warmups, full packs, etc.), budget range (low, mid, premium), and communication preferences (email, phone, text). Include a final "internal notes" field and a “Tag This Customer” screen for internal filters like "High Priority," "Needs Quote," "Repeat Client," etc. At the end, display a full preview of the customer profile. On submit, send the payload (including uploaded files) to the backend customer creation endpoint, maintaining compatibility with the current schema and associating all uploads to the customer ID. Style the flow to be fully mobile- and desktop-friendly, incorporate a progress bar or step dots, allow navigation forward/backward, and auto-save state per screen in case of accidental reload. Make this flow accessible via a button on the Customers page as a modal or dedicated route (/admin/customers/new). Maintain full validation, error handling, and ensure new customers are instantly visible in the Customers table after submission.
+
+
+
+
+
+
+
+
+
+Ask ChatGPT
