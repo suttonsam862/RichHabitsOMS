@@ -408,41 +408,6 @@ app.use('/api/users', userManagementRoutes);
     process.exit(1);
   }
 })();
-import { testDatabaseConnection } from "./supabase.js";
-import { createAdminIfNotExists } from "./create-admin-user.js";
-// Temporarily remove SystemConfigurationManager import to fix server crash
-// import { SystemConfigurationManager } from '../system_config/config-loader.js';
-
-async function initializeDatabase() {
-  // Initialize system configuration
-  console.log('🔧 Initializing system configuration...');
-  // Temporarily remove SystemConfigurationManager initialization to fix server crash
-  // const configManager = SystemConfigurationManager.getInstance();
-  // configManager.initialize();
-
-  // if (!configManager.validateConfiguration()) {
-  //   console.error('❌ System configuration validation failed');
-  //   process.exit(1);
-  // }
-
-  try {
-    // Test database connection
-  // await testDatabaseConnection();
-    await createAdminIfNotExists();
-  } catch (error) {
-    console.error("Database initialization failed:", error);
-    process.exit(1);
-  }
-}
-
-import dataAccessRoutes from './routes/api/dataAccessRoutes.js';
-import workflowRoutes from './routes/api/workflowRoutes.js';
-import monitoringRoutes from './routes/api/monitoringRoutes.js';
-import aiRoutes from './routes/api/aiRoutes.js';
-
-// Import routes
-app.use('/api/auth', authRoutes);
-app.use('/api/catalog', catalogRoutes);
 app.use('/api/catalog-options', catalogOptionsRoutes);
 app.use('/api/fabric-options', fabricOptionsRoutes);
 app.use('/api/customers', customerRoutes);
@@ -451,15 +416,13 @@ app.use('/api/images', imageRoutes);
 app.use('/api/invitations', invitationRoutes);
 app.use('/api/user-management', userManagementRoutes);
 app.use('/api/security', securityRoutes);
-app.use('/api/data-access', dataAccessRoutes);
+// Data access routes temporarily disabled due to import issues
 app.use('/api/user-roles', userRolesRoutes);
-app.use('/api/workflow', workflowRoutes);
+// Workflow routes temporarily disabled due to import issues
 
-// AI routes
-app.use('/api/ai', aiRoutes);
+// AI routes temporarily disabled due to import issues
 
-// Monitoring routes
-app.use('/api/monitoring', monitoringRoutes);
+// Monitoring routes temporarily disabled due to import issues
 
 //invitation routes
 app.use('/api/invitations', invitationRoutes);
