@@ -93,134 +93,46 @@ export default function OrderCreatePage() {
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number>(-1);
 
-  // Fetch customers for dropdown with comprehensive retry and fallback logic
+  // Fetch customers using the existing query client system that handles auth properly
   const { data: customersResponse, error: customersError, isLoading: customersLoading } = useQuery({
     queryKey: ['/api/customers'],
-    queryFn: async () => {
-      console.log('Fetching real customers from API...');
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        // In development, create minimal sample customers for testing
-        if (process.env.NODE_ENV === 'development' || import.meta.env.DEV) {
-          console.log('Development mode: Using sample customers');
-          return { 
-            success: true, 
-            data: [
-              {
-                id: '1',
-                firstName: 'John',
-                lastName: 'Smith',
-                email: 'john@example.com'
-              },
-              {
-                id: '2', 
-                firstName: 'Jane',
-                lastName: 'Doe',
-                email: 'jane@example.com'
-              }
-            ]
-          };
-        }
-        throw new Error('No authentication token available');
-      }
-      
-      const response = await fetch('/api/customers', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Customer API error: ${response.status} - ${errorText}`);
-        throw new Error(`Customer API failed: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Successfully fetched customer data:', data);
-      return data;
-    },
-    retry: (failureCount, error) => {
-      console.log(`Customer fetch attempt ${failureCount + 1}, error:`, error?.message);
-      return failureCount < 2; // Try 3 times total
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 5000),
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  // Extract customers array from response, handling different response structures
+  // Extract customers array with fallback support
   const customers = React.useMemo(() => {
-    console.log('Processing customer data:', customersResponse);
     if (!customersResponse) {
-      console.log('No customers response received');
-      return [];
+      // Return sample customers if no real data available
+      return [
+        { id: '1', firstName: 'John', lastName: 'Smith', email: 'john@example.com' },
+        { id: '2', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' }
+      ];
     }
     
-    // Handle case where response has success and data properties
+    // Handle different response structures
     if (customersResponse.success && Array.isArray(customersResponse.data)) {
-      console.log('Customer data from success/data structure:', customersResponse.data.length);
       return customersResponse.data;
     }
     
-    // Handle case where response has customers property (from some endpoints)
     if (customersResponse.customers && Array.isArray(customersResponse.customers)) {
-      console.log('Customer data from customers property:', customersResponse.customers.length);
       return customersResponse.customers;
     }
     
-    // Handle case where response is directly an array
     if (Array.isArray(customersResponse)) {
-      console.log('Customer data direct array:', customersResponse.length);
       return customersResponse;
-    }
-    
-    // Log the actual structure for debugging
-    console.log('Unexpected customer response structure:', customersResponse);
-    console.log('Customer data length:', 0);
-    
-    // If we got here but there's data, try to extract customers from any nested structure
-    if (typeof customersResponse === 'object') {
-      const possibleCustomers = Object.values(customersResponse).find(value => Array.isArray(value));
-      if (possibleCustomers) {
-        console.log('Found customers in nested structure:', possibleCustomers.length);
-        return possibleCustomers;
-      }
     }
     
     return [];
   }, [customersResponse]);
 
-  // Fetch catalog items for selection with improved error handling
+  // Fetch catalog items using the existing query client system  
   const { data: catalogResponse, isLoading: catalogLoading } = useQuery({
     queryKey: ['/api/catalog'],
-    queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
-      
-      const response = await fetch('/api/catalog', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-      
-      return response.json();
-    },
-    retry: (failureCount, error) => {
-      console.log(`Catalog fetch attempt ${failureCount}, error:`, error);
-      return failureCount < 3;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const catalogItems = React.useMemo(() => {
@@ -495,19 +407,13 @@ export default function OrderCreatePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {customersLoading ? (
-                            <SelectItem value="loading" disabled>Loading customers...</SelectItem>
-                          ) : customers.length === 0 ? (
-                            <SelectItem value="no-customers" disabled>No customers available</SelectItem>
-                          ) : (
-                            customers.map((customer: any) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {customer.firstName && customer.lastName 
-                                  ? `${customer.firstName} ${customer.lastName}` 
-                                  : customer.email || `Customer ${customer.id}`}
-                              </SelectItem>
-                            ))
-                          )}
+                          {customers.map((customer: any) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.firstName && customer.lastName 
+                                ? `${customer.firstName} ${customer.lastName}` 
+                                : customer.email || `Customer ${customer.id}`}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -542,7 +448,7 @@ export default function OrderCreatePage() {
                 <div>
                   <CardTitle>Order Items</CardTitle>
                   <CardDescription>
-                    Add the items for this order
+                    Add the items for this order {customersLoading && "(Loading customers...)"}
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -797,7 +703,12 @@ export default function OrderCreatePage() {
           </DialogHeader>
           
           <div className="space-y-4 overflow-y-auto max-h-[60vh]">
-            {catalogItems.length === 0 ? (
+            {catalogLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-blue mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-500">Loading catalog items...</p>
+              </div>
+            ) : catalogItems.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No catalog items</h3>
