@@ -82,18 +82,18 @@ export default function CustomerListPage() {
     setSelectedCustomer(customer);
     setIsViewCustomerDialogOpen(true);
   };
-  
+
   // Fetch real customer data from API
   const { data: customersResponse, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "customers"],
     queryFn: async () => {
       console.log("Fetching real customers from API...");
       const response = await fetch("/api/customers");
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch customers");
       }
-      
+
       const data = await response.json();
       console.log("Received customer data:", data);
       console.log("Data type:", typeof data, "Is array:", Array.isArray(data));
@@ -104,33 +104,39 @@ export default function CustomerListPage() {
   // Extract customers array from API response
   const customers = React.useMemo(() => {
     if (!customersResponse) return [];
-    
+
     // Handle {success: true, data: [...]} structure
     if (customersResponse.success && Array.isArray(customersResponse.data)) {
       return customersResponse.data;
     }
-    
+
     // Handle direct array
     if (Array.isArray(customersResponse)) {
       return customersResponse;
     }
-    
+
     console.error("Unexpected customer data structure:", customersResponse);
     return [];
   }, [customersResponse]);
 
   // Filter customers based on search term
-  const filteredCustomers = customers.filter((customer: Customer) => {
-    const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
-    const searchLower = searchTerm.toLowerCase();
-    
-    return (
-      (fullName && fullName.toLowerCase().includes(searchLower)) ||
-      (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
-      (customer.company && customer.company.toLowerCase().includes(searchLower))
-    );
-  });
-  
+  const filteredCustomers = React.useMemo(() => {
+    // Ensure customers is always an array before filtering
+    const customersArray = Array.isArray(customers) ? customers : [];
+
+    return customersArray.filter(customer => {
+      const matchesSearch = searchTerm === '' || 
+        customer.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.company?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesCompany = 'all';
+
+      return matchesSearch && matchesCompany;
+    });
+  }, [customers, searchTerm]);
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -147,7 +153,7 @@ export default function CustomerListPage() {
           </Button>
         </div>
       </div>
-      
+
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -301,7 +307,7 @@ export default function CustomerListPage() {
               Complete customer information and account details
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedCustomer && (
             <div className="space-y-6 mt-6">
               {/* Basic Information */}
