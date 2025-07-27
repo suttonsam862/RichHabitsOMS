@@ -430,41 +430,14 @@ async function getAllCustomers(req: Request, res: Response) {
         });
       }
 
-      // If no real customers found, check if we should return sample data in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log('No real customers found, providing sample customers for development');
-        const sampleCustomers = [
-          {
-            id: 'sample-1',
-            email: 'john.smith@example.com',
-            firstName: 'John',
-            lastName: 'Smith',
-            company: 'Smith Corp',
-            phone: '555-0123',
-            created_at: new Date().toISOString(),
-            last_sign_in_at: new Date().toISOString(),
-            email_confirmed_at: new Date().toISOString()
-          },
-          {
-            id: 'sample-2',
-            email: 'jane.doe@example.com',
-            firstName: 'Jane',
-            lastName: 'Doe',
-            company: 'Doe Industries',
-            phone: '555-0124',
-            created_at: new Date().toISOString(),
-            last_sign_in_at: new Date().toISOString(),
-            email_confirmed_at: new Date().toISOString()
-          }
-        ];
-
-        return res.json({
-          success: true,
-          data: sampleCustomers,
-          count: sampleCustomers.length,
-          note: 'Sample data - no real customers found'
-        });
-      }
+      // Return empty array if no customers found instead of sample data
+      console.log('No customers found in database');
+      return res.json({
+        success: true,
+        data: [],
+        count: 0,
+        message: 'No customers found'
+      });
 
       // Return empty array if no customers and not in development
       return res.json({

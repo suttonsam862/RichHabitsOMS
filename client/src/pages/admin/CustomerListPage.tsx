@@ -88,7 +88,13 @@ export default function CustomerListPage() {
     queryKey: ["admin", "customers"],
     queryFn: async () => {
       console.log("Fetching real customers from API...");
-      const response = await fetch("/api/customers");
+      const response = await fetch("/api/customers", {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch customers");
@@ -97,8 +103,11 @@ export default function CustomerListPage() {
       const data = await response.json();
       console.log("Received customer data:", data);
       console.log("Data type:", typeof data, "Is array:", Array.isArray(data));
+      console.log("Customer count:", data?.data?.length || 0);
       return data;
-    }
+    },
+    staleTime: 0, // Always refetch
+    cacheTime: 0  // Don't cache
   });
 
   // Enhanced data processing with better error handling
@@ -198,7 +207,11 @@ export default function CustomerListPage() {
                 variant="outline" 
                 size="sm" 
                 className="h-9" 
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["admin", "customers"] })}
+                onClick={() => {
+                  console.log("Manually refreshing customer data...");
+                  queryClient.removeQueries({ queryKey: ["admin", "customers"] });
+                  refetch();
+                }}
                 disabled={isLoading}
               >
                 {isLoading ? (
