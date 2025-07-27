@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,8 +29,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Trash, ArrowLeft } from 'lucide-react';
+import { Loader2, Plus, Trash, ArrowLeft, Package, Search } from 'lucide-react';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { z } from 'zod';
 
@@ -43,6 +45,7 @@ const orderItemSchema = z.object({
   quantity: z.number().min(1, 'Quantity must be at least 1'),
   unitPrice: z.number().min(0, 'Unit price must be non-negative'),
   totalPrice: z.number().min(0, 'Total price must be non-negative'),
+  catalogItemId: z.string().optional(), // Add catalog item reference
 });
 
 const orderFormSchema = z.object({
@@ -62,16 +65,69 @@ interface Customer {
   email: string;
 }
 
+interface CatalogItem {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  sport: string;
+  basePrice: number;
+  unitCost: number;
+  etaDays: string;
+  status: string;
+  imageUrl?: string;
+  hasMeasurements?: boolean;
+}
+
+interface CatalogItemsResponse {
+  success: boolean;
+  data: CatalogItem[];
+}
+
 export default function OrderCreatePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // State for catalog integration
+  const [showCatalogPicker, setShowCatalogPicker] = useState(false);
+  const [selectedItemIndex, setSelectedItemIndex] = useState<number>(-1);
 
   // Fetch customers for dropdown
-  const { data: customers = [] } = useQuery<Customer[]>({
+  const { data: customersResponse, error: customersError } = useQuery({
     queryKey: ['/api/customers'],
     queryFn: getQueryFn({ on401: 'throw' }),
   });
+
+  // Extract customers array from response, handling different response structures
+  const customers = React.useMemo(() => {
+    if (!customersResponse) return [];
+    
+    // Handle case where response has a 'data' property
+    if ((customersResponse as any).data && Array.isArray((customersResponse as any).data)) {
+      return (customersResponse as any).data;
+    }
+    
+    // Handle case where response is directly an array
+    if (Array.isArray(customersResponse)) {
+      return customersResponse;
+    }
+    
+    // Log the actual structure for debugging
+    console.log('Unexpected customers response structure:', customersResponse);
+    return [];
+  }, [customersResponse]);
+
+  // Fetch catalog items for selection
+  const { data: catalogResponse } = useQuery<CatalogItemsResponse>({
+    queryKey: ['/api/catalog'],
+    queryFn: getQueryFn({ on401: 'throw' }),
+  });
+
+  const catalogItems = React.useMemo(() => {
+    if (!catalogResponse?.data) return [];
+    return catalogResponse.data.filter(item => item.status === 'active');
+  }, [catalogResponse]);
 
   // Initialize the form
   const form = useForm<OrderFormValues>({
@@ -90,6 +146,7 @@ export default function OrderCreatePage() {
           quantity: 1,
           unitPrice: 0,
           totalPrice: 0,
+          catalogItemId: '',
         },
       ],
     },
@@ -201,7 +258,49 @@ export default function OrderCreatePage() {
       quantity: 1,
       unitPrice: 0,
       totalPrice: 0,
+      catalogItemId: '',
     });
+  };
+
+  // Add item from catalog
+  const addCatalogItem = (catalogItem: CatalogItem) => {
+    if (selectedItemIndex >= 0) {
+      // Update existing item
+      form.setValue(`items.${selectedItemIndex}.productName`, catalogItem.name);
+      form.setValue(`items.${selectedItemIndex}.description`, `${catalogItem.category} - ${catalogItem.sport}`);
+      form.setValue(`items.${selectedItemIndex}.unitPrice`, catalogItem.basePrice);
+      form.setValue(`items.${selectedItemIndex}.catalogItemId`, catalogItem.id);
+      
+      // Calculate total price
+      const quantity = form.getValues(`items.${selectedItemIndex}.quantity`) || 1;
+      form.setValue(`items.${selectedItemIndex}.totalPrice`, quantity * catalogItem.basePrice);
+    } else {
+      // Add new item
+      append({
+        productName: catalogItem.name,
+        description: `${catalogItem.category} - ${catalogItem.sport}`,
+        size: '',
+        color: '',
+        quantity: 1,
+        unitPrice: catalogItem.basePrice,
+        totalPrice: catalogItem.basePrice,
+        catalogItemId: catalogItem.id,
+      });
+    }
+    
+    setShowCatalogPicker(false);
+    setSelectedItemIndex(-1);
+    
+    toast({
+      title: "Catalog Item Added",
+      description: `${catalogItem.name} has been added to the order.`,
+    });
+  };
+
+  // Open catalog picker for specific item
+  const openCatalogPicker = (index: number = -1) => {
+    setSelectedItemIndex(index);
+    setShowCatalogPicker(true);
   };
 
   // Calculate line item total
@@ -328,15 +427,27 @@ export default function OrderCreatePage() {
                     Add the items for this order
                   </CardDescription>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addItem}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Item
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addItem}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Manual Item
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={() => openCatalogPicker()}
+                    className="bg-neon-blue hover:bg-neon-blue/80"
+                  >
+                    <Package className="mr-2 h-4 w-4" />
+                    Add from Catalog
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -351,7 +462,7 @@ export default function OrderCreatePage() {
                       <TableHead>Quantity</TableHead>
                       <TableHead>Unit Price</TableHead>
                       <TableHead>Total</TableHead>
-                      <TableHead></TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -488,24 +599,35 @@ export default function OrderCreatePage() {
                           ${calculateLineTotal(index).toFixed(2)}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (fields.length > 1) {
-                                remove(index);
-                              } else {
-                                toast({
-                                  title: 'Error',
-                                  description: 'Cannot remove the last item. Orders must have at least one item.',
-                                  variant: 'destructive',
-                                });
-                              }
-                            }}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openCatalogPicker(index)}
+                              title="Select from Catalog"
+                            >
+                              <Package className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (fields.length > 1) {
+                                  remove(index);
+                                } else {
+                                  toast({
+                                    title: 'Error',
+                                    description: 'Cannot remove the last item. Orders must have at least one item.',
+                                    variant: 'destructive',
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -545,6 +667,74 @@ export default function OrderCreatePage() {
           </div>
         </form>
       </Form>
+
+      {/* Catalog Picker Dialog */}
+      <Dialog open={showCatalogPicker} onOpenChange={setShowCatalogPicker}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Select Catalog Item</DialogTitle>
+            <DialogDescription>
+              Choose an item from the catalog to add to your order
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 overflow-y-auto max-h-[60vh]">
+            {catalogItems.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No catalog items</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  No active catalog items are available.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {catalogItems.map((item) => (
+                  <Card key={item.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-semibold text-lg truncate">{item.name}</h3>
+                          <Badge variant="secondary">{item.category}</Badge>
+                        </div>
+                        
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">SKU:</span>
+                            <span className="font-mono">{item.sku}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Sport:</span>
+                            <span>{item.sport}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Price:</span>
+                            <span className="font-semibold">${item.basePrice.toFixed(2)}</span>
+                          </div>
+                          {item.etaDays && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">ETA:</span>
+                              <span>{item.etaDays} days</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <Button
+                          onClick={() => addCatalogItem(item)}
+                          className="w-full mt-3"
+                          size="sm"
+                        >
+                          Select Item
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

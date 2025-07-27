@@ -495,10 +495,6 @@ async function logAuditEvent(event: {
   }
 }
 
-// Configure routes for manufacturers and role-based user queries
-router.get('/manufacturers', requireAuth, requireRole(['admin', 'salesperson']), getManufacturers);
-router.get('/role/:role', requireAuth, requireRole(['admin']), getUsersByRole);
-
 /**
  * Get all manufacturers
  */
@@ -550,13 +546,22 @@ async function getManufacturers(req: Request, res: Response) {
 }
 
 /**
- * Get all users by role
+ * Get users by role - Admin only endpoint
  */
 async function getUsersByRole(req: Request, res: Response) {
   try {
     const { role } = req.params;
+    
+    if (!role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role parameter is required'
+      });
+    }
+
     console.log(`Fetching users with role: ${role}`);
 
+    // Get all users
     const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {
