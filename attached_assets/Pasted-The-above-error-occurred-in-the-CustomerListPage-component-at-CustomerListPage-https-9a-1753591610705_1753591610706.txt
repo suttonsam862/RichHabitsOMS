@@ -1,0 +1,28 @@
+The above error occurred in the <CustomerListPage> component:
+
+    at CustomerListPage (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/pages/admin/CustomerListPage.tsx:67:39)
+    at RequireAuth (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/auth/RequireAuth.tsx:20:31)
+    at RenderedRoute (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=eb9c78d0:5449:26)
+    at Outlet (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=eb9c78d0:6116:26)
+    at main
+    at div
+    at div
+    at AppLayout (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/layout/AppLayout.tsx:46:43)
+    at RenderedRoute (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=eb9c78d0:5449:26)
+    at Routes (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=eb9c78d0:6182:3)
+    at Router (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=eb9c78d0:6125:13)
+    at BrowserRouter (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=eb9c78d0:9111:3)
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=eb9c78d0:38:15)
+    at TooltipProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=eb9c78d0:62:5)
+    at AuthProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/context/AuthContext.tsx:33:32)
+    at QueryClientProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=eb9c78d0:2805:3)
+    at ErrorBoundary (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/error/ErrorBoundary.tsx:8:5)
+    at App
+    at AuthProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/context/AuthContext.tsx?v=F5e8irXd9GsLKw8DSggy8:33:32)
+    at QueryClientProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=eb9c78d0:2805:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+ErrorBoundary caught an error: 
+TypeError {}
+ 
+Object {componentStack: "↵    at CustomerListPage…"}

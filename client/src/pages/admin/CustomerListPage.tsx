@@ -84,7 +84,7 @@ export default function CustomerListPage() {
   };
   
   // Fetch real customer data from API
-  const { data: customers, isLoading, isError, refetch } = useQuery({
+  const { data: customersResponse, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "customers"],
     queryFn: async () => {
       console.log("Fetching real customers from API...");
@@ -101,14 +101,26 @@ export default function CustomerListPage() {
     }
   });
 
-  // We're using the new AddCustomerForm component now
-  
+  // Extract customers array from API response
+  const customers = React.useMemo(() => {
+    if (!customersResponse) return [];
+    
+    // Handle {success: true, data: [...]} structure
+    if (customersResponse.success && Array.isArray(customersResponse.data)) {
+      return customersResponse.data;
+    }
+    
+    // Handle direct array
+    if (Array.isArray(customersResponse)) {
+      return customersResponse;
+    }
+    
+    console.error("Unexpected customer data structure:", customersResponse);
+    return [];
+  }, [customersResponse]);
+
   // Filter customers based on search term
-  const customerData = customers || [];
-  console.log("Processing customer data:", customerData);
-  console.log("Customer data length:", customerData.length);
-  
-  const filteredCustomers = customerData.filter((customer: Customer) => {
+  const filteredCustomers = customers.filter((customer: Customer) => {
     const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
     const searchLower = searchTerm.toLowerCase();
     
