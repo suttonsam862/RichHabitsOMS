@@ -1,6 +1,4 @@
 
-#!/usr/bin/env node
-
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
@@ -75,6 +73,22 @@ async function createRealCustomers() {
       if (error) {
         console.error(`❌ Error creating ${customer.email}:`, error.message);
         continue;
+      }
+      
+      // Also create customer record in customers table
+      const { error: customerError } = await supabaseAdmin
+        .from('customers')
+        .insert({
+          user_id: data.user.id,
+          first_name: customer.firstName,
+          last_name: customer.lastName,
+          email: customer.email,
+          company: customer.company,
+          phone: customer.phone
+        });
+      
+      if (customerError) {
+        console.error(`❌ Error creating customer record for ${customer.email}:`, customerError.message);
       }
       
       console.log(`✅ Created customer: ${customer.email} (ID: ${data.user.id})`);
