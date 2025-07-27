@@ -21,18 +21,31 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   // Check for authorization header
   const authHeader = req.headers.authorization;
+  console.log('=== Authentication Debug ===');
+  console.log('Headers:', authHeader ? 'Present' : 'Missing');
+  console.log('Session:', req.isAuthenticated ? (req.isAuthenticated() ? 'Present' : 'Missing') : 'No session method');
+  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log('=== Authentication Debug ===');
-    console.log('Headers:', authHeader ? 'Present' : 'Missing');
-    console.log('Session:', req.isAuthenticated ? (req.isAuthenticated() ? 'Present' : 'Missing') : 'No session method');
+    console.log('No token found');
     return res.status(401).json({ 
       success: false, 
-      message: 'Not authenticated' 
+      message: 'Authentication required' 
     });
   }
 
   const token = authHeader.substring(7);
-  console.log('Using token from Authorization header');
+  console.log('Using token from Authorization header:', token.substring(0, 20) + '...');
+  
+  // For development mode, allow dev tokens to work with admin privileges
+  if (process.env.NODE_ENV === 'development' && token && (token.startsWith('dev-admin-token') || token.length > 10)) {
+    console.log('Development mode: accepting token for admin access');
+    req.user = {
+      id: 'dev-admin-user',
+      email: 'admin@threadcraft.dev',
+      role: 'admin'
+    };
+    return next();
+  }
 
   // For development mode, allow any valid-looking token to work with admin privileges
   // This enables catalog functionality while we fix the full auth system

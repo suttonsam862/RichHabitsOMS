@@ -47,27 +47,40 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     // Check for authentication token
     const token = localStorage.getItem('authToken');
+    console.log('Query function called for:', queryKey[0], 'with token:', token ? 'present' : 'missing');
 
     // Create headers with auth token if available
-    const headers: HeadersInit = {};
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
+      console.log('Added Authorization header to request');
+    } else {
+      console.log('No auth token found in localStorage');
     }
+
+    console.log('Making request to:', queryKey[0], 'with headers:', headers);
 
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
       headers
     });
 
+    console.log('Response status:', res.status);
+
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      // Clear tokens on auth failures
+      console.log('401 response, clearing tokens and returning null');
       localStorage.removeItem('authToken');
       localStorage.removeItem('tokenExpires');
       return null;
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    console.log('Successfully fetched data:', data);
+    return data;
   };
 
 // Centralized token management
