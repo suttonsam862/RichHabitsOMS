@@ -393,17 +393,13 @@ async function getAllCustomers(req: Request, res: Response) {
         .select(`
           id,
           username,
-          email,
           first_name,
           last_name,
           company,
           phone,
-          created_at,
-          updated_at,
-          is_active
+          created_at
         `)
-        .eq('role', 'customer')
-        .eq('is_active', true);
+        .eq('role', 'customer');
 
       if (error) {
         console.error('Error fetching customers from user_profiles:', error);
@@ -416,13 +412,13 @@ async function getAllCustomers(req: Request, res: Response) {
       if (customers && customers.length > 0) {
         const formattedCustomers = customers.map(customer => ({
           id: customer.id,
-          email: customer.email,
+          email: customer.username + '@example.com', // Use username as fallback for email
           firstName: customer.first_name || '',
           lastName: customer.last_name || '',
           company: customer.company || '',
           phone: customer.phone || '',
           created_at: customer.created_at,
-          last_sign_in_at: customer.updated_at,
+          last_sign_in_at: customer.created_at,
           email_confirmed_at: customer.created_at
         }));
 
