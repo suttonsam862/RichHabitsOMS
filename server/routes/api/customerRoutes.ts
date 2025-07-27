@@ -384,113 +384,41 @@ async function getAllCustomers(req: Request, res: Response) {
   try {
     console.log('Fetching customers - request received');
 
-    // Try to fetch real customers from user_profiles table first
-    try {
-      console.log('Attempting to fetch real customers from user_profiles table...');
-
-      const { data: customers, error } = await supabaseAdmin
-        .from('user_profiles')
-        .select(`
-          id,
-          username,
-          first_name,
-          last_name,
-          company,
-          phone,
-          created_at
-        `)
-        .eq('role', 'customer');
-
-      if (error) {
-        console.error('Error fetching customers from user_profiles:', error);
-        throw error;
-      }
-
-      console.log(`Found ${customers?.length || 0} customers in user_profiles table`);
-
-      // If we have real customers, return them in the expected format
-      if (customers && customers.length > 0) {
-        const formattedCustomers = customers.map(customer => ({
-          id: customer.id,
-          email: customer.username + '@example.com', // Use username as fallback for email
-          firstName: customer.first_name || '',
-          lastName: customer.last_name || '',
-          company: customer.company || '',
-          phone: customer.phone || '',
-          created_at: customer.created_at,
-          last_sign_in_at: customer.created_at,
-          email_confirmed_at: customer.created_at
-        }));
-
-        console.log(`Returning ${formattedCustomers.length} real customers from database`);
-        return res.json({
-          success: true,
-          data: formattedCustomers,
-          count: formattedCustomers.length
-        });
-      }
-
-      // Return empty array if no customers found instead of sample data
-      console.log('No customers found in database');
-      return res.json({
-        success: true,
-        data: [],
-        count: 0,
-        message: 'No customers found'
-      });
-
-      // Return empty array if no customers and not in development
-      return res.json({
-        success: true,
-        data: [],
-        count: 0
-      });
-
-    } catch (supabaseError) {
-      console.error('Supabase connection failed:', supabaseError);
-
-      // Only fall back to sample data in development mode if Supabase fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Supabase failed, providing sample customers for development');
-        const sampleCustomers = [
-          {
-            id: 'fallback-1',
-            email: 'john.smith@example.com',
-            firstName: 'John',
-            lastName: 'Smith',
-            company: 'Smith Corp',
-            phone: '555-0123',
-            created_at: new Date().toISOString(),
-            last_sign_in_at: new Date().toISOString(),
-            email_confirmed_at: new Date().toISOString()
-          },
-          {
-            id: 'fallback-2',
-            email: 'jane.doe@example.com',
-            firstName: 'Jane',
-            lastName: 'Doe',
-            company: 'Doe Industries',
-            phone: '555-0124',
-            created_at: new Date().toISOString(),
-            last_sign_in_at: new Date().toISOString(),
-            email_confirmed_at: new Date().toISOString()
-          }
-        ];
-
-        return res.json({
-          success: true,
-          data: sampleCustomers,
-          count: sampleCustomers.length,
-          note: 'Fallback sample data - Supabase connection failed'
-        });
-      }
-
-      // In production, return error if Supabase fails
+    // Fetch real customers from Supabase Auth
+    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (error) {
+      console.error('Error fetching customers from Supabase Auth:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to fetch customers: ' + supabaseError.message
+        message: 'Failed to fetch customers: ' + error.message
       });
     }
+
+    // Filter for customer role users and format the response
+    const customers = users.users
+      .filter(user => user.user_metadata?.role === 'customer')
+      .map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.user_metadata?.firstName || '',
+        lastName: user.user_metadata?.lastName || '',
+        username: user.user_metadata?.username || '',
+        company: user.user_metadata?.company || '',
+        phone: user.user_metadata?.phone || '',
+        role: user.user_metadata?.role || 'customer',
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at,
+        email_confirmed_at: user.email_confirmed_at
+      }));
+
+    console.log(`Found ${customers.length} customers from Supabase Auth`);
+
+    res.json({
+      success: true,
+      data: customers,
+      count: customers.length
+    });
 
   } catch (error) {
     console.error('Error in getAllCustomers:', error);
@@ -501,57 +429,8 @@ async function getAllCustomers(req: Request, res: Response) {
   }
 }
 
-// Configure routes - temporarily remove auth middleware for development
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    console.log('Fetching customers from database...');
-
-    // Query user_profiles table for customers
-    const { data: customers, error, count } = await supabaseAdmin
-      .from('user_profiles')
-      .select('*', { count: 'exact' })
-      .eq('role', 'customer')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Database error fetching customers:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch customers',
-        error: error.message
-      });
-    }
-
-    console.log(`Found ${customers?.length || 0} customers in database`);
-
-    // Transform the data to match expected format
-    const transformedCustomers = customers?.map(customer => ({
-      id: customer.id,
-      email: customer.email,
-      firstName: customer.first_name,
-      lastName: customer.last_name,
-      username: customer.username,
-      company: customer.company,
-      phone: customer.phone,
-      role: customer.role,
-      created_at: customer.created_at,
-      last_sign_in_at: customer.created_at, // Use created_at as fallback
-      email_confirmed_at: customer.created_at // Use created_at as fallback
-    })) || [];
-
-    return res.status(200).json({
-      success: true,
-      data: transformedCustomers,
-      count: count || 0
-    });
-  } catch (err) {
-    console.error('Unexpected error in customer route:', err);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
+// Configure routes
+router.get('/', getAllCustomers);
 router.post('/invite', requireAuth, requireRole(['admin']), sendUserInvitation);
 router.get('/verify/:token', verifyInvitation);
 router.post('/', requireAuth, requireRole(['admin']), createCustomer);
