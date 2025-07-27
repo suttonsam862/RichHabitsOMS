@@ -41,6 +41,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import AddCustomerForm from "./AddCustomerForm";
+import CustomerOnboardingFlow from "@/components/customer/CustomerOnboardingFlow";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,7 @@ interface Customer {
 export default function CustomerListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
+  const [isOnboardingFlowOpen, setIsOnboardingFlowOpen] = useState(false);
   const [isViewCustomerDialogOpen, setIsViewCustomerDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
@@ -189,10 +191,17 @@ export default function CustomerListPage() {
             Manage your customer relationships and interactions
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
-          <Button onClick={() => setIsAddCustomerDialogOpen(true)}>
+        <div className="mt-4 sm:mt-0 flex space-x-2">
+          <Button 
+            variant="outline"
+            onClick={() => setIsAddCustomerDialogOpen(true)}
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Quick Add
+          </Button>
+          <Button onClick={() => setIsOnboardingFlowOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Customer
+            Full Onboarding
           </Button>
         </div>
       </div>
@@ -461,6 +470,34 @@ export default function CustomerListPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Enhanced Customer Onboarding Flow */}
+      <CustomerOnboardingFlow 
+        isOpen={isOnboardingFlowOpen}
+        onClose={() => setIsOnboardingFlowOpen(false)}
+        onSuccess={() => {
+          setIsOnboardingFlowOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+        }}
+      />
+
+      {/* Quick Add Customer Dialog */}
+      <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Quick Add Customer</DialogTitle>
+            <DialogDescription>
+              Create a new customer profile with basic information.
+            </DialogDescription>
+          </DialogHeader>
+          <AddCustomerForm 
+            onSuccess={() => {
+              setIsAddCustomerDialogOpen(false);
+              queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>
