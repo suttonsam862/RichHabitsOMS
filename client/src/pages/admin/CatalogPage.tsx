@@ -1,16 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Upload, Image as ImageIcon, Eye, Search, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import OptimizedImage from '@/components/OptimizedImage';
+
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Plus, 
+  Search, 
+  Edit, 
+  Trash2, 
+  ImageIcon,
+  Loader2,
+  RefreshCw,
+  Package,
+  DollarSign,
+  Calendar,
+  Hash,
+  FileText,
+  Upload,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  X,
+  Sparkles
+} from "lucide-react";
+import OptimizedImage from "@/components/OptimizedImage";
 
 interface CatalogItem {
   id: string;
@@ -23,9 +61,16 @@ interface CatalogItem {
   etaDays: string;
   status: 'active' | 'inactive';
   imageUrl?: string;
-  measurementChartUrl?: string;
-  createdAt: string;
-  updatedAt: string;
+  description?: string;
+  buildInstructions?: string;
+  fabric?: string;
+  sizes?: string[];
+  colors?: string[];
+  customizationOptions?: string[];
+  minQuantity?: number;
+  maxQuantity?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface CatalogFormData {
@@ -37,7 +82,48 @@ interface CatalogFormData {
   sku: string;
   etaDays: string;
   status: 'active' | 'inactive';
+  description: string;
+  buildInstructions: string;
+  fabric: string;
+  sizes: string[];
+  colors: string[];
+  customizationOptions: string[];
+  minQuantity: number;
+  maxQuantity: number;
 }
+
+const ONBOARDING_STEPS = [
+  {
+    id: 'basic',
+    title: 'Basic Information',
+    description: 'Tell us about your product',
+    icon: Package
+  },
+  {
+    id: 'pricing',
+    title: 'Pricing & Cost',
+    description: 'Set your pricing structure',
+    icon: DollarSign
+  },
+  {
+    id: 'details',
+    title: 'Product Details',
+    description: 'Add detailed specifications',
+    icon: FileText
+  },
+  {
+    id: 'customization',
+    title: 'Customization',
+    description: 'Define available options',
+    icon: Sparkles
+  },
+  {
+    id: 'image',
+    title: 'Product Image',
+    description: 'Upload a stunning image',
+    icon: Upload
+  }
+];
 
 export default function CatalogPage() {
   const [isAddingItem, setIsAddingItem] = useState(false);
@@ -45,6 +131,7 @@ export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<CatalogFormData>({
     name: '',
     category: '',
@@ -52,126 +139,218 @@ export default function CatalogPage() {
     basePrice: 0,
     unitCost: 0,
     sku: '',
-    etaDays: '',
-    status: 'active'
+    etaDays: '7-10 business days',
+    status: 'active',
+    description: '',
+    buildInstructions: '',
+    fabric: '',
+    sizes: [],
+    colors: [],
+    customizationOptions: [],
+    minQuantity: 1,
+    maxQuantity: 1000
   });
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch catalog items
-  const { data: catalogItems = [], isLoading, error } = useQuery({
-    queryKey: ['/api/catalog'],
-    select: (data) => data?.data || []
+  // Fetch catalog items with better error handling
+  const { data: catalogItems = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['catalog'],
+    queryFn: async () => {
+      console.log("Fetching catalog items...");
+      try {
+        const response = await fetch("/api/catalog", {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch catalog: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Catalog data received:", data);
+        
+        // Handle different response structures
+        if (data.success && Array.isArray(data.data)) {
+          return data.data;
+        } else if (Array.isArray(data)) {
+          return data;
+        } else {
+          console.warn("Unexpected catalog response structure:", data);
+          return [];
+        }
+      } catch (error) {
+        console.error("Catalog fetch error:", error);
+        throw error;
+      }
+    },
+    retry: 2,
+    retryDelay: 1000
   });
 
   // Fetch categories and sports for dropdowns
   const { data: categories = [] } = useQuery({
-    queryKey: ['/api/catalog-options/categories'],
-    select: (data) => data?.categories || []
+    queryKey: ['catalog-categories'],
+    queryFn: async () => {
+      const response = await fetch("/api/catalog-options/categories");
+      if (response.ok) {
+        const data = await response.json();
+        return data.categories || [];
+      }
+      return ['Jerseys', 'Shorts', 'Accessories', 'Equipment', 'Custom Apparel'];
+    }
   });
 
   const { data: sports = [] } = useQuery({
-    queryKey: ['/api/catalog-options/sports'],
-    select: (data) => data?.sports || []
+    queryKey: ['catalog-sports'],
+    queryFn: async () => {
+      const response = await fetch("/api/catalog-options/sports");
+      if (response.ok) {
+        const data = await response.json();
+        return data.sports || [];
+      }
+      return ['Football', 'Basketball', 'Soccer', 'Baseball', 'Hockey', 'Tennis', 'Golf', 'General'];
+    }
   });
 
-  // Create catalog item mutation
+  // Create item mutation
   const createItemMutation = useMutation({
-    mutationFn: async (data: CatalogFormData) => {
-      return apiRequest('/api/catalog', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/catalog'] });
-      setIsAddingItem(false);
-      resetForm();
+    mutationFn: async (itemData: CatalogFormData) => {
+      const formDataToSend = new FormData();
       
-      // Upload image if file is selected
-      if (selectedFile && result?.item?.id) {
-        uploadImage(result.item.id);
+      // Add all form fields
+      Object.entries(itemData).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          formDataToSend.append(key, JSON.stringify(value));
+        } else {
+          formDataToSend.append(key, String(value));
+        }
+      });
+
+      // Add image if selected
+      if (selectedFile) {
+        formDataToSend.append('image', selectedFile);
       }
-      
-      toast({
-        title: 'Success',
-        description: 'Catalog item created successfully',
+
+      const response = await fetch('/api/catalog', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+        },
+        body: formDataToSend
       });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Item Created",
+        description: "Catalog item has been created successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      resetForm();
+      setIsAddingItem(false);
     },
     onError: (error) => {
       toast({
-        title: 'Error',
-        description: 'Failed to create catalog item',
-        variant: 'destructive'
+        title: "Error",
+        description: `Failed to create item: ${error.message}`,
+        variant: "destructive",
       });
     }
   });
 
-  // Update catalog item mutation
+  // Update item mutation
   const updateItemMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CatalogFormData> }) => {
-      return apiRequest(`/api/catalog/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+    mutationFn: async ({ id, data }: { id: string; data: CatalogFormData }) => {
+      const formDataToSend = new FormData();
+      
+      Object.entries(data).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          formDataToSend.append(key, JSON.stringify(value));
+        } else {
+          formDataToSend.append(key, String(value));
+        }
       });
+
+      if (selectedFile) {
+        formDataToSend.append('image', selectedFile);
+      }
+
+      const response = await fetch(`/api/catalog/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+        },
+        body: formDataToSend
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update item');
+      }
+
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/catalog'] });
-      setEditingItem(null);
-      resetForm();
       toast({
-        title: 'Success',
-        description: 'Catalog item updated successfully',
+        title: "Item Updated",
+        description: "Catalog item has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      resetForm();
+      setIsAddingItem(false);
+      setEditingItem(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update item: ${error.message}`,
+        variant: "destructive",
       });
     }
   });
 
-  // Delete catalog item mutation
+  // Delete item mutation
   const deleteItemMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/catalog/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/catalog/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete item');
+      }
+
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/catalog'] });
       toast({
-        title: 'Success',
-        description: 'Catalog item deleted successfully',
+        title: "Item Deleted",
+        description: "Catalog item has been deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['catalog'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete item: ${error.message}`,
+        variant: "destructive",
       });
     }
   });
-
-  // Image upload function
-  const uploadImage = async (catalogItemId: string) => {
-    if (!selectedFile) return;
-
-    const imageFormData = new FormData();
-    imageFormData.append('image', selectedFile);
-
-    try {
-      await apiRequest(`/api/images/catalog/${catalogItemId}`, {
-        method: 'POST',
-        body: imageFormData
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ['/api/catalog'] });
-      setSelectedFile(null);
-      setImagePreview(null);
-      
-      toast({
-        title: 'Success',
-        description: 'Image uploaded successfully',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to upload image',
-        variant: 'destructive'
-      });
-    }
-  };
 
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,6 +367,13 @@ export default function CatalogPage() {
     }
   };
 
+  // Generate SKU
+  const generateSKU = () => {
+    const prefix = formData.category.substring(0, 3).toUpperCase();
+    const suffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setFormData({ ...formData, sku: `${prefix}-${suffix}` });
+  };
+
   // Reset form
   const resetForm = () => {
     setFormData({
@@ -197,11 +383,44 @@ export default function CatalogPage() {
       basePrice: 0,
       unitCost: 0,
       sku: '',
-      etaDays: '',
-      status: 'active'
+      etaDays: '7-10 business days',
+      status: 'active',
+      description: '',
+      buildInstructions: '',
+      fabric: '',
+      sizes: [],
+      colors: [],
+      customizationOptions: [],
+      minQuantity: 1,
+      maxQuantity: 1000
     });
     setSelectedFile(null);
     setImagePreview(null);
+    setCurrentStep(0);
+  };
+
+  // Start editing
+  const startEditing = (item: CatalogItem) => {
+    setEditingItem(item);
+    setFormData({
+      name: item.name || '',
+      category: item.category || '',
+      sport: item.sport || '',
+      basePrice: item.basePrice || 0,
+      unitCost: item.unitCost || 0,
+      sku: item.sku || '',
+      etaDays: item.etaDays || '7-10 business days',
+      status: item.status || 'active',
+      description: item.description || '',
+      buildInstructions: item.buildInstructions || '',
+      fabric: item.fabric || '',
+      sizes: item.sizes || [],
+      colors: item.colors || [],
+      customizationOptions: item.customizationOptions || [],
+      minQuantity: item.minQuantity || 1,
+      maxQuantity: item.maxQuantity || 1000
+    });
+    setIsAddingItem(true);
   };
 
   // Handle form submission
@@ -217,33 +436,309 @@ export default function CatalogPage() {
 
   // Filter items based on search
   const filteredItems = catalogItems.filter((item: CatalogItem) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.sport.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.sport?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Start editing
-  const startEditing = (item: CatalogItem) => {
-    setEditingItem(item);
-    setFormData({
-      name: item.name,
-      category: item.category,
-      sport: item.sport,
-      basePrice: item.basePrice,
-      unitCost: item.unitCost,
-      sku: item.sku,
-      etaDays: item.etaDays,
-      status: item.status
-    });
-    setIsAddingItem(true);
+  // Handle next step in onboarding
+  const handleNextStep = () => {
+    if (currentStep < ONBOARDING_STEPS.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  // Handle previous step in onboarding
+  const handlePrevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Render onboarding step content
+  const renderStepContent = () => {
+    const step = ONBOARDING_STEPS[currentStep];
+    
+    switch (step.id) {
+      case 'basic':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name" className="text-foreground">Product Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter product name"
+                className="glass-input"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="category" className="text-foreground">Category</Label>
+              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                <SelectTrigger className="glass-input">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="glass-panel border-glass-border">
+                  {categories.map((category: string) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="sport" className="text-foreground">Sport</Label>
+              <Select value={formData.sport} onValueChange={(value) => setFormData({ ...formData, sport: value })}>
+                <SelectTrigger className="glass-input">
+                  <SelectValue placeholder="Select sport" />
+                </SelectTrigger>
+                <SelectContent className="glass-panel border-glass-border">
+                  {sports.map((sport: string) => (
+                    <SelectItem key={sport} value={sport}>
+                      {sport}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+
+      case 'pricing':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="basePrice" className="text-foreground">Base Price ($)</Label>
+              <Input
+                id="basePrice"
+                type="number"
+                step="0.01"
+                value={formData.basePrice}
+                onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+                className="glass-input"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="unitCost" className="text-foreground">Unit Cost ($)</Label>
+              <Input
+                id="unitCost"
+                type="number"
+                step="0.01"
+                value={formData.unitCost}
+                onChange={(e) => setFormData({ ...formData, unitCost: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+                className="glass-input"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="sku" className="text-foreground">SKU</Label>
+              <div className="flex space-x-2">
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  placeholder="Product SKU"
+                  className="glass-input"
+                />
+                <Button type="button" onClick={generateSKU} variant="outline" className="glass-button">
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="etaDays" className="text-foreground">Estimated Delivery Time</Label>
+              <Input
+                id="etaDays"
+                value={formData.etaDays}
+                onChange={(e) => setFormData({ ...formData, etaDays: e.target.value })}
+                placeholder="7-10 business days"
+                className="glass-input"
+              />
+            </div>
+          </div>
+        );
+
+      case 'details':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="description" className="text-foreground">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe your product"
+                className="glass-input"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="buildInstructions" className="text-foreground">Build Instructions</Label>
+              <Textarea
+                id="buildInstructions"
+                value={formData.buildInstructions}
+                onChange={(e) => setFormData({ ...formData, buildInstructions: e.target.value })}
+                placeholder="Manufacturing and build instructions"
+                className="glass-input"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="fabric" className="text-foreground">Fabric</Label>
+              <Input
+                id="fabric"
+                value={formData.fabric}
+                onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
+                placeholder="e.g., 100% Polyester, Cotton Blend"
+                className="glass-input"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="minQuantity" className="text-foreground">Min Quantity</Label>
+                <Input
+                  id="minQuantity"
+                  type="number"
+                  value={formData.minQuantity}
+                  onChange={(e) => setFormData({ ...formData, minQuantity: parseInt(e.target.value) || 1 })}
+                  className="glass-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="maxQuantity" className="text-foreground">Max Quantity</Label>
+                <Input
+                  id="maxQuantity"
+                  type="number"
+                  value={formData.maxQuantity}
+                  onChange={(e) => setFormData({ ...formData, maxQuantity: parseInt(e.target.value) || 1000 })}
+                  className="glass-input"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'customization':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="sizes" className="text-foreground">Available Sizes</Label>
+              <Input
+                id="sizes"
+                value={formData.sizes.join(', ')}
+                onChange={(e) => setFormData({ ...formData, sizes: e.target.value.split(', ').filter(s => s.trim()) })}
+                placeholder="XS, S, M, L, XL, XXL"
+                className="glass-input"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Separate sizes with commas</p>
+            </div>
+
+            <div>
+              <Label htmlFor="colors" className="text-foreground">Available Colors</Label>
+              <Input
+                id="colors"
+                value={formData.colors.join(', ')}
+                onChange={(e) => setFormData({ ...formData, colors: e.target.value.split(', ').filter(c => c.trim()) })}
+                placeholder="Red, Blue, Green, Black, White"
+                className="glass-input"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Separate colors with commas</p>
+            </div>
+
+            <div>
+              <Label htmlFor="customizationOptions" className="text-foreground">Customization Options</Label>
+              <Input
+                id="customizationOptions"
+                value={formData.customizationOptions.join(', ')}
+                onChange={(e) => setFormData({ ...formData, customizationOptions: e.target.value.split(', ').filter(o => o.trim()) })}
+                placeholder="Embroidery, Screen Print, Heat Transfer"
+                className="glass-input"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Separate options with commas</p>
+            </div>
+
+            <div>
+              <Label htmlFor="status" className="text-foreground">Status</Label>
+              <Select value={formData.status} onValueChange={(value: 'active' | 'inactive') => setFormData({ ...formData, status: value })}>
+                <SelectTrigger className="glass-input">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent className="glass-panel border-glass-border">
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+
+      case 'image':
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="image" className="text-foreground">Product Image</Label>
+              <div className="border-2 border-dashed border-glass-border rounded-lg p-6 text-center">
+                {imagePreview ? (
+                  <div className="space-y-4">
+                    <img src={imagePreview} alt="Preview" className="mx-auto max-h-48 rounded-lg" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setImagePreview(null);
+                      }}
+                      className="glass-button"
+                    >
+                      Remove Image
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <div>
+                      <Label htmlFor="file-upload" className="cursor-pointer">
+                        <span className="text-neon-blue hover:text-neon-blue/80">Upload an image</span>
+                        <Input
+                          id="file-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading catalog...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-neon-blue" />
+        <span className="ml-2 text-foreground">Loading catalog...</span>
       </div>
     );
   }
@@ -251,259 +746,284 @@ export default function CatalogPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Product Catalog</h1>
-        <Button onClick={() => setIsAddingItem(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Item
-        </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Product Catalog</h1>
+          <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
+        </div>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              console.log("Manually refreshing catalog...");
+              refetch();
+            }}
+            disabled={isLoading}
+            className="glass-button"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Refresh
+          </Button>
+          <Button 
+            onClick={() => setIsAddingItem(true)}
+            className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Item
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
-      <div className="flex items-center space-x-2">
-        <Search className="w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search catalog items..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
+      <Card className="rich-card">
+        <CardContent className="pt-6">
+          <div className="flex items-center space-x-2">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search catalog items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="glass-input max-w-sm"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Add/Edit Form */}
-      {isAddingItem && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingItem ? 'Edit' : 'Add'} Catalog Item</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category: string) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="sport">Sport</Label>
-                  <Select value={formData.sport} onValueChange={(value) => setFormData({ ...formData, sport: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sport" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sports.map((sport: string) => (
-                        <SelectItem key={sport} value={sport}>
-                          {sport}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="basePrice">Base Price</Label>
-                  <Input
-                    id="basePrice"
-                    type="number"
-                    step="0.01"
-                    value={formData.basePrice}
-                    onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="unitCost">Unit Cost</Label>
-                  <Input
-                    id="unitCost"
-                    type="number"
-                    step="0.01"
-                    value={formData.unitCost}
-                    onChange={(e) => setFormData({ ...formData, unitCost: parseFloat(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="etaDays">ETA (Days)</Label>
-                  <Input
-                    id="etaDays"
-                    value={formData.etaDays}
-                    onChange={(e) => setFormData({ ...formData, etaDays: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value: 'active' | 'inactive') => setFormData({ ...formData, status: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Image Upload */}
-              <div>
-                <Label htmlFor="image">Product Image</Label>
-                <div className="mt-2">
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <Label htmlFor="image" className="cursor-pointer inline-flex items-center px-4 py-2 border border-dashed border-gray-300 rounded-md">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Choose Image
-                  </Label>
-                  {imagePreview && (
-                    <div className="mt-2">
-                      <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-md" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => {
-                  setIsAddingItem(false);
-                  setEditingItem(null);
-                  resetForm();
-                }}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createItemMutation.isPending || updateItemMutation.isPending}>
-                  {(createItemMutation.isPending || updateItemMutation.isPending) && (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  )}
-                  {editingItem ? 'Update' : 'Create'}
-                </Button>
-              </div>
-            </form>
+      {/* Error State */}
+      {error && (
+        <Card className="rich-card">
+          <CardContent className="py-8 text-center">
+            <h3 className="text-lg font-medium mb-2 text-foreground">Unable to load catalog</h3>
+            <p className="text-muted-foreground mb-4">There was an error fetching catalog data. Please try again.</p>
+            <Button onClick={() => refetch()} className="glass-button">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
           </CardContent>
         </Card>
       )}
 
       {/* Catalog Items Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((item: CatalogItem) => (
-          <Card key={item.id} className="relative">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{item.name}</CardTitle>
-                <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
-                  {item.status}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">{item.category} • {item.sport}</p>
-            </CardHeader>
-            
-            <CardContent>
-              {item.imageUrl && (
-                <div className="mb-4">
-                  <OptimizedImage
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-full h-48 object-cover rounded-md"
-                    loading="lazy"
-                    placeholder="blur"
-                    sizes="(max-width: 768px) 100vw, 400px"
-                  />
+      {!error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredItems.map((item: CatalogItem) => (
+            <Card key={item.id} className="rich-card relative group hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg text-foreground">{item.name}</CardTitle>
+                  <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
+                    {item.status}
+                  </Badge>
                 </div>
-              )}
+                <p className="text-sm text-muted-foreground">{item.category} • {item.sport}</p>
+              </CardHeader>
               
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">SKU:</span>
-                  <span className="font-mono">{item.sku}</span>
+              <CardContent>
+                {item.imageUrl && (
+                  <div className="mb-4">
+                    <OptimizedImage
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-full h-48 object-cover rounded-md"
+                      loading="lazy"
+                      placeholder="blur"
+                      sizes="(max-width: 768px) 100vw, 400px"
+                    />
+                  </div>
+                )}
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">SKU:</span>
+                    <span className="font-mono text-foreground">{item.sku}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Price:</span>
+                    <span className="font-semibold text-foreground">${(item.basePrice || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">ETA:</span>
+                    <span className="text-foreground">{item.etaDays}</span>
+                  </div>
+                  {item.fabric && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Fabric:</span>
+                      <span className="text-foreground">{item.fabric}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Base Price:</span>
-                  <span className="font-semibold">${item.basePrice.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Unit Cost:</span>
-                  <span>${item.unitCost.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">ETA:</span>
-                  <span>{item.etaDays} days</span>
-                </div>
-              </div>
 
-              <div className="flex justify-end space-x-2 mt-4">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => startEditing(item)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => deleteItemMutation.mutate(item.id)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredItems.length === 0 && !isLoading && (
-        <div className="text-center py-12">
-          <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No catalog items found</h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm ? 'No items match your search criteria.' : 'Get started by adding your first catalog item.'}
-          </p>
-          {!searchTerm && (
-            <Button onClick={() => setIsAddingItem(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add First Item
-            </Button>
-          )}
+                <div className="flex justify-end space-x-2 mt-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => startEditing(item)}
+                    className="glass-button"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => deleteItemMutation.mutate(item.id)}
+                    className="glass-button hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
+
+      {/* Empty State */}
+      {!error && filteredItems.length === 0 && !isLoading && (
+        <Card className="rich-card">
+          <CardContent className="py-16 text-center">
+            <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2 text-foreground">No catalog items found</h3>
+            <p className="text-muted-foreground mb-6">
+              {searchTerm ? 'No items match your search criteria.' : 'Get started by adding your first catalog item.'}
+            </p>
+            {!searchTerm && (
+              <Button 
+                onClick={() => setIsAddingItem(true)}
+                className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add First Item
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tinder-Style Onboarding Dialog */}
+      <Dialog open={isAddingItem} onOpenChange={(open) => {
+        if (!open) {
+          setIsAddingItem(false);
+          setEditingItem(null);
+          resetForm();
+        }
+      }}>
+        <DialogContent className="bg-rich-black/90 backdrop-blur-md border border-glass-border max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-neon-blue flex items-center">
+              <Package className="mr-2 h-5 w-5" />
+              {editingItem ? 'Edit Catalog Item' : 'Add New Catalog Item'}
+            </DialogTitle>
+            <DialogDescription className="subtitle text-neon-green">
+              {editingItem ? 'Update your catalog item information' : 'Create a new product for your catalog'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Progress Indicator */}
+          <div className="flex items-center justify-between mb-6">
+            {ONBOARDING_STEPS.map((step, index) => {
+              const IconComponent = step.icon;
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              
+              return (
+                <div key={step.id} className="flex items-center">
+                  <div className={`
+                    w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
+                    ${isActive ? 'border-neon-blue bg-neon-blue text-rich-black' : ''}
+                    ${isCompleted ? 'border-neon-green bg-neon-green text-rich-black' : ''}
+                    ${!isActive && !isCompleted ? 'border-glass-border bg-transparent text-muted-foreground' : ''}
+                  `}>
+                    {isCompleted ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      <IconComponent className="w-5 h-5" />
+                    )}
+                  </div>
+                  {index < ONBOARDING_STEPS.length - 1 && (
+                    <div className={`
+                      w-12 h-0.5 mx-2 transition-all duration-300
+                      ${isCompleted ? 'bg-neon-green' : 'bg-glass-border'}
+                    `} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Step Content */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="min-h-[300px]">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {ONBOARDING_STEPS[currentStep].title}
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  {ONBOARDING_STEPS[currentStep].description}
+                </p>
+              </div>
+              
+              {renderStepContent()}
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between pt-6 border-t border-glass-border">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevStep}
+                disabled={currentStep === 0}
+                className="glass-button"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddingItem(false);
+                    setEditingItem(null);
+                    resetForm();
+                  }}
+                  className="glass-button"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+
+                {currentStep === ONBOARDING_STEPS.length - 1 ? (
+                  <Button
+                    type="submit"
+                    disabled={createItemMutation.isPending || updateItemMutation.isPending}
+                    className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
+                  >
+                    {createItemMutation.isPending || updateItemMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Check className="w-4 h-4 mr-2" />
+                    )}
+                    {editingItem ? 'Update Item' : 'Create Item'}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleNextStep}
+                    className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

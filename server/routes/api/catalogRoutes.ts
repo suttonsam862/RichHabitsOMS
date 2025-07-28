@@ -1,160 +1,113 @@
 import { Request, Response, Router } from 'express';
-import { supabase } from '../../db.js';
 import { createClient } from '@supabase/supabase-js';
-
-// Use service key for catalog operations to bypass RLS
-const supabaseService = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
-import { CatalogItem, InsertCatalogItem } from '../../../shared/schema';
 import { requireAuth, requireRole } from '../auth/auth';
-
-// Create service role client for delete operations to bypass RLS
-const supabaseServiceRole = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
-import { deleteImageFile, extractFilenameFromUrl } from '../../imageUpload';
-import { z } from 'zod';
-import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs/promises';
-
-// Comprehensive logging function for catalog operations
-function logCatalogOperation(operation: string, req: Request, data?: any, error?: any) {
-  const timestamp = new Date().toISOString();
-  const requestId = `catalog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  console.log(`\n📁 === CATALOG OPERATION: ${operation.toUpperCase()} ===`);
-  console.log(`🆔 Request ID: ${requestId}`);
-  console.log(`📅 Timestamp: ${timestamp}`);
-  console.log(`👤 User: ${(req as any).user?.email || 'Anonymous'} (${(req as any).user?.role || 'Unknown'})`);
-  console.log(`🌐 Route: ${req.method} ${req.path}`);
-
-  if (data) {
-    console.log(`📊 Operation Data:`);
-    console.log(JSON.stringify(data, null, 2));
-  }
-
-  if (error) {
-    console.error(`❌ Operation Error:`);
-    console.error(`   Type: ${error.constructor.name}`);
-    console.error(`   Message: ${error.message}`);
-    console.error(`   Code: ${error.code || 'Unknown'}`);
-    if (error.details) console.error(`   Details: ${error.details}`);
-    if (error.hint) console.error(`   Hint: ${error.hint}`);
-  }
-
-  console.log(`=== END CATALOG OPERATION ===\n`);
-}
+import fs from 'fs';
 
 const router = Router();
 
+// Create Supabase admin client
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), 'uploads', 'catalog');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
 /**
- * Get all catalog items with proper data transformation
+ * Get all catalog items
  */
-export async function getCatalogItems(req: Request, res: Response) {
+async function getAllCatalogItems(req: Request, res: Response) {
   try {
-    logCatalogOperation('get_catalog_items', req);
+    console.log('Fetching all catalog items from database...');
 
-    console.log('🔍 Attempting to fetch catalog items...');
-    console.log('👤 Request user:', (req as any).user?.email, (req as any).user?.role);
-    console.log('🔑 Using Supabase client type:', typeof supabase);
-
-    const { data: items, error } = await supabaseService
+    const { data: catalogItems, error } = await supabaseAdmin
       .from('catalog_items')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      logCatalogOperation('get_catalog_items', req, null, error);
-      console.error('❌ Error fetching catalog items:', error);
-      console.error('   Error code:', error.code);
-      console.error('   Error details:', error.details);
-      console.error('   Error hint:', error.hint);
-      return res.status(500).json({ 
-        success: false, 
+      console.error('Error fetching catalog items:', error);
+      return res.status(500).json({
+        success: false,
         message: 'Failed to fetch catalog items',
-        error: error.message 
+        error: error.message
       });
     }
 
-    console.log('📊 Raw items from database:', items?.length || 0);
-    if (items && items.length > 0) {
-      console.log('📝 First raw item:', JSON.stringify(items[0], null, 2));
-    }
+    console.log(`Found ${catalogItems?.length || 0} catalog items`);
 
-    // Transform database snake_case to camelCase for frontend
-    const transformedItems = (items || []).map(item => {
-      // Fix image URLs to use correct environment
-      let imageUrl = item.base_image_url;
-      let measurementChartUrl = item.measurement_chart_url;
+    // Process the data to ensure proper formatting
+    const processedItems = (catalogItems || []).map(item => ({
+      id: item.id,
+      name: item.name || '',
+      category: item.category || '',
+      sport: item.sport || '',
+      basePrice: parseFloat(item.base_price) || 0,
+      unitCost: parseFloat(item.unit_cost) || 0,
+      sku: item.sku || '',
+      etaDays: item.eta_days || '7-10 business days',
+      status: item.status || 'active',
+      imageUrl: item.image_url || null,
+      description: item.description || '',
+      buildInstructions: item.build_instructions || '',
+      fabric: item.fabric || '',
+      sizes: Array.isArray(item.sizes) ? item.sizes : (item.sizes ? JSON.parse(item.sizes) : []),
+      colors: Array.isArray(item.colors) ? item.colors : (item.colors ? JSON.parse(item.colors) : []),
+      customizationOptions: Array.isArray(item.customization_options) ? item.customization_options : (item.customization_options ? JSON.parse(item.customization_options) : []),
+      minQuantity: parseInt(item.min_quantity) || 1,
+      maxQuantity: parseInt(item.max_quantity) || 1000,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    }));
 
-      // Log image URL for debugging
-      if (imageUrl) {
-        console.log(`Processing image URL for item ${item.id}:`, imageUrl);
-      }
-
-      if (imageUrl && imageUrl.includes('localhost:5000')) {
-        // Replace localhost with the current environment URL
-        const currentHost = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://0.0.0.0:5000';
-        imageUrl = imageUrl.replace('http://localhost:5000', currentHost);
-        console.log(`Fixed image URL:`, imageUrl);
-      }
-
-      if (measurementChartUrl && measurementChartUrl.includes('localhost:5000')) {
-        const currentHost = process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 'http://0.0.0.0:5000';
-        measurementChartUrl = measurementChartUrl.replace('http://localhost:5000', currentHost);
-      }
-
-      return {
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        sport: item.sport,
-        basePrice: parseFloat(String(item.base_price)) || 0,
-        unitCost: parseFloat(String(item.unit_cost)) || 0,
-        sku: item.sku,
-        status: item.status,
-        imageUrl: imageUrl,
-        measurementChartUrl: measurementChartUrl,
-        hasMeasurements: item.has_measurements,
-        measurementInstructions: item.measurement_instructions,
-        etaDays: item.eta_days,
-        preferredManufacturerId: item.preferred_manufacturer_id,
-        tags: item.tags || [],
-        specifications: item.specifications || {},
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        buildInstructions: item.build_instructions || '',
-        fabricId: item.fabric_id || null,
-        fabricName: null
-      };
+    res.json({
+      success: true,
+      data: processedItems,
+      count: processedItems.length
     });
 
-    logCatalogOperation('get_catalog_items', req, { count: transformedItems.length });
-    console.log(`Found ${transformedItems.length} catalog items`);
-    return res.json(transformedItems);
   } catch (error) {
-    logCatalogOperation('get_catalog_items', req, null, error);
-    console.error('Catalog fetch error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error' 
+    console.error('Error in getAllCatalogItems:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 }
@@ -162,8 +115,10 @@ export async function getCatalogItems(req: Request, res: Response) {
 /**
  * Create a new catalog item
  */
-export async function createCatalogItem(req: Request, res: Response) {
+async function createCatalogItem(req: Request, res: Response) {
   try {
+    console.log('Creating new catalog item:', req.body);
+
     const {
       name,
       category,
@@ -171,193 +126,57 @@ export async function createCatalogItem(req: Request, res: Response) {
       basePrice,
       unitCost,
       sku,
-      status = 'active',
-      imageUrl,
-      measurementChartUrl,
-      hasMeasurements,
-      measurementInstructions,
       etaDays,
-      preferredManufacturerId,
-      tags,
-      specifications,
+      status,
+      description,
       buildInstructions,
-      fabricId
+      fabric,
+      sizes,
+      colors,
+      customizationOptions,
+      minQuantity,
+      maxQuantity
     } = req.body;
 
-    logCatalogOperation('create_catalog_item', req, { requestBody: req.body });
-
-    console.log('Creating new catalog item:', { name, sku, category, sport });
-
-    // Comprehensive server-side validation
-    if (!name || !category || !sport || !sku || basePrice === undefined || unitCost === undefined || !etaDays) {
-      const error = new Error('Missing required fields: name, category, sport, sku, basePrice, unitCost, and etaDays are required');
-      logCatalogOperation('create_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: name, category, sport, sku, basePrice, unitCost, and etaDays are required'
-      });
+    // Handle file upload
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = `/uploads/catalog/${req.file.filename}`;
     }
 
-    // Validate data types and ranges
-    if (typeof name !== 'string' || name.trim().length === 0 || name.length > 255) {
-      const error = new Error('Invalid name: must be a non-empty string under 255 characters');
-      logCatalogOperation('create_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid name: must be a non-empty string under 255 characters'
-      });
-    }
+    // Parse arrays if they come as strings
+    const parseSizes = typeof sizes === 'string' ? JSON.parse(sizes) : (sizes || []);
+    const parseColors = typeof colors === 'string' ? JSON.parse(colors) : (colors || []);
+    const parseCustomizations = typeof customizationOptions === 'string' ? JSON.parse(customizationOptions) : (customizationOptions || []);
 
-    if (typeof sku !== 'string' || sku.trim().length < 3 || sku.length > 100) {
-      const error = new Error('Invalid SKU: must be 3-100 characters long');
-      logCatalogOperation('create_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid SKU: must be 3-100 characters long'
-      });
-    }
-
-    const numericBasePrice = Number(basePrice);
-    const numericUnitCost = Number(unitCost);
-
-    if (isNaN(numericBasePrice) || numericBasePrice < 0.01 || numericBasePrice > 999999.99) {
-      const error = new Error('Invalid base price: must be between $0.01 and $999,999.99');
-      logCatalogOperation('create_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid base price: must be between $0.01 and $999,999.99'
-      });
-    }
-
-    if (isNaN(numericUnitCost) || numericUnitCost < 0 || numericUnitCost > 999999.99) {
-      const error = new Error('Invalid unit cost: must be between $0.00 and $999,999.99');
-      logCatalogOperation('create_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid unit cost: must be between $0.00 and $999,999.99'
-      });
-    }
-
-    // Validate and parse specifications if provided
-    let parsedSpecifications = {};
-    if (specifications) {
-      if (typeof specifications === 'string' && specifications.trim()) {
-        try {
-          parsedSpecifications = JSON.parse(specifications);
-          if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
-            throw new Error('Must be an object');
-          }
-        } catch (error) {
-          logCatalogOperation('create_catalog_item', req, null, error);
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid specifications: must be valid JSON object'
-          });
-        }
-      } else if (typeof specifications === 'object' && specifications !== null) {
-        parsedSpecifications = specifications;
-      }
-    }
-
-    // Parse tags if provided
-    let parsedTags = [];
-    if (tags) {
-      if (typeof tags === 'string' && tags.trim()) {
-        parsedTags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
-      } else if (Array.isArray(tags)) {
-        parsedTags = tags.filter((tag: any) => typeof tag === 'string' && tag.trim().length > 0);
-      }
-    }
-
-    // Check if SKU already exists (case insensitive)
-    const { data: existingItems, error: skuCheckError } = await supabase
+    const { data: newItem, error } = await supabaseAdmin
       .from('catalog_items')
-      .select('id')
-      .ilike('sku', sku.trim());
-
-    if (skuCheckError) {
-      logCatalogOperation('create_catalog_item', req, null, skuCheckError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to check SKU existence',
-        error: skuCheckError.message
-      });
-    }
-
-    if (existingItems && existingItems.length > 0) {
-      const error = new Error('SKU already exists (case insensitive check)');
-      logCatalogOperation('create_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'SKU already exists (case insensitive check)'
-      });
-    }
-
-    // For items requiring measurements, we'll allow the validation to pass here
-    // and handle measurement chart uploads separately after item creation
-    // This allows for file uploads which are processed after the item is created
-
-    // Validate fabric_id if provided
-    if (fabricId && fabricId.trim()) {
-      const { data: fabricExists } = await supabaseService
-        .from('catalog_fabrics')
-        .select('id')
-        .eq('id', fabricId.trim())
-        .eq('is_active', true)
-        .single();
-      
-      if (!fabricExists) {
-        const error = new Error('Invalid fabric ID: fabric does not exist or is inactive');
-        logCatalogOperation('create_catalog_item', req, null, error);
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid fabric ID: fabric does not exist or is inactive'
-        });
-      }
-    }
-
-    const newItem = {
-      name: name.trim(),
-      category: category.trim(),
-      sport: sport.trim(),
-      base_price: numericBasePrice,
-      unit_cost: numericUnitCost,
-      sku: sku.trim().toUpperCase(),
-      status: status,
-      base_image_url: imageUrl?.trim() || null,
-      measurement_chart_url: measurementChartUrl?.trim() || null,
-      has_measurements: Boolean(hasMeasurements),
-      measurement_instructions: measurementInstructions?.trim() || null,
-      eta_days: etaDays.trim(),
-      preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
-      tags: parsedTags,
-      specifications: parsedSpecifications,
-      fabric_id: fabricId?.trim() || null
-    };
-
-    // Handle build_instructions as long-form text
-    if (buildInstructions !== undefined) {
-      (newItem as any).build_instructions = typeof buildInstructions === 'string' ? buildInstructions.trim() || null : null;
-    }
-
-    const { data: item, error } = await supabaseService
-      .from('catalog_items')
-      .insert([newItem])
+      .insert({
+        name: name || '',
+        category: category || '',
+        sport: sport || '',
+        base_price: parseFloat(basePrice) || 0,
+        unit_cost: parseFloat(unitCost) || 0,
+        sku: sku || '',
+        eta_days: etaDays || '7-10 business days',
+        status: status || 'active',
+        image_url: imageUrl,
+        description: description || '',
+        build_instructions: buildInstructions || '',
+        fabric: fabric || '',
+        sizes: JSON.stringify(parseSizes),
+        colors: JSON.stringify(parseColors),
+        customization_options: JSON.stringify(parseCustomizations),
+        min_quantity: parseInt(minQuantity) || 1,
+        max_quantity: parseInt(maxQuantity) || 1000,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .select()
       .single();
 
     if (error) {
-      logCatalogOperation('create_catalog_item', req, newItem, error);
       console.error('Error creating catalog item:', error);
-
-      // Handle specific database errors
-      if (error.code === '23505') { // unique constraint violation
-        return res.status(400).json({
-          success: false,
-          message: 'SKU already exists'
-        });
-      }
-
       return res.status(500).json({
         success: false,
         message: 'Failed to create catalog item',
@@ -365,30 +184,17 @@ export async function createCatalogItem(req: Request, res: Response) {
       });
     }
 
-    logCatalogOperation('create_catalog_item', req, item);
-    console.log('Catalog item created successfully:', item.id);
-    return res.status(201).json({
+    console.log('Catalog item created successfully:', newItem.id);
+
+    res.status(201).json({
       success: true,
-      item: {
-        ...item,
-        // Transform back to camelCase for consistency
-        basePrice: item.base_price,
-        unitCost: item.unit_cost,
-        imageUrl: item.base_image_url,
-        measurementChartUrl: item.measurement_chart_url,
-        hasMeasurements: item.has_measurements,
-        measurementInstructions: item.measurement_instructions,
-        etaDays: item.eta_days,
-        preferredManufacturerId: item.preferred_manufacturer_id,
-        buildInstructions: item.build_instructions || '',
-        fabricId: item.fabric_id,
-        fabricName: null // Will be populated if fabric lookup is needed
-      }
+      message: 'Catalog item created successfully',
+      data: newItem
     });
+
   } catch (error) {
-    logCatalogOperation('create_catalog_item', req, null, error);
-    console.error('Catalog creation error:', error);
-    return res.status(500).json({
+    console.error('Error in createCatalogItem:', error);
+    res.status(500).json({
       success: false,
       message: 'Internal server error'
     });
@@ -398,139 +204,67 @@ export async function createCatalogItem(req: Request, res: Response) {
 /**
  * Update a catalog item
  */
-export async function updateCatalogItem(req: Request, res: Response) {
+async function updateCatalogItem(req: Request, res: Response) {
   try {
     const { id } = req.params;
+    console.log(`Updating catalog item ${id}:`, req.body);
+
     const {
       name,
       category,
       sport,
       basePrice,
       unitCost,
-      status,
-      imageUrl,
-      measurementChartUrl,
-      hasMeasurements,
-      measurementInstructions,
+      sku,
       etaDays,
-      preferredManufacturerId,
-      tags,
-      specifications,
+      status,
+      description,
       buildInstructions,
-      fabricId
+      fabric,
+      sizes,
+      colors,
+      customizationOptions,
+      minQuantity,
+      maxQuantity
     } = req.body;
 
-    logCatalogOperation('update_catalog_item', req, { itemId: id, requestBody: req.body });
-
-    console.log('Updating catalog item:', id);
-
-    // Validate required fields
-    if (!name || !category || !sport || basePrice === undefined || unitCost === undefined || !etaDays) {
-      const error = new Error('Missing required fields: name, category, sport, basePrice, unitCost, and etaDays are required');
-      logCatalogOperation('update_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: name, category, sport, basePrice, unitCost, and etaDays are required'
-      });
+    // Handle file upload
+    let imageUrl = undefined;
+    if (req.file) {
+      imageUrl = `/uploads/catalog/${req.file.filename}`;
     }
 
-    // Validate data types and ranges
-    const numericBasePrice = Number(basePrice);
-    const numericUnitCost = Number(unitCost);
+    // Parse arrays if they come as strings
+    const parseSizes = typeof sizes === 'string' ? JSON.parse(sizes) : (sizes || []);
+    const parseColors = typeof colors === 'string' ? JSON.parse(colors) : (colors || []);
+    const parseCustomizations = typeof customizationOptions === 'string' ? JSON.parse(customizationOptions) : (customizationOptions || []);
 
-    if (isNaN(numericBasePrice) || numericBasePrice < 0.01 || numericBasePrice > 999999.99) {
-      const error = new Error('Invalid base price: must be between $0.01 and $999,999.99');
-      logCatalogOperation('update_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid base price: must be between $0.01 and $999,999.99'
-      });
-    }
-
-    if (isNaN(numericUnitCost) || numericUnitCost < 0 || numericUnitCost > 999999.99) {
-      const error = new Error('Invalid unit cost: must be between $0.00 and $999,999.99');
-      logCatalogOperation('update_catalog_item', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid unit cost: must be between $0.00 and $999,999.99'
-      });
-    }
-
-    // Parse specifications if provided
-    let parsedSpecifications = {};
-    if (specifications) {
-      if (typeof specifications === 'string' && specifications.trim()) {
-        try {
-          parsedSpecifications = JSON.parse(specifications);
-          if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
-            throw new Error('Must be an object');
-          }
-        } catch (error) {
-          logCatalogOperation('update_catalog_item', req, null, error);
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid specifications: must be valid JSON object'
-          });
-        }
-      } else if (typeof specifications === 'object' && specifications !== null) {
-        parsedSpecifications = specifications;
-      }
-    }
-
-    // Parse tags if provided
-    let parsedTags = [];
-    if (tags) {
-      if (typeof tags === 'string' && tags.trim()) {
-        parsedTags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
-      } else if (Array.isArray(tags)) {
-        parsedTags = tags.filter((tag: any) => typeof tag === 'string' && tag.trim().length > 0);
-      }
-    }
-
-    // Validate fabric_id if provided
-    if (fabricId && fabricId.trim()) {
-      const { data: fabricExists } = await supabaseService
-        .from('catalog_fabrics')
-        .select('id')
-        .eq('id', fabricId.trim())
-        .eq('is_active', true)
-        .single();
-      
-      if (!fabricExists) {
-        const error = new Error('Invalid fabric ID: fabric does not exist or is inactive');
-        logCatalogOperation('update_catalog_item', req, null, error);
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid fabric ID: fabric does not exist or is inactive'
-        });
-      }
-    }
-
-    const updateData = {
-      name: name.trim(),
-      category: category.trim(),
-      sport: sport.trim(),
-      base_price: numericBasePrice,
-      unit_cost: numericUnitCost,
-      status: status,
-      base_image_url: imageUrl?.trim() || null,
-      measurement_chart_url: measurementChartUrl?.trim() || null,
-      has_measurements: Boolean(hasMeasurements),
-      measurement_instructions: measurementInstructions?.trim() || null,
-      eta_days: etaDays.trim(),
-      preferred_manufacturer_id: preferredManufacturerId?.trim() || null,
-      tags: parsedTags,
-      specifications: parsedSpecifications,
-      fabric_id: fabricId?.trim() || null,
+    const updateData: any = {
+      name: name || '',
+      category: category || '',
+      sport: sport || '',
+      base_price: parseFloat(basePrice) || 0,
+      unit_cost: parseFloat(unitCost) || 0,
+      sku: sku || '',
+      eta_days: etaDays || '7-10 business days',
+      status: status || 'active',
+      description: description || '',
+      build_instructions: buildInstructions || '',
+      fabric: fabric || '',
+      sizes: JSON.stringify(parseSizes),
+      colors: JSON.stringify(parseColors),
+      customization_options: JSON.stringify(parseCustomizations),
+      min_quantity: parseInt(minQuantity) || 1,
+      max_quantity: parseInt(maxQuantity) || 1000,
       updated_at: new Date().toISOString()
     };
 
-    // Handle build_instructions as long-form text
-    if (buildInstructions !== undefined) {
-      (updateData as any).build_instructions = typeof buildInstructions === 'string' ? buildInstructions.trim() || null : null;
+    // Only update image_url if a new file was uploaded
+    if (imageUrl) {
+      updateData.image_url = imageUrl;
     }
 
-    const { data: item, error } = await supabaseService
+    const { data: updatedItem, error } = await supabaseAdmin
       .from('catalog_items')
       .update(updateData)
       .eq('id', id)
@@ -538,18 +272,7 @@ export async function updateCatalogItem(req: Request, res: Response) {
       .single();
 
     if (error) {
-      logCatalogOperation('update_catalog_item', req, updateData, error);
       console.error('Error updating catalog item:', error);
-
-      // Handle specific database errors more gracefully
-      if (error.message && error.message.includes('build_instructions')) {
-        return res.status(500).json({
-          success: false,
-          message: 'Database schema issue: build_instructions column not found',
-          error: 'Please ensure the database schema is up to date'
-        });
-      }
-
       return res.status(500).json({
         success: false,
         message: 'Failed to update catalog item',
@@ -557,39 +280,17 @@ export async function updateCatalogItem(req: Request, res: Response) {
       });
     }
 
-    if (!item) {
-      const error = new Error('Catalog item not found');
-      logCatalogOperation('update_catalog_item', req, updateData, error);
-      return res.status(404).json({
-        success: false,
-        message: 'Catalog item not found'
-      });
-    }
-
-    logCatalogOperation('update_catalog_item', req, item);
     console.log('Catalog item updated successfully:', id);
-    return res.json({
+
+    res.json({
       success: true,
-      item: {
-        ...item,
-        // Transform back to camelCase for consistency
-        basePrice: item.base_price,
-        unitCost: item.unit_cost,
-        imageUrl: item.base_image_url,
-        measurementChartUrl: item.measurement_chart_url,
-        hasMeasurements: item.has_measurements,
-        measurementInstructions: item.measurement_instructions,
-        etaDays: item.eta_days,
-        preferredManufacturerId: item.preferred_manufacturer_id,
-        buildInstructions: item.build_instructions || '',
-        fabricId: item.fabric_id,
-        fabricName: null // Will be populated if fabric lookup is needed
-      }
+      message: 'Catalog item updated successfully',
+      data: updatedItem
     });
+
   } catch (error) {
-    logCatalogOperation('update_catalog_item', req, null, error);
-    console.error('Catalog update error:', error);
-    return res.status(500).json({
+    console.error('Error in updateCatalogItem:', error);
+    res.status(500).json({
       success: false,
       message: 'Internal server error'
     });
@@ -599,148 +300,50 @@ export async function updateCatalogItem(req: Request, res: Response) {
 /**
  * Delete a catalog item
  */
-export async function deleteCatalogItem(req: Request, res: Response) {
+async function deleteCatalogItem(req: Request, res: Response) {
   try {
     const { id } = req.params;
+    console.log(`Deleting catalog item: ${id}`);
 
-    logCatalogOperation('delete_catalog_item', req, { itemId: id });
-
-    console.log('Deleting catalog item:', id);
-
-    // Use service role client for both check and delete to ensure consistency
-    const { data: existingItem, error: checkError } = await supabaseServiceRole
+    // Get the item first to remove image file if exists
+    const { data: existingItem } = await supabaseAdmin
       .from('catalog_items')
-      .select('id, name, sku')
+      .select('image_url')
       .eq('id', id)
       .single();
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      logCatalogOperation('delete_catalog_item', req, null, checkError);
-      console.error('Error checking catalog item existence:', checkError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to check catalog item existence',
-        error: checkError.message
-      });
-    }
-
-    if (!existingItem) {
-      const notFoundError = new Error('Catalog item not found');
-      logCatalogOperation('delete_catalog_item', req, null, notFoundError);
-      return res.status(404).json({
-        success: false,
-        message: 'Catalog item not found'
-      });
-    }
-
-    console.log('Found item to delete:', existingItem.name, existingItem.sku);
-
-    // Perform the deletion using service role to bypass RLS
-    const { data: deletedData, error: deleteError } = await supabaseServiceRole
+    const { error } = await supabaseAdmin
       .from('catalog_items')
       .delete()
-      .eq('id', id)
-      .select();
+      .eq('id', id);
 
-    if (deleteError) {
-      logCatalogOperation('delete_catalog_item', req, null, deleteError);
-      console.error('Error deleting catalog item:', deleteError);
+    if (error) {
+      console.error('Error deleting catalog item:', error);
       return res.status(500).json({
         success: false,
         message: 'Failed to delete catalog item',
-        error: deleteError.message
-      });
-    }
-
-    // Verify deletion was successful
-    if (!deletedData || deletedData.length === 0) {
-      logCatalogOperation('delete_catalog_item', req, null, new Error('Delete failed - no rows affected'));
-      return res.status(500).json({
-        success: false,
-        message: 'Delete operation failed - item may not exist or RLS blocked deletion'
-      });
-    }
-
-    logCatalogOperation('delete_catalog_item', req, { 
-      itemId: id, 
-      success: true, 
-      deletedCount: deletedData.length,
-      itemName: existingItem.name,
-      itemSku: existingItem.sku
-    });
-
-    console.log('Catalog item deleted successfully:', id, existingItem.name, `(${deletedData.length} row(s) affected)`);
-
-    return res.json({
-      success: true,
-      message: 'Catalog item deleted successfully',
-      data: {
-        deletedItem: existingItem,
-        deletedCount: deletedData.length
-      }
-    });
-  } catch (error) {
-    logCatalogOperation('delete_catalog_item', req, null, error);
-    console.error('Catalog deletion error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-}
-
-/**
- * Check if SKU exists (used for validation during creation)
- */
-export async function checkSkuExists(req: Request, res: Response) {
-  try {
-    const { sku } = req.query;
-
-    if (!sku || typeof sku !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'SKU parameter is required'
-      });
-    }
-
-    logCatalogOperation('check_sku', req, { sku });
-
-    // Check if SKU exists (case insensitive)
-    const { data: existingItems, error } = await supabase
-      .from('catalog_items')
-      .select('id, sku')
-      .ilike('sku', sku.trim());
-
-    if (error) {
-      logCatalogOperation('check_sku', req, null, error);
-      console.error('Error checking SKU:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to check SKU',
         error: error.message
       });
     }
 
-    const exists = existingItems && existingItems.length > 0;
-
-    logCatalogOperation('check_sku', req, { 
-      sku, 
-      exists, 
-      foundItems: existingItems?.length || 0 
-    });
-
-    return res.json({
-      success: true,
-      data: {
-        exists,
-        sku: sku.trim(),
-        foundItems: existingItems || []
+    // Remove image file if it exists
+    if (existingItem?.image_url) {
+      const imagePath = path.join(process.cwd(), existingItem.image_url);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
       }
+    }
+
+    console.log('Catalog item deleted successfully:', id);
+
+    res.json({
+      success: true,
+      message: 'Catalog item deleted successfully'
     });
+
   } catch (error) {
-    logCatalogOperation('check_sku', req, null, error);
-    console.error('SKU check error:', error);
-    return res.status(500).json({
+    console.error('Error in deleteCatalogItem:', error);
+    res.status(500).json({
       success: false,
       message: 'Internal server error'
     });
@@ -748,114 +351,70 @@ export async function checkSkuExists(req: Request, res: Response) {
 }
 
 /**
- * Get a single catalog item by ID
+ * Get a single catalog item
  */
-export async function getCatalogItem(req: Request, res: Response) {
+async function getCatalogItem(req: Request, res: Response) {
   try {
     const { id } = req.params;
+    console.log(`Fetching catalog item: ${id}`);
 
-    logCatalogOperation('get_catalog_item', req, { itemId: id });
-
-    console.log('Fetching catalog item:', id);
-
-    const { data: item, error } = await supabase
+    const { data: item, error } = await supabaseAdmin
       .from('catalog_items')
       .select('*')
       .eq('id', id)
       .single();
 
     if (error) {
-      logCatalogOperation('get_catalog_item', req, null, error);
       console.error('Error fetching catalog item:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch catalog item',
-        error: error.message
-      });
-    }
-
-    if (!item) {
-      const error = new Error('Catalog item not found');
-      logCatalogOperation('get_catalog_item', req, null, error);
       return res.status(404).json({
         success: false,
         message: 'Catalog item not found'
       });
     }
 
-    logCatalogOperation('get_catalog_item', req, item);
-    return res.json({
+    // Process the item data
+    const processedItem = {
+      id: item.id,
+      name: item.name || '',
+      category: item.category || '',
+      sport: item.sport || '',
+      basePrice: parseFloat(item.base_price) || 0,
+      unitCost: parseFloat(item.unit_cost) || 0,
+      sku: item.sku || '',
+      etaDays: item.eta_days || '7-10 business days',
+      status: item.status || 'active',
+      imageUrl: item.image_url || null,
+      description: item.description || '',
+      buildInstructions: item.build_instructions || '',
+      fabric: item.fabric || '',
+      sizes: Array.isArray(item.sizes) ? item.sizes : (item.sizes ? JSON.parse(item.sizes) : []),
+      colors: Array.isArray(item.colors) ? item.colors : (item.colors ? JSON.parse(item.colors) : []),
+      customizationOptions: Array.isArray(item.customization_options) ? item.customization_options : (item.customization_options ? JSON.parse(item.customization_options) : []),
+      minQuantity: parseInt(item.min_quantity) || 1,
+      maxQuantity: parseInt(item.max_quantity) || 1000,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    };
+
+    res.json({
       success: true,
-      item
+      data: processedItem
     });
+
   } catch (error) {
-    logCatalogOperation('get_catalog_item', req, null, error);
-    console.error('Catalog fetch error:', error);
-    return res.status(500).json({
+    console.error('Error in getCatalogItem:', error);
+    res.status(500).json({
       success: false,
       message: 'Internal server error'
     });
   }
 }
 
-/**
- * Check if SKU already exists
- */
-export async function checkSKUExists(req: Request, res: Response) {
-  try {
-    const { sku } = req.query;
-
-    logCatalogOperation('check_sku_exists', req, { sku });
-
-    if (!sku) {
-      const error = new Error('SKU parameter is required');
-      logCatalogOperation('check_sku_exists', req, null, error);
-      return res.status(400).json({
-        success: false,
-        message: 'SKU parameter is required'
-      });
-    }
-
-    console.log('Checking SKU existence:', sku);
-
-    const { data: existingItems, error } = await supabase
-      .from('catalog_items')
-      .select('id')
-      .eq('sku', sku);
-
-    if (error) {
-      logCatalogOperation('check_sku_exists', req, null, error);
-      console.error('Error checking SKU:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to check SKU',
-        error: error.message
-      });
-    }
-
-    const existingItem = existingItems && existingItems.length > 0 ? existingItems[0] : null;
-
-    logCatalogOperation('check_sku_exists', req, { sku, exists: !!existingItem });
-    return res.json({
-      success: true,
-      exists: !!existingItem
-    });
-  } catch (error) {
-    logCatalogOperation('check_sku_exists', req, null, error);
-    console.error('SKU check error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-}
-
-// Configure routes - Allow catalog_manager and customer_catalog_manager roles
-router.get('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), getCatalogItems);
-router.post('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), createCatalogItem);
-router.get('/check-sku', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), checkSKUExists);
-router.get('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), getCatalogItem);
-router.put('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), updateCatalogItem);
+// Configure routes
+router.get('/', getAllCatalogItems);
+router.get('/:id', getCatalogItem);
+router.post('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), createCatalogItem);
+router.patch('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), updateCatalogItem);
 router.delete('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), deleteCatalogItem);
 
 export default router;
