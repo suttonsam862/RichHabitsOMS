@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -10,22 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { 
   Search, 
   MoreHorizontal, 
   PlusCircle, 
@@ -36,7 +21,14 @@ import {
   FileText, 
   Trash2,
   Users,
-  Eye
+  Eye,
+  Building2,
+  Trophy,
+  Briefcase,
+  GraduationCap,
+  Heart,
+  Zap,
+  Star
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +41,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Customer {
   id: number | string;
@@ -71,8 +71,37 @@ interface Customer {
   created_at?: string;
 }
 
+interface OrganizationCard {
+  id: string;
+  name: string;
+  type: 'sports' | 'business' | 'education' | 'nonprofit' | 'government';
+  customerCount: number;
+  totalOrders: number;
+  totalSpent: string;
+  primaryContact?: string;
+  avatar?: string;
+  customers: Customer[];
+}
+
+const organizationIcons = {
+  sports: Trophy,
+  business: Briefcase,
+  education: GraduationCap,
+  nonprofit: Heart,
+  government: Building2
+};
+
+const organizationColors = {
+  sports: 'from-orange-500/20 to-red-500/20 border-orange-500/30',
+  business: 'from-blue-500/20 to-indigo-500/20 border-blue-500/30',
+  education: 'from-green-500/20 to-emerald-500/20 border-green-500/30',
+  nonprofit: 'from-pink-500/20 to-rose-500/20 border-pink-500/30',
+  government: 'from-purple-500/20 to-violet-500/20 border-purple-500/30'
+};
+
 export default function CustomerListPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedOrganizationType, setSelectedOrganizationType] = useState<string>("all");
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
   const [isOnboardingFlowOpen, setIsOnboardingFlowOpen] = useState(false);
   const [isViewCustomerDialogOpen, setIsViewCustomerDialogOpen] = useState(false);
@@ -104,20 +133,10 @@ export default function CustomerListPage() {
 
       const data = await response.json();
       console.log("Received customer data:", data);
-      console.log("Data type:", typeof data, "Is array:", Array.isArray(data));
-      console.log("Customer count:", data?.data?.length || 0);
-      console.log("Success flag:", data?.success);
-      
-      // Additional validation
-      if (data?.success && data?.data && Array.isArray(data.data)) {
-        console.log("Valid customer response with", data.data.length, "customers");
-        console.log("First customer sample:", data.data[0]);
-      }
-      
       return data;
     },
-    staleTime: 0, // Always refetch
-    gcTime: 0  // Don't cache (cacheTime was renamed to gcTime in v5)
+    staleTime: 0,
+    gcTime: 0
   });
 
   // Enhanced data processing with better error handling
@@ -129,9 +148,6 @@ export default function CustomerListPage() {
       return [];
     }
 
-    console.log('Data type:', typeof data, 'Is array:', Array.isArray(data));
-
-    // Handle different response formats
     let customersArray = [];
 
     if (Array.isArray(data)) {
@@ -150,45 +166,184 @@ export default function CustomerListPage() {
       return [];
     }
 
-    console.log('Customer data length:', customersArray?.length || 0);
-
     return customersArray || [];
   }, []);
 
-  // Extract customers array from API response - fixed to handle loading state properly
+  // Extract customers array from API response
   const customers = React.useMemo(() => {
-    // Don't process data while loading to avoid null states
     if (isLoading || !customersResponse) {
       return [];
     }
     return processCustomerData(customersResponse);
   }, [customersResponse, processCustomerData, isLoading]);
 
-  // Filter customers based on search term
-  const filteredCustomers = React.useMemo(() => {
-    // Ensure customers is always an array before filtering
-    const customersArray = Array.isArray(customers) ? customers : [];
-
-    return customersArray.filter(customer => {
-      const matchesSearch = searchTerm === '' || 
-        customer.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.company?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesCompany = 'all';
-
-      return matchesSearch && matchesCompany;
+  // Group customers by organization
+  const organizations = React.useMemo(() => {
+    const orgMap = new Map<string, OrganizationCard>();
+    
+    customers.forEach((customer: Customer) => {
+      const orgName = customer.company || 'Individual Customers';
+      const orgType = getOrganizationType(orgName);
+      
+      if (!orgMap.has(orgName)) {
+        orgMap.set(orgName, {
+          id: orgName.toLowerCase().replace(/\s+/g, '-'),
+          name: orgName,
+          type: orgType,
+          customerCount: 0,
+          totalOrders: 0,
+          totalSpent: '$0.00',
+          customers: []
+        });
+      }
+      
+      const org = orgMap.get(orgName)!;
+      org.customers.push(customer);
+      org.customerCount += 1;
+      org.totalOrders += customer.orders || 0;
+      
+      // Set primary contact as first customer
+      if (!org.primaryContact) {
+        org.primaryContact = `${customer.firstName} ${customer.lastName}`;
+      }
     });
-  }, [customers, searchTerm]);
+    
+    return Array.from(orgMap.values());
+  }, [customers]);
+
+  // Helper function to determine organization type
+  function getOrganizationType(orgName: string): OrganizationCard['type'] {
+    const name = orgName.toLowerCase();
+    if (name.includes('sport') || name.includes('team') || name.includes('athletic') || name.includes('fc') || name.includes('united')) return 'sports';
+    if (name.includes('school') || name.includes('university') || name.includes('college') || name.includes('education')) return 'education';
+    if (name.includes('nonprofit') || name.includes('foundation') || name.includes('charity')) return 'nonprofit';
+    if (name.includes('city') || name.includes('county') || name.includes('government') || name.includes('municipal')) return 'government';
+    return 'business';
+  }
+
+  // Filter organizations by type and search
+  const filteredOrganizations = React.useMemo(() => {
+    return organizations.filter(org => {
+      const matchesSearch = searchTerm === '' || 
+        org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        org.primaryContact?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesType = selectedOrganizationType === 'all' || org.type === selectedOrganizationType;
+      
+      return matchesSearch && matchesType;
+    });
+  }, [organizations, searchTerm, selectedOrganizationType]);
+
+  // Group filtered organizations by type
+  const organizationsByType = React.useMemo(() => {
+    const grouped = {
+      sports: filteredOrganizations.filter(org => org.type === 'sports'),
+      business: filteredOrganizations.filter(org => org.type === 'business'),
+      education: filteredOrganizations.filter(org => org.type === 'education'),
+      nonprofit: filteredOrganizations.filter(org => org.type === 'nonprofit'),
+      government: filteredOrganizations.filter(org => org.type === 'government')
+    };
+    
+    // Only return types that have organizations
+    return Object.fromEntries(
+      Object.entries(grouped).filter(([_, orgs]) => orgs.length > 0)
+    );
+  }, [filteredOrganizations]);
+
+  const OrganizationCard = ({ organization }: { organization: OrganizationCard }) => {
+    const IconComponent = organizationIcons[organization.type];
+    const colorClasses = organizationColors[organization.type];
+    
+    return (
+      <div className={`relative group cursor-pointer min-w-[320px] h-[200px] rounded-xl bg-gradient-to-br ${colorClasses} backdrop-blur-md border transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex-shrink-0`}>
+        {/* Glassmorphism overlay */}
+        <div className="absolute inset-0 bg-white/5 rounded-xl backdrop-blur-sm"></div>
+        
+        {/* Content */}
+        <div className="relative z-10 p-6 h-full flex flex-col justify-between">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
+                <IconComponent className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white truncate max-w-[200px]">
+                  {organization.name}
+                </h3>
+                <p className="text-white/70 text-sm capitalize">
+                  {organization.type} Organization
+                </p>
+              </div>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="glass-panel border-glass-border">
+                <DropdownMenuLabel className="text-foreground">Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-glass-border" />
+                <DropdownMenuItem className="text-foreground hover:bg-white/10">
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-foreground hover:bg-white/10">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Contact Organization
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-foreground hover:bg-white/10">
+                  <FileText className="mr-2 h-4 w-4" />
+                  View Orders
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Primary Contact Avatar */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-r from-neon-blue/30 to-neon-green/30 flex items-center justify-center">
+                <span className="text-white font-bold text-lg">
+                  {organization.primaryContact?.charAt(0) || organization.name.charAt(0)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="flex justify-between items-end">
+            <div className="text-white/90">
+              <div className="text-xs text-white/60">Customers</div>
+              <div className="text-lg font-bold">{organization.customerCount}</div>
+            </div>
+            <div className="text-white/90 text-right">
+              <div className="text-xs text-white/60">Orders</div>
+              <div className="text-lg font-bold">{organization.totalOrders}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      </div>
+    );
+  };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="container mx-auto py-8 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Organizations</h1>
           <p className="text-muted-foreground mt-2">
-            Manage your customer relationships and interactions
+            Manage customer organizations and business relationships
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-2">
@@ -201,33 +356,62 @@ export default function CustomerListPage() {
           </Button>
           <Button onClick={() => setIsOnboardingFlowOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Full Onboarding
+            New Organization
           </Button>
         </div>
       </div>
 
-      <Card>
+      {/* Search and Filters */}
+      <Card className="rich-card">
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input 
                 type="search" 
-                placeholder="Search customers..." 
-                className="pl-8 max-w-sm"
+                placeholder="Search organizations..." 
+                className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-9">
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
+            
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                variant={selectedOrganizationType === 'all' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setSelectedOrganizationType('all')}
+              >
+                All
               </Button>
+              <Button 
+                variant={selectedOrganizationType === 'sports' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setSelectedOrganizationType('sports')}
+              >
+                <Trophy className="mr-2 h-4 w-4" />
+                Sports
+              </Button>
+              <Button 
+                variant={selectedOrganizationType === 'business' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setSelectedOrganizationType('business')}
+              >
+                <Briefcase className="mr-2 h-4 w-4" />
+                Business
+              </Button>
+              <Button 
+                variant={selectedOrganizationType === 'education' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setSelectedOrganizationType('education')}
+              >
+                <GraduationCap className="mr-2 h-4 w-4" />
+                Education
+              </Button>
+              
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="h-9" 
                 onClick={() => {
                   console.log("Manually refreshing customer data...");
                   queryClient.removeQueries({ queryKey: ["admin", "customers"] });
@@ -244,111 +428,82 @@ export default function CustomerListPage() {
               </Button>
             </div>
           </div>
-
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : isError ? (
-            <div className="flex justify-center py-8 text-center">
-              <div className="max-w-md">
-                <h3 className="text-lg font-medium mb-2">Unable to load customers</h3>
-                <p className="text-muted-foreground">There was an error fetching customer data. Please try again later.</p>
-              </div>
-            </div>
-          ) : filteredCustomers && filteredCustomers.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Orders</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCustomers.map((customer: Customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell>
-                        <div className="font-medium">
-                          {customer.firstName} {customer.lastName}
-                        </div>
-                      </TableCell>
-                      <TableCell>{customer.email || "-"}</TableCell>
-                      <TableCell>{customer.company || "-"}</TableCell>
-                      <TableCell>{customer.orders || 0}</TableCell>
-                      <TableCell>
-                        <Badge variant="default">
-                          Active
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleViewCustomer(customer)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Customer
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Mail className="mr-2 h-4 w-4" />
-                              Send Email
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Edit Customer
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <FileText className="mr-2 h-4 w-4" />
-                              View Orders
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center border rounded-md">
-              <div className="bg-gray-100 p-3 rounded-full mb-4">
-                <Users className="h-10 w-10 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">No customers found</h3>
-              <p className="text-muted-foreground max-w-md mb-6">
-                There are no customers in the system yet. Add your first customer to get started.
-              </p>
-              <Button 
-                onClick={() => setIsAddCustomerDialogOpen(true)}
-                className="flex items-center"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Customer
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Use our new AddCustomerForm component */}
+      {/* Organization Sections */}
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      ) : isError ? (
+        <Card className="rich-card">
+          <CardContent className="py-16 text-center">
+            <h3 className="text-lg font-medium mb-2 text-foreground">Unable to load organizations</h3>
+            <p className="text-muted-foreground">There was an error fetching organization data. Please try again later.</p>
+          </CardContent>
+        </Card>
+      ) : Object.keys(organizationsByType).length > 0 ? (
+        <div className="space-y-8">
+          {Object.entries(organizationsByType).map(([type, orgs]) => {
+            const IconComponent = organizationIcons[type as keyof typeof organizationIcons];
+            return (
+              <div key={type} className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <IconComponent className="w-6 h-6 text-neon-blue" />
+                  <h2 className="text-xl font-bold text-foreground capitalize">
+                    {type} Organizations
+                  </h2>
+                  <Badge variant="secondary">
+                    {orgs.length}
+                  </Badge>
+                </div>
+                
+                <div className="overflow-x-auto pb-4">
+                  <div className="flex space-x-6" style={{ width: 'max-content' }}>
+                    {orgs.map((org) => (
+                      <OrganizationCard key={org.id} organization={org} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <Card className="rich-card">
+          <CardContent className="py-16 text-center">
+            <div className="bg-gray-100 p-3 rounded-full mb-4 inline-block">
+              <Building2 className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium mb-2 text-foreground">No organizations found</h3>
+            <p className="text-muted-foreground max-w-md mb-6 mx-auto">
+              There are no organizations in the system yet. Add your first customer organization to get started.
+            </p>
+            <Button 
+              onClick={() => setIsOnboardingFlowOpen(true)}
+              className="flex items-center"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Organization
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dialogs */}
       <AddCustomerForm 
         isOpen={isAddCustomerDialogOpen} 
         onClose={() => setIsAddCustomerDialogOpen(false)} 
+      />
+
+      <CustomerOnboardingFlow 
+        isOpen={isOnboardingFlowOpen}
+        onClose={() => setIsOnboardingFlowOpen(false)}
+        onSuccess={() => {
+          setIsOnboardingFlowOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+        }}
       />
 
       {/* View Customer Dialog */}
@@ -392,112 +547,8 @@ export default function CustomerListPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Address Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground border-b border-glass-border pb-2">
-                  Address Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="subtitle text-muted-foreground text-xs">Street Address</label>
-                    <p className="text-foreground">{selectedCustomer.address || "Not provided"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="subtitle text-muted-foreground text-xs">City</label>
-                    <p className="text-foreground">{selectedCustomer.city || "Not provided"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="subtitle text-muted-foreground text-xs">State</label>
-                    <p className="text-foreground">{selectedCustomer.state || "Not provided"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="subtitle text-muted-foreground text-xs">ZIP Code</label>
-                    <p className="text-foreground">{selectedCustomer.zip || "Not provided"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="subtitle text-muted-foreground text-xs">Country</label>
-                    <p className="text-foreground">{selectedCustomer.country || "Not provided"}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Summary */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground border-b border-glass-border pb-2">
-                  Account Summary
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="glass-panel p-4 text-center">
-                    <p className="subtitle text-muted-foreground text-xs">Total Orders</p>
-                    <p className="text-2xl font-bold text-neon-blue">{selectedCustomer.orders || 0}</p>
-                  </div>
-                  <div className="glass-panel p-4 text-center">
-                    <p className="subtitle text-muted-foreground text-xs">Total Spent</p>
-                    <p className="text-2xl font-bold text-neon-green">{selectedCustomer.spent || "$0.00"}</p>
-                  </div>
-                  <div className="glass-panel p-4 text-center">
-                    <p className="subtitle text-muted-foreground text-xs">Status</p>
-                    <Badge className="mt-1">{selectedCustomer.status || "Active"}</Badge>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Details */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground border-b border-glass-border pb-2">
-                  Account Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="subtitle text-muted-foreground text-xs">Customer ID</label>
-                    <p className="text-foreground font-mono text-sm">{selectedCustomer.id}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="subtitle text-muted-foreground text-xs">Last Order</label>
-                    <p className="text-foreground">{selectedCustomer.lastOrder || "No orders yet"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="subtitle text-muted-foreground text-xs">Account Created</label>
-                    <p className="text-foreground">
-                      {selectedCustomer.created_at 
-                        ? new Date(selectedCustomer.created_at).toLocaleDateString()
-                        : "Unknown"
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Enhanced Customer Onboarding Flow */}
-      <CustomerOnboardingFlow 
-        isOpen={isOnboardingFlowOpen}
-        onClose={() => setIsOnboardingFlowOpen(false)}
-        onSuccess={() => {
-          setIsOnboardingFlowOpen(false);
-          queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
-        }}
-      />
-
-      {/* Quick Add Customer Dialog */}
-      <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Quick Add Customer</DialogTitle>
-            <DialogDescription>
-              Create a new customer profile with basic information.
-            </DialogDescription>
-          </DialogHeader>
-          <AddCustomerForm 
-            onSuccess={() => {
-              setIsAddCustomerDialogOpen(false);
-              queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
-            }}
-          />
         </DialogContent>
       </Dialog>
     </div>
