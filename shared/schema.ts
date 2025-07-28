@@ -59,6 +59,8 @@ export const customers = pgTable('customers', {
   email: text('email').notNull().unique(),
   phone: text('phone'),
   company: text('company'),
+  sport: text('sport'),
+  organizationType: text('organization_type').default('business'), // 'sports', 'business', 'education', 'nonprofit', 'government'
   address: text('address'),
   city: text('city'),
   state: text('state'),

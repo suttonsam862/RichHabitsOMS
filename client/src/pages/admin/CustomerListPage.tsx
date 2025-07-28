@@ -55,6 +55,8 @@ interface Customer {
   name?: string;
   email?: string;
   company?: string;
+  sport?: string;
+  organizationType?: string;
   orders?: number;
   spent?: string;
   lastOrder?: string | null;
@@ -74,6 +76,7 @@ interface Customer {
 interface OrganizationCard {
   id: string;
   name: string;
+  sport: string;
   type: 'sports' | 'business' | 'education' | 'nonprofit' | 'government';
   customerCount: number;
   totalOrders: number;
@@ -98,6 +101,12 @@ const organizationColors = {
   nonprofit: 'from-pink-500/20 to-rose-500/20 border-pink-500/30',
   government: 'from-purple-500/20 to-violet-500/20 border-purple-500/30'
 };
+
+const sportsOrder = [
+  'Football', 'Basketball', 'Soccer', 'Baseball', 'Hockey', 
+  'Tennis', 'Golf', 'Swimming', 'Track & Field', 'Volleyball', 
+  'Wrestling', 'General Sports'
+];
 
 export default function CustomerListPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -177,19 +186,21 @@ export default function CustomerListPage() {
     return processCustomerData(customersResponse);
   }, [customersResponse, processCustomerData, isLoading]);
 
-  // Group customers by organization
+  // Group customers by organization and sport
   const organizations = React.useMemo(() => {
     const orgMap = new Map<string, OrganizationCard>();
     
     customers.forEach((customer: Customer) => {
       const orgName = customer.company || 'Individual Customers';
-      const orgType = getOrganizationType(orgName);
+      const orgType = customer.organizationType || getOrganizationType(orgName);
+      const sport = customer.sport || (orgType === 'sports' ? 'General Sports' : 'N/A');
       
       if (!orgMap.has(orgName)) {
         orgMap.set(orgName, {
           id: orgName.toLowerCase().replace(/\s+/g, '-'),
           name: orgName,
-          type: orgType,
+          sport: sport,
+          type: orgType as OrganizationCard['type'],
           customerCount: 0,
           totalOrders: 0,
           totalSpent: '$0.00',
@@ -226,7 +237,8 @@ export default function CustomerListPage() {
     return organizations.filter(org => {
       const matchesSearch = searchTerm === '' || 
         org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        org.primaryContact?.toLowerCase().includes(searchTerm.toLowerCase());
+        org.primaryContact?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        org.sport.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesType = selectedOrganizationType === 'all' || org.type === selectedOrganizationType;
       
@@ -234,17 +246,39 @@ export default function CustomerListPage() {
     });
   }, [organizations, searchTerm, selectedOrganizationType]);
 
-  // Group filtered organizations by type
-  const organizationsByType = React.useMemo(() => {
+  // Group sports organizations by sport
+  const sportOrganizations = React.useMemo(() => {
+    const sportsOrgs = filteredOrganizations.filter(org => org.type === 'sports');
+    const grouped = new Map<string, OrganizationCard[]>();
+    
+    sportsOrgs.forEach(org => {
+      const sport = org.sport || 'General Sports';
+      if (!grouped.has(sport)) {
+        grouped.set(sport, []);
+      }
+      grouped.get(sport)!.push(org);
+    });
+    
+    // Sort by predefined sports order
+    const sortedSports = sportsOrder.filter(sport => grouped.has(sport));
+    const otherSports = Array.from(grouped.keys()).filter(sport => !sportsOrder.includes(sport));
+    
+    return [...sortedSports, ...otherSports].map(sport => ({
+      sport,
+      organizations: grouped.get(sport) || []
+    }));
+  }, [filteredOrganizations]);
+
+  // Non-sports organizations grouped by type
+  const businessOrganizations = React.useMemo(() => {
+    const nonSportsOrgs = filteredOrganizations.filter(org => org.type !== 'sports');
     const grouped = {
-      sports: filteredOrganizations.filter(org => org.type === 'sports'),
-      business: filteredOrganizations.filter(org => org.type === 'business'),
-      education: filteredOrganizations.filter(org => org.type === 'education'),
-      nonprofit: filteredOrganizations.filter(org => org.type === 'nonprofit'),
-      government: filteredOrganizations.filter(org => org.type === 'government')
+      business: nonSportsOrgs.filter(org => org.type === 'business'),
+      education: nonSportsOrgs.filter(org => org.type === 'education'),
+      nonprofit: nonSportsOrgs.filter(org => org.type === 'nonprofit'),
+      government: nonSportsOrgs.filter(org => org.type === 'government')
     };
     
-    // Only return types that have organizations
     return Object.fromEntries(
       Object.entries(grouped).filter(([_, orgs]) => orgs.length > 0)
     );
@@ -255,24 +289,24 @@ export default function CustomerListPage() {
     const colorClasses = organizationColors[organization.type];
     
     return (
-      <div className={`relative group cursor-pointer min-w-[320px] h-[200px] rounded-xl bg-gradient-to-br ${colorClasses} backdrop-blur-md border transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex-shrink-0`}>
+      <div className={`relative group cursor-pointer min-w-[240px] h-[140px] rounded-lg bg-gradient-to-br ${colorClasses} backdrop-blur-md border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex-shrink-0`}>
         {/* Glassmorphism overlay */}
-        <div className="absolute inset-0 bg-white/5 rounded-xl backdrop-blur-sm"></div>
+        <div className="absolute inset-0 bg-white/5 rounded-lg backdrop-blur-sm"></div>
         
         {/* Content */}
-        <div className="relative z-10 p-6 h-full flex flex-col justify-between">
+        <div className="relative z-10 p-4 h-full flex flex-col justify-between">
           {/* Header */}
           <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
-                <IconComponent className="w-6 h-6 text-white" />
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
+                <IconComponent className="w-4 h-4 text-white" />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-white truncate max-w-[200px]">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-white truncate">
                   {organization.name}
                 </h3>
-                <p className="text-white/70 text-sm capitalize">
-                  {organization.type} Organization
+                <p className="text-white/70 text-xs">
+                  {organization.type === 'sports' ? organization.sport : organization.type}
                 </p>
               </div>
             </div>
@@ -282,24 +316,24 @@ export default function CustomerListPage() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                  className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-white/10"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreHorizontal className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="glass-panel border-glass-border">
                 <DropdownMenuLabel className="text-foreground">Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-glass-border" />
                 <DropdownMenuItem className="text-foreground hover:bg-white/10">
-                  <Eye className="mr-2 h-4 w-4" />
+                  <Eye className="mr-2 h-3 w-3" />
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-foreground hover:bg-white/10">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Contact Organization
+                  <Mail className="mr-2 h-3 w-3" />
+                  Contact
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-foreground hover:bg-white/10">
-                  <FileText className="mr-2 h-4 w-4" />
+                  <FileText className="mr-2 h-3 w-3" />
                   View Orders
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -308,9 +342,9 @@ export default function CustomerListPage() {
 
           {/* Primary Contact Avatar */}
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-r from-neon-blue/30 to-neon-green/30 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-neon-blue/30 to-neon-green/30 flex items-center justify-center">
+                <span className="text-white font-bold text-xs">
                   {organization.primaryContact?.charAt(0) || organization.name.charAt(0)}
                 </span>
               </div>
@@ -320,24 +354,24 @@ export default function CustomerListPage() {
           {/* Stats */}
           <div className="flex justify-between items-end">
             <div className="text-white/90">
-              <div className="text-xs text-white/60">Customers</div>
-              <div className="text-lg font-bold">{organization.customerCount}</div>
+              <div className="text-xs text-white/60">Members</div>
+              <div className="text-sm font-bold">{organization.customerCount}</div>
             </div>
             <div className="text-white/90 text-right">
               <div className="text-xs text-white/60">Orders</div>
-              <div className="text-lg font-bold">{organization.totalOrders}</div>
+              <div className="text-sm font-bold">{organization.totalOrders}</div>
             </div>
           </div>
         </div>
 
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="absolute inset-0 bg-white/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
     );
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -369,7 +403,7 @@ export default function CustomerListPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input 
                 type="search" 
-                placeholder="Search organizations..." 
+                placeholder="Search organizations or sports..." 
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -431,7 +465,7 @@ export default function CustomerListPage() {
         </CardContent>
       </Card>
 
-      {/* Organization Sections */}
+      {/* Content */}
       {isLoading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -443,52 +477,99 @@ export default function CustomerListPage() {
             <p className="text-muted-foreground">There was an error fetching organization data. Please try again later.</p>
           </CardContent>
         </Card>
-      ) : Object.keys(organizationsByType).length > 0 ? (
-        <div className="space-y-8">
-          {Object.entries(organizationsByType).map(([type, orgs]) => {
-            const IconComponent = organizationIcons[type as keyof typeof organizationIcons];
-            return (
-              <div key={type} className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <IconComponent className="w-6 h-6 text-neon-blue" />
-                  <h2 className="text-xl font-bold text-foreground capitalize">
-                    {type} Organizations
-                  </h2>
-                  <Badge variant="secondary">
-                    {orgs.length}
-                  </Badge>
-                </div>
-                
-                <div className="overflow-x-auto pb-4">
-                  <div className="flex space-x-6" style={{ width: 'max-content' }}>
-                    {orgs.map((org) => (
-                      <OrganizationCard key={org.id} organization={org} />
-                    ))}
+      ) : (
+        <div className="space-y-6">
+          {/* Sports Organizations by Sport */}
+          {(selectedOrganizationType === 'all' || selectedOrganizationType === 'sports') && 
+            sportOrganizations.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <Trophy className="w-6 h-6 text-neon-blue" />
+                <h2 className="text-xl font-bold text-foreground">
+                  Sports Organizations
+                </h2>
+                <Badge variant="secondary">
+                  {sportOrganizations.reduce((acc, sport) => acc + sport.organizations.length, 0)}
+                </Badge>
+              </div>
+              
+              {sportOrganizations.map(({ sport, organizations }) => (
+                <div key={sport} className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-lg font-semibold text-foreground">{sport}</h3>
+                    <Badge variant="outline">{organizations.length}</Badge>
+                  </div>
+                  
+                  <div className="overflow-x-auto pb-2">
+                    <div className="flex space-x-4" style={{ width: 'max-content' }}>
+                      {organizations.map((org) => (
+                        <OrganizationCard key={org.id} organization={org} />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <Card className="rich-card">
-          <CardContent className="py-16 text-center">
-            <div className="bg-gray-100 p-3 rounded-full mb-4 inline-block">
-              <Building2 className="h-10 w-10 text-gray-400" />
+              ))}
             </div>
-            <h3 className="text-lg font-medium mb-2 text-foreground">No organizations found</h3>
-            <p className="text-muted-foreground max-w-md mb-6 mx-auto">
-              There are no organizations in the system yet. Add your first customer organization to get started.
-            </p>
-            <Button 
-              onClick={() => setIsOnboardingFlowOpen(true)}
-              className="flex items-center"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Organization
-            </Button>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Business Organizations */}
+          {Object.keys(businessOrganizations).length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <Building2 className="w-6 h-6 text-neon-blue" />
+                <h2 className="text-xl font-bold text-foreground">
+                  Business Organizations
+                </h2>
+                <Badge variant="secondary">
+                  {Object.values(businessOrganizations).reduce((acc, orgs) => acc + orgs.length, 0)}
+                </Badge>
+              </div>
+              
+              {Object.entries(businessOrganizations).map(([type, orgs]) => {
+                const IconComponent = organizationIcons[type as keyof typeof organizationIcons];
+                return (
+                  <div key={type} className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <IconComponent className="w-5 h-5 text-muted-foreground" />
+                      <h3 className="text-lg font-semibold text-foreground capitalize">{type}</h3>
+                      <Badge variant="outline">{orgs.length}</Badge>
+                    </div>
+                    
+                    <div className="overflow-x-auto pb-2">
+                      <div className="flex space-x-4" style={{ width: 'max-content' }}>
+                        {orgs.map((org) => (
+                          <OrganizationCard key={org.id} organization={org} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {sportOrganizations.length === 0 && Object.keys(businessOrganizations).length === 0 && (
+            <Card className="rich-card">
+              <CardContent className="py-16 text-center">
+                <div className="bg-gray-100 p-3 rounded-full mb-4 inline-block">
+                  <Building2 className="h-10 w-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium mb-2 text-foreground">No organizations found</h3>
+                <p className="text-muted-foreground max-w-md mb-6 mx-auto">
+                  There are no organizations matching your current filters. Try adjusting your search or filters.
+                </p>
+                <Button 
+                  onClick={() => setIsOnboardingFlowOpen(true)}
+                  className="flex items-center"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Organization
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Dialogs */}
@@ -542,8 +623,16 @@ export default function CustomerListPage() {
                     <p className="text-foreground">{selectedCustomer.company || "Not provided"}</p>
                   </div>
                   <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Sport</label>
+                    <p className="text-foreground">{selectedCustomer.sport || "Not specified"}</p>
+                  </div>
+                  <div className="space-y-2">
                     <label className="subtitle text-muted-foreground text-xs">Phone</label>
                     <p className="text-foreground">{selectedCustomer.phone || "Not provided"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="subtitle text-muted-foreground text-xs">Organization Type</label>
+                    <p className="text-foreground capitalize">{selectedCustomer.organizationType || "Business"}</p>
                   </div>
                 </div>
               </div>
