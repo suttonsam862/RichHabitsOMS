@@ -96,12 +96,15 @@ export function fixWebSocketError() {
   if (typeof window !== 'undefined') {
     const originalHandler = window.onunhandledrejection;
     window.onunhandledrejection = (event) => {
-      // Check if it's a WebSocket-related error
+      // Check if it's a WebSocket-related error or network error
       if (event.reason && 
           (event.reason.message?.includes('WebSocket') || 
            event.reason.message?.includes('Failed to fetch') ||
-           event.reason.name === 'NetworkError')) {
-        console.warn('WebSocket-related promise rejection handled:', event.reason);
+           event.reason.message?.includes('NetworkError') ||
+           event.reason.message?.includes('fetch') ||
+           event.reason.name === 'NetworkError' ||
+           event.reason.name === 'TypeError')) {
+        // Suppress these common network errors to reduce console spam
         event.preventDefault();
         return;
       }

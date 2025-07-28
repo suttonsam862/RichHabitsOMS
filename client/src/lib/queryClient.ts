@@ -53,7 +53,7 @@ export const getQueryFn: <T>(options: {
     const headers: HeadersInit = {
       'Content-Type': 'application/json'
     };
-    
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
       console.log('Added Authorization header to request');
@@ -98,30 +98,58 @@ export const setAuthToken = (token: string): void => {
   localStorage.removeItem('token'); // Remove legacy token
 };
 
+import { QueryClient } from '@tanstack/react-query';
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error: any) => {
-        // Don't retry on 401 errors - clear auth and redirect
-        if (error?.response?.status === 401) {
-          clearAuthToken();
-          window.location.href = '/login';
+        // Don't retry on authentication errors
+        if (error?.status === 401 || error?.status === 403) {
           return false;
         }
-        return failureCount < 3;
+
+        // Retry network errors up to 3 times
+        if (error?.message?.includes('Failed to fetch') || 
+            error?.message?.includes('NetworkError') ||
+            error?.name === 'TypeError') {
+          return failureCount < 3;
+        }
+
+        // Default retry behavior for other errors
+        return failureCount < 2;
       },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      onError: (error: any) => {
+        // Suppress "Failed to fetch" errors from cluttering console
+        if (error?.message?.includes('Failed to fetch')) {
+          console.warn('Network request failed, retrying...', error.message);
+        } else {
+          console.error('Query error:', error);
+        }
+      }
     },
     mutations: {
       retry: (failureCount, error: any) => {
-        if (error?.response?.status === 401) {
-          clearAuthToken();
-          window.location.href = '/login';
+        // Don't retry mutations on auth errors
+        if (error?.status === 401 || error?.status === 403) {
           return false;
         }
-        return failureCount < 2;
+
+        // Retry network errors once for mutations
+        if (error?.message?.includes('Failed to fetch')) {
+          return failureCount < 1;
+        }
+
+        return false;
       },
+      onError: (error: any) => {
+        if (!error?.message?.includes('Failed to fetch')) {
+          console.error('Mutation error:', error);
+        }
+      }
     },
   },
 });

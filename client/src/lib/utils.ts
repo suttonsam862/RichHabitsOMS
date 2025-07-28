@@ -5,6 +5,55 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Enhanced fetch wrapper with better error handling
+export async function apiRequest(url: string, options: RequestInit = {}) {
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: defaultHeaders,
+    });
+
+    // Handle network-level failures
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Network Error');
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    }
+
+    return await response.text();
+  } catch (error: any) {
+    // Handle different types of network errors
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      console.warn('Network connection failed:', url);
+      throw new Error('Network connection failed. Please check your internet connection.');
+    }
+
+    if (error.message.includes('NetworkError')) {
+      console.warn('Network error occurred:', url);
+      throw new Error('Network error occurred. Please try again.');
+    }
+
+    // Re-throw the original error for other cases
+    throw error;
+  }
+}
+
+// Utility to check if we're in development mode
+export const isDevelopment = () => {
+  return process.env.NODE_ENV === 'development' || 
+         window.location.hostname.includes('replit.dev') ||
+         window.location.hostname.includes('localhost');
+};
+
 export function formatCurrency(amount: number | string): string {
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
   return new Intl.NumberFormat('en-US', {
@@ -39,7 +88,7 @@ export function generateOrderNumber(): string {
 
 export function getInitials(name: string): string {
   if (!name) return '';
-  
+
   const parts = name.split(' ');
   if (parts.length === 1) {
     return parts[0].substring(0, 2).toUpperCase();
@@ -105,7 +154,7 @@ export function debounce<T extends (...args: any[]) => any>(
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  
+
   return function(...args: Parameters<T>) {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -155,31 +204,31 @@ export function getFileIcon(fileType: string): string {
 export function getTimeAgo(date: Date | string): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const seconds = Math.floor((new Date().getTime() - dateObj.getTime()) / 1000);
-  
+
   let interval = seconds / 31536000;
   if (interval > 1) {
     return Math.floor(interval) + " years ago";
   }
-  
+
   interval = seconds / 2592000;
   if (interval > 1) {
     return Math.floor(interval) + " months ago";
   }
-  
+
   interval = seconds / 86400;
   if (interval > 1) {
     return Math.floor(interval) + " days ago";
   }
-  
+
   interval = seconds / 3600;
   if (interval > 1) {
     return Math.floor(interval) + " hours ago";
   }
-  
+
   interval = seconds / 60;
   if (interval > 1) {
     return Math.floor(interval) + " minutes ago";
   }
-  
+
   return Math.floor(seconds) + " seconds ago";
 }

@@ -56,6 +56,28 @@ import CustomerInvitesPage from "./pages/admin/CustomerInvitesPage";
 import NewOrderInquiriesPage from "./pages/admin/NewOrderInquiriesPage";
 import ProductLibrary from "./pages/ProductLibrary";
 
+// Enhanced error handling for network failures
+const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+  // Check if it's a network-related error
+  if (event.reason && 
+      (event.reason.message?.includes('Failed to fetch') || 
+       event.reason.message?.includes('NetworkError') ||
+       event.reason.message?.includes('fetch') ||
+       event.reason.name === 'TypeError')) {
+    console.warn('Network request failed (handled):', event.reason.message);
+    event.preventDefault();
+    return;
+  }
+
+  // Log other unhandled rejections for debugging
+  console.error('Unhandled promise rejection:', event.reason);
+};
+
+// Set up global error handling
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -136,7 +158,7 @@ function App() {
                     </RequireAuth>
                   } 
                 />
-                
+
                 {/* Catalog Manager route */}
                  <Route 
                   path="/dashboard/catalog_manager" 

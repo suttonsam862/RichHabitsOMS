@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const checkAuthStatus = async () => {
       try {
         setLoading(true);
-        
+
         // Check for stored token in localStorage
         const storedToken = localStorage.getItem('authToken');
         const storedRole = localStorage.getItem('userRole');
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             localStorage.setItem('userName', 'admin');
             localStorage.setItem('userFirstName', 'Admin');
             localStorage.setItem('userLastName', 'User');
-            
+
             const devUser = {
               id: 'dev-admin-123',
               email: 'admin@threadcraft.dev',
@@ -76,14 +76,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               firstName: 'Admin',
               lastName: 'User'
             };
-            
+
             setUser(devUser);
             setLoading(false);
             setInitialized(true);
             console.log('Development mode: Created admin session for catalog functionality');
             return;
           }
-          
+
           setUser(null);
           setLoading(false);
           setInitialized(true);
@@ -96,7 +96,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           const expirationTime = new Date(tokenExpires).getTime();
           const currentTime = Date.now();
           const oneHourFromNow = currentTime + (60 * 60 * 1000);
-          
+
           // If token is already expired by more than 5 minutes, clear it
           if (expirationTime < (currentTime - 5 * 60 * 1000)) {
             console.log('Token expired, clearing session');
@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setInitialized(true);
             return;
           }
-          
+
           // If token expires within an hour, extend the session by using current user data
           if (expirationTime < oneHourFromNow) {
             console.log('Token expiring soon, extending session');
@@ -129,12 +129,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             firstName: localStorage.getItem('userFirstName') || '',
             lastName: localStorage.getItem('userLastName') || ''
           };
-          
+
           // Set user immediately from cache
           setUser(cachedUser);
           setLoading(false);
           setInitialized(true);
-          
+
           // Validate in background without blocking UI
           setTimeout(async () => {
             try {
@@ -160,7 +160,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               console.log('Background auth validation failed, but continuing with cached data');
             }
           }, 100);
-          
+
           return;
         }
 
@@ -194,7 +194,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             console.log('User session validated successfully');
             console.log('Already authenticated as:', userData.user.role);
             setUser(userData.user);
-            
+
             // Update localStorage with fresh data
             localStorage.setItem('userRole', userData.user.role);
             localStorage.setItem('userId', userData.user.id.toString());
@@ -208,13 +208,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         } catch (fetchError: any) {
           clearTimeout(timeoutId);
-          
+
           if (fetchError.name === 'AbortError') {
             console.log('Auth check timed out, keeping cached data');
           } else {
             console.error('Auth fetch error:', fetchError);
           }
-          
+
           // Don't clear tokens on network errors - just set as unauthenticated
           setUser(null);
         }
