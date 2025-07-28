@@ -498,3 +498,21 @@ app.use('/api/monitoring', monitoringRoutes);
 
 //invitation routes
 app.use('/api/invitations', invitationRoutes);
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/catalog', catalogRoutes);
+app.use('/api/catalog-options', catalogOptionsRoutes);
+app.use('/api/user-management', userManagementRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+// Import and use sales management routes
+import salesManagementRoutes from './routes/api/salesManagementRoutes';
+app.use('/api/sales-management', salesManagementRoutes);
+
+// Import and use customer contacts routes
+import customerContactsRoutes from './routes/api/customerContactsRoutes';
+app.use('/api/customer-contacts', customerContactsRoutes);
