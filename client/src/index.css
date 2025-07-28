@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap');
 @tailwind base;
 @tailwind components;
@@ -89,7 +90,7 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%);
     transform: translateX(-100%) rotate(25deg);
     pointer-events: none;
     transition: transform 0.6s ease;
@@ -232,6 +233,25 @@
       @apply w-[60vw] max-h-[80vh];
       max-width: 900px;
     }
+  }
+}
+
+/* Rich Habits Color Utilities */
+@layer utilities {
+  .text-neon-blue {
+    color: var(--neon-blue);
+  }
+  
+  .text-neon-green {
+    color: var(--neon-green);
+  }
+  
+  .bg-rich-black {
+    background-color: var(--rich-black);
+  }
+  
+  .border-glass-border {
+    border-color: var(--glass-border);
   }
 }
 

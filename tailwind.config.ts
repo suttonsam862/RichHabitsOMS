@@ -62,6 +62,15 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      // Rich Habits custom colors
+      extend: {
+        colors: {
+          'neon-blue': '#00d1ff',
+          'neon-green': '#00ff9f',
+          'rich-black': '#0a0a0a',
+          'glass-border': 'rgba(255, 255, 255, 0.1)',
+        },
+      },
       keyframes: {
         "accordion-down": {
           from: {
