@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
@@ -10,7 +11,10 @@ export default defineConfig({
     hmr: {
       port: 5173,
     },
-    allowedHosts: "all",
+    allowedHosts: [
+      "all",
+      "9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev"
+    ],
   },
   plugins: [
     react(),
