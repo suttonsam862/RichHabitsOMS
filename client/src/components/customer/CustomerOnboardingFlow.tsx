@@ -264,26 +264,8 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
         </div>
 
         {/* Content */}
-        <div className="relative flex-1 overflow-hidden min-h-0">
-          <AnimatePresence initial={false} custom={direction}>
-            <motion.div
-              key={currentStep}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: 'spring', stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 },
-                scale: { duration: 0.2 },
-              }}
-              className="absolute inset-0 p-4 sm:p-6 overflow-y-auto"
-            >
-              <Card className="h-full border-0 shadow-none bg-transparent">
-                <CardContent className="p-0 h-full flex flex-col min-h-0">
-                  {/* Step Content */}
-                  <div className="flex-1 space-y-3 sm:space-y-4 overflow-y-auto min-h-0 pb-4">
+        <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
+          <div className="space-y-3 sm:space-y-4 pb-4">
                     {currentStep === 0 && (
                       <div className="space-y-3 sm:space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -530,10 +512,6 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </AnimatePresence>
         </div>
 
         {/* Footer */}
