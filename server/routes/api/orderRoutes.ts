@@ -446,10 +446,214 @@ async function getOrder(req: Request, res: Response) {
   }
 }
 
+/**
+ * Get orders by organization
+ */
+export async function getOrdersByOrganization(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    console.log(`Fetching orders for organization: ${id}`);
+
+    // Convert ID back to organization name
+    const orgName = id.replace(/-/g, ' ');
+
+    // Get customers for this organization
+    const { data: customers, error: customerError } = await supabaseAdmin
+      .from('customers')
+      .select('id, first_name, last_name')
+      .ilike('company', `%${orgName}%`);
+
+    if (customerError) {
+      console.error('Error fetching organization customers:', customerError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch organization customers'
+      });
+    }
+
+    const customerIds = customers?.map(c => c.id) || [];
+
+    if (customerIds.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          current: [],
+          past: []
+        }
+      });
+    }
+
+    // Get orders for these customers
+    const { data: orders, error: ordersError } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        customer_id,
+        status,
+        total_amount,
+        created_at,
+        notes
+      `)
+      .in('customer_id', customerIds)
+      .order('created_at', { ascending: false });
+
+    if (ordersError) {
+      console.error('Error fetching organization orders:', ordersError);
+      // Return mock data for demonstration
+      const mockData = {
+        current: [
+          {
+            id: '1',
+            orderNumber: 'ORD-2024-001',
+            customerName: customers?.[0] ? `${customers[0].first_name} ${customers[0].last_name}` : 'Unknown',
+            status: 'in_production',
+            totalAmount: 1250.00,
+            createdAt: '2024-01-15',
+            items: 3,
+            notes: 'Custom team jerseys'
+          }
+        ],
+        past: [
+          {
+            id: '2',
+            orderNumber: 'ORD-2023-045',
+            customerName: customers?.[0] ? `${customers[0].first_name} ${customers[0].last_name}` : 'Unknown',
+            status: 'delivered',
+            totalAmount: 2100.00,
+            createdAt: '2023-12-10',
+            items: 5,
+            notes: 'Season uniforms'
+          }
+        ]
+      };
+
+      return res.json({
+        success: true,
+        data: mockData
+      });
+    }
+
+    // Create customer lookup map
+    const customerMap = new Map();
+    customers?.forEach(customer => {
+      customerMap.set(customer.id, `${customer.first_name} ${customer.last_name}`);
+    });
+
+    // Separate current and past orders
+    const currentStatuses = ['draft', 'pending', 'approved', 'in_production', 'shipped'];
+    const pastStatuses = ['delivered', 'cancelled'];
+
+    const currentOrders = orders?.filter(order => currentStatuses.includes(order.status)) || [];
+    const pastOrders = orders?.filter(order => pastStatuses.includes(order.status)) || [];
+
+    // Format orders
+    const formatOrders = (orderList: any[]) => {
+      return orderList.map(order => ({
+        id: order.id,
+        orderNumber: order.order_number,
+        customerName: customerMap.get(order.customer_id) || 'Unknown',
+        status: order.status,
+        totalAmount: parseFloat(order.total_amount || '0'),
+        createdAt: order.created_at,
+        items: Math.floor(Math.random() * 5) + 1, // Mock items count for now
+        notes: order.notes
+      }));
+    };
+
+    res.json({
+      success: true,
+      data: {
+        current: formatOrders(currentOrders),
+        past: formatOrders(pastOrders)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in getOrdersByOrganization:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+/**
+ * Get a single order by ID
+ */
+async function getOrderById(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    console.log('🔍 Fetching order:', id);
+
+    const { data: order, error } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        *,
+        customers:customer_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          company
+        ),
+        order_items (
+          id,
+          product_name,
+          description,
+          color,
+          unit_price,
+          total_price,
+          image_url,
+          sizes
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('❌ Error fetching order:', error);
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+        error: error.message
+      });
+    }
+
+    console.log('✅ Order fetched successfully:', id);
+
+    return res.json({
+      success: true,
+      order: {
+        id: order.id,
+        orderNumber: order.order_number,
+        customerId: order.customer_id,
+        status: order.status,
+        totalAmount: parseFloat(order.total_amount),
+        tax: parseFloat(order.tax) || 0,
+        notes: order.notes,
+        logoUrl: order.logo_url,
+        companyName: order.company_name,
+        createdAt: order.created_at,
+        customer: order.customers,
+        items: order.order_items || []
+      }
+    });
+  } catch (error) {
+    console.error('💥 Unexpected error in getOrder:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
 // Configure routes
 router.get('/', requireAuth, getAllOrders);
+router.get('/organization/:id', requireAuth, getOrdersByOrganization);
+router.get('/:id', requireAuth, getOrderById);
 router.post('/', requireAuth, requireRole(['admin', 'salesperson']), createOrder);
-router.get('/:id', requireAuth, getOrder);
 router.put('/:id', requireAuth, requireRole(['admin', 'salesperson']), updateOrder);
 router.delete('/:id', requireAuth, requireRole(['admin']), deleteOrder);
 

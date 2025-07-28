@@ -45,10 +45,10 @@ app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'development') {
     return next();
   }
-  
+
   const host = req.get('host');
   const origin = req.get('origin');
-  
+
   // Allow localhost and Replit domains
   if (host && (
     host.includes('localhost') ||
@@ -57,12 +57,12 @@ app.use((req, res, next) => {
   )) {
     return next();
   }
-  
+
   // If we have a Replit domain in environment, allow it
   if (process.env.REPLIT_DEV_DOMAIN && host && host.includes(process.env.REPLIT_DEV_DOMAIN)) {
     return next();
   }
-  
+
   next();
 });
 
@@ -213,6 +213,9 @@ import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import catalogRoutes from './routes/api/catalogRoutes';
 import customerRoutes from './routes/api/customerRoutes';
+import dashboardRoutes from './routes/api/dashboardRoutes';
+import orderRoutes from './routes/api/orderRoutes';
+import organizationRoutes from './routes/api/organizationRoutes';
 import optimizedImageRoutes from './routes/api/optimizedImageRoutes.js';
 import invitationRoutes from './routes/api/invitationRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
@@ -313,6 +316,9 @@ import healthRoutes from './routes/health';
     app.use('/api/fabric-options', fabricOptionsRoutes);
     app.use('/api/catalog', catalogRoutes);
     app.use('/api/customers', customerRoutes);
+    app.use('/api/dashboard', dashboardRoutes);
+    app.use('/api/orders', orderRoutes);
+    app.use('/api/organizations', organizationRoutes);
     app.use('/api/images', optimizedImageRoutes);
     app.use('/api/invitations', invitationRoutes);
     app.use('/api/user-management', userManagementRoutes);

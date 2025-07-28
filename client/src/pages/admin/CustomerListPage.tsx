@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import AddCustomerForm from "./AddCustomerForm";
 import CustomerOnboardingFlow from "@/components/customer/CustomerOnboardingFlow";
+import OrganizationDetailModal from "@/components/admin/OrganizationDetailModal";
 import {
   Dialog,
   DialogContent,
@@ -115,12 +116,24 @@ export default function CustomerListPage() {
   const [isOnboardingFlowOpen, setIsOnboardingFlowOpen] = useState(false);
   const [isViewCustomerDialogOpen, setIsViewCustomerDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isOrganizationDetailOpen, setIsOrganizationDetailOpen] = useState(false);
+  const [selectedOrganization, setSelectedOrganization] = useState<OrganizationCard | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const handleViewCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     setIsViewCustomerDialogOpen(true);
+  };
+
+  const handleOrganizationClick = (organization: OrganizationCard) => {
+    setSelectedOrganization(organization);
+    setIsOrganizationDetailOpen(true);
+  };
+
+  const handleOrganizationUpdate = () => {
+    // Refresh the customer data when organization is updated
+    queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
   };
 
   // Fetch real customer data from API
@@ -297,7 +310,10 @@ export default function CustomerListPage() {
     const colorClasses = organizationColors[organization.type];
     
     return (
-      <div className={`relative group cursor-pointer min-w-[240px] h-[140px] rounded-lg bg-gradient-to-br ${colorClasses} backdrop-blur-md border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex-shrink-0`}>
+      <div 
+        className={`relative group cursor-pointer min-w-[240px] h-[140px] rounded-lg bg-gradient-to-br ${colorClasses} backdrop-blur-md border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex-shrink-0`}
+        onClick={() => handleOrganizationClick(organization)}
+      >
         {/* Glassmorphism overlay */}
         <div className="absolute inset-0 bg-white/5 rounded-lg backdrop-blur-sm"></div>
         
@@ -325,6 +341,7 @@ export default function CustomerListPage() {
                   variant="ghost" 
                   size="sm" 
                   className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                  onClick={(e) => e.stopPropagation()} // Prevent card click when clicking dropdown
                 >
                   <MoreHorizontal className="h-3 w-3" />
                 </Button>
@@ -332,7 +349,13 @@ export default function CustomerListPage() {
               <DropdownMenuContent align="end" className="glass-panel border-glass-border">
                 <DropdownMenuLabel className="text-foreground">Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-glass-border" />
-                <DropdownMenuItem className="text-foreground hover:bg-white/10">
+                <DropdownMenuItem 
+                  className="text-foreground hover:bg-white/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOrganizationClick(organization);
+                  }}
+                >
                   <Eye className="mr-2 h-3 w-3" />
                   View Details
                 </DropdownMenuItem>
@@ -648,6 +671,14 @@ export default function CustomerListPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Organization Detail Modal */}
+      <OrganizationDetailModal
+        organization={selectedOrganization}
+        isOpen={isOrganizationDetailOpen}
+        onClose={() => setIsOrganizationDetailOpen(false)}
+        onUpdate={handleOrganizationUpdate}
+      />
     </div>
   );
 }
