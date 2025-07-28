@@ -25,7 +25,11 @@ export async function setupVite(app: Express, server: Server) {
     },
     host: "0.0.0.0",
     cors: true,
-    origin: "*"
+    origin: "*",
+    allowedHosts: [
+      "all",
+      "9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev"
+    ]
   };
   const vite = await createViteServer({
     ...viteConfig,
