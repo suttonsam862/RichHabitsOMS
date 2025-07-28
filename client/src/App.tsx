@@ -54,6 +54,7 @@ import AnalyticsPage from "./pages/admin/AnalyticsPage";
 import LegalManagementPage from "./pages/admin/LegalManagementPage";
 import CustomerInvitesPage from "./pages/admin/CustomerInvitesPage";
 import NewOrderInquiriesPage from "./pages/admin/NewOrderInquiriesPage";
+import SalesManagementPage from "./pages/admin/SalesManagementPage";
 import ProductLibrary from "./pages/ProductLibrary";
 
 // Enhanced error handling for network failures
@@ -366,6 +367,15 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson']}>
                       <NewOrderInquiriesPage />
+                    </RequireAuth>
+                  } 
+                />
+
+                <Route 
+                  path="/admin/sales-management" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <SalesManagementPage />
                     </RequireAuth>
                   } 
                 />

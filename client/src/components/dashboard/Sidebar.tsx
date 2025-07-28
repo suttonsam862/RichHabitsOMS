@@ -22,7 +22,8 @@ import {
   PlusCircle,
   Scale,
   Package,
-  Shield
+  Shield,
+  TrendingUp
 } from "lucide-react";
 
 // Navigation items for different roles
@@ -31,6 +32,7 @@ const navigationItems = {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Orders", href: "/orders", icon: ShoppingBag },
     { name: "Product Library", href: "/product-library", icon: Package },
+    { name: "Sales Management", href: "/admin/sales-management", icon: TrendingUp },
     { name: "Customer Invites", href: "/admin/invites", icon: Mail },
     { name: "Order Inquiries", href: "/admin/inquiries", icon: FileText },
     { name: "Users", href: "/users", icon: Users },

@@ -47,6 +47,9 @@ import adminRoutesRefactored from './routes/admin/admin';
 // Health check
 import healthRoutesRefactored from './routes/health';
 
+// Sales management routes
+import salesManagementRoutes from './routes/api/salesManagementRoutes';
+
 // Create Supabase admin client with service key for admin operations
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co',
@@ -2023,6 +2026,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use('/api/customers', customerRoutesRefactored);
   router.use('/api/images', imageRoutesRefactored);
   router.use('/api/invitations', invitationRoutesRefactored);
+  router.use('/api/sales-management', salesManagementRoutes);
+
 
   // Admin routes (admin auth required)
   router.use('/api/admin', adminRoutesRefactored);
