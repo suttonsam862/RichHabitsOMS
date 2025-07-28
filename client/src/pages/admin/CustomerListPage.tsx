@@ -128,24 +128,32 @@ export default function CustomerListPage() {
     queryKey: ["admin", "customers"],
     queryFn: async () => {
       console.log("Fetching real customers from API...");
-      const response = await fetch("/api/customers", {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+      try {
+        const response = await fetch("/api/customers", {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch customers: ${response.status} ${errorText}`);
         }
-      });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch customers");
+        const data = await response.json();
+        console.log("Received customer data:", data);
+        return data;
+      } catch (error) {
+        console.error("Customer fetch error:", error);
+        throw error;
       }
-
-      const data = await response.json();
-      console.log("Received customer data:", data);
-      return data;
     },
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    retry: 1, // Only retry once
+    retryDelay: 2000 // Wait 2 seconds before retry
   });
 
   // Enhanced data processing with better error handling

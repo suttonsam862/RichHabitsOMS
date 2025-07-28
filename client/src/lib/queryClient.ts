@@ -103,53 +103,27 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: (failureCount, error: any) => {
-        // Don't retry on authentication errors
-        if (error?.status === 401 || error?.status === 403) {
-          return false;
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors (client errors)
+        if (error instanceof Error && 'status' in error) {
+          const status = (error as any).status;
+          if (status >= 400 && status < 500) {
+            return false;
+          }
         }
-
-        // Retry network errors up to 3 times
-        if (error?.message?.includes('Failed to fetch') || 
-            error?.message?.includes('NetworkError') ||
-            error?.name === 'TypeError') {
-          return failureCount < 3;
-        }
-
-        // Default retry behavior for other errors
-        return failureCount < 2;
+        // Only retry once for network errors to reduce spam
+        return failureCount < 1;
       },
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
-      onError: (error: any) => {
-        // Suppress "Failed to fetch" errors from cluttering console
-        if (error?.message?.includes('Failed to fetch')) {
-          console.warn('Network request failed, retrying...', error.message);
-        } else {
-          console.error('Query error:', error);
-        }
-      }
+      refetchOnReconnect: true,
+      networkMode: 'online',
     },
     mutations: {
-      retry: (failureCount, error: any) => {
-        // Don't retry mutations on auth errors
-        if (error?.status === 401 || error?.status === 403) {
-          return false;
-        }
-
-        // Retry network errors once for mutations
-        if (error?.message?.includes('Failed to fetch')) {
-          return failureCount < 1;
-        }
-
-        return false;
-      },
-      onError: (error: any) => {
-        if (!error?.message?.includes('Failed to fetch')) {
-          console.error('Mutation error:', error);
-        }
-      }
+      retry: false,
+      networkMode: 'online',
     },
   },
 });

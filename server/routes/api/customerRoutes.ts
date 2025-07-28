@@ -384,35 +384,79 @@ async function getAllCustomers(req: Request, res: Response) {
   try {
     console.log('Fetching customers - request received');
 
-    // Fetch real customers from Supabase Auth
-    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+    // First, try to get customers from the customers table
+    const { data: customerProfiles, error: customerError } = await supabaseAdmin
+      .from('customers')
+      .select('*');
+
+    if (customerError) {
+      console.error('Error fetching customer profiles:', customerError);
+    }
+
+    // Also get auth users for additional data
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
     
-    if (error) {
-      console.error('Error fetching customers from Supabase Auth:', error);
+    if (authError) {
+      console.error('Error fetching auth users:', authError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to fetch customers: ' + error.message
+        message: 'Failed to fetch customers: ' + authError.message
       });
     }
 
-    // Filter for customer role users and format the response
-    const customers = users.users
+    // Combine data from both sources
+    const authUsers = authData.users;
+    const customers = [];
+
+    // Process customers from the customers table first
+    if (customerProfiles && customerProfiles.length > 0) {
+      for (const profile of customerProfiles) {
+        const authUser = authUsers.find(u => u.id === profile.id || u.email === profile.email);
+        
+        customers.push({
+          id: profile.id,
+          email: profile.email,
+          firstName: profile.first_name || '',
+          lastName: profile.last_name || '',
+          company: profile.company || '',
+          phone: profile.phone || '',
+          sport: profile.sport || '',
+          organizationType: profile.organization_type || 'business',
+          orders: 0,
+          spent: '$0.00',
+          lastOrder: null,
+          status: authUser?.email_confirmed_at ? 'active' : 'pending',
+          created_at: profile.created_at || authUser?.created_at,
+          userId: authUser?.id
+        });
+      }
+    }
+
+    // Also include auth users with customer role who might not be in customers table
+    const customerRoleUsers = authUsers
       .filter(user => user.user_metadata?.role === 'customer')
-      .map(user => ({
+      .filter(user => !customers.find(c => c.id === user.id || c.email === user.email));
+
+    for (const user of customerRoleUsers) {
+      customers.push({
         id: user.id,
         email: user.email,
         firstName: user.user_metadata?.firstName || '',
         lastName: user.user_metadata?.lastName || '',
-        username: user.user_metadata?.username || '',
         company: user.user_metadata?.company || '',
         phone: user.user_metadata?.phone || '',
-        role: user.user_metadata?.role || 'customer',
+        sport: user.user_metadata?.sport || '',
+        organizationType: user.user_metadata?.organizationType || 'business',
+        orders: 0,
+        spent: '$0.00',
+        lastOrder: null,
+        status: user.email_confirmed_at ? 'active' : 'pending',
         created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at,
-        email_confirmed_at: user.email_confirmed_at
-      }));
+        userId: user.id
+      });
+    }
 
-    console.log(`Found ${customers.length} customers from Supabase Auth`);
+    console.log(`Found ${customers.length} total customers (${customerProfiles?.length || 0} from profiles, ${customerRoleUsers.length} from auth only)`);
 
     res.json({
       success: true,
