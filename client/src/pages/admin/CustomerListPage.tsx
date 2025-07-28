@@ -28,13 +28,18 @@ import {
   GraduationCap,
   Heart,
   Zap,
-  Star
+  Star,
+  Edit,
+  Settings,
+  Archive,
+  ShieldCheck
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import AddCustomerForm from "./AddCustomerForm";
 import CustomerOnboardingFlow from "@/components/customer/CustomerOnboardingFlow";
 import OrganizationDetailModal from "@/components/admin/OrganizationDetailModal";
+import OrganizationEditModal from "@/components/admin/OrganizationEditModal";
 import {
   Dialog,
   DialogContent,
@@ -118,6 +123,8 @@ export default function CustomerListPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isOrganizationDetailOpen, setIsOrganizationDetailOpen] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<OrganizationCard | null>(null);
+  const [isEditingOrganization, setIsEditingOrganization] = useState(false);
+  const [organizationToEdit, setOrganizationToEdit] = useState<OrganizationCard | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -134,6 +141,96 @@ export default function CustomerListPage() {
   const handleOrganizationUpdate = () => {
     // Refresh the customer data when organization is updated
     queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+  };
+
+  const handleEditOrganization = (organization: OrganizationCard) => {
+    setOrganizationToEdit(organization);
+    setIsEditingOrganization(true);
+  };
+
+  const handleArchiveOrganization = async (organization: OrganizationCard) => {
+    if (!confirm(`Are you sure you want to archive ${organization.name}? This will hide it from the main view but preserve all data.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/organizations/${organization.id}/archive`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+        }
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Organization Archived",
+          description: `${organization.name} has been archived successfully.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+      } else {
+        throw new Error('Failed to archive organization');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to archive organization. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteOrganization = async (organization: OrganizationCard) => {
+    if (!confirm(`Are you sure you want to permanently delete ${organization.name}? This action cannot be undone and will remove all associated data.`)) {
+      return;
+    }
+
+    const confirmDelete = prompt(`To confirm deletion, type "${organization.name}" exactly:`);
+    if (confirmDelete !== organization.name) {
+      toast({
+        title: "Deletion Cancelled",
+        description: "Organization name did not match. Deletion cancelled.",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/organizations/${organization.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+        }
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Organization Deleted",
+          description: `${organization.name} has been permanently deleted.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+      } else {
+        throw new Error('Failed to delete organization');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete organization. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendOrganizationEmail = (organization: OrganizationCard) => {
+    const primaryContact = organization.customers[0];
+    if (primaryContact?.email) {
+      window.location.href = `mailto:${primaryContact.email}?subject=Regarding ${organization.name}&body=Hello ${primaryContact.firstName},`;
+    } else {
+      toast({
+        title: "No Email Available",
+        description: "No primary contact email found for this organization.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Fetch real customer data from API
@@ -346,9 +443,11 @@ export default function CustomerListPage() {
                   <MoreHorizontal className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="glass-panel border-glass-border">
-                <DropdownMenuLabel className="text-foreground">Actions</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="glass-panel border-glass-border w-48">
+                <DropdownMenuLabel className="text-foreground">Organization Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-glass-border" />
+                
+                {/* View & Communication */}
                 <DropdownMenuItem 
                   className="text-foreground hover:bg-white/10"
                   onClick={(e) => {
@@ -359,13 +458,81 @@ export default function CustomerListPage() {
                   <Eye className="mr-2 h-3 w-3" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem className="text-foreground hover:bg-white/10">
+                <DropdownMenuItem 
+                  className="text-foreground hover:bg-white/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendOrganizationEmail(organization);
+                  }}
+                >
                   <Mail className="mr-2 h-3 w-3" />
-                  Contact
+                  Contact Primary
                 </DropdownMenuItem>
-                <DropdownMenuItem className="text-foreground hover:bg-white/10">
+                
+                <DropdownMenuSeparator className="bg-glass-border" />
+                
+                {/* Management Actions */}
+                <DropdownMenuItem 
+                  className="text-foreground hover:bg-white/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditOrganization(organization);
+                  }}
+                >
+                  <Edit className="mr-2 h-3 w-3" />
+                  Edit Organization
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-foreground hover:bg-white/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Navigate to organization settings
+                    toast({
+                      title: "Feature Coming Soon",
+                      description: "Organization settings panel is in development.",
+                    });
+                  }}
+                >
+                  <Settings className="mr-2 h-3 w-3" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-foreground hover:bg-white/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Navigate to orders for this organization
+                    toast({
+                      title: "Feature Coming Soon",
+                      description: "Organization order management is in development.",
+                    });
+                  }}
+                >
                   <FileText className="mr-2 h-3 w-3" />
                   View Orders
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator className="bg-glass-border" />
+                
+                {/* Administrative Actions */}
+                <DropdownMenuItem 
+                  className="text-foreground hover:bg-white/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleArchiveOrganization(organization);
+                  }}
+                >
+                  <Archive className="mr-2 h-3 w-3" />
+                  Archive
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteOrganization(organization);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-3 w-3" />
+                  Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -677,6 +844,17 @@ export default function CustomerListPage() {
         organization={selectedOrganization}
         isOpen={isOrganizationDetailOpen}
         onClose={() => setIsOrganizationDetailOpen(false)}
+        onUpdate={handleOrganizationUpdate}
+      />
+
+      {/* Organization Edit Modal */}
+      <OrganizationEditModal
+        organization={organizationToEdit}
+        isOpen={isEditingOrganization}
+        onClose={() => {
+          setIsEditingOrganization(false);
+          setOrganizationToEdit(null);
+        }}
         onUpdate={handleOrganizationUpdate}
       />
     </div>

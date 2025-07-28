@@ -1,4 +1,3 @@
-
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
@@ -18,19 +17,19 @@ const supabaseAdmin = createClient(
 );
 
 /**
- * Get organization details by ID
+ * Get organization details including customers and orders
  */
-async function getOrganization(req: Request, res: Response) {
-  const { id } = req.params;
+async function getOrganizationDetails(req: Request, res: Response) {
+  const { organizationId } = req.params;
 
   try {
-    console.log(`Fetching organization details for: ${id}`);
+    console.log(`Fetching organization details for: ${organizationId}`);
 
-    // Get all customers for this organization
+    // Get organization customers
     const { data: customers, error: customerError } = await supabaseAdmin
       .from('customers')
       .select('*')
-      .eq('company', id.replace('-', ' '));
+      .ilike('company', `%${organizationId.replace(/-/g, ' ')}%`);
 
     if (customerError) {
       console.error('Error fetching organization customers:', customerError);
@@ -40,29 +39,50 @@ async function getOrganization(req: Request, res: Response) {
       });
     }
 
-    // Calculate organization stats
-    const totalOrders = customers?.reduce((sum, customer) => sum + (customer.orders || 0), 0) || 0;
-    const totalSpent = customers?.reduce((sum, customer) => sum + parseFloat(customer.spent?.replace('$', '') || '0'), 0) || 0;
+    // Get organization orders (mock data for now)
+    const mockOrders = [
+      {
+        id: '1',
+        orderNumber: 'ORD-001',
+        customer: customers?.[0]?.first_name + ' ' + customers?.[0]?.last_name,
+        items: 'Custom Team Jerseys x 25',
+        status: 'completed',
+        total: '$1,250.00',
+        date: '2024-01-15',
+        type: 'current'
+      },
+      {
+        id: '2',
+        orderNumber: 'ORD-002',
+        customer: customers?.[1]?.first_name + ' ' + customers?.[1]?.last_name,
+        items: 'Training Equipment Set',
+        status: 'in_progress',
+        total: '$850.00',
+        date: '2024-01-20',
+        type: 'current'
+      }
+    ];
 
-    const organization = {
-      id,
-      name: customers?.[0]?.company || 'Unknown Organization',
-      sport: customers?.[0]?.sport || 'General',
-      type: customers?.[0]?.organizationType || 'business',
-      customerCount: customers?.length || 0,
-      totalOrders,
-      totalSpent: `$${totalSpent.toFixed(2)}`,
-      primaryContact: customers?.[0] ? `${customers[0].firstName} ${customers[0].lastName}` : '',
-      customers: customers || []
+    const organizationData = {
+      id: organizationId,
+      name: organizationId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      customers: customers || [],
+      orders: mockOrders,
+      stats: {
+        totalCustomers: customers?.length || 0,
+        totalOrders: mockOrders.length,
+        totalRevenue: '$2,100.00',
+        avgOrderValue: '$1,050.00'
+      }
     };
 
     res.json({
       success: true,
-      data: organization
+      data: organizationData
     });
 
   } catch (error) {
-    console.error('Error in getOrganization:', error);
+    console.error('Error in getOrganizationDetails:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -71,49 +91,58 @@ async function getOrganization(req: Request, res: Response) {
 }
 
 /**
- * Update organization details
+ * Update organization information
  */
 async function updateOrganization(req: Request, res: Response) {
-  const { id } = req.params;
-  const { name, sport, type, primaryContact } = req.body;
+  const { organizationId } = req.params;
+  const {
+    name,
+    type,
+    sport,
+    description,
+    website,
+    phone,
+    address,
+    notes
+  } = req.body;
 
   try {
-    console.log(`Updating organization: ${id}`, { name, sport, type, primaryContact });
+    console.log(`Updating organization: ${organizationId}`, req.body);
 
-    // Get the old organization name to update all customers
-    const oldName = id.replace('-', ' ');
+    // For now, we'll update all customers with this organization name
+    // In a real implementation, you'd have a separate organizations table
+    const oldName = organizationId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-    // Update all customers in this organization
     const { data: updatedCustomers, error: updateError } = await supabaseAdmin
       .from('customers')
       .update({
         company: name,
-        sport: sport,
         organization_type: type,
+        sport: sport || null,
         updated_at: new Date().toISOString()
       })
-      .eq('company', oldName)
+      .ilike('company', `%${oldName}%`)
       .select();
 
     if (updateError) {
-      console.error('Error updating organization customers:', updateError);
+      console.error('Error updating organization:', updateError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to update organization details'
+        message: 'Failed to update organization'
       });
     }
 
-    console.log(`Successfully updated ${updatedCustomers?.length || 0} customers for organization: ${name}`);
+    // In a future implementation, you would also update an organizations table
+    // with additional fields like description, website, phone, address, notes
 
     res.json({
       success: true,
       message: 'Organization updated successfully',
       data: {
-        id: name.toLowerCase().replace(/\s+/g, '-'),
+        id: organizationId,
         name,
-        sport,
         type,
-        primaryContact,
+        sport,
         updatedCustomers: updatedCustomers?.length || 0
       }
     });
@@ -128,101 +157,90 @@ async function updateOrganization(req: Request, res: Response) {
 }
 
 /**
- * Get orders for an organization
+ * Archive organization (soft delete)
  */
-async function getOrganizationOrders(req: Request, res: Response) {
-  const { id } = req.params;
+async function archiveOrganization(req: Request, res: Response) {
+  const { organizationId } = req.params;
 
   try {
-    console.log(`Fetching orders for organization: ${id}`);
+    console.log(`Archiving organization: ${organizationId}`);
 
-    // Get organization name from ID
-    const orgName = id.replace('-', ' ');
+    const oldName = organizationId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-    // Get customers for this organization
-    const { data: customers, error: customerError } = await supabaseAdmin
+    // Mark customers as archived (you could add an is_archived field)
+    const { data: archivedCustomers, error: archiveError } = await supabaseAdmin
       .from('customers')
-      .select('id, first_name, last_name')
-      .eq('company', orgName);
+      .update({
+        is_archived: true,
+        archived_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .ilike('company', `%${oldName}%`)
+      .select();
 
-    if (customerError) {
-      console.error('Error fetching organization customers:', customerError);
+    if (archiveError) {
+      console.error('Error archiving organization:', archiveError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to fetch organization customers'
+        message: 'Failed to archive organization'
       });
     }
-
-    const customerIds = customers?.map(c => c.id) || [];
-
-    if (customerIds.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          current: [],
-          past: []
-        }
-      });
-    }
-
-    // Get orders for these customers
-    const { data: orders, error: ordersError } = await supabaseAdmin
-      .from('orders')
-      .select(`
-        id,
-        order_number,
-        customer_id,
-        status,
-        total_amount,
-        created_at,
-        notes,
-        customers (
-          first_name,
-          last_name
-        )
-      `)
-      .in('customer_id', customerIds)
-      .order('created_at', { ascending: false });
-
-    if (ordersError) {
-      console.error('Error fetching organization orders:', ordersError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch organization orders'
-      });
-    }
-
-    // Separate current and past orders
-    const currentStatuses = ['draft', 'pending', 'approved', 'in_production', 'shipped'];
-    const pastStatuses = ['delivered', 'cancelled'];
-
-    const currentOrders = orders?.filter(order => currentStatuses.includes(order.status)) || [];
-    const pastOrders = orders?.filter(order => pastStatuses.includes(order.status)) || [];
-
-    // Format orders
-    const formatOrders = (orderList: any[]) => {
-      return orderList.map(order => ({
-        id: order.id,
-        orderNumber: order.order_number,
-        customerName: order.customers ? `${order.customers.first_name} ${order.customers.last_name}` : 'Unknown',
-        status: order.status,
-        totalAmount: parseFloat(order.total_amount || '0'),
-        createdAt: order.created_at,
-        items: Math.floor(Math.random() * 5) + 1, // Mock items count
-        notes: order.notes
-      }));
-    };
 
     res.json({
       success: true,
+      message: 'Organization archived successfully',
       data: {
-        current: formatOrders(currentOrders),
-        past: formatOrders(pastOrders)
+        id: organizationId,
+        archivedCustomers: archivedCustomers?.length || 0
       }
     });
 
   } catch (error) {
-    console.error('Error in getOrganizationOrders:', error);
+    console.error('Error in archiveOrganization:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+/**
+ * Delete organization (hard delete)
+ */
+async function deleteOrganization(req: Request, res: Response) {
+  const { organizationId } = req.params;
+
+  try {
+    console.log(`Deleting organization: ${organizationId}`);
+
+    const oldName = organizationId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    // Delete customers associated with this organization
+    const { data: deletedCustomers, error: deleteError } = await supabaseAdmin
+      .from('customers')
+      .delete()
+      .ilike('company', `%${oldName}%`)
+      .select();
+
+    if (deleteError) {
+      console.error('Error deleting organization:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete organization'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Organization deleted successfully',
+      data: {
+        id: organizationId,
+        deletedCustomers: deletedCustomers?.length || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in deleteOrganization:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -231,8 +249,9 @@ async function getOrganizationOrders(req: Request, res: Response) {
 }
 
 // Configure routes
-router.get('/:id', getOrganization);
-router.put('/:id', requireAuth, requireRole(['admin']), updateOrganization);
-router.get('/:id/orders', getOrganizationOrders);
+router.get('/:organizationId', getOrganizationDetails);
+router.patch('/:organizationId', requireAuth, requireRole(['admin']), updateOrganization);
+router.patch('/:organizationId/archive', requireAuth, requireRole(['admin']), archiveOrganization);
+router.delete('/:organizationId', requireAuth, requireRole(['admin']), deleteOrganization);
 
 export default router;

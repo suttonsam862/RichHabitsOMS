@@ -384,10 +384,11 @@ async function getAllCustomers(req: Request, res: Response) {
   try {
     console.log('Fetching customers - request received');
 
-    // First, try to get customers from the customers table
+    // First, try to get customers from the customers table (exclude archived)
     const { data: customerProfiles, error: customerError } = await supabaseAdmin
       .from('customers')
-      .select('*');
+      .select('*')
+      .neq('is_archived', true);
 
     if (customerError) {
       console.error('Error fetching customer profiles:', customerError);
