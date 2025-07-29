@@ -2,69 +2,75 @@ import React from 'react';
 import { Button } from './button';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
 
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error?: Error;
-}
-
-interface ErrorBoundaryProps {
+interface Props {
   children: React.ReactNode;
-  fallback?: React.ComponentType<{ error?: Error; resetError: () => void }>;
+  fallback?: React.ComponentType<{ error: Error; resetError: () => void }>;
 }
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error boundary caught an error:', error, errorInfo);
+    // Only log unexpected errors, not auth-related ones
+    if (!error.message.includes('401') && !error.message.includes('403')) {
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
   }
 
   resetError = () => {
-    this.setState({ hasError: false, error: undefined });
+    this.setState({ hasError: false, error: null });
   };
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         const FallbackComponent = this.props.fallback;
-        return <FallbackComponent error={this.state.error} resetError={this.resetError} />;
+        return <FallbackComponent error={this.state.error!} resetError={this.resetError} />;
       }
 
       return (
-        <Card className="mx-auto mt-8 max-w-md">
-          <CardHeader>
-            <CardTitle className="text-red-600">Something went wrong</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              An error occurred while rendering this component. Please try refreshing the page.
-            </p>
-            <Button onClick={this.resetError} variant="outline" className="w-full">
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center min-h-[200px] p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-center text-red-600">
+                Something went wrong
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-center text-muted-foreground">
+                We encountered an unexpected error. Please try again.
+              </p>
+              {process.env.NODE_ENV === 'development' && this.state.error && (
+                <details className="text-xs bg-gray-100 p-2 rounded">
+                  <summary>Error details (dev only)</summary>
+                  <pre className="mt-2 whitespace-pre-wrap">
+                    {this.state.error.toString()}
+                  </pre>
+                </details>
+              )}
+              <div className="flex justify-center">
+                <Button onClick={this.resetError}>
+                  Try again
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       );
     }
 
     return this.props.children;
   }
 }
-
-export const withErrorBoundary = <P extends object>(
-  Component: React.ComponentType<P>,
-  fallback?: React.ComponentType<{ error?: Error; resetError: () => void }>
-) => {
-  return React.forwardRef<any, P>((props, ref) => (
-    <ErrorBoundary fallback={fallback}>
-      <Component {...(props as any)} ref={ref} />
-    </ErrorBoundary>
-  ));
-};
