@@ -38,7 +38,7 @@ import Production from "./pages/Production";
 import Payments from "./pages/Payments";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
-import ManufacturingManagement from "./pages/AdminManufacturerAssignment";
+import AdminManufacturerAssignment from "./pages/AdminManufacturerAssignment";
 
 // CustomerList is already imported via CustomerListPage
 import CustomerListPage from "./pages/admin/CustomerListPage";
@@ -65,13 +65,15 @@ const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
        event.reason.message?.includes('NetworkError') ||
        event.reason.message?.includes('fetch') ||
        event.reason.name === 'TypeError')) {
-    console.warn('Network request failed (handled):', event.reason.message);
+    // Silently handle network errors without logging
     event.preventDefault();
     return;
   }
 
-  // Log other unhandled rejections for debugging
-  console.error('Unhandled promise rejection:', event.reason);
+  // Only log truly unexpected errors in development
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Unhandled promise rejection:', event.reason);
+  }
 };
 
 // Set up global error handling
@@ -274,7 +276,7 @@ function App() {
                   path="/manufacturer-assignment" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
-                      <ManufacturingManagement />
+                      <AdminManufacturerAssignment />
                     </RequireAuth>
                   } 
                 />
