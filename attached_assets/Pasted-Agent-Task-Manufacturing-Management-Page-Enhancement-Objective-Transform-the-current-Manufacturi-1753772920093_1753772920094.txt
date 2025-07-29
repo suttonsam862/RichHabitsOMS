@@ -1,0 +1,53 @@
+Agent Task: Manufacturing Management Page Enhancement
+Objective: Transform the current "Manufacturing Assignment" page into a comprehensive "Manufacturing Management" system with integrated supply chain organization capabilities.
+
+Core Requirements:
+Page Rename: Change "Manufacturing Assignment" to "Manufacturing Management"
+
+Enhanced Management Table: Create a structured management interface that includes:
+
+Order details integration from orders database
+Catalog item information embedded within order items
+Manufacturer assignment and communication tracking
+Production status workflow management
+Timeline and deadline tracking
+Database Integration Requirements:
+
+Connect to existing orders table with nested order_items
+Reference catalog_items data through order items relationships
+Utilize production_tasks and design_tasks tables
+Link manufacturer profiles from user_profiles where role='manufacturer'
+Track communication history through messages table
+Management Table Structure should display:
+
+Order number and customer information
+Associated catalog items with manufacturing specifications
+Assigned manufacturer details
+Production task status and timeline
+Communication logs and action items
+Priority levels and due dates
+Supply Chain Organization Features:
+
+Drag-and-drop task prioritization
+Bulk manufacturer assignment
+Production queue visualization
+Resource allocation tracking
+Quality control checkpoints
+Communication Integration:
+
+Direct messaging to manufacturers from the management interface
+Automated notifications for status changes
+File sharing capabilities for production specifications
+Progress update collection system
+Technical Implementation Focus:
+Leverage existing manufacturingRoutes.ts API endpoints
+Extend the current AdminManufacturerAssignment.tsx component
+Implement real-time updates using React Query
+Maintain responsive design principles
+Ensure proper error handling and loading states
+Expected Deliverables:
+Renamed page with enhanced UI/UX
+Comprehensive management table with all required integrations
+Improved workflow management capabilities
+Enhanced communication tools for manufacturer coordination
+This enhancement should transform the basic assignment functionality into a full-featured manufacturing management system that provides complete visibility and control over the production pipeline.
