@@ -2,7 +2,7 @@
 -- Run this in the Supabase SQL Editor
 
 -- Create enums
-CREATE TYPE IF NOT EXISTS "role_type" AS ENUM ('admin', 'salesperson', 'designer', 'manufacturer', 'customer');
+CREATE TYPE IF NOT EXISTS "role_type" AS ENUM ('admin', 'salesperson', 'designer', 'manufacturer', 'customer', 'manager');
 CREATE TYPE IF NOT EXISTS "order_status" AS ENUM ('draft', 'pending_design', 'design_in_progress', 'design_review', 'design_approved', 'pending_production', 'in_production', 'completed', 'cancelled');
 CREATE TYPE IF NOT EXISTS "task_status" AS ENUM ('pending', 'in_progress', 'submitted', 'approved', 'rejected', 'completed', 'cancelled');
 CREATE TYPE IF NOT EXISTS "payment_status" AS ENUM ('pending', 'processing', 'completed', 'failed', 'refunded');

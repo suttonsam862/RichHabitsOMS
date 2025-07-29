@@ -1,5 +1,5 @@
 -- Create enums
-CREATE TYPE "role_type" AS ENUM ('admin', 'salesperson', 'designer', 'manufacturer', 'customer');
+CREATE TYPE "role_type" AS ENUM ('admin', 'salesperson', 'designer', 'manufacturer', 'customer', 'manager');
 CREATE TYPE "order_status" AS ENUM ('draft', 'pending_design', 'design_in_progress', 'design_review', 'design_approved', 'pending_production', 'in_production', 'completed', 'cancelled');
 CREATE TYPE "task_status" AS ENUM ('pending', 'in_progress', 'submitted', 'approved', 'rejected', 'completed', 'cancelled');
 CREATE TYPE "payment_status" AS ENUM ('pending', 'processing', 'completed', 'failed', 'refunded');

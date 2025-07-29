@@ -330,14 +330,14 @@ export default function ManufacturingManagement() {
       if (ordersResponse.ok) {
         const ordersData = await ordersResponse.json();
         const ordersArray = Array.isArray(ordersData.data) ? ordersData.data : [];
-        
+
         // Enhance orders with priority calculation and additional data
         const enhancedOrders = ordersArray.map((order: any) => ({
           ...order,
           priority: calculateOrderPriority(order),
           dueDate: calculateDueDate(order),
         }));
-        
+
         setOrders(enhancedOrders);
         console.log('Orders loaded:', enhancedOrders.length);
       } else {
@@ -406,7 +406,7 @@ export default function ManufacturingManagement() {
   const calculateOrderPriority = (order: any): 'low' | 'medium' | 'high' | 'urgent' => {
     const daysOld = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24));
     const totalAmount = parseFloat(order.totalAmount || '0');
-    
+
     if (daysOld > 14 || totalAmount > 5000) return 'urgent';
     if (daysOld > 7 || totalAmount > 2000) return 'high';
     if (daysOld > 3 || totalAmount > 500) return 'medium';
@@ -829,7 +829,7 @@ export default function ManufacturingManagement() {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">In Production</CardTitle>
@@ -931,7 +931,7 @@ export default function ManufacturingManagement() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="w-[150px]">
@@ -1058,7 +1058,7 @@ export default function ManufacturingManagement() {
                                 className="rounded"
                               />
                             </TableCell>
-                            
+
                             {/* Order Details */}
                             <TableCell>
                               <div className="space-y-1">
@@ -1200,7 +1200,7 @@ export default function ManufacturingManagement() {
                                   </TooltipTrigger>
                                   <TooltipContent>Send Message</TooltipContent>
                                 </Tooltip>
-                                
+
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
@@ -1331,7 +1331,7 @@ export default function ManufacturingManagement() {
         </Tabs>
 
         {/* Enhanced Dialog Components */}
-        
+
         {/* Assign Manufacturer Dialog */}
         <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
           <DialogContent className="sm:max-w-[500px]">
@@ -1341,7 +1341,7 @@ export default function ManufacturingManagement() {
                 Select a manufacturer to assign to this order for production
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="manufacturer">Manufacturer</Label>
@@ -1390,7 +1390,7 @@ export default function ManufacturingManagement() {
                 Assign a manufacturer to {selectedOrders.length} selected orders
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="bulk-manufacturer">Manufacturer</Label>
@@ -1439,7 +1439,7 @@ export default function ManufacturingManagement() {
                 Send a message related to the selected order
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="message-recipient">Recipient</Label>
@@ -1459,7 +1459,7 @@ export default function ManufacturingManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="message-subject">Subject</Label>
                 <Input
@@ -1469,7 +1469,7 @@ export default function ManufacturingManagement() {
                   placeholder="Message subject"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="message-content">Message</Label>
                 <Textarea
@@ -1511,7 +1511,7 @@ export default function ManufacturingManagement() {
                 Create a new manufacturer account in the system
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1539,7 +1539,7 @@ export default function ManufacturingManagement() {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -1553,7 +1553,7 @@ export default function ManufacturingManagement() {
                   placeholder="email@example.com"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="company">Company</Label>
                 <Input
@@ -1566,7 +1566,7 @@ export default function ManufacturingManagement() {
                   placeholder="Company name"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
                 <Input
@@ -1579,7 +1579,7 @@ export default function ManufacturingManagement() {
                   placeholder="Phone number"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="specialties">Specialties</Label>
                 <Textarea
