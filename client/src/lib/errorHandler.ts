@@ -41,12 +41,18 @@ export const handleApiError = (error: any): AppError => {
 export const logError = (error: any, context?: string) => {
   // Only log unexpected errors, not auth failures or network errors
   if (
+    !error || // Undefined/null errors
     error?.status === 401 || 
     error?.status === 403 ||
     error?.message?.includes('Failed to fetch') ||
     error?.message?.includes('NetworkError') ||
     error?.message?.includes('fetch') ||
-    typeof error === 'object' && Object.keys(error).length === 0
+    (typeof error === 'object' && (!error || Object.keys(error).length === 0)) ||
+    error === '' ||
+    String(error).trim() === '' ||
+    JSON.stringify(error) === '{}' ||
+    JSON.stringify(error) === 'null' ||
+    JSON.stringify(error) === '""'
   ) {
     return;
   }

@@ -15,8 +15,9 @@ fixWebSocketConnection();
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason;
   
-  // Suppress common expected errors
+  // Suppress all expected errors and empty objects
   if (
+    !reason || // Undefined/null reasons
     reason?.status === 401 || 
     reason?.status === 403 ||
     reason?.message?.includes('401') ||
@@ -24,7 +25,12 @@ window.addEventListener('unhandledrejection', (event) => {
     reason?.message?.includes('Failed to fetch') ||
     reason?.message?.includes('NetworkError') ||
     reason?.message?.includes('fetch') ||
-    typeof reason === 'object' && Object.keys(reason).length === 0 // Empty objects
+    (typeof reason === 'object' && (!reason || Object.keys(reason).length === 0)) || // Empty objects or null objects
+    reason === '' || // Empty strings
+    String(reason).trim() === '' || // Empty string representations
+    JSON.stringify(reason) === '{}' || // Stringify check for empty objects
+    JSON.stringify(reason) === 'null' || // Null objects
+    JSON.stringify(reason) === '""' // Empty string objects
   ) {
     event.preventDefault();
     return;
