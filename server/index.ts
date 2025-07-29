@@ -190,25 +190,33 @@ app.use((req, res, next) => {
   };
 
   res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      // Reduce noise from expected auth failures
-      if (path === '/api/auth/me' && res.statusCode === 401) {
-        return; // Don't log expected unauthenticated requests
-      }
-      
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse && res.statusCode >= 400) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
+      const duration = Date.now() - start;
+      if (path.startsWith("/api")) {
+        // Reduce noise from expected failures
+        if (
+          (path === '/api/auth/me' && res.statusCode === 401) ||
+          (path.includes('/api/') && res.statusCode === 401) ||
+          (path.includes('/api/') && res.statusCode === 403) ||
+          res.statusCode === 404
+        ) {
+          return; // Don't log expected failures
+        }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
+        // Only log errors and successful operations in development
+        if (process.env.NODE_ENV === 'development' && (res.statusCode >= 500 || res.statusCode < 400)) {
+          let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+          if (capturedJsonResponse && res.statusCode >= 400) {
+            logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+          }
 
-      log(logLine);
-    }
-  });
+          if (logLine.length > 80) {
+            logLine = logLine.slice(0, 79) + "…";
+          }
+
+          log(logLine);
+        }
+      }
+    });
 
   next();
 });

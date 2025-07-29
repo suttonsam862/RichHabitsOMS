@@ -39,10 +39,20 @@ export const handleApiError = (error: any): AppError => {
 };
 
 export const logError = (error: any, context?: string) => {
-  // Only log unexpected errors, not auth failures
-  if (error?.status === 401 || error?.status === 403) {
+  // Only log unexpected errors, not auth failures or network errors
+  if (
+    error?.status === 401 || 
+    error?.status === 403 ||
+    error?.message?.includes('Failed to fetch') ||
+    error?.message?.includes('NetworkError') ||
+    error?.message?.includes('fetch') ||
+    typeof error === 'object' && Object.keys(error).length === 0
+  ) {
     return;
   }
 
-  console.error(`Error${context ? ` in ${context}` : ''}:`, error);
+  // Only log in development to reduce production noise
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`Error${context ? ` in ${context}` : ''}:`, error);
+  }
 };
