@@ -38,7 +38,7 @@ import Production from "./pages/Production";
 import Payments from "./pages/Payments";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
-import AdminManufacturerAssignment from "./pages/AdminManufacturerAssignment";
+import ManufacturingManagement from "./pages/AdminManufacturerAssignment";
 
 // CustomerList is already imported via CustomerListPage
 import CustomerListPage from "./pages/admin/CustomerListPage";
@@ -274,7 +274,7 @@ function App() {
                   path="/manufacturer-assignment" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
-                      <AdminManufacturerAssignment />
+                      <ManufacturingManagement />
                     </RequireAuth>
                   } 
                 />
