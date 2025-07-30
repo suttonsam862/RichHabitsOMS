@@ -247,6 +247,7 @@ import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import catalogRoutes from './routes/api/catalogRoutes';
 import catalogImageRoutes from './routes/api/catalogImageRoutes';
+import imageReorderRoutes from './routes/api/imageReorderRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
@@ -373,6 +374,7 @@ import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, delete
     app.use('/api/fabric-options', fabricOptionsRoutes);
     app.use('/api/catalog', catalogRoutes);
     app.use('/api/catalog', catalogImageRoutes);
+    app.use('/api', imageReorderRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/dashboard', dashboardRoutes);
     app.use('/api/orders', orderRoutes);

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star, Eye, Trash2, Download, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import DraggableImageGallery, { type GalleryImage } from '@/components/ui/DraggableImageGallery';
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
 import { getFieldStyles } from "@/lib/utils";
@@ -873,133 +874,56 @@ export default function CatalogItemEditPage() {
                       <span>Click images to preview • Hover for actions</span>
                     </div>
                     
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* Draggable Image Gallery */}
+                    {form.getValues('images').length > 0 && (
+                      <DraggableImageGallery
+                        images={form.getValues('images').map((img, index) => ({
+                          id: img.id || `image-${index}`,
+                          url: img.url,
+                          alt: img.alt,
+                          isPrimary: img.isPrimary,
+                          order: index
+                        }))}
+                        entityType="catalog_item"
+                        entityId={itemId || ''}
+                        onReorder={(reorderedImages) => {
+                          // Update form with new order
+                          form.setValue('images', reorderedImages.map(img => ({
+                            id: img.id,
+                            url: img.url,
+                            alt: img.alt || '',
+                            isPrimary: img.isPrimary || false
+                          })));
+                        }}
+                        onDelete={async (imageId) => {
+                          // Find and remove image from form
+                          const currentImages = form.getValues('images');
+                          const imageIndex = currentImages.findIndex(img => img.id === imageId);
+                          if (imageIndex >= 0) {
+                            await removeImage(imageIndex);
+                          }
+                        }}
+                        onSetPrimary={async (imageId) => {
+                          // Set image as primary in form
+                          const currentImages = form.getValues('images');
+                          const updatedImages = currentImages.map(img => ({
+                            ...img,
+                            isPrimary: img.id === imageId
+                          }));
+                          form.setValue('images', updatedImages);
+                        }}
+                        maxImages={10}
+                        className="mt-4"
+                      />
+                    )}
+                    
+                    {/* Legacy static gallery fallback (hidden when using draggable gallery) */}
+                    <div className="hidden">
                       {imagesFieldArray.fields.map((field, index) => {
                         const image = form.getValues(`images.${index}`);
                         return (
                           <div key={field.id} className="relative group border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
-                            {/* Drag handle */}
-                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <div className="bg-white rounded p-1 shadow-sm cursor-move" title="Drag to reorder">
-                                <GripVertical className="w-4 h-4 text-gray-600" />
-                              </div>
-                            </div>
-                            
-                            <div className="aspect-square bg-gray-100 flex items-center justify-center relative">
-                              <img
-                                src={image.url}
-                                alt={image.alt || `Product image ${index + 1}`}
-                                className="w-full h-full object-cover cursor-pointer"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw1MCA0NUw2NSA2NUgzNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
-                                }}
-                              />
-                              
-                              {/* Image overlay for preview */}
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center cursor-pointer">
-                                    <Eye className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                                  </div>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-4xl w-full">
-                                  <DialogHeader>
-                                    <DialogTitle>Image Preview - {image.alt || `Product Image ${index + 1}`}</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div className="flex justify-center bg-gray-50 rounded-lg p-4">
-                                      <img
-                                        src={image.url}
-                                        alt={image.alt || `Product image ${index + 1}`}
-                                        className="max-h-96 w-auto object-contain"
-                                      />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div>
-                                        <span className="font-medium text-muted-foreground">Status:</span>
-                                        <span className={`ml-2 px-2 py-1 rounded text-xs ${image.isPrimary ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'}`}>
-                                          {image.isPrimary ? 'Primary Image' : 'Gallery Image'}
-                                        </span>
-                                      </div>
-                                      <div>
-                                        <span className="font-medium text-muted-foreground">Alt Text:</span>
-                                        <span className="ml-2">{image.alt || 'Not set'}</span>
-                                      </div>
-                                    </div>
-                                    <div className="flex justify-end space-x-2">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => window.open(image.url, '_blank')}
-                                      >
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Open Full Size
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            </div>
-                            
-                            {/* Primary badge */}
-                            {image.isPrimary && (
-                              <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center shadow-sm">
-                                <Star className="w-3 h-3 mr-1" />
-                                Primary
-                              </div>
-                            )}
-                            
-                            {/* Hover actions */}
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                              <div className="flex space-x-2">
-                                {!image.isPrimary && (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => setPrimaryImage(index)}
-                                    className="text-xs shadow-sm"
-                                    title="Set as primary image"
-                                  >
-                                    <Star className="w-3 h-3 mr-1" />
-                                    Set Primary
-                                  </Button>
-                                )}
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="destructive"
-                                      className="text-xs shadow-sm"
-                                      title="Delete image"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Image</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete this image? This will permanently remove it from both storage and the catalog item. This action cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction 
-                                        onClick={() => removeImage(index)}
-                                        className="bg-red-600 hover:bg-red-700"
-                                      >
-                                        Delete Image
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-                            </div>
-                            
-                            {/* Alt text input */}
+                            {/* Alt text input for form compatibility */}
                             <div className="p-3 border-t bg-gray-50">
                               <FormField
                                 control={form.control}
@@ -1017,12 +941,9 @@ export default function CatalogItemEditPage() {
                                   </FormItem>
                                 )}
                               />
-                              <div className="mt-1 text-xs text-muted-foreground">
-                                Image {index + 1} • {image.isPrimary ? 'Primary' : 'Gallery'}
-                              </div>
                             </div>
                           </div>
-                        );
+                        )
                       })}
                     </div>
                   </div>
