@@ -18,7 +18,7 @@ import { createServer } from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase, testSupabaseConnection, closeConnections } from "./db";
 import { authenticateRequest } from "./routes/auth/auth";
-import { globalErrorHandler, notFoundHandler } from "./middleware/errorHandler";
+import { globalErrorHandler, notFoundHandler, centralizedExceptionLogger } from "./middleware/errorHandler";
 import { 
   apiLimiter, 
   authLimiter, 
@@ -84,6 +84,9 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // Sanitize all inputs
 app.use(sanitizeInput);
+
+// Add centralized exception logger middleware to capture all exceptions and request bodies
+app.use(centralizedExceptionLogger);
 
 // Generate a strong random session secret
 const generateRandomString = (length = 32) => {

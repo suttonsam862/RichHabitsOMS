@@ -62,7 +62,7 @@ export class DatabaseError extends Error {
   }
 }
 
-// Ultra-comprehensive error logging function
+// Centralized error logging function with comprehensive request/exception capture
 function logError(err: AppError, req: Request, additionalContext: any = {}) {
   const timestamp = new Date().toISOString();
   const requestId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -73,82 +73,85 @@ function logError(err: AppError, req: Request, additionalContext: any = {}) {
   console.error(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 
   // Request Details
-  console.error('\n📡 REQUEST DETAILS:');
-  console.error(`   Method: ${req.method}`);
-  console.error(`   URL: ${req.originalUrl}`);
-  console.error(`   Path: ${req.path}`);
-  console.error(`   Query: ${JSON.stringify(req.query)}`);
-  console.error(`   User Agent: ${req.get('User-Agent') || 'Unknown'}`);
-  console.error(`   IP Address: ${req.ip || req.connection.remoteAddress || 'Unknown'}`);
-  console.error(`   Referrer: ${req.get('Referer') || 'Direct'}`);
+  console.error(`🔗 Method: ${req.method}`);
+  console.error(`🔗 URL: ${req.originalUrl || req.url}`);
+  console.error(`🔗 Path: ${req.path}`);
+  console.error(`🌐 User Agent: ${req.get('User-Agent') || 'Unknown'}`);
+  console.error(`📍 IP Address: ${req.ip || req.connection.remoteAddress || 'Unknown'}`);
+  
+  // Headers (exclude sensitive ones)
+  const sanitizedHeaders = { ...req.headers };
+  delete sanitizedHeaders.authorization;
+  delete sanitizedHeaders.cookie;
+  delete sanitizedHeaders['x-api-key'];
+  console.error(`📋 Headers:`, JSON.stringify(sanitizedHeaders, null, 2));
 
-  // Authentication Context
-  console.error('\n🔐 AUTHENTICATION CONTEXT:');
-  console.error(`   Session Exists: ${!!req.session}`);
-  console.error(`   Session ID: ${req.session?.id || 'None'}`);
-  console.error(`   User ID: ${(req as any).user?.id || 'Anonymous'}`);
-  console.error(`   User Email: ${(req as any).user?.email || 'Unknown'}`);
-  console.error(`   User Role: ${(req as any).user?.role || 'Unknown'}`);
-  console.error(`   Auth Header: ${req.get('Authorization') ? 'Present' : 'Missing'}`);
-
-  // Request Body (sanitized)
+  // Request Body (exclude sensitive fields)
   if (req.body && Object.keys(req.body).length > 0) {
     const sanitizedBody = { ...req.body };
-    // Remove sensitive fields
     delete sanitizedBody.password;
     delete sanitizedBody.token;
     delete sanitizedBody.secret;
-    console.error('\n📝 REQUEST BODY (sanitized):');
-    console.error(`   ${JSON.stringify(sanitizedBody, null, 2)}`);
+    delete sanitizedBody.apiKey;
+    console.error(`📦 Request Body:`, JSON.stringify(sanitizedBody, null, 2));
+  }
+
+  // Query Parameters
+  if (req.query && Object.keys(req.query).length > 0) {
+    console.error(`🔍 Query Params:`, JSON.stringify(req.query, null, 2));
+  }
+
+  // Route Parameters
+  if (req.params && Object.keys(req.params).length > 0) {
+    console.error(`🎯 Route Params:`, JSON.stringify(req.params, null, 2));
+  }
+
+  // Session Information (if available)
+  if (req.session) {
+    const sessionInfo = {
+      id: req.session.id,
+      userId: (req.session as any).userId,
+      userRole: (req.session as any).userRole,
+      isAuthenticated: !!(req.session as any).userId
+    };
+    console.error(`👤 Session Info:`, JSON.stringify(sessionInfo, null, 2));
+  }
+
+  // User Context (if available from auth middleware)
+  if ((req as any).user) {
+    const userInfo = {
+      id: (req as any).user.id,
+      email: (req as any).user.email,
+      role: (req as any).user.role
+    };
+    console.error(`👤 User Context:`, JSON.stringify(userInfo, null, 2));
   }
 
   // Error Details
-  console.error('\n💥 ERROR DETAILS:');
-  console.error(`   Error Type: ${err.name || 'Unknown'}`);
-  console.error(`   Error Message: ${err.message}`);
-  console.error(`   Status Code: ${err.statusCode || 500}`);
-  console.error(`   Status: ${err.status || 'error'}`);
-  console.error(`   Operational: ${err.isOperational || false}`);
-  console.error(`   Error Code: ${err.code || 'Unknown'}`);
-
-  // Stack Trace
+  console.error(`💥 Error Type: ${err.name || 'Unknown'}`);
+  console.error(`💥 Error Message: ${err.message}`);
+  console.error(`💥 Status Code: ${err.statusCode || 500}`);
+  console.error(`💥 Operational: ${err.isOperational || false}`);
+  
+  // Stack Trace (formatted for readability)
   if (err.stack) {
-    console.error('\n📚 STACK TRACE:');
+    console.error(`📚 Stack Trace:`);
     const stackLines = err.stack.split('\n');
-    stackLines.forEach((line, index) => {
+    stackLines.slice(0, 10).forEach((line: string, index: number) => {
       console.error(`   ${index + 1}: ${line.trim()}`);
     });
   }
 
-  // Database Context (if available)
-  if (additionalContext.database) {
-    console.error('\n🗄️ DATABASE CONTEXT:');
-    console.error(`   Connection Status: ${additionalContext.database.connected || 'Unknown'}`);
-    console.error(`   Active Connections: ${additionalContext.database.activeConnections || 'Unknown'}`);
-    console.error(`   Last Query: ${additionalContext.database.lastQuery || 'Unknown'}`);
-  }
-
-  // Application State
-  console.error('\n🖥️ APPLICATION STATE:');
-  console.error(`   Memory Usage: ${JSON.stringify(process.memoryUsage(), null, 2)}`);
-  console.error(`   Uptime: ${process.uptime()} seconds`);
-  console.error(`   Node Version: ${process.version}`);
-  console.error(`   Platform: ${process.platform}`);
-
-  // Environment Variables (non-sensitive)
-  console.error('\n🌍 ENVIRONMENT CHECK:');
-  console.error(`   NODE_ENV: ${process.env.NODE_ENV || 'Not set'}`);
-  console.error(`   SUPABASE_URL: ${process.env.SUPABASE_URL ? 'Set' : 'Missing'}`);
-  console.error(`   DATABASE_URL: ${process.env.DATABASE_URL ? 'Set' : 'Missing'}`);
-  console.error(`   SESSION_SECRET: ${process.env.SESSION_SECRET ? 'Set' : 'Missing'}`);
-
+  // Memory Usage at Error Time
+  const memUsage = process.memoryUsage();
+  console.error(`🖥️ Memory Usage: RSS=${Math.round(memUsage.rss / 1024 / 1024)}MB, Heap=${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+  
   // Additional Context
   if (Object.keys(additionalContext).length > 0) {
-    console.error('\n🔍 ADDITIONAL CONTEXT:');
-    console.error(JSON.stringify(additionalContext, null, 2));
+    console.error(`🔍 Additional Context:`, JSON.stringify(additionalContext, null, 2));
   }
 
-  console.error('\n=== END ERROR LOG ===\n');
+  console.error('=== END ERROR LOG ===\n');
 }
 
 const handleDatabaseError = (err: any): AppError => {
@@ -179,102 +182,116 @@ const handleDatabaseError = (err: any): AppError => {
   return new DatabaseError(err.message);
 };
 
-const handleJWTError = (): AppError => {
-  console.error('\n🔐 JWT ERROR ANALYSIS:');
-  console.error('   DIAGNOSIS: Invalid JWT token - token may be malformed, expired, or using wrong secret');
-  return new AuthenticationError('Invalid token');
-};
-
-const handleJWTExpiredError = (): AppError => {
-  console.error('\n🔐 JWT EXPIRED ERROR ANALYSIS:');
-  console.error('   DIAGNOSIS: JWT token has expired - user needs to re-authenticate');
-  return new AuthenticationError('Token expired');
-};
-
-const sendErrorDev = (err: AppError, res: Response) => {
-  res.status(err.statusCode || 500).json({
-    success: false,
-    status: err.status,
-    error: err,
-    message: err.message,
-    stack: err.stack
-  });
-};
-
-const sendErrorProd = (err: AppError, res: Response) => {
-  // Operational, trusted error: send message to client
+const sendErrorResponse = (err: AppError, res: Response) => {
+  // Don't leak error details in production
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   if (err.isOperational) {
+    // Operational errors are safe to expose
     res.status(err.statusCode || 500).json({
       success: false,
       status: err.status,
-      message: err.message
+      message: err.message,
+      ...(isProduction ? {} : { stack: err.stack }),
     });
   } else {
-    // Programming or other unknown error: don't leak error details
-    console.error('💥 CRITICAL PRODUCTION ERROR - SENSITIVE DETAILS HIDDEN FROM CLIENT');
+    // Programming errors - don't leak details
+    console.error('💀 CRITICAL: Unexpected Error:', err);
     res.status(500).json({
       success: false,
       status: 'error',
-      message: 'Something went wrong!'
+      message: isProduction ? 'Something went wrong!' : err.message,
+      ...(isProduction ? {} : { stack: err.stack }),
     });
   }
 };
 
+// Global error handler middleware
 export const globalErrorHandler = (
-  err: AppError,
+  err: any,
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+  let error: AppError = err;
 
-  // Log comprehensive error details
-  logError(err, req);
+  // Log all errors with comprehensive context
+  logError(error, req);
 
-  if (process.env.NODE_ENV === 'development') {
-    sendErrorDev(err, res);
-  } else {
-    let error = { ...err };
-    error.message = err.message;
-
-    if (error.code?.includes('PG') || error.code?.includes('PGRST')) error = handleDatabaseError(error);
-    if (error.name === 'JsonWebTokenError') error = handleJWTError();
-    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
-
-    sendErrorProd(error, res);
+  // Handle specific error types
+  if (err.name === 'ValidationError') {
+    error = new ValidationError(err.message);
+  } else if (err.code?.startsWith('PG') || err.code?.match(/^\d{5}$/)) {
+    error = handleDatabaseError(err);
+  } else if (err.message?.includes('JWT') || err.message?.includes('token')) {
+    error = new AuthenticationError('Invalid or expired token');
+  } else if (err.name === 'ZodError') {
+    error = new ValidationError('Invalid request data');
   }
+
+  // Ensure all errors have required properties
+  error.statusCode = error.statusCode || 500;
+  error.status = error.status || 'error';
+  error.isOperational = error.isOperational ?? false;
+
+  sendErrorResponse(error, res);
 };
 
+// 404 handler for API routes
+export const notFoundHandler = (req: Request, res: Response) => {
+  const error = new NotFoundError(`Route ${req.originalUrl} not found`);
+  logError(error, req);
+  sendErrorResponse(error, res);
+};
+
+// Async wrapper for route handlers to catch async errors
 export const asyncHandler = (fn: Function) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch((err) => {
-      console.error('\n⚡ ASYNC HANDLER ERROR CAUGHT:');
-      console.error(`   Function: ${fn.name || 'Anonymous'}`);
-      console.error(`   Route: ${req.method} ${req.path}`);
-      console.error(`   Error: ${err.message}`);
-      next(err);
-    });
+    Promise.resolve(fn(req, res, next)).catch(next);
   };
 };
 
-export const notFoundHandler = (req: Request, res: Response, next: NextFunction) => {
-  console.error('\n🔍 404 NOT FOUND ERROR:');
-  console.error(`   Requested URL: ${req.originalUrl}`);
-  console.error(`   Method: ${req.method}`);
-  console.error(`   User Agent: ${req.get('User-Agent')}`);
-  console.error(`   IP: ${req.ip}`);
-  console.error('   DIAGNOSIS: Route not found - check if route is properly registered');
+// Centralized exception logger middleware - captures ALL thrown exceptions
+export const centralizedExceptionLogger = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // Store original methods
+  const originalJson = res.json;
+  const originalSend = res.send;
+  const originalEnd = res.end;
 
-  const err = new NotFoundError(`Can't find ${req.originalUrl} on this server!`);
-  next(err);
-};
+  // Override res.json to capture error responses
+  res.json = function(body: any) {
+    if (res.statusCode >= 400) {
+      console.error('\n🔥 === RESPONSE ERROR CAPTURED ===');
+      console.error(`📅 Timestamp: ${new Date().toISOString()}`);
+      console.error(`🔗 ${req.method} ${req.originalUrl}`);
+      console.error(`📦 Request Body:`, JSON.stringify(req.body || {}, null, 2));
+      console.error(`🚨 Response Status: ${res.statusCode}`);
+      console.error(`💣 Response Body:`, JSON.stringify(body, null, 2));
+      console.error('=== END RESPONSE ERROR ===\n');
+    }
+    return originalJson.call(this, body);
+  };
 
-// Session refresh middleware
-export const refreshSession = (req: Request, res: Response, next: NextFunction) => {
-  if (req.session && req.session.user) {
-    // Refresh session timestamp
-    req.session.touch();
-  }
+  // Override res.send to capture text error responses
+  res.send = function(body: any) {
+    if (res.statusCode >= 400) {
+      console.error('\n🔥 === RESPONSE ERROR CAPTURED (SEND) ===');
+      console.error(`📅 Timestamp: ${new Date().toISOString()}`);
+      console.error(`🔗 ${req.method} ${req.originalUrl}`);
+      console.error(`📦 Request Body:`, JSON.stringify(req.body || {}, null, 2));
+      console.error(`🚨 Response Status: ${res.statusCode}`);
+      console.error(`💣 Response Body:`, body);
+      console.error('=== END RESPONSE ERROR ===\n');
+    }
+    return originalSend.call(this, body);
+  };
+
   next();
 };
+
+// Export the logError function for use in other modules
+export { logError };
