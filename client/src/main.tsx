@@ -10,14 +10,17 @@ import './lib/fixWebSocketError'
 
 // Enhanced unhandled rejection handler with filtering
 let rejectionCount = 0;
-const MAX_REJECTION_LOGS = 10;
+const MAX_REJECTION_LOGS = 3; // Reduced from 10
 const ignoredErrorMessages = [
   'server not ready',
   'rate limited',
   'websocket connection',
   'failed to fetch',
   'network error',
-  'load failed'
+  'load failed',
+  'vite hmr ping failed',
+  '0.0.0.0 requests blocked',
+  'not authenticated'
 ];
 
 // Global unhandled promise rejection handler
@@ -29,17 +32,20 @@ window.addEventListener('unhandledrejection', (event) => {
   if (import.meta.env.DEV) {
     const shouldIgnore = ignoredErrorMessages.some(ignored => 
       errorMessage.includes(ignored)
-    );
+    ) || errorMessage.includes('0.0.0.0') || 
+       errorMessage.includes('hmr') ||
+       errorMessage.includes('vite') ||
+       (errorMessage === '' || errorMessage === 'undefined' || errorMessage === 'null');
 
     if (shouldIgnore) {
       rejectionCount++;
 
       // Log only first few rejections to avoid spam
       if (rejectionCount <= MAX_REJECTION_LOGS) {
-        console.warn(`🚫 Filtered rejection (${rejectionCount}/${MAX_REJECTION_LOGS}):`, errorMessage);
+        console.debug(`🚫 Dev error suppressed (${rejectionCount}/${MAX_REJECTION_LOGS})`);
 
         if (rejectionCount === MAX_REJECTION_LOGS) {
-          console.warn('🔇 Further filtered rejections will be suppressed');
+          console.debug('🔇 Development error suppression active');
         }
       }
 

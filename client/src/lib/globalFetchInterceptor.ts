@@ -81,7 +81,7 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit): Pro
       fetchAttemptCounts.set(attemptKey, attempts);
 
       // Log only first failure per endpoint to reduce spam
-      if (attempts.count === 1) {
+      if (attempts.count === 1 && !url.includes('auth/me')) {
         console.warn(`⚠️ Fetch failed: ${response.status} ${url}`);
       }
     }
@@ -93,8 +93,8 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit): Pro
     attempts.lastAttempt = now;
     fetchAttemptCounts.set(attemptKey, attempts);
 
-    // Log only first error per endpoint to reduce spam
-    if (attempts.count === 1) {
+    // Log only first error per endpoint to reduce spam, suppress auth/me errors
+    if (attempts.count === 1 && !url.includes('auth/me') && !url.includes('0.0.0.0')) {
       console.warn(`❌ Fetch error: ${url}`, error instanceof Error ? error.message : error);
     }
 

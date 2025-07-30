@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { checkServerHealth } from '@/lib/globalFetchInterceptor';
+import { isHmrReconnecting } from '@/lib/viteHmrFix';
 
 interface User {
   id: string;
@@ -50,6 +51,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Don't check auth if we've exceeded attempts
     if (authCheckAttempts >= MAX_AUTH_ATTEMPTS) {
       setLoading(false);
+      return;
+    }
+
+    // Don't check auth during HMR reconnection
+    if (import.meta.env.DEV && isHmrReconnecting()) {
+      console.debug('🔄 Skipping auth check during HMR reconnection');
+      setTimeout(checkAuth, 2000);
       return;
     }
 
