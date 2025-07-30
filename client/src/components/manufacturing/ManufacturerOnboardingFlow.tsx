@@ -124,11 +124,11 @@ export default function ManufacturerOnboardingFlow({ isOpen, onClose, onSuccess 
   const createManufacturerMutation = useMutation({
     mutationFn: async (manufacturerData: any) => {
       console.log('Creating manufacturer with data:', manufacturerData);
-      return apiRequest('POST', '/api/users/create', manufacturerData);
+      return apiRequest('POST', '/api/manufacturing/manufacturers', manufacturerData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users', 'manufacturer'] });
       queryClient.invalidateQueries({ queryKey: ['/api/users/manufacturers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/manufacturers'] });
       toast({
         title: 'Success!',
         description: 'Manufacturer has been added successfully',

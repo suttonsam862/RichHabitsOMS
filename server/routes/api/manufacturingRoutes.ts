@@ -321,6 +321,187 @@ export async function getManufacturingQueue(req: Request, res: Response) {
 }
 
 /**
+ * GET /api/manufacturing/manufacturers - List all manufacturers (using approach from userManagementRoutes)
+ */
+export async function getManufacturers(req: Request, res: Response) {
+  try {
+    console.log('👥 Fetching manufacturers using Supabase Auth...');
+
+    // Use Supabase Auth to get all users like the working userManagementRoutes does
+    const { data: authUsers, error } = await supabase.auth.admin.listUsers();
+
+    if (error) {
+      console.error('Error fetching auth users:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch manufacturers',
+        error: error.message
+      });
+    }
+
+    // Filter for manufacturer role users (following the pattern from userManagementRoutes)
+    const manufacturers = authUsers.users
+      .filter(user => user.user_metadata?.role === 'manufacturer')
+      .map(user => ({
+        id: user.id,
+        firstName: user.user_metadata?.firstName || user.user_metadata?.first_name || '',
+        lastName: user.user_metadata?.lastName || user.user_metadata?.last_name || '',
+        email: user.email || '',
+        company: user.user_metadata?.company || '',
+        phone: user.user_metadata?.phone || '',
+        specialties: Array.isArray(user.user_metadata?.specialties) 
+          ? user.user_metadata.specialties.join(', ')
+          : user.user_metadata?.specialties || '',
+        status: user.email_confirmed_at ? 'active' : 'pending',
+        workload: 0, // Calculate from active orders
+        activeOrders: 0,
+        completedOrders: 0,
+        averageCompletionTime: 0,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at || user.created_at
+      }));
+
+    console.log(`✅ Found ${manufacturers.length} manufacturers`);
+
+    res.json({
+      success: true,
+      data: manufacturers
+    });
+  } catch (error: any) {
+    console.error('❌ Manufacturers fetch failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * POST /api/manufacturing/manufacturers - Create new manufacturer (using approach from userManagementRoutes)
+ */
+export async function createManufacturer(req: Request, res: Response) {
+  try {
+    console.log('🏭 Creating new manufacturer using Supabase Auth...');
+    console.log('Request body:', req.body);
+
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      company,
+      specialties,
+      address,
+      city,
+      state,
+      zip,
+      website,
+      equipment,
+      maxCapacity,
+      turnaroundTime,
+      qualityCertifications,
+      hourlyRate,
+      minimumOrder,
+      rushOrderSurcharge,
+      paymentTerms
+    } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: firstName, lastName, email'
+      });
+    }
+
+    // Create user in Supabase Auth with manufacturer role (no password required for admin creation)
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email.toLowerCase(),
+      email_confirm: true,
+      password: Math.random().toString(36).substring(2, 15), // Random password, user can reset later
+      user_metadata: {
+        firstName,
+        lastName,
+        first_name: firstName, // Keep both formats
+        last_name: lastName,   // Keep both formats
+        role: 'manufacturer',
+        company,
+        phone,
+        specialties: Array.isArray(specialties) ? specialties : (specialties ? [specialties] : []),
+        profile: {
+          address,
+          city,
+          state,
+          zip,
+          website,
+          equipment: Array.isArray(equipment) ? equipment : [],
+          maxCapacity,
+          turnaroundTime,
+          qualityCertifications: Array.isArray(qualityCertifications) ? qualityCertifications : [],
+          pricing: {
+            hourlyRate,
+            minimumOrder,
+            rushOrderSurcharge,
+            paymentTerms: paymentTerms || 'net_30'
+          }
+        }
+      }
+    });
+
+    if (authError) {
+      console.error('Error creating manufacturer in Supabase Auth:', authError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create manufacturer',
+        error: authError.message
+      });
+    }
+
+    console.log('✅ Manufacturer created successfully:', authData.user?.id);
+
+    // Transform response to match frontend format
+    const transformedManufacturer = {
+      id: authData.user?.id,
+      firstName: firstName,
+      lastName: lastName,
+      email: email.toLowerCase(),
+      company: company || '',
+      phone: phone || '',
+      specialties: Array.isArray(specialties) ? specialties.join(', ') : specialties || '',
+      status: 'active',
+      workload: 0,
+      activeOrders: 0,
+      completedOrders: 0,
+      averageCompletionTime: 0,
+      createdAt: authData.user?.created_at,
+      updatedAt: authData.user?.updated_at || authData.user?.created_at
+    };
+
+    res.status(201).json({
+      success: true,
+      message: 'Manufacturer created successfully',
+      data: transformedManufacturer
+    });
+  } catch (error: any) {
+    console.error('❌ Manufacturer creation failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * GET /api/users/manufacturers - Alternative endpoint for manufacturers
+ */
+export async function getUserManufacturers(req: Request, res: Response) {
+  // This is just a wrapper for the main getManufacturers function
+  return getManufacturers(req, res);
+}
+
+/**
  * POST /api/design-tasks - Create design task
  */
 export async function createDesignTask(req: Request, res: Response) {

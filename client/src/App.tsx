@@ -280,6 +280,15 @@ function App() {
                   } 
                 />
 
+                <Route 
+                  path="/admin-manufacturer-assignment" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <AdminManufacturerAssignment />
+                    </RequireAuth>
+                  } 
+                />
+
 
 
                 <Route 

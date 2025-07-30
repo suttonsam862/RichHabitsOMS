@@ -240,6 +240,15 @@ import authRoutes from './routes/api/authRoutes';
 import imageVariantsRoutes from './routes/api/imageVariantsRoutes';
 import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
 import healthRoutes from './routes/health';
+import { 
+  getManufacturingStats, 
+  getDesignTasks, 
+  getProductionTasks, 
+  getManufacturingQueue,
+  getManufacturers,
+  createManufacturer,
+  getUserManufacturers
+} from './routes/api/manufacturingRoutes';
 
 (async () => {
   try {
@@ -323,6 +332,10 @@ import healthRoutes from './routes/health';
     app.use('/api/fabric-options', authenticateRequest);
     app.use('/api/catalog', authenticateRequest);
     app.use('/api/customers', authenticateRequest);
+    app.use('/api/manufacturing', authenticateRequest);
+    app.use('/api/users', authenticateRequest);
+    app.use('/api/design-tasks', authenticateRequest);
+    app.use('/api/production-tasks', authenticateRequest);
     app.use('/api/images', authenticateRequest);
     app.use('/api/invitations', authenticateRequest);
     app.use('/api/user-management', authenticateRequest);
@@ -348,6 +361,15 @@ import healthRoutes from './routes/health';
 app.use('/api/security', securityRoutes);
     app.use('/api/user-roles', userRolesRoutes);
 app.use('/api/users', userManagementRoutes);
+
+    // Manufacturing Management API endpoints
+    app.get('/api/manufacturing/stats', getManufacturingStats);
+    app.get('/api/manufacturing/manufacturers', getManufacturers);
+    app.post('/api/manufacturing/manufacturers', createManufacturer);
+    app.get('/api/users/manufacturers', getUserManufacturers);
+    app.get('/api/design-tasks', getDesignTasks);
+    app.get('/api/production-tasks', getProductionTasks);
+    app.get('/api/manufacturing/queue', getManufacturingQueue);
 
     // Dashboard stats endpoint - Critical fix for 404 error
     app.get('/api/dashboard/stats', authenticateRequest, async (req: Request, res: Response) => {
