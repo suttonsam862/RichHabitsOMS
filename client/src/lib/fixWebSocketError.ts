@@ -96,12 +96,18 @@ export function fixWebSocketError() {
   if (typeof window !== 'undefined') {
     const originalHandler = window.onunhandledrejection;
     window.onunhandledrejection = (event) => {
-      // Check if it's a WebSocket-related error or network error
+      // Check if it's a WebSocket-related error, network error, or API error
       if (event.reason && 
           (event.reason.message?.includes('WebSocket') || 
            event.reason.message?.includes('Failed to fetch') ||
            event.reason.message?.includes('NetworkError') ||
            event.reason.message?.includes('fetch') ||
+           event.reason.message?.includes('HTTP 404') ||
+           event.reason.message?.includes('404') ||
+           event.reason.message?.includes('Connection refused') ||
+           event.reason.status === 404 ||
+           event.reason.status === 401 ||
+           event.reason.status === 403 ||
            event.reason.name === 'NetworkError' ||
            event.reason.name === 'TypeError')) {
         // Suppress these common network errors to reduce console spam

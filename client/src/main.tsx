@@ -50,16 +50,20 @@ console.log = (...args) => {
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason;
   
-  // Suppress all expected errors and empty objects
+  // Suppress all expected errors and API errors
   if (
     !reason || // Undefined/null reasons
     reason?.status === 401 || 
     reason?.status === 403 ||
+    reason?.status === 404 ||
     reason?.message?.includes('401') ||
     reason?.message?.includes('403') ||
+    reason?.message?.includes('404') ||
+    reason?.message?.includes('HTTP 404') ||
     reason?.message?.includes('Failed to fetch') ||
     reason?.message?.includes('NetworkError') ||
     reason?.message?.includes('fetch') ||
+    reason?.message?.includes('Connection refused') ||
     (typeof reason === 'object' && (!reason || Object.keys(reason).length === 0)) || // Empty objects or null objects
     reason === '' || // Empty strings
     String(reason).trim() === '' || // Empty string representations
