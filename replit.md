@@ -89,6 +89,7 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Handler Validation**: Confirmed catalog handler expects core fields (name, sku, basePrice, category, sport, status) with specifications JSON for extended fields
 - **Price Validation**: Added frontend validation for basePrice and unitCost to ensure positive numbers before form submission
 - **User Experience**: Enhanced error messages with specific validation feedback for invalid number formats and negative values
+- **Submit Button State**: Disabled submit button during request in-flight with loading indicator and text change to prevent multiple submissions
 
 ### Comprehensive Integration Test Suite Implementation (July 30, 2025)
 - **Status**: 100% Complete - Full test coverage for all core workflows implemented
