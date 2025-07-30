@@ -71,7 +71,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
     if (itemError) {
       console.error('Error creating catalog item:', itemError);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to create catalog item: ' + itemError.message,
         details: itemError.details || 'No additional details'
@@ -80,7 +80,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
     console.log('Catalog item created successfully:', insertedItem);
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       message: 'Catalog item created successfully',
       item: insertedItem
@@ -88,7 +88,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error('Unexpected error creating catalog item:', err);
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: 'Unexpected error creating catalog item: ' + (err.message || 'Unknown error')
     });
@@ -152,7 +152,7 @@ async function getAllCatalogItems(req: Request, res: Response) {
 
     if (error) {
       console.error('Error fetching catalog items:', error);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to fetch catalog items',
         error: error.message
@@ -194,7 +194,7 @@ async function getAllCatalogItems(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Error in getAllCatalogItems:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Internal server error'
     });
@@ -266,7 +266,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
     if (error) {
       console.error('Error creating catalog item:', error);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to create catalog item',
         error: error.message
@@ -275,7 +275,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
     console.log('Catalog item created successfully:', newItem.id);
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       message: 'Catalog item created successfully',
       data: newItem
@@ -283,7 +283,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Error in createCatalogItem:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Internal server error'
     });
@@ -306,7 +306,7 @@ async function updateCatalogItem(req: Request, res: Response) {
     const result = await CatalogService.updateItem(id, req.body);
 
     if (!result.success) {
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to update catalog item',
         error: result.error
@@ -321,7 +321,7 @@ async function updateCatalogItem(req: Request, res: Response) {
 
   } catch (error: any) {
     console.error('Error in updateCatalogItem:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Internal server error',
       error: error.message
@@ -351,7 +351,7 @@ async function deleteCatalogItem(req: Request, res: Response) {
 
     if (error) {
       console.error('Error deleting catalog item:', error);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to delete catalog item',
         error: error.message
@@ -375,7 +375,7 @@ async function deleteCatalogItem(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Error in deleteCatalogItem:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Internal server error'
     });
@@ -398,7 +398,7 @@ async function getCatalogItem(req: Request, res: Response) {
 
     if (error) {
       console.error('Error fetching catalog item:', error);
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
         message: 'Catalog item not found'
       });
@@ -435,7 +435,7 @@ async function getCatalogItem(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Error in getCatalogItem:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Internal server error'
     });

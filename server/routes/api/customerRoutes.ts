@@ -93,7 +93,7 @@ export async function sendUserInvitation(req: Request, res: Response) {
 
     if (inviteError) {
       console.error('Error storing invitation:', inviteError);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to create invitation'
       });
@@ -120,7 +120,7 @@ export async function sendUserInvitation(req: Request, res: Response) {
     console.log(`✅ Invitation created for ${email}`);
     console.log(`📧 Invitation URL: ${inviteUrl}`);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: `Invitation sent successfully to ${email}`,
       invitation: {
@@ -128,14 +128,14 @@ export async function sendUserInvitation(req: Request, res: Response) {
         firstName,
         lastName,
         role,
-        inviteUrl: emailSent ? undefined : inviteUrl, // Only include URL if email failed
+        inviteUrl: emailSent ? undefined : inviteUrl,
         expiresAt: expiresAt.toISOString()
       }
     });
 
   } catch (error) {
     console.error('Error creating invitation:', error);
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: 'Failed to create invitation'
     });
@@ -165,7 +165,7 @@ export async function verifyInvitation(req: Request, res: Response) {
       .single();
 
     if (error || !invitation) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
         message: 'Invalid or expired invitation token'
       });
@@ -201,7 +201,7 @@ export async function verifyInvitation(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Error verifying invitation:', error);
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: 'Failed to verify invitation'
     });
@@ -247,7 +247,7 @@ export async function createCustomer(req: Request, res: Response) {
 
     if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
       console.error('Error checking existing customer:', checkError);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to validate customer uniqueness: ' + checkError.message
       });
@@ -290,7 +290,7 @@ export async function createCustomer(req: Request, res: Response) {
       console.error('Error creating customer profile:', profileError);
       console.error('Profile error details:', JSON.stringify(profileError, null, 2));
 
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to create customer profile: ' + profileError.message,
         details: profileError.details || 'No additional details'
@@ -300,7 +300,7 @@ export async function createCustomer(req: Request, res: Response) {
     console.log('Customer profile created successfully:', insertedProfile);
 
     // Success response with customer data
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       message: 'Customer created successfully',
       customer: {
@@ -316,7 +316,7 @@ export async function createCustomer(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error('Unexpected error creating customer:', err);
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: 'Unexpected error creating customer: ' + (err.message || 'Unknown error')
     });
@@ -344,7 +344,7 @@ async function getAllCustomers(req: Request, res: Response) {
 
     if (authError) {
       console.error('Error fetching auth users:', authError);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to fetch customers: ' + authError.message
       });
@@ -404,7 +404,7 @@ async function getAllCustomers(req: Request, res: Response) {
 
     console.log(`Found ${customers.length} total customers (${customerProfiles?.length || 0} from profiles, ${customerRoleUsers.length} from auth only)`);
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: customers,
       count: customers.length
@@ -412,7 +412,7 @@ async function getAllCustomers(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Error in getAllCustomers:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Internal server error'
     });
@@ -679,7 +679,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
       
       if (bucketError) {
         console.error('Error creating bucket:', bucketError);
-        return res.status(500).json({
+        return res.status(400).json({
           success: false,
           message: 'Failed to initialize storage bucket: ' + bucketError.message
         });
@@ -700,7 +700,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
 
     if (error) {
       console.error('Error uploading photo to Supabase:', error);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to upload photo: ' + error.message
       });
@@ -721,7 +721,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
 
     if (updateError) {
       console.error('Error updating customer photo URL:', updateError);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to update customer photo URL'
       });
@@ -735,7 +735,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
 
   } catch (error) {
     console.error('Error uploading customer photo:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Failed to upload customer photo'
     });
@@ -764,7 +764,7 @@ router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res
       .single();
 
     if (error || !customer) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
         message: 'Customer not found'
       });
@@ -792,10 +792,13 @@ router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res
       lastOrder: null
     };
 
-    res.json(responseData);
+    res.status(200).json({
+      success: true,
+      data: responseData
+    });
   } catch (error) {
     console.error('Error fetching customer:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Failed to fetch customer'
     });

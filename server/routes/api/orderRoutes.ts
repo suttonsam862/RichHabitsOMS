@@ -94,7 +94,7 @@ async function createOrder(req: Request, res: Response) {
     const customerExists = await validateCustomerExists(orderData.customer_id);
     if (!customerExists) {
       console.error('❌ Customer not found:', orderData.customer_id);
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
         message: 'Customer not found'
       });
@@ -140,7 +140,7 @@ async function createOrder(req: Request, res: Response) {
 
     if (orderError) {
       console.error('❌ Order creation failed:', orderError);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to create order',
         error: orderError.message
@@ -179,7 +179,7 @@ async function createOrder(req: Request, res: Response) {
         .delete()
         .eq('id', createdOrder.id);
 
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to create order items, order rolled back',
         error: itemsError.message
@@ -189,14 +189,15 @@ async function createOrder(req: Request, res: Response) {
     console.log('✅ Order items created successfully:', createdItems.length);
 
     // Return simplified structure with order and items
-    res.status(201).json({
+    res.status(200).json({
+      success: true,
       order: createdOrder,
       items: createdItems
     });
 
   } catch (error: any) {
     console.error('💥 Order creation error:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: 'Internal server error',
       error: error.message
