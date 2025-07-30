@@ -424,40 +424,86 @@ async function getAllCustomers(req: Request, res: Response) {
  */
 async function updateCustomer(req: Request, res: Response) {
   const { id } = req.params;
-  const {
-    first_name,
-    last_name,
-    email,
-    company,
-    phone,
-    address,
-    city,
-    state,
-    zip,
-    country
-  } = req.body;
-
+  
   try {
+    // Validate customer ID format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!id || !uuidRegex.test(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid customer ID format'
+      });
+    }
+
     console.log(`Updating customer profile with ID: ${id}`);
+    console.log('Request body:', req.body);
+
+    // Handle both camelCase (frontend) and snake_case (database) field names
+    const {
+      firstName, first_name,
+      lastName, last_name,
+      email,
+      company,
+      phone,
+      address,
+      city,
+      state,
+      zip,
+      country,
+      status
+    } = req.body;
+
+    // Build update object with snake_case field names for database
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    // Map camelCase to snake_case and handle both formats
+    if (firstName !== undefined || first_name !== undefined) {
+      updateData.first_name = firstName || first_name;
+    }
+    if (lastName !== undefined || last_name !== undefined) {
+      updateData.last_name = lastName || last_name;
+    }
+    if (email !== undefined) updateData.email = email;
+    if (company !== undefined) updateData.company = company || '';
+    if (phone !== undefined) updateData.phone = phone || '';
+    if (address !== undefined) updateData.address = address || '';
+    if (city !== undefined) updateData.city = city || '';
+    if (state !== undefined) updateData.state = state || '';
+    if (zip !== undefined) updateData.zip = zip || '';
+    if (country !== undefined) updateData.country = country || '';
+    if (status !== undefined) updateData.status = status;
+
+    console.log('Update data to be sent to database:', updateData);
+
+    // First check if customer exists
+    const { data: existingCustomer, error: checkError } = await supabaseAdmin
+      .from('customers')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (checkError) {
+      if (checkError.code === 'PGRST116') {
+        return res.status(404).json({
+          success: false,
+          message: 'Customer not found'
+        });
+      }
+      console.error('Error checking customer existence:', checkError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to verify customer: ' + checkError.message
+      });
+    }
 
     // Update customer in database
     const { data: updatedProfile, error: profileError } = await supabaseAdmin
       .from('customers')
-      .update({
-        first_name,
-        last_name,
-        email,
-        company: company || '',
-        phone: phone || '',
-        address: address || '',
-        city: city || '',
-        state: state || '',
-        zip: zip || '',
-        country: country || '',
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id)
-      .select()
+      .select('*')
       .single();
 
     if (profileError) {
@@ -474,26 +520,40 @@ async function updateCustomer(req: Request, res: Response) {
     if (!updatedProfile) {
       return res.status(404).json({
         success: false,
-        message: 'Customer not found'
+        message: 'Customer not found after update'
       });
     }
 
     console.log('Customer profile updated successfully:', updatedProfile);
 
-    // Success response with updated customer data
+    // Success response with updated customer data in camelCase format
+    const responseData = {
+      id: updatedProfile.id,
+      firstName: updatedProfile.first_name,
+      lastName: updatedProfile.last_name,
+      email: updatedProfile.email,
+      company: updatedProfile.company,
+      phone: updatedProfile.phone,
+      address: updatedProfile.address,
+      city: updatedProfile.city,
+      state: updatedProfile.state,
+      zip: updatedProfile.zip,
+      country: updatedProfile.country,
+      status: updatedProfile.status,
+      photo_url: updatedProfile.photo_url,
+      created_at: updatedProfile.created_at,
+      updated_at: updatedProfile.updated_at,
+      // For compatibility with frontend expectations
+      orders: 0,
+      spent: '$0.00',
+      lastOrder: null
+    };
+
     res.status(200).json({
       success: true,
       message: 'Customer updated successfully',
-      customer: {
-        id: updatedProfile.id,
-        firstName: updatedProfile.first_name,
-        lastName: updatedProfile.last_name,
-        email: updatedProfile.email,
-        company: updatedProfile.company,
-        phone: updatedProfile.phone,
-        created_at: updatedProfile.created_at,
-        updated_at: updatedProfile.updated_at
-      }
+      customer: responseData,
+      data: responseData // For compatibility with different frontend expectations
     });
 
   } catch (err: any) {
