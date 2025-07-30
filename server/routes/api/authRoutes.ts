@@ -138,9 +138,10 @@ router.post('/login', async (req: Request, res: Response) => {
         expiresAt: data.session.expires_at
       }
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Unexpected login error:', err);
-    return res.status(500).json({ 
+    console.error(err.message);
+    return res.status(400).json({ 
       success: false, 
       message: 'An unexpected error occurred'
     });

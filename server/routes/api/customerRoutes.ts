@@ -133,8 +133,9 @@ export async function sendUserInvitation(req: Request, res: Response) {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating invitation:', error);
+    console.error(error.message);
     return res.status(400).json({
       success: false,
       message: 'Failed to create invitation'
@@ -199,8 +200,9 @@ export async function verifyInvitation(req: Request, res: Response) {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error verifying invitation:', error);
+    console.error(error.message);
     return res.status(400).json({
       success: false,
       message: 'Failed to verify invitation'
@@ -733,8 +735,9 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
       photoUrl
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading customer photo:', error);
+    console.error(error.message);
     res.status(400).json({
       success: false,
       message: 'Failed to upload customer photo'

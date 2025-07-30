@@ -88,6 +88,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error('Unexpected error creating catalog item:', err);
+    console.error(err.message);
     return res.status(400).json({
       success: false,
       message: 'Unexpected error creating catalog item: ' + (err.message || 'Unknown error')
@@ -192,8 +193,9 @@ async function getAllCatalogItems(req: Request, res: Response) {
       count: processedItems.length
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getAllCatalogItems:', error);
+    console.error(error.message);
     res.status(400).json({
       success: false,
       message: 'Internal server error'
@@ -281,8 +283,9 @@ async function createCatalogItem(req: Request, res: Response) {
       data: newItem
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in createCatalogItem:', error);
+    console.error(error.message);
     res.status(400).json({
       success: false,
       message: 'Internal server error'
@@ -321,6 +324,7 @@ async function updateCatalogItem(req: Request, res: Response) {
 
   } catch (error: any) {
     console.error('Error in updateCatalogItem:', error);
+    console.error(error.message);
     res.status(400).json({
       success: false,
       message: 'Internal server error',
@@ -373,8 +377,9 @@ async function deleteCatalogItem(req: Request, res: Response) {
       message: 'Catalog item deleted successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in deleteCatalogItem:', error);
+    console.error(error.message);
     res.status(400).json({
       success: false,
       message: 'Internal server error'
@@ -433,8 +438,9 @@ async function getCatalogItem(req: Request, res: Response) {
       data: processedItem
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getCatalogItem:', error);
+    console.error(error.message);
     res.status(400).json({
       success: false,
       message: 'Internal server error'

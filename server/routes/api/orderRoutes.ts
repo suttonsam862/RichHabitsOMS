@@ -197,6 +197,7 @@ async function createOrder(req: Request, res: Response) {
 
   } catch (error: any) {
     console.error('💥 Order creation error:', error);
+    console.error(error.message);
     res.status(400).json({
       success: false,
       message: 'Internal server error',

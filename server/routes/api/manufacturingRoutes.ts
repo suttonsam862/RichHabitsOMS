@@ -122,7 +122,8 @@ export async function getManufacturingStats(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('❌ Manufacturing stats fetch failed:', error);
-    res.status(500).json({
+    console.error(error.message);
+    res.status(400).json({
       success: false,
       message: 'Failed to fetch manufacturing statistics',
       error: error.message
