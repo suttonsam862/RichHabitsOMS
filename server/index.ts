@@ -247,6 +247,7 @@ import catalogImageRoutes from './routes/api/catalogImageRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
+import orderImageRoutes from './routes/api/orderImageRoutes';
 import organizationRoutes from './routes/api/organizationRoutes';
 import unifiedImageRoutes from './routes/api/unifiedImageRoutes';
 import invitationRoutes from './routes/api/invitationRoutes';
@@ -370,6 +371,7 @@ import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, delete
     app.use('/api/customers', customerRoutes);
     app.use('/api/dashboard', dashboardRoutes);
     app.use('/api/orders', orderRoutes);
+    app.use('/api/orders', orderImageRoutes);
     app.use('/api/organizations', organizationRoutes);
     app.use('/api/images-unified', unifiedImageRoutes); // UNIFIED: Single standardized image system
     app.use('/api', imageVariantsRoutes); // Image variants routes

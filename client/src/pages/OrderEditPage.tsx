@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import ManufacturerCard from '@/components/ManufacturerCard';
+import { ProductionImageUploader } from '@/components/ProductionImageUploader';
 import {
   Loader2,
   Plus,
@@ -1026,6 +1027,21 @@ export default function OrderEditPage() {
                   />
                 </CardContent>
               </Card>
+
+              {/* Production Images */}
+              {order && (
+                <ProductionImageUploader
+                  orderId={order.id}
+                  taskType="production"
+                  stage="in_progress"
+                  onUploadSuccess={(images) => {
+                    toast({
+                      title: "Images uploaded",
+                      description: `Successfully uploaded ${images.length} production images`
+                    });
+                  }}
+                />
+              )}
             </div>
           </div>
 
