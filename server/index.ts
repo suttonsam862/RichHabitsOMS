@@ -231,6 +231,7 @@ import orderRoutes from './routes/api/orderRoutes';
 import organizationRoutes from './routes/api/organizationRoutes';
 import optimizedImageRoutes from './routes/api/optimizedImageRoutes.js';
 import comprehensiveImageRoutes from './routes/api/comprehensiveImageRoutes';
+import fixedImageRoutes from './routes/api/fixedImageRoutes';
 import invitationRoutes from './routes/api/invitationRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
 import securityRoutes from './routes/api/securityRoutes';
@@ -327,6 +328,7 @@ import healthRoutes from './routes/health';
     app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
     app.use('/api/catalog/:catalogItemId/images', authenticateRequest);
+    app.use('/api/images-fixed', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
@@ -338,6 +340,7 @@ import healthRoutes from './routes/health';
     app.use('/api/organizations', organizationRoutes);
     app.use('/api/images', optimizedImageRoutes);
     app.use('/api/images-v2', comprehensiveImageRoutes); // NEW: Comprehensive image system
+    app.use('/api/images-fixed', fixedImageRoutes); // FIXED: Supabase Storage issues resolved
     app.use('/api', imageVariantsRoutes); // Image variants routes
     app.use('/api', enhancedOrderRoutes); // Enhanced order management routes
     app.use('/api/invitations', invitationRoutes);

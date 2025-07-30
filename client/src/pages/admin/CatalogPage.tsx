@@ -1205,10 +1205,10 @@ export default function CatalogPage() {
         formData.append('images', file);
       });
 
-      const response = await fetch(`/api/catalog/${catalogItemId}/images`, {
+      const response = await fetch(`/api/images-fixed/catalog/${catalogItemId}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || 'dev-admin-token-12345'}`
         },
         body: formData
       });
