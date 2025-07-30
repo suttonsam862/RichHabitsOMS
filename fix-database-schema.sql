@@ -152,6 +152,18 @@ CREATE TABLE IF NOT EXISTS "order_items" (
   "created_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure catalog_item_id column exists if table was created previously without it
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'order_items' 
+        AND column_name = 'catalog_item_id'
+    ) THEN
+        ALTER TABLE order_items ADD COLUMN catalog_item_id UUID REFERENCES catalog_items(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
 -- Step 7: Create remaining tables
 CREATE TABLE IF NOT EXISTS "design_tasks" (
   "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
