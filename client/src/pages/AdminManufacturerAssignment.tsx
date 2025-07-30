@@ -351,13 +351,16 @@ export default function ManufacturingManagement() {
 
   // Computed values for dashboard metrics (fallback if API fails)
   const metrics = useMemo(() => {
-    const totalOrders = orders.length;
-    const ordersInProduction = orders.filter(o => o.status === 'in_production').length;
-    const pendingAssignment = orders.filter(o => o.status === 'design_approved' && !o.manufacturerId).length;
-    const overdueOrders = orders.filter(o => o.dueDate && new Date(o.dueDate) < new Date()).length;
+    const safeOrders = Array.isArray(orders) ? orders : [];
+    const safeManufacturers = Array.isArray(manufacturers) ? manufacturers : [];
+    
+    const totalOrders = safeOrders.length;
+    const ordersInProduction = safeOrders.filter(o => o?.status === 'in_production').length;
+    const pendingAssignment = safeOrders.filter(o => o?.status === 'design_approved' && !o?.manufacturerId).length;
+    const overdueOrders = safeOrders.filter(o => o?.dueDate && new Date(o.dueDate) < new Date()).length;
     const avgCompletionTime = 7; // Calculate from historical data
-    const manufacturerUtilization = manufacturers.length > 0 ? 
-      (ordersInProduction / manufacturers.length * 100) : 0;
+    const manufacturerUtilization = safeManufacturers.length > 0 ? 
+      (ordersInProduction / safeManufacturers.length * 100) : 0;
 
     return {
       totalOrders,

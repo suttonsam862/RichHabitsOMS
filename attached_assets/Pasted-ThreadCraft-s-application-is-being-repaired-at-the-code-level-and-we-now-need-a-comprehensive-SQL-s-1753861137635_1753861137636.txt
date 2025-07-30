@@ -1,0 +1,62 @@
+ThreadCraft’s application is being repaired at the code level, and we now need a comprehensive SQL script to fix, sync, and future-proof the Supabase database schema.
+
+Act as a senior database architect working on a production-grade multi-role system.
+
+Please write a safe SQL script to run in Supabase that will do the following:
+
+---
+
+🧱 STRUCTURE REPAIR
+
+1. **Ensure all expected tables exist with correct structure**  
+   - customers  
+   - catalog_items  
+   - catalog_categories  
+   - catalog_sports  
+   - orders  
+   - order_items  
+   - user_profiles  
+   - manufacturers  
+   - design_tasks  
+   - production_tasks  
+   - user_invitations  
+   - messages (missing – create it)
+
+2. **Create or update columns to match codebase expectations**  
+   - Match naming conventions (snake_case)  
+   - Include required columns like `first_name`, `last_name`, `email`, `role`, `status`, `created_at`, `updated_at`, etc.
+
+3. **Add all required foreign key relationships**  
+   - orders.customer_id → customers.id  
+   - order_items.order_id → orders.id  
+   - order_items.catalog_item_id → catalog_items.id  
+   - design_tasks.order_id → orders.id  
+   - production_tasks.order_id → orders.id  
+   - messages.sender_id → user_profiles.id  
+   - messages.receiver_id → user_profiles.id
+
+4. **Set sensible defaults**  
+   - `created_at` and `updated_at` as `TIMESTAMP DEFAULT now()`  
+   - status fields default to `'pending'` or equivalent
+
+5. **Add missing indexes**  
+   - Add indexes to foreign keys, searchable fields (`email`, `status`, etc.)
+
+6. **Add UUID generation where needed**  
+   - Use `uuid_generate_v4()` for primary keys if not already in place
+
+7. **Create the missing `messages` table**  
+   - Fields: id (UUID), sender_id, receiver_id, content, created_at, read_status
+
+8. **Prepare for RLS (but do not apply policies unless instructed)**  
+   - Add role-based reference fields (`role`, `user_id`) to support row-level filtering later
+
+---
+
+📌 Output:
+- One SQL file
+- Fully formatted and executable in Supabase SQL Editor
+- Include `IF NOT EXISTS` where applicable to avoid destructive actions
+- Use PostgreSQL syntax
+
+Only output the SQL file contents.
