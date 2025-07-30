@@ -544,6 +544,11 @@ export default function CatalogItemEditPage() {
         <div>
           <h1 className="text-2xl font-bold">Edit Catalog Item</h1>
           <p className="text-muted-foreground">{catalogItem.name} ({catalogItem.sku})</p>
+          {catalogItem?.updated_at && (
+            <p className="text-sm text-muted-foreground">
+              Last updated: {new Date(catalogItem.updated_at).toLocaleString()}
+            </p>
+          )}
         </div>
       </div>
 

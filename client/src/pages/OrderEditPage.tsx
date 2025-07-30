@@ -535,6 +535,11 @@ export default function OrderEditPage() {
             <p className="text-muted-foreground">
               {isEditing ? `Update order ${order?.orderNumber}` : 'Create a new customer order with detailed specifications'}
             </p>
+            {isEditing && order?.updated_at && (
+              <p className="text-sm text-muted-foreground">
+                Last updated: {new Date(order.updated_at).toLocaleString()}
+              </p>
+            )}
           </div>
         </div>
         

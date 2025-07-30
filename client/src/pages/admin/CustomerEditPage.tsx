@@ -642,6 +642,11 @@ export default function CustomerEditPage() {
         <div>
           <h1 className="text-2xl font-bold">Edit Customer</h1>
           <p className="text-muted-foreground">{customer.firstName} {customer.lastName}</p>
+          {customer?.updated_at && (
+            <p className="text-sm text-muted-foreground">
+              Last updated: {new Date(customer.updated_at).toLocaleString()}
+            </p>
+          )}
         </div>
       </div>
 
