@@ -509,13 +509,7 @@ export async function addOrderItem(req: Request, res: Response) {
 
     const itemData = validationResult.data;
 
-    // Get current max line number
-    const { data: existingItems } = await supabaseAdmin
-      .from('order_items')
-      .select('line_number')
-      .eq('order_id', orderId)
-      .order('line_number', { ascending: false })
-      .limit(1);
+    // No need for line numbers since they don't exist in schema
 
     const dbItemData = {
       order_id: orderId,
@@ -572,7 +566,7 @@ export async function getOrderItems(req: Request, res: Response) {
       .from('order_items')
       .select('*')
       .eq('order_id', orderId)
-      .order('line_number', { ascending: true });
+      .order('id', { ascending: true });
 
     if (error) {
       console.error('❌ Error fetching order items:', error);

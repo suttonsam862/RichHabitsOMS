@@ -85,12 +85,12 @@ async function testOrderCreationWithController() {
       order_number: orderData.order_number,
       status: orderData.status,
       total_amount: orderData.total_amount,
+      tax: orderData.tax,
       notes: orderData.notes,
-      priority: orderData.priority,
-      rush_order: orderData.rush_order,
-      internal_notes: orderData.internal_notes,
-      customer_requirements: orderData.customer_requirements,
-      delivery_address: orderData.delivery_address,
+      is_paid: orderData.is_paid,
+      salesperson_id: orderData.salesperson_id,
+      stripe_session_id: orderData.stripe_session_id,
+      payment_date: orderData.payment_date,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -119,15 +119,7 @@ async function testOrderCreationWithController() {
       unit_price: item.unit_price,
       total_price: item.total_price,
       color: item.color,
-      size: item.size,
-      fabric: item.fabric,
-      customization: item.customization,
-      specifications: item.specifications,
-      sizes: JSON.stringify(item.sizes),
-      line_number: index + 1,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      size: item.size
     }));
 
     const { data: newOrderItems, error: itemsError } = await supabase
@@ -174,7 +166,7 @@ async function testOrderCreationWithController() {
       .from('order_items')
       .select('*')
       .eq('order_id', newOrder.id)
-      .order('line_number');
+      .order('id');
 
     if (itemsRetrieveError) {
       console.error('❌ Order items retrieval failed:', itemsRetrieveError.message);
@@ -196,7 +188,8 @@ async function testOrderCreationWithController() {
         order_number,
         status,
         total_amount,
-        priority,
+        tax,
+        notes,
         created_at,
         customers:customer_id (
           id,
@@ -213,8 +206,7 @@ async function testOrderCreationWithController() {
           total_price,
           color,
           size,
-          fabric,
-          sizes
+          description
         )
       `)
       .eq('id', newOrder.id)
@@ -232,8 +224,8 @@ async function testOrderCreationWithController() {
     console.log('\n🔄 Step 5: Testing Order Update...');
     
     const updateData = {
-      status: 'in_design',
-      internal_notes: 'Updated test notes',
+      status: 'draft',
+      notes: 'Updated test notes',
       updated_at: new Date().toISOString()
     };
 
@@ -255,7 +247,7 @@ async function testOrderCreationWithController() {
     // Step 6: Test Serialization Issues
     console.log('\n🔄 Step 6: Testing Data Serialization...');
     
-    // Test with problematic data types
+    // Test with problematic data types using actual schema
     const serializationTestItem = {
       order_id: newOrder.id,
       product_name: 'Serialization Test Item',
@@ -264,23 +256,7 @@ async function testOrderCreationWithController() {
       unit_price: 99.99,
       total_price: 99.99,
       color: 'Multi-Color',
-      size: 'OS',
-      fabric: 'Special Material™',
-      customization: 'Custom text with "quotes" and \'apostrophes\'',
-      specifications: JSON.stringify({
-        weight: '150gsm',
-        blend: '60% cotton, 40% polyester',
-        special: true,
-        tags: ['premium', 'limited-edition']
-      }),
-      sizes: JSON.stringify({
-        'One Size': 1,
-        'Special-Char-Size': 0
-      }),
-      line_number: 999,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      size: 'OS'
     };
 
     const { data: serializationItem, error: serializationError } = await supabase

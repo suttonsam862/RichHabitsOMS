@@ -1,0 +1,79 @@
+ThreadCraft is currently in a broken and non-functional state after a series of Agent prompts. The system has accumulated complex infrastructure, AI hooks, monitoring tools, and documentation — but none of the **core functional flows actually work**.
+
+The following primary user actions are completely broken:
+
+❌ Add Customer  
+❌ Add Catalog Item  
+❌ Add Manufacturer  
+❌ Create Order  
+
+---
+
+Please perform a focused **cleanup and repair pass** to restore minimum viable functionality to the following areas. Your goal is to **eliminate critical blockers**, correct **broken data creation flows**, and ensure the app can be used to build forward.
+
+---
+
+### 🔧 Fix Priorities
+
+1. **Fix Schema Mismatch in Customer Creation**
+- Path: `client/src/pages/admin/AddCustomerForm.tsx`
+- Replace all camelCase fields (`firstName`) with snake_case (`first_name`) to match Supabase schema
+- Ensure all required fields are submitted to the correct Supabase table (`customers`)
+- Validate submission with Supabase insert success or detailed error message
+
+2. **Fix Broken Customer API Route**
+- Path: `server/routes/api/customerRoutes.ts`
+- Update field mapping in the customer creation endpoint
+- Use correct `req.body` shape and Supabase field names
+- Add error logging and return proper response codes
+
+3. **Fix Circuit Breaker Blocking Fetches**
+- Path: `client/src/lib/fetchCircuitBreaker.ts`
+- Prevent unnecessary blocking of dev requests or failed retries
+- Disable aggressive fallback behavior for dev environment
+- Ensure that fetch loops don’t trigger circuit breaker during testing
+
+4. **Restore Catalog Item Creation**
+- Path: `client/src/pages/admin/AddCatalogItemForm.tsx`
+- Ensure fields map correctly to Supabase `catalog_items`
+- Fix image upload path and link to item
+- Ensure variant, size, color are handled or stubbed if not supported yet
+
+5. **Repair Manufacturer Creation**
+- Path: `client/src/pages/admin/AddManufacturerForm.tsx`
+- Add missing form submission logic or fix incorrect field mapping
+- Path: `server/routes/api/manufacturingRoutes.ts`
+- Ensure backend creates a valid `manufacturer` record tied to `user_profiles`
+
+6. **Fix Order Creation Logic**
+- Path: `client/src/pages/orders/CreateOrderForm.tsx`
+- Confirm nested form structure correctly gathers `order_items`
+- Fix API route: `server/routes/api/orderRoutes.ts`
+- Ensure correct linking of order → order_items → customer_id
+- Validate totals, status default, and Supabase schema alignment
+
+---
+
+### 🛡️ Error Handling & Validation Fixes
+- Add error boundaries to all critical pages (CustomerForm, CatalogForm, OrderForm)
+- Improve error logging for Supabase responses — include messages in UI
+- Avoid silent failures in form submissions
+
+---
+
+### ✅ Your Goal
+Return the system to a usable, development-ready state by restoring basic CRUD functionality across all core entities:
+
+- ✅ Customer creation
+- ✅ Catalog item creation (with optional image)
+- ✅ Manufacturer creation
+- ✅ Order creation with item linking
+
+Do not introduce new infra. Focus on **restoring** and **correcting**.
+
+Clearly describe:
+- What files you updated
+- What was fixed in each
+- What features are now operational
+- What issues still remain
+
