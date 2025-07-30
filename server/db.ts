@@ -83,6 +83,24 @@ export const supabase = (() => {
   return supabaseClient;
 })();
 
+// Admin client for server-side operations
+export const supabaseAdmin = (() => {
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co';
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
+
+  if (!supabaseServiceKey) {
+    console.warn('Warning: SUPABASE_SERVICE_KEY not found, admin operations may fail');
+    return supabase; // Fallback to regular client
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+})();
+
 // Connection retry logic
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second

@@ -268,6 +268,7 @@ import manufacturingRoutes, {
   updateManufacturer,
   getUserManufacturers
 } from './routes/api/manufacturingRoutes';
+import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, deleteManufacturerMedia } from './routes/api/manufacturerMediaRoutes';
 
 (async () => {
   try {
@@ -387,6 +388,11 @@ app.use('/api/users', userManagementRoutes);
     app.post('/api/manufacturing/manufacturers', createManufacturer);
     app.patch('/api/manufacturing/manufacturers/:id', updateManufacturer);
     app.get('/api/users/manufacturers', getUserManufacturers);
+    
+    // Manufacturer media routes
+    app.post('/api/manufacturing/manufacturers/:id/media', authenticateRequest, uploadMiddleware, uploadManufacturerMedia);
+    app.get('/api/manufacturing/manufacturers/:id/media', authenticateRequest, getManufacturerMedia);
+    app.delete('/api/manufacturing/manufacturers/:id/media/:mediaId', authenticateRequest, deleteManufacturerMedia);
     app.get('/api/design-tasks', getDesignTasks);
     app.get('/api/production-tasks', getProductionTasks);
     app.get('/api/manufacturing/queue', getManufacturingQueue);

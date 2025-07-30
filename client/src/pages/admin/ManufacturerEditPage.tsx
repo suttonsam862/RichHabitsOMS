@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import ManufacturerMediaUploader from '@/components/ManufacturerMediaUploader';
 
 // Form validation schema
 const manufacturerFormSchema = z.object({
@@ -589,6 +590,12 @@ export default function ManufacturerEditPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Media Upload Section */}
+          <ManufacturerMediaUploader 
+            manufacturerId={id || ''} 
+            className="w-full"
+          />
 
           {/* Save Button */}
           <div className="flex justify-end space-x-4">
