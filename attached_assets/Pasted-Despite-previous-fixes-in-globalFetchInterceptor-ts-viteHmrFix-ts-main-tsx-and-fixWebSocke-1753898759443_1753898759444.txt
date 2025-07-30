@@ -1,0 +1,63 @@
+Despite previous fixes in `globalFetchInterceptor.ts`, `viteHmrFix.ts`, `main.tsx`, and `fixWebSocketError.ts`, we are still seeing repeated console spam:
+
+- `Failed to fetch`
+- `Unhandled Promise Rejection`
+- Originating from `window.fetch`, `@vite/client`, and `globalFetchInterceptor.ts`
+
+These errors are flooding the console with 14+ duplicate messages per second and are **not silenced by the previous fixes**.
+
+---
+
+### ✅ Your Job
+
+Trace the actual **source of the repeated fetch loop** and **why it is still happening.**
+
+---
+
+### 🔍 Trace These:
+
+1. **What code is triggering fetch or ping before the backend is ready?**
+   - Is it Vite's HMR client?
+   - Is it AuthContext trying to validate a token?
+   - Is it a global polling function without a readiness check?
+
+2. **What part of the application calls `fetch()` before the server has completed startup?**
+   - Identify the first calls from `main.tsx`, `App.tsx`, or early hooks.
+
+3. **Is this loop recursive or retrying with no cap?**
+   - Check if the ping/fetch is firing in a loop (e.g., 1000ms interval)
+   - Is the retry logic broken?
+
+4. **Why is suppression not catching it?**
+   - Are these fetch calls bypassing the global fetch override?
+   - Is the error happening in `EventSource`, `WebSocket`, or a raw fetch?
+
+---
+
+### 🧠 Then Fix It
+
+You must:
+
+✅ Identify and isolate the first fetch or ping that happens during app boot  
+✅ Add a check for `serverReady` or `isHealthCheckPassed` before firing the fetch  
+✅ Add a `maxAttempts` or exponential backoff to all recursive fetches  
+✅ Confirm that **no fetch happens** until `/api/health` returns 200  
+✅ Ensure `window.fetch` and global catchers still allow *real* errors to appear
+
+---
+
+### 📦 Output Format
+
+For each finding:
+
+- 🧠 **Root Cause**
+- 📂 File + Line
+- 🛠️ Fix Needed
+- ✅ Was it already attempted? Why did it fail?
+
+End with a recommendation for:
+- 1 Agent prompt (if code fix is needed)
+- 1 Assistant prompt (if this requires server coordination)
+- Any toggle/flag to suppress the issue until resolved
+
+Your goal is to **finally stop the infinite error loop** while preserving real fetch behavior.
