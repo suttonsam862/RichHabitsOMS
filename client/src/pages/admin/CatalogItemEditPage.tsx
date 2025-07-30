@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star, Eye, Trash2, Download, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
+import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
 import { getFieldStyles } from "@/lib/utils";
 
 const catalogItemSchema = z.object({
@@ -155,6 +156,12 @@ export default function CatalogItemEditPage() {
     initialData,
     requiredFields: ['name', 'base_price'],
     ignoreFields: ['images'] // Don't require changes to images for form validity
+  });
+
+  // Block navigation during form submission
+  useFormNavigationBlock({
+    when: validation.isSubmitDisabled || updateMutation.isPending,
+    message: "Your catalog item is being saved. Please wait for the process to complete before leaving."
   });
 
   // Update mutation (supports both PATCH and PUT)

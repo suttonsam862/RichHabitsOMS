@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
+import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
 import { getFieldStyles } from "@/lib/utils";
 
 const customerSchema = z.object({
@@ -139,6 +140,12 @@ export default function CustomerEditPage() {
     initialData,
     requiredFields: ['firstName', 'lastName', 'email'],
     ignoreFields: [] // Include all fields in change detection
+  });
+
+  // Block navigation during form submission
+  useFormNavigationBlock({
+    when: validation.isSubmitDisabled || updateMutation.isPending,
+    message: "Your form is being saved. Please wait for the process to complete before leaving."
   });
 
   // File handling functions

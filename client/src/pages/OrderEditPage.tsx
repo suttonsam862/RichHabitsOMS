@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useFormValidation } from '@/hooks/useFormValidation';
+import { useFormNavigationBlock } from '@/hooks/useFormNavigationBlock';
 import ManufacturerCard from '@/components/ManufacturerCard';
 import { ProductionImageUploader } from '@/components/ProductionImageUploader';
 import OrderAuditHistory from '@/components/OrderAuditHistory';
@@ -309,6 +310,12 @@ export default function OrderEditPage() {
     initialData,
     requiredFields: ['orderNumber', 'customerId'],
     ignoreFields: ['id'] // Don't require changes to ID for form validity
+  });
+
+  // Block navigation during form submission
+  useFormNavigationBlock({
+    when: validation.isSubmitDisabled || (isEditing ? updateOrderMutation.isPending : createOrderMutation.isPending),
+    message: "Your order is being saved. Please wait for the process to complete before leaving."
   });
 
   // Calculate item total when quantity or unit price changes
