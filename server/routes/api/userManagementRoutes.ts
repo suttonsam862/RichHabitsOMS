@@ -63,7 +63,7 @@ const updateUserSchema = z.object({
  */
 router.get('/users', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 50, search, status, role } = req.query;
+    const { page = 1, limit = Math.min(Number(req.query.limit) || 50, 100), search, status, role } = req.query;
 
     let query = supabaseAdmin
       .from('enhanced_user_profiles')

@@ -9,7 +9,7 @@ router.get('/orders/enhanced', requireAuth, async (req, res) => {
   try {
     console.log('📋 Fetching enhanced orders with basic query (preventing image_url error)');
 
-    // Use basic orders table to avoid column reference issues
+    // Use basic orders table to avoid column reference issues (with default limit for safety)
     const { data: orders, error } = await supabaseAdmin
       .from('orders')
       .select(`
@@ -25,7 +25,8 @@ router.get('/orders/enhanced', requireAuth, async (req, res) => {
         logo_url,
         company_name
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) {
       console.error('❌ Error fetching enhanced orders:', error);

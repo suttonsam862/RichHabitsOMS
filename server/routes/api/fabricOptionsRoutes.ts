@@ -38,7 +38,8 @@ router.get('/fabrics', async (req, res) => {
       .from('catalog_fabrics')
       .select('id, name, description, is_active, created_at, updated_at')
       .eq('is_active', true)
-      .order('name', { ascending: true });
+      .order('name', { ascending: true })
+      .limit(100);
 
     if (error) {
       console.error('❌ Database error fetching fabrics:', error);

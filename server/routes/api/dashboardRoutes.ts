@@ -51,7 +51,7 @@ async function getDashboardStats(req: Request, res: Response) {
       recentActivity: [] as any[]
     };
 
-    // Get recent orders for activity feed - always handle as array
+    // Get recent orders for activity feed - always handle as array (keeping existing limit of 5)
     const { data: recentOrders } = await supabaseAdmin
       .from('orders')
       .select('id, status, created_at, total_amount')

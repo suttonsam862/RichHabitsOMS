@@ -144,7 +144,8 @@ async function getAllCatalogItems(req: Request, res: Response) {
     const { data: catalogItems, error } = await supabaseAdmin
       .from('catalog_items')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) {
       console.error('Error fetching catalog items:', error);

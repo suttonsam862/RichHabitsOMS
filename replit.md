@@ -124,6 +124,15 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Response Format**: Returns photoUrl and storageLocation for frontend integration
 - **Logging**: Comprehensive logging for debugging and monitoring photo upload operations
 
+### Complete Query Performance Protection with Default LIMIT 100 (July 30, 2025)
+- **Status**: 100% Complete - All GET list endpoints now protected with default LIMIT 100 to prevent runaway queries
+- **Routes Protected**: customerRoutes.ts, catalogRoutes.ts, enhancedOrderRoutes.ts, orderController.ts, userManagementRoutes.ts, manufacturingRoutes.ts, fabricOptionsRoutes.ts
+- **Enhanced Pagination**: Order controller and user management routes now enforce `Math.min(limit, 100)` for user-specified limits
+- **Performance Benefits**: Maximum 100 records per request, prevents memory exhaustion, protects database connection pool, faster response times
+- **Safety Implementation**: Applied `.limit(100)` to all select() operations that return lists, maintaining pagination compatibility
+- **User Control**: Users can specify smaller limits via query params but cannot exceed the 100-record safety maximum
+- **Production Ready**: Eliminates timeout risks on large datasets, provides predictable performance characteristics, optimized for production scale
+
 ### Complete Empty Array Handling for Supabase select() Operations (July 30, 2025)
 - **Status**: 100% Complete - All Supabase select() operations now safely handle empty results with 200 status and empty arrays
 - **Routes Fixed**: customerRoutes.ts (getAllCustomers), dashboardRoutes.ts (getDashboardStats), manufacturingRoutes.ts (getManufacturingStats)

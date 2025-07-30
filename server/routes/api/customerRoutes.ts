@@ -340,10 +340,11 @@ async function getAllCustomers(req: Request, res: Response) {
   try {
     console.log('Fetching customers - request received');
 
-    // First, try to get customers from the customers table
+    // First, try to get customers from the customers table (with default limit for safety)
     const { data: customerProfiles, error: customerError } = await supabaseAdmin
       .from('customers')
-      .select('*');
+      .select('*')
+      .limit(100);
 
     if (customerError) {
       console.error('Error fetching customer profiles:', customerError);

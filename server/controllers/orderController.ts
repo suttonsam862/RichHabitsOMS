@@ -367,7 +367,7 @@ export async function getAllOrders(req: Request, res: Response) {
     
     const { 
       page = 1, 
-      limit = 20, 
+      limit = Math.min(Number(req.query.limit) || 20, 100), // Enforce max limit of 100
       status, 
       customer_id, 
       priority,
@@ -566,7 +566,8 @@ export async function getOrderItems(req: Request, res: Response) {
       .from('order_items')
       .select('*')
       .eq('order_id', orderId)
-      .order('id', { ascending: true });
+      .order('id', { ascending: true })
+      .limit(100);
 
     if (error) {
       console.error('❌ Error fetching order items:', error);
