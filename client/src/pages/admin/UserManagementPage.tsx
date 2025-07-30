@@ -66,15 +66,21 @@ import {
 
 // Form schemas
 const createUserSchema = z.object({
-  email: z.string().email(),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  role: z.string().min(1, "Role is required"),
-  password: z.string().optional(),
-  phone: z.string().optional(),
-  company: z.string().optional(),
-  department: z.string().optional(),
-  title: z.string().optional(),
+  email: z.string().email("Valid email is required"),
+  firstName: z.string().min(1, "First name is required").max(50, "First name too long"),
+  lastName: z.string().min(1, "Last name is required").max(50, "Last name too long"),
+  role: z.enum(['admin', 'salesperson', 'designer', 'manufacturer', 'customer'], {
+    required_error: "Please select a valid role"
+  }),
+  password: z.string().optional().refine((val) => !val || val.length >= 6, {
+    message: "Password must be at least 6 characters if provided"
+  }),
+  phone: z.string().optional().refine((val) => !val || /^\+?[1-9]\d{1,14}$/.test(val), {
+    message: "Invalid phone number format"
+  }),
+  company: z.string().max(100, "Company name too long").optional(),
+  department: z.string().max(50, "Department name too long").optional(),
+  title: z.string().max(50, "Title too long").optional(),
   sendInvitation: z.boolean().default(true),
 });
 
@@ -153,6 +159,10 @@ export default function UserManagementPage() {
     queryKey: ['user-management', 'users', currentPage, searchQuery, statusFilter, roleFilter],
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '50',
@@ -169,10 +179,18 @@ export default function UserManagementPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to fetch users`);
       }
 
       return response.json();
+    },
+    staleTime: 30000, // Cache for 30 seconds
+    retry: (failureCount, error: any) => {
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false; // Don't retry auth errors
+      }
+      return failureCount < 3;
     },
   });
 
@@ -180,24 +198,45 @@ export default function UserManagementPage() {
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserData) => {
       const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
+      // Validate required fields client-side
+      if (!userData.email || !userData.firstName || !userData.lastName || !userData.role) {
+        throw new Error('Missing required fields');
+      }
+
+      // Clean up data before sending
+      const cleanedData = {
+        ...userData,
+        email: userData.email?.trim().toLowerCase() || '',
+        firstName: userData.firstName?.trim() || '',
+        lastName: userData.lastName?.trim() || '',
+        phone: userData.phone?.trim() || undefined,
+        company: userData.company?.trim() || undefined,
+        department: userData.department?.trim() || undefined,
+        title: userData.title?.trim() || undefined,
+      };
+
       const response = await fetch('/api/user-management/users', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(cleanedData),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create user');
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to create user: ${response.status}`);
       }
 
       return response.json();
     },
     onSuccess: (response) => {
-      let description = response.message;
+      let description = response.message || 'User created successfully';
       
       // Show temporary password if one was generated and not emailed
       if (response.data?.temporaryPassword) {
@@ -208,14 +247,31 @@ export default function UserManagementPage() {
         title: 'Success',
         description,
       });
+      
+      // Reset form and close dialog
       setIsCreateDialogOpen(false);
-      createForm.reset();
-      queryClient.invalidateQueries({ queryKey: ['user-management', 'users'] });
+      createForm.reset({
+        firstName: '',
+        lastName: '',
+        email: '',
+        role: '',
+        password: '',
+        phone: '',
+        company: '',
+        department: '',
+        title: '',
+        sendInvitation: true,
+      });
+      
+      // Invalidate and refetch data
+      queryClient.invalidateQueries({ queryKey: ['user-management'] });
+      refetch();
     },
     onError: (error: Error) => {
+      console.error('User creation failed:', error);
       toast({
-        title: 'Error',
-        description: error.message,
+        title: 'Error Creating User',
+        description: error.message || 'An unexpected error occurred while creating the user',
         variant: 'destructive',
       });
     },
@@ -299,6 +355,16 @@ export default function UserManagementPage() {
     console.log('📝 Form errors:', createForm.formState.errors);
     console.log('🔄 Form is valid:', createForm.formState.isValid);
     
+    // Additional validation before submission
+    if (!createForm.formState.isValid) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fix all form errors before submitting',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     createUserMutation.mutate(data);
   };
 
@@ -309,7 +375,16 @@ export default function UserManagementPage() {
   };
 
   const handleDeleteUser = (user: User) => {
-    if (confirm(`Are you sure you want to deactivate ${user.firstName} ${user.lastName}?`)) {
+    if (!user?.id) {
+      toast({
+        title: 'Error',
+        description: 'User ID is missing',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to deactivate ${user.firstName} ${user.lastName}? This action cannot be undone.`)) {
       deleteUserMutation.mutate(user.id);
     }
   };
@@ -494,7 +569,12 @@ export default function UserManagementPage() {
                           <h4 className="font-medium text-sm">Admin Pages</h4>
                           <div className="space-y-1">
                             <label className="flex items-center space-x-2 text-sm">
-                              <input type="checkbox" className="rounded" />
+                              <input 
+                                type="checkbox" 
+                                className="rounded"
+                                name="permissions"
+                                value="user_management"
+                              />
                               <span>User Management</span>
                             </label>
                             <label className="flex items-center space-x-2 text-sm">
@@ -706,6 +786,12 @@ export default function UserManagementPage() {
                         console.log('🖱️ Create User button clicked');
                         console.log('📝 Form state:', createForm.formState);
                         console.log('📄 Form values:', createForm.getValues());
+                        
+                        // Prevent double submission
+                        if (createUserMutation.isPending) {
+                          e.preventDefault();
+                          return;
+                        }
                       }}
                     >
                       {createUserMutation.isPending ? 'Creating...' : 'Create User'}

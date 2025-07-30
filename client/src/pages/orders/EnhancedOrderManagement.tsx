@@ -225,16 +225,34 @@ export default function EnhancedOrderManagement() {
   const { data: orders = [], isLoading: ordersLoading, refetch: refetchOrders } = useQuery({
     queryKey: ['enhanced-orders'],
     queryFn: async () => {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
       const response = await fetch("/api/orders/enhanced", {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
-      if (!response.ok) throw new Error('Failed to fetch orders');
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to fetch orders: ${response.status}`);
+      }
+      
       const data = await response.json();
       return data.success ? data.orders : [];
     },
-    refetchInterval: 10000 // Refresh every 10 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds (reduced frequency)
+    retry: (failureCount, error: any) => {
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false; // Don't retry auth errors
+      }
+      return failureCount < 2;
+    },
+    staleTime: 10000 // Cache for 10 seconds
   });
 
   // Fetch customers
@@ -285,32 +303,73 @@ export default function EnhancedOrderManagement() {
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: Partial<Order>) => {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
+      // Validate required fields
+      if (!orderData.customerId || !orderData.orderNumber) {
+        throw new Error('Customer and order number are required');
+      }
+
+      // Validate order items
+      if (!orderData.items || orderData.items.length === 0) {
+        throw new Error('At least one order item is required');
+      }
+
+      // Clean and validate order data
+      const cleanedData = {
+        ...orderData,
+        orderNumber: orderData.orderNumber?.trim(),
+        totalAmount: Math.round((orderData.totalAmount || 0) * 100) / 100, // Round to 2 decimals
+        tax: Math.round((orderData.tax || 0) * 100) / 100,
+        discount: Math.round((orderData.discount || 0) * 100) / 100,
+        items: orderData.items.map(item => ({
+          ...item,
+          productName: item.productName?.trim(),
+          quantity: Math.max(1, item.quantity || 1),
+          unitPrice: Math.max(0, item.unitPrice || 0),
+          totalPrice: Math.round((item.quantity * item.unitPrice) * 100) / 100
+        }))
+      };
+
       const response = await fetch("/api/orders", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify(cleanedData)
       });
-      if (!response.ok) throw new Error('Failed to create order');
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to create order: ${response.status}`);
+      }
+      
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast({
         title: "Order Created",
-        description: "Order has been created successfully with team assignments.",
+        description: response?.message || "Order has been created successfully with team assignments.",
       });
       queryClient.invalidateQueries({ queryKey: ['enhanced-orders'] });
       queryClient.invalidateQueries({ queryKey: ['team-workload'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      refetchOrders();
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error('Order creation failed:', error);
       toast({
-        title: "Creation Failed",
-        description: `Failed to create order: ${error.message}`,
+        title: "Order Creation Failed",
+        description: error.message || "An unexpected error occurred while creating the order",
         variant: "destructive",
       });
+      
+      // Don't reset form on error so user can retry
     }
   });
 
@@ -368,15 +427,27 @@ export default function EnhancedOrderManagement() {
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `ORD-${year}${month}${day}-${random}`;
+    const time = date.getHours().toString().padStart(2, '0') + date.getMinutes().toString().padStart(2, '0');
+    const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    return `ORD-${year}${month}${day}-${time}-${random}`;
   };
 
   const handleStartOrder = () => {
+    if (!user?.id) {
+      toast({
+        title: "Authentication Error",
+        description: "User authentication is required to create orders",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setOrderFormData({
       ...orderFormData,
       orderNumber: generateOrderNumber(),
-      salespersonId: user?.id
+      salespersonId: user.id,
+      createdAt: new Date().toISOString(),
+      items: [] // Ensure items array is initialized
     });
     setIsCreatingOrder(true);
     setCurrentStep(0);
@@ -402,8 +473,44 @@ export default function EnhancedOrderManagement() {
   };
 
   const handleSubmitOrder = () => {
-    if (editingOrder) {
-      updateOrderMutation.mutate({ id: editingOrder.id!, data: orderFormData });
+    // Comprehensive validation before submission
+    if (!orderFormData.customerId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a customer before submitting",
+        variant: "destructive",
+      });
+      setCurrentStep(0); // Go back to customer selection
+      return;
+    }
+
+    if (!orderFormData.items || orderFormData.items.length === 0) {
+      toast({
+        title: "Validation Error", 
+        description: "Please add at least one order item",
+        variant: "destructive",
+      });
+      setCurrentStep(3); // Go to items step
+      return;
+    }
+
+    // Validate all items have required fields
+    const invalidItems = orderFormData.items.filter(item => 
+      !item.productName?.trim() || item.quantity <= 0 || item.unitPrice < 0
+    );
+    
+    if (invalidItems.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: "All items must have a product name, positive quantity, and non-negative price",
+        variant: "destructive",
+      });
+      setCurrentStep(3); // Go to items step
+      return;
+    }
+
+    if (editingOrder?.id) {
+      updateOrderMutation.mutate({ id: editingOrder.id, data: orderFormData });
     } else {
       createOrderMutation.mutate(orderFormData);
     }
@@ -411,6 +518,7 @@ export default function EnhancedOrderManagement() {
 
   const addOrderItem = () => {
     const newItem: OrderItem = {
+      id: `temp-${Date.now()}`, // Temporary ID for tracking
       productName: '',
       description: '',
       size: '',
@@ -420,37 +528,81 @@ export default function EnhancedOrderManagement() {
       totalPrice: 0,
       status: 'pending'
     };
+    
+    const updatedItems = [...(orderFormData.items || []), newItem];
     setOrderFormData({
       ...orderFormData,
-      items: [...(orderFormData.items || []), newItem]
+      items: updatedItems
+    });
+    
+    // Show guidance toast
+    toast({
+      title: "Item Added",
+      description: "Please fill in the product details for the new item",
     });
   };
 
   const updateOrderItem = (index: number, item: OrderItem) => {
-    const updatedItems = [...(orderFormData.items || [])];
-    updatedItems[index] = { ...item, totalPrice: item.quantity * item.unitPrice };
+    if (index < 0 || !orderFormData.items || index >= orderFormData.items.length) {
+      console.error('Invalid item index:', index);
+      return;
+    }
+
+    const updatedItems = [...orderFormData.items];
+    const validatedItem = {
+      ...item,
+      quantity: Math.max(1, item.quantity || 1), // Ensure minimum quantity of 1
+      unitPrice: Math.max(0, item.unitPrice || 0), // Ensure non-negative price
+      totalPrice: Math.round((Math.max(1, item.quantity || 1) * Math.max(0, item.unitPrice || 0)) * 100) / 100
+    };
     
-    const totalAmount = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const tax = totalAmount * 0.08; // 8% tax
+    updatedItems[index] = validatedItem;
+    
+    // Recalculate totals
+    const subtotal = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const tax = Math.round(subtotal * 0.08 * 100) / 100; // 8% tax, rounded
+    const totalAmount = Math.round((subtotal + tax - (orderFormData.discount || 0)) * 100) / 100;
     
     setOrderFormData({
       ...orderFormData,
       items: updatedItems,
-      totalAmount,
+      totalAmount: Math.max(0, totalAmount), // Ensure non-negative total
       tax
     });
   };
 
   const removeOrderItem = (index: number) => {
-    const updatedItems = orderFormData.items?.filter((_, i) => i !== index) || [];
-    const totalAmount = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const tax = totalAmount * 0.08;
+    if (index < 0 || !orderFormData.items || index >= orderFormData.items.length) {
+      console.error('Invalid item index for removal:', index);
+      return;
+    }
+
+    if (orderFormData.items.length === 1) {
+      toast({
+        title: "Cannot Remove",
+        description: "At least one item is required for the order",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updatedItems = orderFormData.items.filter((_, i) => i !== index);
+    
+    // Recalculate totals
+    const subtotal = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const tax = Math.round(subtotal * 0.08 * 100) / 100;
+    const totalAmount = Math.round((subtotal + tax - (orderFormData.discount || 0)) * 100) / 100;
     
     setOrderFormData({
       ...orderFormData,
       items: updatedItems,
-      totalAmount,
+      totalAmount: Math.max(0, totalAmount),
       tax
+    });
+
+    toast({
+      title: "Item Removed",
+      description: "Order item has been removed and totals updated",
     });
   };
 

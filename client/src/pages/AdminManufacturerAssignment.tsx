@@ -504,138 +504,286 @@ export default function ManufacturingManagement() {
     });
   }, [orders, searchTerm, statusFilter, priorityFilter, manufacturerFilter, dateRangeFilter]);
 
-  // Enhanced mutation functions
+  // Enhanced mutation functions with comprehensive validation
   const addManufacturerMutation = useMutation({
     mutationFn: async (manufacturerData: typeof newManufacturerData) => {
-      const response = await apiRequest('POST', '/api/users/create-manufacturer', {
+      // Validate required fields
+      if (!manufacturerData.firstName?.trim()) {
+        throw new Error('First name is required');
+      }
+      if (!manufacturerData.lastName?.trim()) {
+        throw new Error('Last name is required');
+      }
+      if (!manufacturerData.email?.trim()) {
+        throw new Error('Email is required');
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(manufacturerData.email.trim())) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Clean and validate data
+      const cleanedData = {
         ...manufacturerData,
+        firstName: manufacturerData.firstName.trim(),
+        lastName: manufacturerData.lastName.trim(),
+        email: manufacturerData.email.trim().toLowerCase(),
+        company: manufacturerData.company?.trim() || '',
+        phone: manufacturerData.phone?.trim() || '',
+        specialties: manufacturerData.specialties?.trim() || '',
         role: 'manufacturer'
-      });
+      };
+
+      const response = await apiRequest('POST', '/api/users/create-manufacturer', cleanedData);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to create manufacturer: ${response.status}`);
+      }
+      
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users', 'manufacturer'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users/manufacturers'] });
       fetchAllData(true); // Refresh all data
       toast({
-        title: 'Manufacturer Added',
-        description: 'New manufacturer has been created successfully',
+        title: 'Manufacturer Added Successfully',
+        description: response?.message || `${newManufacturerData.firstName} ${newManufacturerData.lastName} has been created`,
       });
       setShowTinderManufacturerDialog(false);
       resetManufacturerForm();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
+      console.error('Manufacturer creation failed:', error);
       toast({
         title: 'Failed to Add Manufacturer',
-        description: error.message || 'Failed to create new manufacturer',
+        description: error.message || 'An unexpected error occurred while creating the manufacturer',
         variant: 'destructive'
       });
+      // Don't reset form on error so user can retry
     },
   });
 
-  // Single manufacturer assignment
+  // Single manufacturer assignment with validation
   const assignManufacturerMutation = useMutation({
-    mutationFn: (data: { orderId: string, manufacturerId: string }) => {
-      return apiRequest('PUT', `/api/orders/${data.orderId}/assign-manufacturer`, {
+    mutationFn: async (data: { orderId: string, manufacturerId: string }) => {
+      if (!data.orderId?.trim()) {
+        throw new Error('Order ID is required for assignment');
+      }
+      if (!data.manufacturerId?.trim()) {
+        throw new Error('Manufacturer ID is required for assignment');
+      }
+
+      const response = await apiRequest('PUT', `/api/orders/${data.orderId}/assign-manufacturer`, {
         manufacturerId: data.manufacturerId
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to assign manufacturer: ${response.status}`);
+      }
+
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       fetchAllData(true); // Refresh all data
+      queryClient.invalidateQueries({ queryKey: ['enhanced-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/stats'] });
+      
+      const selectedOrder = orders.find(o => o.id === selectedOrderId);
+      const selectedManufacturer = manufacturers.find(m => m.id === selectedManufacturerId);
+      
       toast({
-        title: 'Manufacturer Assigned',
-        description: 'The manufacturer has been assigned to this order successfully',
+        title: 'Manufacturer Assigned Successfully',
+        description: response?.message || `${selectedManufacturer?.firstName || 'Manufacturer'} assigned to order ${selectedOrder?.orderNumber || selectedOrderId}`,
       });
       setShowAssignDialog(false);
       setSelectedOrderId(null);
       setSelectedManufacturerId('');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
+      console.error('Manufacturer assignment failed:', error);
       toast({
         title: 'Assignment Failed',
-        description: error.message || 'Failed to assign manufacturer',
+        description: error.message || 'An unexpected error occurred during assignment',
         variant: 'destructive'
       });
     },
   });
 
-  // Bulk manufacturer assignment
+  // Bulk manufacturer assignment with comprehensive validation
   const bulkAssignMutation = useMutation({
     mutationFn: async (data: { orderIds: string[], manufacturerId: string }) => {
-      const results = await Promise.all(
-        data.orderIds.map(orderId =>
-          apiRequest('PUT', `/api/orders/${orderId}/assign-manufacturer`, {
+      if (!data.orderIds || data.orderIds.length === 0) {
+        throw new Error('At least one order must be selected for bulk assignment');
+      }
+      if (!data.manufacturerId?.trim()) {
+        throw new Error('Manufacturer selection is required for bulk assignment');
+      }
+
+      // Validate all order IDs
+      const invalidOrderIds = data.orderIds.filter(id => !id?.trim());
+      if (invalidOrderIds.length > 0) {
+        throw new Error('All selected orders must have valid IDs');
+      }
+
+      // Process assignments with error tracking
+      const results = await Promise.allSettled(
+        data.orderIds.map(async (orderId) => {
+          const response = await apiRequest('PUT', `/api/orders/${orderId}/assign-manufacturer`, {
             manufacturerId: data.manufacturerId
-          })
-        )
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+            throw new Error(`Order ${orderId}: ${errorData.message || 'Assignment failed'}`);
+          }
+          
+          return response.json();
+        })
       );
-      return results;
+
+      // Check for any failures
+      const failures = results.filter(result => result.status === 'rejected') as PromiseRejectedResult[];
+      const successes = results.filter(result => result.status === 'fulfilled').length;
+
+      if (failures.length > 0) {
+        const errorMessages = failures.map(f => f.reason.message).join('; ');
+        throw new Error(`${failures.length} assignments failed: ${errorMessages}`);
+      }
+
+      return { successCount: successes, totalCount: data.orderIds.length };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       fetchAllData(true);
+      queryClient.invalidateQueries({ queryKey: ['enhanced-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/stats'] });
+      
+      const selectedManufacturer = manufacturers.find(m => m.id === selectedManufacturerId);
+      
       toast({
-        title: 'Bulk Assignment Complete',
-        description: `Successfully assigned manufacturer to ${selectedOrders.length} orders`,
+        title: 'Bulk Assignment Completed',
+        description: `Successfully assigned ${selectedManufacturer?.firstName || 'manufacturer'} to ${result.successCount} out of ${result.totalCount} orders`,
       });
       setShowBulkAssignDialog(false);
       setSelectedOrders([]);
       setSelectedManufacturerId('');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
+      console.error('Bulk manufacturer assignment failed:', error);
       toast({
         title: 'Bulk Assignment Failed',
-        description: error.message || 'Failed to assign manufacturer to some orders',
+        description: error.message || 'An unexpected error occurred during bulk assignment',
         variant: 'destructive'
       });
     },
   });
 
-  // Send message mutation
+  // Send message mutation with validation
   const sendMessageMutation = useMutation({
     mutationFn: async (data: typeof messageData & { orderId?: string }) => {
-      return apiRequest('POST', '/api/messages', data);
+      if (!data.content?.trim()) {
+        throw new Error('Message content is required');
+      }
+      if (!data.receiverId?.trim()) {
+        throw new Error('Message recipient is required');
+      }
+
+      // Clean and validate message data
+      const cleanedData = {
+        ...data,
+        subject: data.subject?.trim() || 'Manufacturing Communication',
+        content: data.content.trim(),
+        receiverId: data.receiverId.trim(),
+        orderId: data.orderId?.trim() || undefined
+      };
+
+      const response = await apiRequest('POST', '/api/messages', cleanedData);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to send message: ${response.status}`);
+      }
+      
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       fetchAllData(true);
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      
+      const recipient = manufacturers.find(m => m.id === messageData.receiverId);
+      
       toast({
-        title: 'Message Sent',
-        description: 'Your message has been sent successfully',
+        title: 'Message Sent Successfully',
+        description: response?.message || `Message sent to ${recipient?.firstName || 'recipient'}`,
       });
       setShowMessageDialog(false);
       resetMessageForm();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
+      console.error('Message sending failed:', error);
       toast({
         title: 'Failed to Send Message',
-        description: error.message || 'Failed to send message',
+        description: error.message || 'An unexpected error occurred while sending the message',
         variant: 'destructive'
       });
+      // Don't reset form on error so user can retry
     },
   });
 
-  // Update production progress mutation
+  // Update production progress mutation with validation  
   const updateProgressMutation = useMutation({
     mutationFn: async (data: typeof progressData) => {
-      return apiRequest('PUT', `/api/production-tasks/${data.orderId}/progress`, {
-        status: data.status,
-        notes: data.notes,
-        completionPercentage: data.completionPercentage
-      });
+      if (!data.orderId?.trim()) {
+        throw new Error('Order ID is required for progress updates');
+      }
+      if (!data.status?.trim()) {
+        throw new Error('Status is required for progress updates');
+      }
+      if (data.completionPercentage < 0 || data.completionPercentage > 100) {
+        throw new Error('Completion percentage must be between 0 and 100');
+      }
+
+      // Clean and validate progress data
+      const cleanedData = {
+        status: data.status.trim(),
+        notes: data.notes?.trim() || '',
+        completionPercentage: Math.min(100, Math.max(0, data.completionPercentage || 0))
+      };
+
+      const response = await apiRequest('PUT', `/api/production-tasks/${data.orderId}/progress`, cleanedData);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to update progress: ${response.status}`);
+      }
+      
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       fetchAllData(true);
+      queryClient.invalidateQueries({ queryKey: ['/api/production-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/stats'] });
+      const order = orders.find(o => o.id === progressData.orderId);
+      
       toast({
-        title: 'Progress Updated',
-        description: 'Production progress has been updated successfully',
+        title: 'Progress Updated Successfully', 
+        description: response?.message || `Progress updated for order ${order?.orderNumber || progressData.orderId}`,
       });
       setShowProgressDialog(false);
       resetProgressForm();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
+      console.error('Progress update failed:', error);
       toast({
         title: 'Update Failed',
-        description: error.message || 'Failed to update progress',
+        description: error.message || 'An unexpected error occurred while updating progress',
         variant: 'destructive'
       });
+      // Don't reset form on error so user can retry
     },
   });
 

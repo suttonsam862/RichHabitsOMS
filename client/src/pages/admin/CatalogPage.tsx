@@ -865,32 +865,40 @@ export default function CatalogPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch catalog items with better error handling
+  // Fetch catalog items with comprehensive error handling
   const { data: catalogItems = [], isLoading, error, refetch } = useQuery({
     queryKey: ['catalog'],
     queryFn: async () => {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
       console.log("Fetching catalog items...");
       try {
         const response = await fetch("/api/catalog", {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+            'Authorization': `Bearer ${token}`
           }
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch catalog: ${response.status}`);
+          const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+          throw new Error(errorData.message || `Failed to fetch catalog: ${response.status}`);
         }
 
         const data = await response.json();
         console.log("Catalog data received:", data);
         
-        // Handle different response structures
+        // Handle different response structures with validation
         if (data.success && Array.isArray(data.data)) {
           return data.data;
         } else if (Array.isArray(data)) {
           return data;
+        } else if (data.data && Array.isArray(data.data)) {
+          return data.data;
         } else {
           console.warn("Unexpected catalog response structure:", data);
           return [];
@@ -900,8 +908,15 @@ export default function CatalogPage() {
         throw error;
       }
     },
-    retry: 2,
-    retryDelay: 1000
+    retry: (failureCount, error: any) => {
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false; // Don't retry auth errors
+      }
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 15000, // Cache for 15 seconds
+    refetchInterval: 60000 // Refresh every minute
   });
 
   // Fetch categories and sports for dropdowns
@@ -929,135 +944,252 @@ export default function CatalogPage() {
     }
   });
 
-  // Create item mutation
+  // Create item mutation with comprehensive validation
   const createItemMutation = useMutation({
     mutationFn: async (itemData: CatalogFormData) => {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
+      // Validate required fields
+      if (!itemData.name?.trim()) {
+        throw new Error('Product name is required');
+      }
+      if (!itemData.category?.trim()) {
+        throw new Error('Category is required');
+      }
+      if (!itemData.sport?.trim()) {
+        throw new Error('Sport is required');
+      }
+      if (itemData.basePrice < 0) {
+        throw new Error('Base price cannot be negative');
+      }
+      if (itemData.unitCost < 0) {
+        throw new Error('Unit cost cannot be negative');
+      }
+
       const formDataToSend = new FormData();
       
+      // Clean and validate data before sending
+      const cleanedData = {
+        ...itemData,
+        name: itemData.name.trim(),
+        category: itemData.category.trim(),
+        sport: itemData.sport.trim(),
+        basePrice: Math.round(itemData.basePrice * 100) / 100, // Round to 2 decimals
+        unitCost: Math.round(itemData.unitCost * 100) / 100,
+        sku: itemData.sku?.trim() || '',
+        description: itemData.description?.trim() || '',
+        buildInstructions: itemData.buildInstructions?.trim() || '',
+        fabric: itemData.fabric?.trim() || '',
+        etaDays: itemData.etaDays?.trim() || '7-10 business days',
+        minQuantity: Math.max(1, itemData.minQuantity || 1),
+        maxQuantity: Math.max(itemData.minQuantity || 1, itemData.maxQuantity || 1000)
+      };
+
       // Add all form fields
-      Object.entries(itemData).forEach(([key, value]) => {
+      Object.entries(cleanedData).forEach(([key, value]) => {
         if (Array.isArray(value)) {
-          formDataToSend.append(key, JSON.stringify(value));
+          formDataToSend.append(key, JSON.stringify(value.filter(v => v?.trim())));
         } else {
           formDataToSend.append(key, String(value));
         }
       });
 
-      // Add image if selected
+      // Add image if selected with validation
       if (selectedFile) {
+        // Validate file size (5MB limit)
+        if (selectedFile.size > 5 * 1024 * 1024) {
+          throw new Error('Image file size must be less than 5MB');
+        }
+        // Validate file type
+        if (!selectedFile.type.startsWith('image/')) {
+          throw new Error('Please select a valid image file');
+        }
         formDataToSend.append('image', selectedFile);
       }
 
       const response = await fetch('/api/catalog', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+          'Authorization': `Bearer ${token}`
         },
         body: formDataToSend
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to create item: ${response.status}`);
       }
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast({
-        title: "Item Created",
-        description: "Catalog item has been created successfully.",
+        title: "Item Created Successfully",
+        description: response?.message || `${formData.name} has been added to the catalog`,
       });
       queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      queryClient.invalidateQueries({ queryKey: ['catalog-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['catalog-sports'] });
+      refetch(); // Immediate refresh
       resetForm();
       setIsAddingItem(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error('Catalog item creation failed:', error);
       toast({
-        title: "Error",
-        description: `Failed to create item: ${error.message}`,
+        title: "Creation Failed",
+        description: error.message || "An unexpected error occurred while creating the item",
         variant: "destructive",
       });
+      // Don't reset form on error so user can retry
     }
   });
 
-  // Update item mutation
+  // Update item mutation with validation
   const updateItemMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: CatalogFormData }) => {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
+      if (!id) {
+        throw new Error('Item ID is required for updates');
+      }
+
+      // Validate required fields for updates
+      if (!data.name?.trim()) {
+        throw new Error('Product name is required');
+      }
+      if (!data.category?.trim()) {
+        throw new Error('Category is required');
+      }
+      if (data.basePrice < 0) {
+        throw new Error('Base price cannot be negative');
+      }
+
       const formDataToSend = new FormData();
       
-      Object.entries(data).forEach(([key, value]) => {
+      // Clean and validate data
+      const cleanedData = {
+        ...data,
+        name: data.name.trim(),
+        category: data.category.trim(),
+        sport: data.sport?.trim() || '',
+        basePrice: Math.round(data.basePrice * 100) / 100,
+        unitCost: Math.round(data.unitCost * 100) / 100,
+        sku: data.sku?.trim() || '',
+        description: data.description?.trim() || '',
+        buildInstructions: data.buildInstructions?.trim() || '',
+        fabric: data.fabric?.trim() || '',
+        etaDays: data.etaDays?.trim() || '7-10 business days',
+        minQuantity: Math.max(1, data.minQuantity || 1),
+        maxQuantity: Math.max(data.minQuantity || 1, data.maxQuantity || 1000)
+      };
+
+      Object.entries(cleanedData).forEach(([key, value]) => {
         if (Array.isArray(value)) {
-          formDataToSend.append(key, JSON.stringify(value));
+          formDataToSend.append(key, JSON.stringify(value.filter(v => v?.trim())));
         } else {
           formDataToSend.append(key, String(value));
         }
       });
 
+      // Add image if selected with validation
       if (selectedFile) {
+        if (selectedFile.size > 5 * 1024 * 1024) {
+          throw new Error('Image file size must be less than 5MB');
+        }
+        if (!selectedFile.type.startsWith('image/')) {
+          throw new Error('Please select a valid image file');
+        }
         formDataToSend.append('image', selectedFile);
       }
 
       const response = await fetch(`/api/catalog/${id}`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+          'Authorization': `Bearer ${token}`
         },
         body: formDataToSend
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update item');
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to update item: ${response.status}`);
       }
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast({
-        title: "Item Updated",
-        description: "Catalog item has been updated successfully.",
+        title: "Item Updated Successfully",
+        description: response?.message || `${formData.name} has been updated`,
       });
       queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      queryClient.invalidateQueries({ queryKey: ['catalog-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['catalog-sports'] });
+      refetch(); // Immediate refresh
       resetForm();
       setIsAddingItem(false);
       setEditingItem(null);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error('Catalog item update failed:', error);
       toast({
-        title: "Error",
-        description: `Failed to update item: ${error.message}`,
+        title: "Update Failed",
+        description: error.message || "An unexpected error occurred while updating the item",
         variant: "destructive",
       });
+      // Don't reset form on error so user can retry
     }
   });
 
-  // Delete item mutation
+  // Delete item mutation with confirmation
   const deleteItemMutation = useMutation({
     mutationFn: async (id: string) => {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token missing');
+      }
+
+      if (!id) {
+        throw new Error('Item ID is required for deletion');
+      }
+
       const response = await fetch(`/api/catalog/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete item');
+        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+        throw new Error(errorData.message || `Failed to delete item: ${response.status}`);
       }
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       toast({
-        title: "Item Deleted",
-        description: "Catalog item has been deleted successfully.",
+        title: "Item Deleted Successfully",
+        description: response?.message || "The catalog item has been permanently removed",
       });
       queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      queryClient.invalidateQueries({ queryKey: ['catalog-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['catalog-sports'] });
+      refetch(); // Immediate refresh
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error('Catalog item deletion failed:', error);
       toast({
-        title: "Error",
-        description: `Failed to delete item: ${error.message}`,
+        title: "Deletion Failed",
+        description: error.message || "An unexpected error occurred while deleting the item",
         variant: "destructive",
       });
     }
@@ -1114,26 +1246,78 @@ export default function CatalogPage() {
     }
   };
 
-  // Handle file selection
+  // Handle file selection with validation
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a valid image file (JPEG, PNG, WebP, or GIF)",
+        variant: "destructive",
+      });
+      return;
     }
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Image size must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+    
+    // Create preview with error handling
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+      toast({
+        title: "Image Selected",
+        description: `${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+      });
+    };
+    reader.onerror = () => {
+      toast({
+        title: "File Read Error",
+        description: "Failed to read the selected image file",
+        variant: "destructive",
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
-  // Generate SKU
+  // Generate SKU with enhanced algorithm
   const generateSKU = () => {
-    const prefix = formData.category.substring(0, 3).toUpperCase();
-    const suffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setFormData({ ...formData, sku: `${prefix}-${suffix}` });
+    if (!formData.category || !formData.name) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in category and product name before generating SKU",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const categoryPrefix = formData.category.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '');
+    const namePrefix = formData.name.substring(0, 2).toUpperCase().replace(/[^A-Z]/g, '');
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 4).toUpperCase();
+    
+    const newSKU = `${categoryPrefix || 'CAT'}-${namePrefix || 'PR'}-${timestamp}-${random}`;
+    
+    setFormData({ ...formData, sku: newSKU });
+    
+    toast({
+      title: "SKU Generated",
+      description: `New SKU: ${newSKU}`,
+    });
   };
 
   // Reset form
@@ -1185,11 +1369,73 @@ export default function CatalogPage() {
     setIsAddingItem(true);
   };
 
-  // Handle form submission
+  // Handle form submission with comprehensive validation
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editingItem) {
+    // Comprehensive client-side validation
+    if (!formData.name?.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Product name is required",
+        variant: "destructive",
+      });
+      setCurrentStep(0); // Go back to basic info step
+      return;
+    }
+    
+    if (!formData.category?.trim()) {
+      toast({
+        title: "Validation Error", 
+        description: "Category is required",
+        variant: "destructive",
+      });
+      setCurrentStep(0); // Go back to basic info step
+      return;
+    }
+
+    if (!formData.sport?.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Sport selection is required", 
+        variant: "destructive",
+      });
+      setCurrentStep(0); // Go back to basic info step
+      return;
+    }
+
+    if (formData.basePrice < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Base price cannot be negative",
+        variant: "destructive",
+      });
+      setCurrentStep(1); // Go to pricing step
+      return;
+    }
+
+    if (formData.unitCost < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Unit cost cannot be negative",
+        variant: "destructive",
+      });
+      setCurrentStep(1); // Go to pricing step
+      return;
+    }
+
+    if (formData.minQuantity > formData.maxQuantity) {
+      toast({
+        title: "Validation Error",
+        description: "Minimum quantity cannot be greater than maximum quantity",
+        variant: "destructive",
+      });
+      setCurrentStep(2); // Go to details step
+      return;
+    }
+
+    // Submit after validation passes
+    if (editingItem?.id) {
       updateItemMutation.mutate({ id: editingItem.id, data: formData });
     } else {
       createItemMutation.mutate(formData);
