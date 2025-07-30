@@ -224,10 +224,43 @@ export default function OrderEditor() {
       return;
     }
 
+    // Validate at least 1 item is present
+    if (!data.items || data.items.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'At least one item is required to create an order.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if at least one item has valid required fields
+    const validItems = data.items.filter(item => 
+      item.productName && 
+      item.productName.trim() !== '' && 
+      item.quantity > 0 && 
+      item.unitPrice >= 0
+    );
+
+    if (validItems.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please add at least one valid item with product name, quantity, and price.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Use filtered data with only valid items
+    const filteredData = {
+      ...data,
+      items: validItems
+    };
+
     if (isEditing) {
-      updateOrderMutation.mutate(data);
+      updateOrderMutation.mutate(filteredData);
     } else {
-      createOrderMutation.mutate(data);
+      createOrderMutation.mutate(filteredData);
     }
   }
 
