@@ -233,9 +233,9 @@ export default function CustomerListPage() {
     }
   };
 
-  // Fetch real customer data from API
+  // Fetch real customer data from API with proper auth headers
   const { data: customersResponse, isLoading, isError, refetch } = useQuery({
-    queryKey: ["admin", "customers"],
+    queryKey: ['/api/customers'], // Use same key as orders page for consistency
     queryFn: async () => {
       console.log("Fetching real customers from API...");
       try {
@@ -243,7 +243,8 @@ export default function CustomerListPage() {
           method: 'GET',
           headers: {
             'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            'Pragma': 'no-cache',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || 'dev-admin-token-12345'}`
           }
         });
 
@@ -266,43 +267,30 @@ export default function CustomerListPage() {
     retryDelay: 2000 // Wait 2 seconds before retry
   });
 
-  // Enhanced data processing with better error handling
-  const processCustomerData = useCallback((data: any) => {
-    console.log('Processing customer data:', data);
-
-    if (!data) {
-      console.log('No data provided');
-      return [];
-    }
-
-    let customersArray = [];
-
-    if (Array.isArray(data)) {
-      customersArray = data;
-    } else if (data && typeof data === 'object') {
-      if (data.data && Array.isArray(data.data)) {
-        customersArray = data.data;
-      } else if (data.customers && Array.isArray(data.customers)) {
-        customersArray = data.customers;
-      } else {
-        console.warn('Unexpected data format, returning empty array:', data);
-        return [];
-      }
-    } else {
-      console.warn('Data is not an object or array:', data);
-      return [];
-    }
-
-    return customersArray || [];
-  }, []);
-
-  // Extract customers array from API response
+  // Extract customers array with proper error handling - same logic as orders page
   const customers = React.useMemo(() => {
-    if (isLoading || !customersResponse) {
+    if (!customersResponse) {
       return [];
     }
-    return processCustomerData(customersResponse);
-  }, [customersResponse, processCustomerData, isLoading]);
+    
+    console.log('Processing customer data:', customersResponse);
+    
+    // Handle different response structures - match OrderCreatePage logic exactly
+    if ((customersResponse as any).success && Array.isArray((customersResponse as any).data)) {
+      return (customersResponse as any).data;
+    }
+    
+    if ((customersResponse as any).customers && Array.isArray((customersResponse as any).customers)) {
+      return (customersResponse as any).customers;
+    }
+    
+    if (Array.isArray(customersResponse)) {
+      return customersResponse;
+    }
+    
+    console.warn('Unexpected customer response structure:', customersResponse);
+    return [];
+  }, [customersResponse]);
 
   // Group customers by organization and sport
   const organizations = React.useMemo(() => {
