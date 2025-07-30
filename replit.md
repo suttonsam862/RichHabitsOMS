@@ -88,6 +88,7 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **API Compatibility**: Fixed field name mapping (productName→product_name, unitPrice→unit_price, totalPrice→total_price)
 - **Production Ready**: All three order creation interfaces work seamlessly with transaction-safe backend API
 - **Error Handling**: Comprehensive error handling with rollback capabilities and detailed logging for debugging
+- **Clean Response Format**: Returns simplified `{ order, items }` structure with 201 status code as per API specification
 
 ### AddCatalogItemForm Form Submission Fix (July 30, 2025)
 - **Status**: 100% Complete - Form now submits to correct endpoint with SKU generation

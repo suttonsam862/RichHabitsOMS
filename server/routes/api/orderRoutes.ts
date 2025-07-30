@@ -188,16 +188,10 @@ async function createOrder(req: Request, res: Response) {
 
     console.log('✅ Order items created successfully:', createdItems.length);
 
-    // Return the complete order with items
-    const completeOrder = {
-      ...createdOrder,
-      items: createdItems
-    };
-
+    // Return simplified structure with order and items
     res.status(201).json({
-      success: true,
-      message: 'Order created successfully',
-      order: completeOrder
+      order: createdOrder,
+      items: createdItems
     });
 
   } catch (error: any) {
