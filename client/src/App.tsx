@@ -1,3 +1,4 @@
+
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "./components/ui/toaster";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -7,16 +8,6 @@ import { MutationProvider } from "./context/MutationContext";
 import { AppWithSpinner } from "./components/AppWithSpinner";
 import { GlobalErrorBoundary } from "./components/error/GlobalErrorBoundary";
 import { AppRouter } from "./components/Router";
-
-// Basic error handling - don't suppress all rejections
-const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-  console.error('Unhandled promise rejection:', event.reason);
-  // Don't prevent default - let React handle it properly
-};
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('unhandledrejection', handleUnhandledRejection);
-}
 
 function App() {
   return (

@@ -1,3 +1,4 @@
+
 /**
  * Comprehensive Error Handler for ThreadCraft Application
  * Handles all unhandled promise rejections and provides structured error logging
@@ -31,19 +32,16 @@ class ErrorHandler {
   }
 
   private setupGlobalHandlers() {
-    // Handle unhandled promise rejections
+    // Handle unhandled promise rejections - simplified to avoid refresh loops
     window.addEventListener('unhandledrejection', (event) => {
-      // TEMPORARY: Enhanced logging for debugging
-      console.group('🚨 DETAILED UNHANDLED REJECTION');
-      console.error('Raw event.reason:', event.reason);
-      console.error('Event.reason type:', typeof event.reason);
-      console.error('Event.reason.message:', event.reason?.message);
-      console.error('Event.reason.stack:', event.reason?.stack);
-      console.error('Event.reason.status:', event.reason?.status);
-      console.error('Event.reason.url:', event.reason?.url);
-      console.error('Full event object:', event);
+      // Basic logging without preventing default behavior
+      console.group('🚨 UNHANDLED REJECTION DETAILS');
+      console.error('Reason:', event.reason);
+      console.error('Type:', typeof event.reason);
+      console.error('Message:', event.reason?.message);
+      console.error('Stack:', event.reason?.stack);
       console.error('Timestamp:', new Date().toISOString());
-      console.error('Current URL:', window.location.href);
+      console.error('URL:', window.location.href);
       console.groupEnd();
 
       const error = this.processError(event.reason, {
@@ -54,8 +52,7 @@ class ErrorHandler {
         userAgent: navigator.userAgent
       });
 
-      // Prevent page refresh from error handling
-      event.preventDefault();
+      // Don't prevent default - let React handle properly
       
       // Log structured error
       this.logError(error);
