@@ -132,7 +132,15 @@ export const circuitBreaker = new FetchCircuitBreaker();
 export async function safeFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const endpoint = url.split('?')[0]; // Remove query params for circuit breaker key
 
-  if (circuitBreaker.shouldBlockRequest(endpoint)) {
+  // Bypass circuit breaker in development environment
+  if (import.meta.env.DEV) {
+    console.log('🔧 Development mode: Bypassing circuit breaker for', endpoint);
+    return fetch(url, options);
+  }
+
+  if (circuitBreaker.canMakeRequest(endpoint)) {
+    // Request allowed, proceed
+  } else {
     const error = new Error(`Circuit breaker is OPEN for ${endpoint}`);
     (error as any).circuitBreakerBlocked = true;
     throw error;

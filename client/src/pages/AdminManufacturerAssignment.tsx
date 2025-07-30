@@ -369,53 +369,53 @@ export default function ManufacturingManagement() {
     };
   }, [orders, manufacturers]);
 
-  // Filtered and sorted orders
+  // Filter and process orders for display
   const filteredOrders = useMemo(() => {
-    let filtered = orders;
+    if (!orders || !Array.isArray(orders)) return [];
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer?.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer?.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    // Priority filter
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(order => order.priority === priorityFilter);
-    }
-
-    // Manufacturer filter
-    if (manufacturerFilter !== 'all') {
-      if (manufacturerFilter === 'unassigned') {
-        filtered = filtered.filter(order => !order.manufacturerId);
-      } else {
-        filtered = filtered.filter(order => order.manufacturerId === manufacturerFilter);
+    return orders.filter(order => {
+      // Search filter
+      if (searchTerm) {
+        const searchTermLower = searchTerm.toLowerCase();
+        if (
+          !order.orderNumber.toLowerCase().includes(searchTermLower) &&
+          !(order.customer?.company?.toLowerCase().includes(searchTermLower) ||
+            order.customer?.firstName?.toLowerCase().includes(searchTermLower) ||
+            order.customer?.lastName?.toLowerCase().includes(searchTermLower))
+        ) {
+          return false;
+        }
       }
-    }
 
-    // Date range filter
-    if (dateRangeFilter.start) {
-      filtered = filtered.filter(order => 
-        new Date(order.createdAt) >= new Date(dateRangeFilter.start!)
-      );
-    }
-    if (dateRangeFilter.end) {
-      filtered = filtered.filter(order => 
-        new Date(order.createdAt) <= new Date(dateRangeFilter.end!)
-      );
-    }
+      // Status filter
+      if (statusFilter !== 'all' && order.status !== statusFilter) {
+        return false;
+      }
 
-    // Sort by priority and creation date
-    return filtered.sort((a, b) => {
+      // Priority filter
+      if (priorityFilter !== 'all' && order.priority !== priorityFilter) {
+        return false;
+      }
+
+      // Manufacturer filter
+      if (manufacturerFilter !== 'all') {
+        if (manufacturerFilter === 'unassigned') {
+          if (order.manufacturerId) return false;
+        } else {
+          if (order.manufacturerId !== manufacturerFilter) return false;
+        }
+      }
+
+      // Date range filter
+      if (dateRangeFilter.start && new Date(order.createdAt) < new Date(dateRangeFilter.start)) {
+        return false;
+      }
+      if (dateRangeFilter.end && new Date(order.createdAt) > new Date(dateRangeFilter.end)) {
+        return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
       const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
       const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
       if (priorityDiff !== 0) return priorityDiff;
@@ -436,7 +436,7 @@ export default function ManufacturingManagement() {
       if (!manufacturerData.email?.trim()) {
         throw new Error('Email is required');
       }
-      
+
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(manufacturerData.email.trim())) {
@@ -456,12 +456,12 @@ export default function ManufacturingManagement() {
       };
 
       const response = await apiRequest('POST', '/api/users/create-manufacturer', cleanedData);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Network error' }));
         throw new Error(errorData.message || `Failed to create manufacturer: ${response.status}`);
       }
-      
+
       return response.json();
     },
     onSuccess: createMutationSuccessHandler(globalDataSync, {
@@ -512,10 +512,10 @@ export default function ManufacturingManagement() {
       fetchAllData(true); // Refresh all data
       queryClient.invalidateQueries({ queryKey: ['enhanced-orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/stats'] });
-      
+
       const selectedOrder = orders.find(o => o.id === selectedOrderId);
       const selectedManufacturer = manufacturers.find(m => m.id === selectedManufacturerId);
-      
+
       toast({
         title: 'Manufacturer Assigned Successfully',
         description: response?.message || `${selectedManufacturer?.firstName || 'Manufacturer'} assigned to order ${selectedOrder?.orderNumber || selectedOrderId}`,
@@ -556,12 +556,12 @@ export default function ManufacturingManagement() {
           const response = await apiRequest('PUT', `/api/orders/${orderId}/assign-manufacturer`, {
             manufacturerId: data.manufacturerId
           });
-          
+
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: 'Network error' }));
             throw new Error(`Order ${orderId}: ${errorData.message || 'Assignment failed'}`);
           }
-          
+
           return response.json();
         })
       );
@@ -621,12 +621,12 @@ export default function ManufacturingManagement() {
       };
 
       const response = await apiRequest('POST', '/api/messages', cleanedData);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Network error' }));
         throw new Error(errorData.message || `Failed to send message: ${response.status}`);
       }
-      
+
       return response.json();
     },
     onSuccess: createMutationSuccessHandler(globalDataSync, {
@@ -674,12 +674,12 @@ export default function ManufacturingManagement() {
       };
 
       const response = await apiRequest('PUT', `/api/production-tasks/${data.orderId}/progress`, cleanedData);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Network error' }));
         throw new Error(errorData.message || `Failed to update progress: ${response.status}`);
       }
-      
+
       return response.json();
     },
     onSuccess: createMutationSuccessHandler(globalDataSync, {
@@ -951,7 +951,8 @@ export default function ManufacturingManagement() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0```text
+ pb-2">
               <CardTitle className="text-sm font-medium">Overdue</CardTitle>
               <XCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>

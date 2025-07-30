@@ -7,6 +7,8 @@ import { sendEmail, getCustomerInviteEmailTemplate } from '../../email';
 import { requireAuth, requireRole } from '../auth/auth';
 import { customerTransformers } from '../../utils/schemaTransformers';
 import crypto from 'crypto';
+import multer from 'multer';
+import { handleCatalogImageUpload } from '../../imageUpload.js';
 
 const router = Router();
 
@@ -262,7 +264,7 @@ export async function createCustomer(req: Request, res: Response) {
     const customerId = crypto.randomUUID();
 
     console.log('Creating customer profile with ID:', customerId);
-    
+
     // Insert customer directly into database
     const { data: insertedProfile, error: profileError } = await supabaseAdmin
       .from('customers')
@@ -339,7 +341,7 @@ async function getAllCustomers(req: Request, res: Response) {
 
     // Also get auth users for additional data
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-    
+
     if (authError) {
       console.error('Error fetching auth users:', authError);
       return res.status(500).json({
@@ -356,7 +358,7 @@ async function getAllCustomers(req: Request, res: Response) {
     if (customerProfiles && customerProfiles.length > 0) {
       for (const profile of customerProfiles) {
         const authUser = authUsers.find(u => u.id === profile.id || u.email === profile.email);
-        
+
         customers.push({
           id: profile.id,
           email: profile.email,
@@ -417,10 +419,162 @@ async function getAllCustomers(req: Request, res: Response) {
   }
 }
 
+/**
+ * Update an existing customer in Supabase
+ */
+async function updateCustomer(req: Request, res: Response) {
+  const { id } = req.params;
+  const {
+    first_name,
+    last_name,
+    email,
+    company,
+    phone,
+    address,
+    city,
+    state,
+    zip,
+    country
+  } = req.body;
+
+  try {
+    console.log(`Updating customer profile with ID: ${id}`);
+
+    // Update customer in database
+    const { data: updatedProfile, error: profileError } = await supabaseAdmin
+      .from('customers')
+      .update({
+        first_name,
+        last_name,
+        email,
+        company: company || '',
+        phone: phone || '',
+        address: address || '',
+        city: city || '',
+        state: state || '',
+        zip: zip || '',
+        country: country || '',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (profileError) {
+      console.error('Error updating customer profile:', profileError);
+      console.error('Profile error details:', JSON.stringify(profileError, null, 2));
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update customer profile: ' + profileError.message,
+        details: profileError.details || 'No additional details'
+      });
+    }
+
+    if (!updatedProfile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    console.log('Customer profile updated successfully:', updatedProfile);
+
+    // Success response with updated customer data
+    res.status(200).json({
+      success: true,
+      message: 'Customer updated successfully',
+      customer: {
+        id: updatedProfile.id,
+        firstName: updatedProfile.first_name,
+        lastName: updatedProfile.last_name,
+        email: updatedProfile.email,
+        company: updatedProfile.company,
+        phone: updatedProfile.phone,
+        created_at: updatedProfile.created_at,
+        updated_at: updatedProfile.updated_at
+      }
+    });
+
+  } catch (err: any) {
+    console.error('Unexpected error updating customer:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Unexpected error updating customer: ' + (err.message || 'Unknown error')
+    });
+  }
+}
+
+/**
+ * Upload customer photo
+ */
+async function uploadCustomerPhoto(req: Request, res: Response) {
+  const { id } = req.params;
+
+  try {
+    // Check if file exists
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    // Upload file to Supabase storage (example, adjust as needed)
+    const { data, error } = await supabaseAdmin.storage
+      .from('customer-photos')
+      .upload(`${id}/${req.file.originalname}`, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      });
+
+    if (error) {
+      console.error('Error uploading photo to Supabase:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload photo'
+      });
+    }
+
+    const photoUrl = `https://your-supabase-url.supabase.co/storage/v1/object/public/${data.path}`; // Adjust URL
+
+    // Update customer record with photo URL
+    const { error: updateError } = await supabaseAdmin
+      .from('customers')
+      .update({ photo_url: photoUrl })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error updating customer photo URL:', updateError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update customer photo URL'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Photo uploaded successfully',
+      photoUrl
+    });
+
+  } catch (error) {
+    console.error('Error uploading customer photo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload customer photo'
+    });
+  }
+}
+
 // Configure routes
 router.get('/', getAllCustomers);
 router.post('/invite', requireAuth, requireRole(['admin']), sendUserInvitation);
 router.get('/verify/:token', verifyInvitation);
 router.post('/', requireAuth, requireRole(['admin']), createCustomer);
+
+router.put('/:id', requireAuth, requireRole(['admin']), updateCustomer);
+router.patch('/:id', requireAuth, requireRole(['admin']), updateCustomer);
+router.post('/:id/photo', requireAuth, requireRole(['admin']), handleCatalogImageUpload, uploadCustomerPhoto);
 
 export default router;

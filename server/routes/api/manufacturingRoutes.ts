@@ -4,6 +4,7 @@
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth.js';
+import { supabase } from '../../db.js';
 import crypto from 'crypto';
 
 const router = Router();
