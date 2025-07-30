@@ -1030,23 +1030,23 @@ export default function CatalogItemEditPage() {
                     type="button"
                     variant="outline"
                     onClick={() => navigate('/admin/catalog')}
-                    disabled={updateMutation.isPending || isDeleting}
+                    disabled={isSaving || isDeleting}
                   >
                     Cancel
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={updateMutation.isPending || !validation.canSubmit || isSubmitDisabled || isDeleting}
+                    disabled={isSaving || !validation.canSubmit || isSubmitDisabled || isDeleting}
                     className={`bg-blue-600 hover:bg-blue-700 ${(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}`}
                     title={!validation.canSubmit ? 
                       (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
                       isSubmitDisabled ? "Please wait before submitting again" :
                       "Save catalog item changes"}
                   >
-                    {updateMutation.isPending ? (
+                    {isSaving ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Updating...
+                        Saving...
                       </>
                     ) : isSubmitDisabled ? (
                       <>
@@ -1067,7 +1067,7 @@ export default function CatalogItemEditPage() {
                   type="button"
                   variant="outline"
                   onClick={() => softDelete(catalogItem.id, catalogItem, catalogItem.name)}
-                  disabled={updateMutation.isPending || isDeleting}
+                  disabled={isSaving || isDeleting}
                   className="text-red-400 hover:bg-red-500/10 hover:text-red-300 border-red-400/30 hover:border-red-400"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />

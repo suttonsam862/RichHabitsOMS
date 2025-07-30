@@ -1088,7 +1088,7 @@ export default function CustomerEditPage() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={updateCustomerMutation.isPending || !validation.canSubmit || isSubmitDisabled}
+                  disabled={isSaving || !validation.canSubmit || isSubmitDisabled}
                   className={(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}
                   title={!validation.canSubmit ? 
                     (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
@@ -1096,7 +1096,7 @@ export default function CustomerEditPage() {
                     "Save customer changes"}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {updateCustomerMutation.isPending ? 'Saving...' : isSubmitDisabled ? 'Processing...' : 'Save Changes'}
+                  {isSaving ? 'Saving...' : isSubmitDisabled ? 'Processing...' : 'Save Changes'}
                 </Button>
               </div>
             </form>
