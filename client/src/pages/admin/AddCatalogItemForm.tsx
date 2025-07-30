@@ -126,10 +126,16 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       // Generate SKU if not provided
       const skuToUse = formData.sku.trim() || generateSKU(formData.name, formData.category);
       
+      // Map camelCase fields to snake_case for backend compatibility
       const submissionData = {
-        ...formData,
-        basePrice: parseFloat(formData.basePrice) || 0,
-        unitCost: parseFloat(formData.unitCost) || 0,
+        name: formData.name,
+        description: formData.description,
+        base_price: parseFloat(formData.basePrice) || 0,
+        unit_cost: parseFloat(formData.unitCost) || 0,
+        category: formData.category,
+        sport: formData.sport,
+        fabric: formData.fabric,
+        status: formData.status,
         sku: skuToUse
       };
       
