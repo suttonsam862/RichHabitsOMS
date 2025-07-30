@@ -766,7 +766,7 @@ async function updateCustomer(req: Request, res: Response) {
 
     res.status(200).json({
       success: true,
-      updatedCustomer: responseData
+      data: responseData
     });
 
   } catch (err: any) {
@@ -937,9 +937,11 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
     // Always return success if file was uploaded to storage
     res.status(200).json({
       success: true,
-      message: 'Photo uploaded successfully to customer_photos/ directory',
-      photoUrl,
-      storageLocation: `customer_photos/${id}_${Date.now()}.jpg`
+      data: {
+        message: 'Photo uploaded successfully to customer_photos/ directory',
+        photoUrl,
+        storageLocation: `customer_photos/${id}_${Date.now()}.jpg`
+      }
     });
 
   } catch (error: any) {
