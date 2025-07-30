@@ -1,0 +1,67 @@
+You are now acting as a senior engineer performing a **mass refactor pass** on the entire ThreadCraft codebase.
+
+Your task is to go through **every single file** (frontend and backend) and **clean, refactor, and organize** them with the following constraints:
+
+---
+
+✅ WHAT YOU SHOULD DO:
+
+1. **Organize Imports**
+- Sort all imports: external libraries first, then internal utils/components
+- Remove unused imports
+
+2. **Consistent Formatting**
+- Normalize indentation (2 or 4 spaces)
+- Clean up trailing commas, unnecessary semicolons, and extra blank lines
+- Convert all arrow functions to consistent style
+
+3. **Component Cleanup**
+- Convert unnamed functions to named if unclear
+- Collapse unnecessary `useEffect(() => { fetch(); }, [])` into custom hooks if reused
+
+4. **Route and API Refactor**
+- Standardize error handling across all Express routes
+- Replace duplicate response patterns with shared response helper if exists
+
+5. **State Cleanup**
+- Remove any unused React state or context
+- Move constants and utility functions out of components into `lib/`
+
+6. **Form and Hook Normalization**
+- Extract repeated form validation logic into shared validators
+- Convert multi-step `useState` forms into a single `useReducer` or form hook if simple
+
+7. **Naming Consistency**
+- Ensure all files use kebab-case or camelCase (based on project convention)
+- Rename any confusingly named files (e.g. `page.jsx` → `CustomerEditPage.tsx`)
+
+8. **Directory Structure**
+- Group related components under `components/` by feature
+- Move reusable logic into `lib/`, `hooks/`, or `utils/` folders
+
+9. **Comments & Documentation**
+- Add top-level comments to all exported functions or classes
+- Remove TODOs if completed, flag if abandoned
+
+10. **Type & Interface Cleanup**
+- Ensure every exported function and prop uses TypeScript interfaces
+- Consolidate repeated types into `/shared/types.ts`
+
+---
+
+❌ WHAT YOU MUST NOT DO:
+
+- ❌ Do NOT change any actual functionality or logic
+- ❌ Do NOT remove any feature or break an endpoint
+- ❌ Do NOT introduce new dependencies or libraries
+- ❌ Do NOT change how the frontend behaves
+
+---
+
+📦 Output:
+
+- Summarize all files changed
+- Describe what was refactored in each (e.g. imports sorted, props typed, useEffect removed)
+- Confirm no behavioral logic was altered
+
+You are cleaning up the codebase for maintainability and clarity only.

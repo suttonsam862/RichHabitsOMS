@@ -35,7 +35,7 @@ const DEFAULT_SPORTS = [
 /**
  * Get available categories
  */
-async function getCategories(req: Request, res: Response) {
+function getCategories(req: Request, res: Response) {
   try {
     res.status(200).json({
       success: true,
@@ -55,7 +55,7 @@ async function getCategories(req: Request, res: Response) {
 /**
  * Get available sports
  */
-async function getSports(req: Request, res: Response) {
+function getSports(req: Request, res: Response) {
   try {
     res.status(200).json({
       success: true,

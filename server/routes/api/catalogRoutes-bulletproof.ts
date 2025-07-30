@@ -202,7 +202,7 @@ async function getCatalogItemById(req: Request, res: Response) {
     const { id } = req.params;
     console.log(`🔍 BULLETPROOF GET: Fetching catalog item ${id}`);
 
-    const result = await CatalogService.getItemById(id);
+    const result = await CatalogService.getById(id);
 
     if (!result.success) {
       return res.status(404).json({
