@@ -1,12 +1,99 @@
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
+import crypto from 'crypto';
 import { CatalogService } from '../../services/catalogService';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
 const router = Router();
+
+// Create Supabase admin client
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
+/**
+ * Create a new catalog item
+ */
+async function createCatalogItem(req: Request, res: Response) {
+  const {
+    name,
+    description,
+    base_price,
+    category,
+    type,
+    fabric_options,
+    color_options,
+    size_options
+  } = req.body;
+
+  // Validate required fields
+  if (!name || base_price === undefined) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: name and base_price are required'
+    });
+  }
+
+  try {
+    console.log('Creating catalog item:', name);
+
+    // Generate a unique ID for the catalog item
+    const itemId = crypto.randomUUID();
+
+    // Insert catalog item into database
+    const { data: insertedItem, error: itemError } = await supabaseAdmin
+      .from('catalog_items')
+      .insert({
+        id: itemId,
+        name,
+        description: description || '',
+        base_price: parseFloat(base_price),
+        category: category || '',
+        type: type || '',
+        fabric_options: fabric_options || '',
+        color_options: color_options || '',
+        size_options: size_options || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (itemError) {
+      console.error('Error creating catalog item:', itemError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create catalog item: ' + itemError.message,
+        details: itemError.details || 'No additional details'
+      });
+    }
+
+    console.log('Catalog item created successfully:', insertedItem);
+
+    res.status(201).json({
+      success: true,
+      message: 'Catalog item created successfully',
+      item: insertedItem
+    });
+
+  } catch (err: any) {
+    console.error('Unexpected error creating catalog item:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Unexpected error creating catalog item: ' + (err.message || 'Unknown error')
+    });
+  }
+}
 
 // Create Supabase admin client
 const supabaseAdmin = createClient(
@@ -361,5 +448,8 @@ router.get('/:id', getCatalogItem);
 router.post('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), createCatalogItem);
 router.patch('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), updateCatalogItem);
 router.delete('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), deleteCatalogItem);
+
+// Configure routes
+router.post('/', requireAuth, requireRole(['admin']), createCatalogItem);
 
 export default router;

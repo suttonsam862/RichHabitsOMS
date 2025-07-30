@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -12,33 +13,33 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-interface AddCustomerFormProps {
+interface AddManufacturerFormProps {
   isOpen?: boolean;
   onClose?: () => void;
   onSuccess?: () => void;
 }
 
-export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: AddCustomerFormProps) {
+export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess }: AddManufacturerFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    name: '',
     email: '',
-    company: '',
     phone: '',
     address: '',
     city: '',
     state: '',
     zip: '',
     country: '',
-    sendInvite: true
+    specialties: '',
+    capacity: ''
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -46,17 +47,16 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
     }));
   };
 
-  const addCustomerMutation = useMutation({
-    mutationFn: async (customerData: typeof formData) => {
-      console.log('Submitting customer data:', customerData);
+  const addManufacturerMutation = useMutation({
+    mutationFn: async (manufacturerData: typeof formData) => {
+      console.log('Submitting manufacturer data:', manufacturerData);
       
-      // Get auth token from localStorage
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('Authentication required. Please log in again.');
       }
 
-      const response = await axios.post('/api/customers', customerData, {
+      const response = await axios.post('/api/manufacturing/manufacturers', manufacturerData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -65,22 +65,21 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
       return response.data;
     },
     onSuccess: (data) => {
-      console.log('Customer created successfully:', data);
-      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+      console.log('Manufacturer created successfully:', data);
+      queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/manufacturers'] });
       toast({
         title: "Success!",
-        description: "Customer was added successfully",
+        description: "Manufacturer was added successfully",
       });
       resetForm();
       if (onSuccess) onSuccess();
       if (onClose) onClose();
     },
     onError: (error: any) => {
-      console.error('Error adding customer:', error);
+      console.error('Error adding manufacturer:', error);
       toast({
-        title: "Failed to add customer",
-        description: error?.response?.data?.message || "There was an error creating the customer. Please try again.",
+        title: "Failed to add manufacturer",
+        description: error?.response?.data?.message || "There was an error creating the manufacturer. Please try again.",
         variant: "destructive",
       });
     }
@@ -88,24 +87,23 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
 
   const resetForm = () => {
     setFormData({
-      first_name: '',
-      last_name: '',
+      name: '',
       email: '',
-      company: '',
       phone: '',
       address: '',
       city: '',
       state: '',
       zip: '',
       country: '',
-      sendInvite: true
+      specialties: '',
+      capacity: ''
     });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting form with data:', formData);
-    addCustomerMutation.mutate(formData);
+    console.log('Submitting manufacturer form with data:', formData);
+    addManufacturerMutation.mutate(formData);
   };
 
   return (
@@ -114,60 +112,36 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
     }}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Add New Customer</DialogTitle>
+          <DialogTitle>Add New Manufacturer</DialogTitle>
           <DialogDescription>
-            Fill in the customer details below. All fields marked with an asterisk (*) are required.
+            Fill in the manufacturer details below. All fields marked with an asterisk (*) are required.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first_name">First Name *</Label>
-                <Input
-                  id="first_name"
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleInputChange}
-                  placeholder="John"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name *</Label>
-                <Input
-                  id="last_name"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleInputChange}
-                  placeholder="Doe"
-                  required
-                />
-              </div>
-            </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
+              <Label htmlFor="name">Manufacturer Name *</Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
+                id="name"
+                name="name"
+                value={formData.name}
                 onChange={handleInputChange}
-                placeholder="john.doe@example.com"
+                placeholder="ABC Manufacturing Co."
                 required
               />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
-                  id="company"
-                  name="company"
-                  value={formData.company}
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="Acme Inc."
+                  placeholder="contact@manufacturer.com"
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -189,7 +163,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
-                placeholder="123 Main St"
+                placeholder="123 Manufacturing St"
               />
             </div>
             
@@ -201,7 +175,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                   name="city"
                   value={formData.city}
                   onChange={handleInputChange}
-                  placeholder="New York"
+                  placeholder="Manufacturing City"
                 />
               </div>
               <div className="space-y-2">
@@ -211,7 +185,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                   name="state"
                   value={formData.state}
                   onChange={handleInputChange}
-                  placeholder="NY"
+                  placeholder="CA"
                 />
               </div>
             </div>
@@ -224,7 +198,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                   name="zip"
                   value={formData.zip}
                   onChange={handleInputChange}
-                  placeholder="10001"
+                  placeholder="90210"
                 />
               </div>
               <div className="space-y-2">
@@ -238,6 +212,29 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 />
               </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="specialties">Specialties</Label>
+              <Textarea
+                id="specialties"
+                name="specialties"
+                value={formData.specialties}
+                onChange={handleInputChange}
+                placeholder="Custom jerseys, sportswear, embroidery..."
+                rows={2}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="capacity">Production Capacity</Label>
+              <Input
+                id="capacity"
+                name="capacity"
+                value={formData.capacity}
+                onChange={handleInputChange}
+                placeholder="1000 units/month"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button 
@@ -249,12 +246,12 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
             </Button>
             <Button 
               type="submit"
-              disabled={addCustomerMutation.isPending}
+              disabled={addManufacturerMutation.isPending}
             >
-              {addCustomerMutation.isPending ? (
+              {addManufacturerMutation.isPending ? (
                 <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
               ) : null}
-              Add Customer
+              Add Manufacturer
             </Button>
           </DialogFooter>
         </form>

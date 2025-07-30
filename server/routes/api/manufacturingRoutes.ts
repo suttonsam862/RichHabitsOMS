@@ -2,8 +2,9 @@
  * Manufacturing management routes - Phase 6 of Database Synchronization Checklist
  */
 import { Request, Response, Router } from 'express';
-import { supabase } from '../../db.js';
+import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth.js';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ const router = Router();
 export async function getManufacturingStats(req: Request, res: Response) {
   try {
     console.log('📊 Fetching manufacturing dashboard statistics...');
-    
+
     // Get total orders count
     const { count: totalOrders } = await supabase
       .from('orders')
@@ -62,7 +63,7 @@ export async function getManufacturingStats(req: Request, res: Response) {
     // Get average completion time (for completed orders in last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const { data: recentCompletedOrders } = await supabase
       .from('orders')
       .select('created_at, updated_at')
@@ -122,7 +123,7 @@ export async function getManufacturingStats(req: Request, res: Response) {
 export async function getDesignTasks(req: Request, res: Response) {
   try {
     console.log('📋 Fetching design tasks...');
-    
+
     const { 
       status, 
       designerId, 
@@ -191,7 +192,7 @@ export async function getDesignTasks(req: Request, res: Response) {
 export async function getProductionTasks(req: Request, res: Response) {
   try {
     console.log('📋 Fetching production tasks...');
-    
+
     const { 
       status, 
       manufacturerId, 

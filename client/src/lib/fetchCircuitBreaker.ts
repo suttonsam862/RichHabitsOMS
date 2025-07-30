@@ -52,17 +52,17 @@ class FetchCircuitBreaker {
     switch (state.state) {
       case 'CLOSED':
         return true;
-      
+
       case 'OPEN':
         if (now >= state.nextRetry) {
           state.state = 'HALF_OPEN';
           return true;
         }
         return false;
-      
+
       case 'HALF_OPEN':
         return true;
-      
+
       default:
         return true;
     }
@@ -78,7 +78,7 @@ class FetchCircuitBreaker {
   recordFailure(endpoint: string, error?: any): void {
     const state = this.getState(endpoint);
     const now = Date.now();
-    
+
     state.failureCount++;
     state.lastFailure = now;
 
@@ -97,12 +97,12 @@ class FetchCircuitBreaker {
   getStatus(endpoint: string): string {
     const state = this.getState(endpoint);
     const now = Date.now();
-    
+
     if (state.state === 'OPEN' && now < state.nextRetry) {
       const remainingTime = Math.ceil((state.nextRetry - now) / 1000);
       return `BLOCKED (retry in ${remainingTime}s)`;
     }
-    
+
     return `${state.state} (failures: ${state.failureCount})`;
   }
 
@@ -113,6 +113,16 @@ class FetchCircuitBreaker {
       this.circuits.clear();
     }
   }
+
+  private shouldBlockRequest(url: string): boolean {
+    // Disable circuit breaker in development
+    if (import.meta.env.DEV) {
+      return false;
+    }
+
+    const state = this.circuits.get(url);
+    return state?.state === 'OPEN';
+  }
 }
 
 // Global circuit breaker instance
@@ -121,8 +131,8 @@ export const circuitBreaker = new FetchCircuitBreaker();
 // Enhanced fetch wrapper with circuit breaker
 export async function safeFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const endpoint = url.split('?')[0]; // Remove query params for circuit breaker key
-  
-  if (!circuitBreaker.canMakeRequest(endpoint)) {
+
+  if (this.shouldBlockRequest(endpoint)) {
     const error = new Error(`Circuit breaker is OPEN for ${endpoint}`);
     (error as any).circuitBreakerBlocked = true;
     throw error;
@@ -130,13 +140,13 @@ export async function safeFetch(url: string, options: RequestInit = {}): Promise
 
   try {
     const response = await fetch(url, options);
-    
+
     if (response.ok) {
       circuitBreaker.recordSuccess(endpoint);
     } else {
       circuitBreaker.recordFailure(endpoint, { status: response.status });
     }
-    
+
     return response;
   } catch (error) {
     circuitBreaker.recordFailure(endpoint, error);

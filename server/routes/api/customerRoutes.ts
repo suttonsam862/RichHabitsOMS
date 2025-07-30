@@ -212,8 +212,8 @@ export async function verifyInvitation(req: Request, res: Response) {
  */
 export async function createCustomer(req: Request, res: Response) {
   const {
-    firstName,
-    lastName,
+    first_name,
+    last_name,
     email,
     company,
     phone,
@@ -226,10 +226,10 @@ export async function createCustomer(req: Request, res: Response) {
   } = req.body;
 
   // Validate required fields
-  if (!firstName || !lastName || !email) {
+  if (!first_name || !last_name || !email) {
     return res.status(400).json({
       success: false,
-      message: 'Missing required fields: firstName, lastName, and email are required'
+      message: 'Missing required fields: first_name, last_name, and email are required'
     });
   }
 
@@ -262,16 +262,19 @@ export async function createCustomer(req: Request, res: Response) {
     const customerId = crypto.randomUUID();
 
     console.log('Creating customer profile with ID:', customerId);
-    // Use schema transformer for database insertion
-    const customerData = customerTransformers.toDatabase({
-      id: customerId,
-      firstName,
-      lastName,
-      email,
-      company: company || '',
-      phone: phone || '',
-      address: address || '',
-      city: city || '',
+    
+    // Insert customer directly into database
+    const { data: insertedProfile, error: profileError } = await supabaseAdmin
+      .from('customers')
+      .insert({
+        id: customerId,
+        first_name,
+        last_name,
+        email,
+        company: company || '',
+        phone: phone || '',
+        address: address || '',
+        city: city || '',
         state: state || '',
         zip: zip || '',
         country: country || '',
