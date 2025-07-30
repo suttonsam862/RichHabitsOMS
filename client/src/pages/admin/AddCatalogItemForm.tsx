@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { handlePostCreationRedirect } from '@/utils/navigation';
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 interface AddCatalogItemFormProps {
@@ -36,7 +37,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     unitCost: '',
     category: '',
     sport: '',
-    fabric: '',
+    fabric_id: '',
     status: 'active',
     sku: ''
   });
