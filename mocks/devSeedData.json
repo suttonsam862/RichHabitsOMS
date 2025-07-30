@@ -1,0 +1,812 @@
+{
+  "userProfiles": [
+    {
+      "id": "user-001-admin",
+      "username": "admin",
+      "firstName": "Sarah",
+      "lastName": "Thompson",
+      "role": "admin",
+      "phone": "+1-555-0100",
+      "company": "ThreadCraft Management",
+      "createdAt": "2024-01-15T10:00:00Z",
+      "stripeCustomerId": "cus_admin001",
+      "capabilities": {}
+    },
+    {
+      "id": "user-002-salesperson",
+      "username": "john.sales",
+      "firstName": "John",
+      "lastName": "Rodriguez",
+      "role": "salesperson",
+      "phone": "+1-555-0101",
+      "company": "ThreadCraft Sales",
+      "createdAt": "2024-01-20T09:30:00Z",
+      "stripeCustomerId": "cus_sales001",
+      "capabilities": {}
+    },
+    {
+      "id": "user-003-designer",
+      "username": "emma.design",
+      "firstName": "Emma",
+      "lastName": "Chen",
+      "role": "designer",
+      "phone": "+1-555-0102",
+      "company": "Creative Design Studio",
+      "createdAt": "2024-02-01T14:15:00Z",
+      "stripeCustomerId": "cus_designer001",
+      "capabilities": {
+        "specialties": ["Athletic wear", "Custom graphics", "Logo design"],
+        "software": ["Adobe Illustrator", "Photoshop", "CAD"],
+        "experience_years": 8
+      }
+    },
+    {
+      "id": "user-004-manufacturer",
+      "username": "precision.threads",
+      "firstName": "Michael",
+      "lastName": "Johnson",
+      "role": "manufacturer",
+      "phone": "+1-555-0103",
+      "company": "Precision Threads Inc",
+      "createdAt": "2024-01-25T11:45:00Z",
+      "stripeCustomerId": "cus_mfg001",
+      "capabilities": {
+        "specialties": ["Athletic wear", "Custom embroidery", "Screen printing"],
+        "equipment": ["Industrial sewing machines", "Embroidery equipment", "Heat press"],
+        "max_capacity": 500,
+        "turnaround_time": "7-14 days",
+        "certifications": ["ISO 9001", "OEKO-TEX Standard 100"]
+      }
+    },
+    {
+      "id": "user-005-manufacturer",
+      "username": "elite.garments",
+      "firstName": "Lisa",
+      "lastName": "Park",
+      "role": "manufacturer", 
+      "phone": "+1-555-0104",
+      "company": "Elite Garment Solutions",
+      "createdAt": "2024-02-10T16:20:00Z",
+      "stripeCustomerId": "cus_mfg002",
+      "capabilities": {
+        "specialties": ["Team uniforms", "Corporate apparel", "Sublimation printing"],
+        "equipment": ["Sublimation printers", "Heat transfer", "Cut and sew"],
+        "max_capacity": 750,
+        "turnaround_time": "5-10 days",
+        "certifications": ["Fair Trade", "Sustainable Manufacturing"]
+      }
+    }
+  ],
+  "customers": [
+    {
+      "id": "customer-001",
+      "userId": "user-006-customer",
+      "firstName": "David",
+      "lastName": "Williams",
+      "email": "david.williams@riverside-athletics.com",
+      "phone": "+1-555-0201",
+      "company": "Riverside High School Athletics",
+      "sport": "Basketball",
+      "organizationType": "education",
+      "address": "123 School District Lane",
+      "city": "Riverside",
+      "state": "CA",
+      "zip": "92501",
+      "country": "USA",
+      "createdAt": "2024-02-15T10:30:00Z"
+    },
+    {
+      "id": "customer-002", 
+      "userId": "user-007-customer",
+      "firstName": "Maria",
+      "lastName": "Garcia",
+      "email": "maria@summitcorporate.com",
+      "phone": "+1-555-0202",
+      "company": "Summit Corporate Solutions",
+      "sport": "All Around Item",
+      "organizationType": "business",
+      "address": "456 Business Plaza Dr, Suite 200",
+      "city": "San Francisco",
+      "state": "CA",
+      "zip": "94105",
+      "country": "USA", 
+      "createdAt": "2024-02-20T14:45:00Z"
+    },
+    {
+      "id": "customer-003",
+      "userId": "user-008-customer", 
+      "firstName": "James",
+      "lastName": "Mitchell",
+      "email": "coach.mitchell@thunderbolts.org",
+      "phone": "+1-555-0203",
+      "company": "Thunder Bolts Soccer Club",
+      "sport": "Soccer",
+      "organizationType": "sports",
+      "address": "789 Athletic Complex Way",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78701",
+      "country": "USA",
+      "createdAt": "2024-03-01T09:15:00Z"
+    },
+    {
+      "id": "customer-004",
+      "userId": "user-009-customer",
+      "firstName": "Jennifer",
+      "lastName": "Brown",
+      "email": "jennifer.brown@oceanview-hospital.org",
+      "phone": "+1-555-0204",
+      "company": "Ocean View Medical Center",
+      "sport": "All Around Item",
+      "organizationType": "nonprofit",
+      "address": "321 Medical Center Blvd",
+      "city": "Miami",
+      "state": "FL",
+      "zip": "33101",
+      "country": "USA",
+      "createdAt": "2024-03-05T11:20:00Z"
+    },
+    {
+      "id": "customer-005",
+      "userId": "user-010-customer",
+      "firstName": "Robert",
+      "lastName": "Taylor",
+      "email": "rtaylor@cityfirefighters.gov",
+      "phone": "+1-555-0205",
+      "company": "Metro City Fire Department",
+      "sport": "All Around Item", 
+      "organizationType": "government",
+      "address": "555 Emergency Services Ave",
+      "city": "Denver",
+      "state": "CO",
+      "zip": "80201",
+      "country": "USA",
+      "createdAt": "2024-03-10T08:00:00Z"
+    }
+  ],
+  "catalogItems": [
+    {
+      "id": "catalog-001",
+      "name": "Custom Basketball Jersey",
+      "category": "Jerseys",
+      "sport": "Basketball",
+      "basePrice": "45.99",
+      "unitCost": "22.50",
+      "sku": "BBALL-JERSEY-001",
+      "status": "active",
+      "imageUrl": "/images/catalog/basketball-jersey-primary.jpg",
+      "imageVariants": {
+        "thumbnail": "/images/catalog/basketball-jersey-thumb.jpg",
+        "medium": "/images/catalog/basketball-jersey-med.jpg", 
+        "large": "/images/catalog/basketball-jersey-large.jpg",
+        "original": "/images/catalog/basketball-jersey-original.jpg",
+        "gallery": [
+          "/images/catalog/basketball-jersey-front.jpg",
+          "/images/catalog/basketball-jersey-back.jpg",
+          "/images/catalog/basketball-jersey-side.jpg"
+        ]
+      },
+      "images": [
+        {
+          "id": "img-001",
+          "url": "/images/catalog/basketball-jersey-primary.jpg",
+          "alt": "Custom Basketball Jersey - Primary View",
+          "isPrimary": true,
+          "uploadedAt": "2024-01-15T10:00:00Z"
+        },
+        {
+          "id": "img-002", 
+          "url": "/images/catalog/basketball-jersey-back.jpg",
+          "alt": "Custom Basketball Jersey - Back View",
+          "isPrimary": false,
+          "uploadedAt": "2024-01-15T10:05:00Z"
+        }
+      ],
+      "measurementChartUrl": "/charts/basketball-jersey-measurements.pdf",
+      "hasMeasurements": true,
+      "measurementInstructions": "Measure chest circumference, length from shoulder to hem, and sleeve length. Size chart available for reference.",
+      "etaDays": "10",
+      "preferredManufacturerId": "user-004-manufacturer",
+      "fabric": "Moisture-wicking polyester",
+      "description": "High-performance basketball jersey with custom team colors, numbers, and logos. Features moisture-wicking fabric and athletic fit for optimal performance.",
+      "sizes": ["XS", "S", "M", "L", "XL", "XXL", "XXXL"],
+      "colors": ["Red", "Blue", "Green", "Black", "White", "Navy", "Orange", "Purple"],
+      "customizationOptions": [
+        "Team name",
+        "Player name", 
+        "Player number",
+        "Team logo",
+        "Sponsor logos"
+      ],
+      "minQuantity": "12",
+      "maxQuantity": "100",
+      "tags": ["basketball", "athletic", "team", "moisture-wicking"],
+      "specifications": {
+        "material": "100% Polyester",
+        "weight": "4.5 oz",
+        "fit": "Athletic cut",
+        "care": "Machine wash cold, tumble dry low"
+      },
+      "buildInstructions": "Cut fabric according to size specifications, apply heat transfer vinyl for numbers/names, embroider or screen print logos, assemble with flatlock seams.",
+      "createdAt": "2024-01-15T10:00:00Z",
+      "updatedAt": "2024-03-01T15:30:00Z"
+    },
+    {
+      "id": "catalog-002",
+      "name": "Soccer Team Uniform Set",
+      "category": "Uniforms",
+      "sport": "Soccer", 
+      "basePrice": "89.99",
+      "unitCost": "45.00",
+      "sku": "SOCCER-UNIFORM-001",
+      "status": "active",
+      "imageUrl": "/images/catalog/soccer-uniform-primary.jpg",
+      "imageVariants": {
+        "thumbnail": "/images/catalog/soccer-uniform-thumb.jpg",
+        "medium": "/images/catalog/soccer-uniform-med.jpg",
+        "large": "/images/catalog/soccer-uniform-large.jpg",
+        "original": "/images/catalog/soccer-uniform-original.jpg",
+        "gallery": [
+          "/images/catalog/soccer-uniform-front.jpg",
+          "/images/catalog/soccer-uniform-shorts.jpg",
+          "/images/catalog/soccer-uniform-socks.jpg"
+        ]
+      },
+      "images": [
+        {
+          "id": "img-003",
+          "url": "/images/catalog/soccer-uniform-primary.jpg",
+          "alt": "Soccer Team Uniform Set - Complete Kit",
+          "isPrimary": true,
+          "uploadedAt": "2024-01-20T11:30:00Z"
+        }
+      ],
+      "measurementChartUrl": "/charts/soccer-uniform-measurements.pdf", 
+      "hasMeasurements": true,
+      "measurementInstructions": "Includes jersey, shorts, and socks. Measure chest, waist, and inseam for proper fit.",
+      "etaDays": "14",
+      "preferredManufacturerId": "user-005-manufacturer",
+      "fabric": "Lightweight polyester blend",
+      "description": "Complete soccer uniform set including jersey, shorts, and socks. Sublimation printed for vibrant colors and durability.",
+      "sizes": ["Youth S", "Youth M", "Youth L", "Adult S", "Adult M", "Adult L", "Adult XL", "Adult XXL"],
+      "colors": ["Royal Blue", "Red", "Green", "Black", "White", "Navy", "Yellow"],
+      "customizationOptions": [
+        "Team name",
+        "Player name",
+        "Player number", 
+        "Team crest",
+        "Sponsor logos",
+        "Captain armband"
+      ],
+      "minQuantity": "15",
+      "maxQuantity": "50",
+      "tags": ["soccer", "uniform", "complete-set", "sublimation"],
+      "specifications": {
+        "material": "85% Polyester, 15% Spandex",
+        "weight": "5.2 oz jersey, 3.8 oz shorts",
+        "fit": "Athletic fit with stretch",
+        "care": "Machine wash warm, hang dry"
+      },
+      "buildInstructions": "Sublimation print all graphics on white base fabric, cut and sew components, apply heat transfer numbers if needed.",
+      "createdAt": "2024-01-20T11:30:00Z",
+      "updatedAt": "2024-02-28T10:15:00Z"
+    },
+    {
+      "id": "catalog-003",
+      "name": "Corporate Polo Shirt",
+      "category": "Corporate Wear",
+      "sport": "All Around Item",
+      "basePrice": "32.99",
+      "unitCost": "18.75",
+      "sku": "CORP-POLO-001",
+      "status": "active",
+      "imageUrl": "/images/catalog/corporate-polo-primary.jpg",
+      "imageVariants": {
+        "thumbnail": "/images/catalog/corporate-polo-thumb.jpg",
+        "medium": "/images/catalog/corporate-polo-med.jpg",
+        "large": "/images/catalog/corporate-polo-large.jpg",
+        "original": "/images/catalog/corporate-polo-original.jpg",
+        "gallery": [
+          "/images/catalog/corporate-polo-colors.jpg"
+        ]
+      },
+      "images": [
+        {
+          "id": "img-004",
+          "url": "/images/catalog/corporate-polo-primary.jpg",
+          "alt": "Corporate Polo Shirt - Navy Blue",
+          "isPrimary": true,
+          "uploadedAt": "2024-02-01T09:00:00Z"
+        }
+      ],
+      "measurementChartUrl": "/charts/polo-measurements.pdf",
+      "hasMeasurements": true,
+      "measurementInstructions": "Standard business casual fit. Measure chest and length for sizing.",
+      "etaDays": "7",
+      "preferredManufacturerId": "user-004-manufacturer",
+      "fabric": "Cotton-polyester blend",
+      "description": "Professional polo shirt perfect for corporate branding and team uniforms. Features embroidered logos and comfortable business casual fit.",
+      "sizes": ["XS", "S", "M", "L", "XL", "XXL", "XXXL"],
+      "colors": ["Navy", "Black", "White", "Gray", "Royal Blue", "Forest Green", "Burgundy"],
+      "customizationOptions": [
+        "Company logo embroidery",
+        "Employee name",
+        "Department",
+        "Pocket logo"
+      ],
+      "minQuantity": "6",
+      "maxQuantity": "200",
+      "tags": ["corporate", "polo", "business-casual", "embroidery"],
+      "specifications": {
+        "material": "65% Cotton, 35% Polyester",
+        "weight": "6.5 oz",
+        "fit": "Classic business fit",
+        "care": "Machine wash cold, tumble dry medium"
+      },
+      "buildInstructions": "Embroider logos before construction, standard polo assembly with reinforced collar and button placket.",
+      "createdAt": "2024-02-01T09:00:00Z",
+      "updatedAt": "2024-02-25T14:20:00Z"
+    },
+    {
+      "id": "catalog-004",
+      "name": "Custom Football Practice Jersey",
+      "category": "Jerseys",
+      "sport": "Football",
+      "basePrice": "38.99",
+      "unitCost": "19.25",
+      "sku": "FOOTBALL-PRACTICE-001",
+      "status": "active", 
+      "imageUrl": "/images/catalog/football-practice-primary.jpg",
+      "imageVariants": {
+        "thumbnail": "/images/catalog/football-practice-thumb.jpg",
+        "medium": "/images/catalog/football-practice-med.jpg",
+        "large": "/images/catalog/football-practice-large.jpg",
+        "original": "/images/catalog/football-practice-original.jpg",
+        "gallery": []
+      },
+      "images": [
+        {
+          "id": "img-005",
+          "url": "/images/catalog/football-practice-primary.jpg",
+          "alt": "Custom Football Practice Jersey",
+          "isPrimary": true,
+          "uploadedAt": "2024-02-10T13:45:00Z"
+        }
+      ],
+      "measurementChartUrl": "/charts/football-jersey-measurements.pdf",
+      "hasMeasurements": true,
+      "measurementInstructions": "Loose athletic fit for layering. Measure chest and desired length.",
+      "etaDays": "8",
+      "preferredManufacturerId": "user-004-manufacturer",
+      "fabric": "Durable mesh polyester",
+      "description": "Durable practice jersey for football teams. Mesh construction for breathability with reinforced stitching for contact sports.",
+      "sizes": ["YS", "YM", "YL", "S", "M", "L", "XL", "XXL", "XXXL", "XXXXL"],
+      "colors": ["Red", "Blue", "Green", "Black", "White", "Gold", "Purple", "Orange"],
+      "customizationOptions": [
+        "Team name",
+        "Player number",
+        "Player name", 
+        "Team logo",
+        "Position designation"
+      ],
+      "minQuantity": "20",
+      "maxQuantity": "80",
+      "tags": ["football", "practice", "mesh", "durable"],
+      "specifications": {
+        "material": "100% Polyester Mesh",
+        "weight": "5.8 oz",
+        "fit": "Loose athletic fit",
+        "care": "Machine wash cold, air dry recommended"
+      },
+      "buildInstructions": "Screen print numbers and names, tackle twill for team logos, reinforce all stress points with bar tacks.",
+      "createdAt": "2024-02-10T13:45:00Z",
+      "updatedAt": "2024-03-01T11:00:00Z"
+    },
+    {
+      "id": "catalog-005",
+      "name": "Medical Scrubs Set",
+      "category": "Professional Wear",
+      "sport": "All Around Item",
+      "basePrice": "65.99",
+      "unitCost": "32.00",
+      "sku": "MEDICAL-SCRUBS-001",
+      "status": "active",
+      "imageUrl": "/images/catalog/medical-scrubs-primary.jpg",
+      "imageVariants": {
+        "thumbnail": "/images/catalog/medical-scrubs-thumb.jpg",
+        "medium": "/images/catalog/medical-scrubs-med.jpg",
+        "large": "/images/catalog/medical-scrubs-large.jpg",
+        "original": "/images/catalog/medical-scrubs-original.jpg",
+        "gallery": [
+          "/images/catalog/medical-scrubs-colors.jpg",
+          "/images/catalog/medical-scrubs-details.jpg"
+        ]
+      },
+      "images": [
+        {
+          "id": "img-006",
+          "url": "/images/catalog/medical-scrubs-primary.jpg",
+          "alt": "Medical Scrubs Set - Navy Blue",
+          "isPrimary": true,
+          "uploadedAt": "2024-02-15T16:30:00Z"
+        }
+      ],
+      "measurementChartUrl": "/charts/scrubs-measurements.pdf",
+      "hasMeasurements": true,
+      "measurementInstructions": "Professional medical fit. Includes top and pants. Measure chest, waist, and inseam.",
+      "etaDays": "12",
+      "preferredManufacturerId": "user-005-manufacturer",
+      "fabric": "Medical-grade cotton blend",
+      "description": "Professional medical scrubs set with embroidered hospital logos and staff names. Antimicrobial fabric treatment available.",
+      "sizes": ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"],
+      "colors": ["Navy", "Ceil Blue", "Royal Blue", "Teal", "Black", "Wine", "Hunter Green"],
+      "customizationOptions": [
+        "Hospital logo embroidery",
+        "Staff name",
+        "Department",
+        "Title/credentials",
+        "Antimicrobial treatment"
+      ],
+      "minQuantity": "10",
+      "maxQuantity": "100",
+      "tags": ["medical", "scrubs", "professional", "antimicrobial"],
+      "specifications": {
+        "material": "55% Cotton, 42% Polyester, 3% Spandex",
+        "weight": "7.2 oz",
+        "fit": "Professional medical fit",
+        "care": "Machine wash hot, tumble dry medium, bleach safe"
+      },
+      "buildInstructions": "Apply antimicrobial treatment if requested, embroider logos and names, construct with reinforced pockets and stress points.",
+      "createdAt": "2024-02-15T16:30:00Z",
+      "updatedAt": "2024-03-05T09:45:00Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "order-001",
+      "orderNumber": "ORD-2024-001",
+      "customerId": "customer-001",
+      "salespersonId": "user-002-salesperson",
+      "assignedDesignerId": "user-003-designer",
+      "assignedManufacturerId": "user-004-manufacturer",
+      "status": "design_in_progress",
+      "priority": "high",
+      "totalAmount": "1379.88",
+      "tax": "110.39",
+      "discount": "0.00",
+      "notes": "Need jerseys ready for tournament in 3 weeks. Custom team logo design required.",
+      "internalNotes": "Rush order - coordinate with manufacturer for expedited production",
+      "customerRequirements": "Team colors must match school colors exactly (Pantone 286 Blue and White). Numbers must be tackle twill.",
+      "deliveryAddress": "123 School District Lane, Riverside, CA 92501",
+      "deliveryInstructions": "Deliver to athletics office, contact David Williams at least 1 day before delivery",
+      "rushOrder": true,
+      "estimatedDeliveryDate": "2024-04-01T17:00:00Z",
+      "actualDeliveryDate": null,
+      "isPaid": false,
+      "stripeSessionId": null,
+      "paymentDate": null,
+      "logoUrl": "/logos/riverside-athletics-logo.png",
+      "companyName": "Riverside High School Athletics",
+      "createdAt": "2024-03-15T10:30:00Z",
+      "updatedAt": "2024-03-20T14:15:00Z"
+    },
+    {
+      "id": "order-002",
+      "orderNumber": "ORD-2024-002", 
+      "customerId": "customer-002",
+      "salespersonId": "user-002-salesperson",
+      "assignedDesignerId": null,
+      "assignedManufacturerId": "user-004-manufacturer",
+      "status": "pending_production",
+      "priority": "medium",
+      "totalAmount": "1647.50",
+      "tax": "131.80",
+      "discount": "50.00",
+      "notes": "Corporate polo shirts for new employee onboarding program",
+      "internalNotes": "Bulk order discount applied. Customer may have additional orders quarterly.",
+      "customerRequirements": "Logo embroidery must be high quality - these will be worn by executives",
+      "deliveryAddress": "456 Business Plaza Dr, Suite 200, San Francisco, CA 94105",
+      "deliveryInstructions": "Schedule delivery with Maria Garcia, building requires 24hr notice",
+      "rushOrder": false,
+      "estimatedDeliveryDate": "2024-04-10T12:00:00Z",
+      "actualDeliveryDate": null,
+      "isPaid": true,
+      "stripeSessionId": "cs_summit_corp_001",
+      "paymentDate": "2024-03-18T09:45:00Z",
+      "logoUrl": "/logos/summit-corporate-logo.png",
+      "companyName": "Summit Corporate Solutions",
+      "createdAt": "2024-03-18T09:30:00Z",
+      "updatedAt": "2024-03-22T11:20:00Z"
+    },
+    {
+      "id": "order-003",
+      "orderNumber": "ORD-2024-003",
+      "customerId": "customer-003", 
+      "salespersonId": "user-002-salesperson",
+      "assignedDesignerId": "user-003-designer",
+      "assignedManufacturerId": "user-005-manufacturer",
+      "status": "draft",
+      "priority": "medium",
+      "totalAmount": "2249.75",
+      "tax": "179.98",
+      "discount": "0.00",
+      "notes": "Complete soccer uniform set for spring season",
+      "internalNotes": "Customer requested quote for additional goalkeeper uniforms - follow up needed",
+      "customerRequirements": "Need both home and away kits. Sublimation printing for sponsor logos.",
+      "deliveryAddress": "789 Athletic Complex Way, Austin, TX 78701",
+      "deliveryInstructions": "Deliver to equipment room, Coach Mitchell will be available weekdays 2-6 PM",
+      "rushOrder": false,
+      "estimatedDeliveryDate": "2024-04-15T16:00:00Z",
+      "actualDeliveryDate": null,
+      "isPaid": false,
+      "stripeSessionId": null,
+      "paymentDate": null,
+      "logoUrl": "/logos/thunderbolts-soccer-logo.png",
+      "companyName": "Thunder Bolts Soccer Club",
+      "createdAt": "2024-03-20T15:45:00Z",
+      "updatedAt": "2024-03-21T10:30:00Z"
+    },
+    {
+      "id": "order-004",
+      "orderNumber": "ORD-2024-004",
+      "customerId": "customer-004",
+      "salespersonId": "user-002-salesperson",
+      "assignedDesignerId": null,
+      "assignedManufacturerId": "user-005-manufacturer",
+      "status": "in_production",
+      "priority": "high",
+      "totalAmount": "3299.50",
+      "tax": "263.96",
+      "discount": "150.00",
+      "notes": "Medical scrubs for new hospital wing opening",
+      "internalNotes": "Antimicrobial treatment required. Large order - coordinate production schedule.",
+      "customerRequirements": "All scrubs must have antimicrobial treatment. Department-specific embroidery required.",
+      "deliveryAddress": "321 Medical Center Blvd, Miami, FL 33101",
+      "deliveryInstructions": "Deliver to purchasing department loading dock, schedule with Jennifer Brown 48hrs in advance",
+      "rushOrder": true,
+      "estimatedDeliveryDate": "2024-03-28T08:00:00Z",
+      "actualDeliveryDate": null,
+      "isPaid": true,
+      "stripeSessionId": "cs_oceanview_med_001",
+      "paymentDate": "2024-03-16T14:20:00Z",
+      "logoUrl": "/logos/oceanview-medical-logo.png",
+      "companyName": "Ocean View Medical Center",
+      "createdAt": "2024-03-16T14:15:00Z",
+      "updatedAt": "2024-03-25T09:30:00Z"
+    },
+    {
+      "id": "order-005",
+      "orderNumber": "ORD-2024-005",
+      "customerId": "customer-005",
+      "salespersonId": "user-002-salesperson", 
+      "assignedDesignerId": null,
+      "assignedManufacturerId": "user-004-manufacturer",
+      "status": "completed",
+      "priority": "low",
+      "totalAmount": "899.95",
+      "tax": "72.00",
+      "discount": "25.00",
+      "notes": "Corporate polo shirts for fire department administrative staff",
+      "internalNotes": "Customer satisfied with quality. Potential for additional orders for field uniforms.",
+      "customerRequirements": "Flame-resistant fabric not required for office staff. Standard embroidery acceptable.",
+      "deliveryAddress": "555 Emergency Services Ave, Denver, CO 80201",
+      "deliveryInstructions": "Deliver to main reception, Robert Taylor will coordinate distribution",
+      "rushOrder": false,
+      "estimatedDeliveryDate": "2024-03-25T15:00:00Z",
+      "actualDeliveryDate": "2024-03-24T13:30:00Z",
+      "isPaid": true,
+      "stripeSessionId": "cs_fire_dept_001",
+      "paymentDate": "2024-03-10T11:15:00Z",
+      "logoUrl": "/logos/metro-fire-dept-logo.png",
+      "companyName": "Metro City Fire Department",
+      "createdAt": "2024-03-10T11:10:00Z",
+      "updatedAt": "2024-03-24T13:30:00Z"
+    }
+  ],
+  "orderItems": [
+    {
+      "id": "item-001",
+      "orderId": "order-001",
+      "catalogItemId": "catalog-001",
+      "productName": "Custom Basketball Jersey - Riverside Hawks",
+      "description": "Basketball jersey with Riverside Hawks team branding",
+      "size": "Various",
+      "color": "Royal Blue/White",
+      "fabric": "Moisture-wicking polyester",
+      "customization": "Team name, player numbers 1-30, individual player names on back",
+      "specifications": {
+        "team_name": "Riverside Hawks",
+        "colors": ["Royal Blue", "White"],
+        "numbers": "1-30",
+        "font": "Athletic block",
+        "logo_placement": "Front center, back top"
+      },
+      "quantity": "30",
+      "unitPrice": "45.99",
+      "totalPrice": "1379.70",
+      "customImageUrl": "/designs/riverside-hawks-jersey-mockup.jpg",
+      "designFileUrl": "/designs/riverside-hawks-jersey-final.ai",
+      "productionNotes": "Use tackle twill for numbers, heat transfer for names. Ensure proper size distribution per provided list.",
+      "status": "designing",
+      "estimatedCompletionDate": "2024-03-28T17:00:00Z",
+      "actualCompletionDate": null
+    },
+    {
+      "id": "item-002",
+      "orderId": "order-002",
+      "catalogItemId": "catalog-003",
+      "productName": "Corporate Polo Shirt - Summit Solutions",
+      "description": "Navy polo shirts with Summit Corporate Solutions branding",
+      "size": "Various",
+      "color": "Navy",
+      "fabric": "Cotton-polyester blend",
+      "customization": "Company logo embroidery on chest, employee names optional",
+      "specifications": {
+        "logo_size": "3 inch width",
+        "logo_colors": ["Gold", "White"],
+        "placement": "Left chest",
+        "thread_colors": ["Gold metallic", "White"]
+      },
+      "quantity": "50",
+      "unitPrice": "32.99",
+      "totalPrice": "1649.50",
+      "customImageUrl": "/designs/summit-corp-polo-mockup.jpg",
+      "designFileUrl": "/designs/summit-corp-logo-embroidery.dst",
+      "productionNotes": "High-quality embroidery required. Logo must be precise - customer is quality-focused.",
+      "status": "approved",
+      "estimatedCompletionDate": "2024-04-08T12:00:00Z",
+      "actualCompletionDate": null
+    },
+    {
+      "id": "item-003",
+      "orderId": "order-003",
+      "catalogItemId": "catalog-002", 
+      "productName": "Soccer Uniform Set - Thunder Bolts Home Kit",
+      "description": "Complete home uniform set with Thunder Bolts branding",
+      "size": "Youth and Adult Various",
+      "color": "Blue/Gold",
+      "fabric": "Lightweight polyester blend",
+      "customization": "Team crest, player numbers, names, sponsor logos",
+      "specifications": {
+        "kit_type": "Home",
+        "colors": ["Royal Blue", "Gold", "White"],
+        "crest_placement": "Left chest",
+        "sponsor_logo": "Front center",
+        "number_style": "Modern block"
+      },
+      "quantity": "25",
+      "unitPrice": "89.99",
+      "totalPrice": "2249.75",
+      "customImageUrl": "/designs/thunderbolts-home-kit-mockup.jpg",
+      "designFileUrl": "/designs/thunderbolts-sublimation-layout.pdf",
+      "productionNotes": "Sublimation printing for all graphics. Ensure color accuracy for team branding.",
+      "status": "pending",
+      "estimatedCompletionDate": "2024-04-12T16:00:00Z",
+      "actualCompletionDate": null
+    },
+    {
+      "id": "item-004",
+      "orderId": "order-004",
+      "catalogItemId": "catalog-005",
+      "productName": "Medical Scrubs Set - Ocean View Medical",
+      "description": "Medical scrubs with antimicrobial treatment and hospital branding",
+      "size": "Various",
+      "color": "Ceil Blue",
+      "fabric": "Medical-grade cotton blend with antimicrobial treatment",
+      "customization": "Hospital logo, department names, staff names, antimicrobial treatment",
+      "specifications": {
+        "departments": ["Emergency", "Surgery", "ICU", "Pediatrics"],
+        "logo_placement": "Left chest pocket",
+        "name_placement": "Right chest",
+        "antimicrobial": true
+      },
+      "quantity": "50",
+      "unitPrice": "65.99",
+      "totalPrice": "3299.50",
+      "customImageUrl": "/designs/oceanview-scrubs-mockup.jpg",
+      "designFileUrl": "/designs/oceanview-embroidery-layout.emb",
+      "productionNotes": "Apply antimicrobial treatment before embroidery. Multiple departments - organize by size and department.",
+      "status": "in_production",
+      "estimatedCompletionDate": "2024-03-27T08:00:00Z",
+      "actualCompletionDate": null
+    },
+    {
+      "id": "item-005",
+      "orderId": "order-005",
+      "catalogItemId": "catalog-003",
+      "productName": "Corporate Polo Shirt - Metro Fire Department",
+      "description": "Black polo shirts with fire department logo for administrative staff",
+      "size": "Various",
+      "color": "Black",
+      "fabric": "Cotton-polyester blend",
+      "customization": "Fire department badge embroidery, rank insignia",
+      "specifications": {
+        "logo_type": "Department badge",
+        "logo_size": "4 inch width",
+        "logo_colors": ["Red", "Gold", "White"],
+        "rank_placement": "Right chest"
+      },
+      "quantity": "25",
+      "unitPrice": "32.99",
+      "totalPrice": "824.75",
+      "customImageUrl": "/designs/fire-dept-polo-mockup.jpg",
+      "designFileUrl": "/designs/fire-dept-badge-embroidery.dst",
+      "productionNotes": "Standard embroidery quality. Customer may order additional items if satisfied.",
+      "status": "completed",
+      "estimatedCompletionDate": "2024-03-24T15:00:00Z",
+      "actualCompletionDate": "2024-03-23T14:30:00Z"
+    }
+  ],
+  "designTasks": [
+    {
+      "id": "design-001",
+      "orderId": "order-001",
+      "designerId": "user-003-designer",
+      "status": "in_progress",
+      "description": "Create custom basketball jersey design for Riverside Hawks",
+      "notes": "Customer provided team colors and logo reference. Need to create vector version and apply to jersey template.",
+      "dueDate": "2024-03-26T17:00:00Z",
+      "createdAt": "2024-03-15T15:00:00Z",
+      "updatedAt": "2024-03-20T10:30:00Z"
+    },
+    {
+      "id": "design-002",
+      "orderId": "order-003",
+      "designerId": "user-003-designer",
+      "status": "pending",
+      "description": "Design soccer uniform kit for Thunder Bolts with sublimation layout",
+      "notes": "Need to create sublimation-ready artwork for both home and away kits. Customer wants modern design.",
+      "dueDate": "2024-03-28T16:00:00Z",
+      "createdAt": "2024-03-20T16:00:00Z",
+      "updatedAt": "2024-03-21T09:15:00Z"
+    }
+  ],
+  "catalogCategories": [
+    {
+      "id": "cat-001",
+      "name": "Jerseys",
+      "description": "Athletic jerseys for various sports",
+      "active": true
+    },
+    {
+      "id": "cat-002", 
+      "name": "Uniforms",
+      "description": "Complete uniform sets",
+      "active": true
+    },
+    {
+      "id": "cat-003",
+      "name": "Corporate Wear",
+      "description": "Professional corporate apparel",
+      "active": true
+    },
+    {
+      "id": "cat-004",
+      "name": "Professional Wear",
+      "description": "Specialized professional clothing",
+      "active": true
+    }
+  ],
+  "catalogSports": [
+    {
+      "id": "sport-001",
+      "name": "Basketball",
+      "active": true
+    },
+    {
+      "id": "sport-002",
+      "name": "Soccer", 
+      "active": true
+    },
+    {
+      "id": "sport-003",
+      "name": "Football",
+      "active": true
+    },
+    {
+      "id": "sport-004",
+      "name": "All Around Item",
+      "active": true
+    }
+  ]
+}
