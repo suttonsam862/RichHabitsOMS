@@ -202,7 +202,21 @@ async function getCatalogItemById(req: Request, res: Response) {
     const { id } = req.params;
     console.log(`🔍 BULLETPROOF GET: Fetching catalog item ${id}`);
 
-    const result = await CatalogService.getById(id);
+    // Get single item by ID since getById method doesn't exist
+    const { data: item, error } = await supabaseAdmin
+      .from('catalog_items')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Catalog item not found'
+      });
+    }
+
+    const result = { success: true, data: item };
 
     if (!result.success) {
       return res.status(404).json({
