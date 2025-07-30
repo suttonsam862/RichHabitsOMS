@@ -15,6 +15,7 @@ interface FormValidationState {
   canSubmit: boolean;
   errors: string[];
   missingRequiredFields: string[];
+  changedFields: string[];
 }
 
 /**
@@ -32,7 +33,8 @@ export function useFormValidation<T extends FieldValues>({
     hasChanges: false,
     canSubmit: false,
     errors: [],
-    missingRequiredFields: []
+    missingRequiredFields: [],
+    changedFields: []
   });
 
   // Watch all form values for changes
@@ -43,6 +45,7 @@ export function useFormValidation<T extends FieldValues>({
       const formValues = form.getValues();
       const formErrors = form.formState.errors;
       const errors: string[] = [];
+      const changedFields: string[] = [];
       const missingRequiredFields: string[] = [];
 
       // Check for form validation errors
@@ -69,25 +72,33 @@ export function useFormValidation<T extends FieldValues>({
         }
       });
 
-      // Check if form has changes compared to initial data
+      // Check if form has changes compared to initial data and track changed fields
       let hasChanges = false;
       if (initialData) {
-        // Filter out ignored fields from comparison
-        const filteredFormValues = { ...formValues };
-        const filteredInitialData = { ...initialData };
-        
-        ignoreFields.forEach(field => {
-          delete filteredFormValues[field];
-          delete filteredInitialData[field];
+        // Check each field for changes
+        Object.keys(formValues).forEach(field => {
+          if (!ignoreFields.includes(field)) {
+            const currentValue = formValues[field];
+            const initialValue = initialData[field];
+            
+            if (!deepEqual(currentValue, initialValue)) {
+              changedFields.push(field);
+              hasChanges = true;
+            }
+          }
         });
-
-        hasChanges = !deepEqual(filteredFormValues, filteredInitialData);
       } else {
         // If no initial data, check if any required fields have values
         hasChanges = requiredFields.some((field) => {
           const value = formValues[field];
-          return value !== undefined && value !== null && value !== '' && 
+          const hasValue = value !== undefined && value !== null && value !== '' && 
                  (!Array.isArray(value) || value.length > 0);
+          
+          if (hasValue) {
+            changedFields.push(String(field));
+          }
+          
+          return hasValue;
         });
       }
 
@@ -102,7 +113,8 @@ export function useFormValidation<T extends FieldValues>({
         hasChanges,
         canSubmit,
         errors,
-        missingRequiredFields
+        missingRequiredFields,
+        changedFields
       });
     };
 

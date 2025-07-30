@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star, Eye, Trash2, Download, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
+import { getFieldStyles } from "@/lib/utils";
 
 const catalogItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -517,7 +518,11 @@ export default function CatalogItemEditPage() {
                   <FormItem>
                     <FormLabel>Product Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter product name" {...field} />
+                      <Input 
+                        placeholder="Enter product name" 
+                        {...field} 
+                        className={getFieldStyles('name', validation.changedFields, !!form.formState.errors.name)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -539,6 +544,7 @@ export default function CatalogItemEditPage() {
                         {...field}
                         value={field.value || ''}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        className={getFieldStyles('base_price', validation.changedFields, !!form.formState.errors.base_price)}
                       />
                     </FormControl>
                     <FormMessage />

@@ -313,3 +313,20 @@ export function getTimeAgo(date: Date | string): string {
 
   return Math.floor(seconds) + " seconds ago";
 }
+
+/**
+ * Gets CSS classes for field styling based on validation state
+ */
+export function getFieldStyles(fieldName: string, changedFields: string[], hasErrors: boolean = false): string {
+  const isChanged = changedFields.includes(fieldName);
+  
+  if (hasErrors) {
+    return "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500";
+  }
+  
+  if (isChanged) {
+    return "border-amber-300 bg-amber-50 focus:border-amber-500 focus:ring-amber-500 shadow-sm ring-1 ring-amber-200";
+  }
+  
+  return "border-input";
+}

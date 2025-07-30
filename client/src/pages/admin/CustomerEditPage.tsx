@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
+import { getFieldStyles } from "@/lib/utils";
 
 const customerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -598,7 +599,11 @@ export default function CustomerEditPage() {
                     <FormItem>
                       <FormLabel>First Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="First name" {...field} />
+                        <Input 
+                          placeholder="First name" 
+                          {...field} 
+                          className={getFieldStyles('firstName', validation.changedFields, !!form.formState.errors.firstName)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -612,7 +617,11 @@ export default function CustomerEditPage() {
                     <FormItem>
                       <FormLabel>Last Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Last name" {...field} />
+                        <Input 
+                          placeholder="Last name" 
+                          {...field} 
+                          className={getFieldStyles('lastName', validation.changedFields, !!form.formState.errors.lastName)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -627,7 +636,12 @@ export default function CustomerEditPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="email@example.com" {...field} />
+                      <Input 
+                        type="email" 
+                        placeholder="email@example.com" 
+                        {...field} 
+                        className={getFieldStyles('email', validation.changedFields, !!form.formState.errors.email)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
