@@ -323,41 +323,8 @@ router.post('/onboarding/preferences', async (req, res) => {
   }
 });
 
-// Upload tax exemption certificate
-router.post('/onboarding/tax-certificate', upload.single('certificate'), async (req, res) => {
-  try {
-    const { 
-      token, 
-      certificate_type, 
-      certificate_number, 
-      issuing_state, 
-      expiration_date 
-    } = req.body;
-
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
-
-    // Verify invitation token
-    const { data: invitation } = await supabase
-      .from('invitations')
-      .select('id')
-      .eq('token', token)
-      .single();
-
-    if (!invitation) {
-      return res.status(404).json({ success: false, message: 'Invalid invitation token' });
-    }
-
-    // Save tax certificate info
-    const { error } = await supabase
-      .from('tax_exemption_certificates')
-      .insert({
-        invitation_id: invitation.id,
-        certificate_type,
-        certificate_number,
-        issuing_state,
-        expiration_date,
+// Tax certificate upload removed - using Supabase Storage only
+// router.post('/onboarding/tax-certificate', async (req, res) => {
         file_path: req.file.path,
         original_filename: req.file.originalname,
         file_size_bytes: req.file.size,
