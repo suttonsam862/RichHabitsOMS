@@ -1,6 +1,5 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -50,7 +49,12 @@ export default function CustomerEditPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+
+  // Local state management
+  const [customer, setCustomer] = React.useState<Customer | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [customerError, setCustomerError] = React.useState<string | null>(null);
 
   // Photo upload state
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
@@ -58,26 +62,30 @@ export default function CustomerEditPage() {
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadRetryCount, setUploadRetryCount] = React.useState(0);
 
-  const { data: customer, isLoading, error: customerError } = useQuery({
-    queryKey: ['/api/customers', customerId],
-    queryFn: async () => {
-      try {
-        const response = await fetch(`/api/customers/${customerId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
-          const errorMessage = errorData?.message || `Failed to fetch customer details (${response.status})`;
-          throw new Error(errorMessage);
+  // Fetch customer data with simple async/await
+  const fetchCustomer = async () => {
+    if (!customerId) return;
+    
+    setIsLoading(true);
+    setCustomerError(null);
+    
+    try {
+      const response = await fetch(`/api/customers/${customerId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
+      });
 
-        const data = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.message || `Failed to fetch customer details (${response.status})`;
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
 
       // Convert snake_case response to camelCase for frontend
-      return {
+      const customerData = {
         id: data.id,
         firstName: data.first_name || data.firstName || '',
         lastName: data.last_name || data.lastName || '',
@@ -97,15 +105,22 @@ export default function CustomerEditPage() {
         photo_url: data.photo_url,
         profile_image_url: data.profile_image_url
       } as Customer;
-      } catch (error: any) {
-        if (error.name === 'TypeError' || error.message.includes('fetch')) {
-          throw new Error('Network error. Please check your connection and try again.');
-        }
-        throw error;
-      }
-    },
-    enabled: !!customerId
-  });
+      
+      setCustomer(customerData);
+    } catch (error: any) {
+      const errorMessage = error.name === 'TypeError' || error.message.includes('fetch')
+        ? 'Network error. Please check your connection and try again.'
+        : error.message;
+      setCustomerError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load customer data on mount
+  React.useEffect(() => {
+    fetchCustomer();
+  }, [customerId]);
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -158,7 +173,7 @@ export default function CustomerEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.isSubmitDisabled || updateCustomerMutation.isPending,
+    when: validation.isSubmitDisabled || isSaving,
     message: "Your form is being saved. Please wait for the process to complete before leaving."
   });
 
@@ -226,10 +241,85 @@ export default function CustomerEditPage() {
     }
   };
 
+  // Simple photo upload with async/await
+  const uploadPhoto = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch(`/api/customers/${customerId}/photo`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        let errorMessage = 'Failed to upload photo';
+        
+        if (errorData?.message) {
+          errorMessage = errorData.message;
+        } else if (response.status === 413) {
+          errorMessage = 'File size too large. Please choose a smaller image.';
+        } else if (response.status === 415) {
+          errorMessage = 'Invalid file format. Please upload a valid image file.';
+        } else if (response.status === 401) {
+          errorMessage = 'Authentication failed. Please refresh the page and try again.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (error.name === 'TypeError' || error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      throw error;
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    try {
+      await uploadPhoto(selectedFile);
+      
+      toast({
+        title: "Photo uploaded",
+        description: "Customer photo has been successfully uploaded.",
+      });
+      
+      // Refresh customer data to get the new photo URL
+      await fetchCustomer();
+      
+      // Clear the upload state
+      setSelectedFile(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(null);
+      setUploadRetryCount(0);
+    } catch (error: any) {
+      setUploadRetryCount(prev => prev + 1);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload customer photo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const retryPhotoUpload = () => {
     if (!selectedFile) return;
-    setIsUploading(true);
-    uploadPhotoMutation.mutate(selectedFile);
+    handlePhotoUpload();
   };
 
   // Cleanup preview URL on component unmount
@@ -241,221 +331,198 @@ export default function CustomerEditPage() {
     };
   }, [previewUrl]);
 
-  // Photo upload mutation
-  const uploadPhotoMutation = useMutation({
-    mutationFn: async (file: File) => {
-      try {
-        const formData = new FormData();
-        formData.append('image', file); // Changed from 'file' to 'image' to match middleware
-
-        const response = await fetch(`/api/customers/${customerId}/photo`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          },
-          body: formData
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
-          let errorMessage = 'Failed to upload photo';
-          
-          if (errorData?.message) {
-            errorMessage = errorData.message;
-          } else if (response.status === 413) {
-            errorMessage = 'File size too large. Please choose a smaller image.';
-          } else if (response.status === 415) {
-            errorMessage = 'Invalid file format. Please upload a valid image file.';
-          } else if (response.status === 401) {
-            errorMessage = 'Authentication failed. Please refresh the page and try again.';
-          } else if (response.status >= 500) {
-            errorMessage = 'Server error. Please try again later.';
-          }
-          
-          throw new Error(errorMessage);
-        }
-
-        return response.json();
-      } catch (error: any) {
-        if (error.name === 'TypeError' || error.message.includes('fetch')) {
-          throw new Error('Network error. Please check your connection and try again.');
-        }
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Photo uploaded",
-        description: "Customer photo has been successfully uploaded.",
-      });
-      // Refresh customer data to get the new photo URL
-      queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
-      // Clear the upload state
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      setIsUploading(false);
-      setUploadRetryCount(0);
-    },
-    onError: (error) => {
-      setIsUploading(false);
-      setUploadRetryCount(prev => prev + 1);
-      toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload customer photo.",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const handlePhotoUpload = async () => {
-    if (!selectedFile) return;
-
-    setIsUploading(true);
-    uploadPhotoMutation.mutate(selectedFile);
-  };
-
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [isSubmitDisabled, setIsSubmitDisabled] = React.useState(false);
 
-  const updateCustomerMutation = useMutation({
-    mutationFn: async (data: CustomerFormData) => {
-      // Clear any previous errors
-      setSubmitError(null);
+  // Simple customer update with async/await
+  const updateCustomer = async (data: CustomerFormData) => {
+    // Clear any previous errors
+    setSubmitError(null);
 
-      // Ensure we have a valid customer ID
-      if (!customerId) {
-        throw new Error('Customer ID is required');
-      }
+    // Ensure we have a valid customer ID
+    if (!customerId) {
+      throw new Error('Customer ID is required');
+    }
 
-      // Convert camelCase fields to snake_case for the API
-      const requestData = {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        phone: data.phone || '',
-        company: data.company || '',
-        address: data.address || '',
-        city: data.city || '',
-        state: data.state || '',
-        zip: data.zip || '',
-        country: data.country || '',
-        status: data.status
-      };
+    // Convert camelCase fields to snake_case for the API
+    const requestData = {
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+      phone: data.phone || '',
+      company: data.company || '',
+      address: data.address || '',
+      city: data.city || '',
+      state: data.state || '',
+      zip: data.zip || '',
+      country: data.country || '',
+      status: data.status
+    };
 
-      console.log(`Updating customer with ID: ${customerId}`, requestData);
+    console.log(`Updating customer with ID: ${customerId}`, requestData);
 
-      try {
-        const response = await fetch(`/api/customers/${customerId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          },
-          body: JSON.stringify(requestData)
-        });
+    try {
+      const response = await fetch(`/api/customers/${customerId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify(requestData)
+      });
 
-        // Handle different types of failures
-        if (!response.ok) {
-          let errorMessage = `Failed to update customer (${response.status})`;
+      // Handle different types of failures
+      if (!response.ok) {
+        let errorMessage = `Failed to update customer (${response.status})`;
 
-          try {
-            const errorData = await response.json();
-            if (errorData.message) {
-              errorMessage = errorData.message;
-            } else if (errorData.error) {
-              errorMessage = errorData.error;
-            }
-          } catch (jsonError) {
-            // If we can't parse JSON, use the status-based message
-            if (response.status === 400) {
-              errorMessage = 'Invalid customer data provided';
-            } else if (response.status === 401) {
-              errorMessage = 'Authentication required. Please log in again.';
-            } else if (response.status === 403) {
-              errorMessage = 'You do not have permission to update this customer';
-            } else if (response.status === 404) {
-              errorMessage = 'Customer not found';
-            } else if (response.status >= 500) {
-              errorMessage = 'Server error. Please try again later.';
-            }
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
           }
-
-          const error = new Error(errorMessage);
-          error.name = `HTTPError${response.status}`;
-          throw error;
+        } catch (jsonError) {
+          // If we can't parse JSON, use the status-based message
+          if (response.status === 400) {
+            errorMessage = 'Invalid customer data provided';
+          } else if (response.status === 401) {
+            errorMessage = 'Authentication required. Please log in again.';
+          } else if (response.status === 403) {
+            errorMessage = 'You do not have permission to update this customer';
+          } else if (response.status === 404) {
+            errorMessage = 'Customer not found';
+          } else if (response.status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          }
         }
 
-        const result = await response.json();
-
-        // Validate the response structure
-        if (!result.success || !result.updatedCustomer) {
-          throw new Error('Invalid response format from server');
-        }
-
-        return result;
-      } catch (networkError: any) {
-        // Handle network errors (no internet, server down, etc.)
-        if (networkError.name === 'TypeError' || networkError.message.includes('fetch')) {
-          throw new Error('Network error. Please check your connection and try again.');
-        }
-        throw networkError;
+        const error = new Error(errorMessage);
+        error.name = `HTTPError${response.status}`;
+        throw error;
       }
-    },
-    onSuccess: (data) => {
-      console.log('Customer updated successfully:', data);
 
+      const result = await response.json();
+
+      // Validate the response structure
+      if (!result.success || !result.updatedCustomer) {
+        throw new Error('Invalid response format from server');
+      }
+
+      return result;
+    } catch (networkError: any) {
+      // Handle network errors (no internet, server down, etc.)
+      if (networkError.name === 'TypeError' || networkError.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      throw networkError;
+    }
+  };
+
+  // Form submission handler with async/await
+  const onSubmit = async (data: CustomerFormData) => {
+    // Check validation and submit state before submitting
+    if (!validation.canSubmit || isSubmitDisabled) {
+      if (isSubmitDisabled) {
+        toast({
+          title: "Please wait",
+          description: "Form is being processed. Please wait before submitting again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Cannot submit form",
+        description: validation.errors.length > 0 
+          ? validation.errors[0] 
+          : validation.hasChanges 
+            ? "Please fix form errors before submitting"
+            : "No changes to save",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Disable submit button immediately
+    setIsSubmitDisabled(true);
+    setIsSaving(true);
+    
+    try {
+      const result = await updateCustomer(data);
+      
+      console.log('Customer updated successfully:', result);
+      
       // Clear any previous errors
       setSubmitError(null);
 
       // Only show success toast if API response indicates success
-      if (data && data.success === true) {
+      if (result && result.success === true) {
         toast({
           title: "Customer updated",
           description: "Customer information has been successfully updated.",
         });
 
-        // Optimistically update React Query cache with fresh data
-        if (data.updatedCustomer) {
-          // Update the specific customer cache
-          queryClient.setQueryData(['/api/customers', customerId], data.updatedCustomer);
-
-          // Update the customer in the customers list cache
-          queryClient.setQueryData(['/api/customers'], (oldData: any) => {
-            if (oldData?.data) {
-              const updatedList = oldData.data.map((customer: any) => 
-                customer.id === customerId ? data.updatedCustomer : customer
-              );
-              return { ...oldData, data: updatedList };
-            }
-            return oldData;
-          });
-
-          // Update form values to reflect server response (in case server modified data)
-          form.reset({
-            firstName: data.updatedCustomer.firstName || '',
-            lastName: data.updatedCustomer.lastName || '',
-            email: data.updatedCustomer.email || '',
-            company: data.updatedCustomer.company || '',
-            phone: data.updatedCustomer.phone || '',
-            address: data.updatedCustomer.address || '',
-            city: data.updatedCustomer.city || '',
-            state: data.updatedCustomer.state || '',
-            zip: data.updatedCustomer.zip || '',
-            country: data.updatedCustomer.country || '',
-            status: data.updatedCustomer.status || 'active'
-          });
-        }
-
-        // Update form with new values from response
-        const updatedCustomer = result.data || result;
-        if (updatedCustomer) {
-          form.reset({
+        // Update form values to reflect server response (in case server modified data)
+        if (result.updatedCustomer) {
+          const updatedCustomer = result.updatedCustomer;
+          const formData = {
             firstName: updatedCustomer.firstName || updatedCustomer.first_name || '',
             lastName: updatedCustomer.lastName || updatedCustomer.last_name || '',
             email: updatedCustomer.email || '',
+            company: updatedCustomer.company || '',
             phone: updatedCustomer.phone || '',
             address: updatedCustomer.address || '',
             city: updatedCustomer.city || '',
+            state: updatedCustomer.state || '',
+            zip: updatedCustomer.zip || '',
+            country: updatedCustomer.country || '',
+            status: updatedCustomer.status || 'active'
+          };
+          
+          form.reset(formData);
+          setInitialData(formData);
+          
+          // Update the local customer state
+          setCustomer(prev => prev ? { ...prev, ...updatedCustomer } : null);
+        }
+
+        // Navigate back to customer detail page
+        navigate(`/admin/customers/${customerId}`);
+      } else {
+        // If success is not true, treat it as an error
+        const errorMessage = result?.message || 'Update completed but server did not confirm success';
+        setSubmitError(errorMessage);
+        toast({
+          title: "Update uncertain",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Customer update failed:', error);
+
+      // Set the inline error message
+      setSubmitError(error.message);
+
+      // Also show toast for immediate feedback
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update customer information.",
+        variant: "destructive",
+      });
+
+      // If it's an auth error, redirect to login
+      if (error.name === 'HTTPError401') {
+        localStorage.removeItem('authToken');
+        navigate('/login');
+      }
+    } finally {
+      setIsSaving(false);
+      // Re-enable submit after 1 second
+      setTimeout(() => setIsSubmitDisabled(false), 1000);
+    }
+  };
             state: updatedCustomer.state || '',
             zipCode: updatedCustomer.zipCode || updatedCustomer.zip_code || '',
             status: updatedCustomer.status || 'active'
