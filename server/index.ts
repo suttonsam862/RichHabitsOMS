@@ -177,11 +177,21 @@ app.use(session({
   name: 'threadcraft.session' // Custom session name
 }));
 
-// Request logging middleware
+// Enhanced request logging middleware for all API routes
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  // Log all incoming API requests immediately
+  if (path.startsWith("/api")) {
+    console.log(`🌐 API Request: ${req.method} ${path} - ${new Date().toISOString()}`);
+    
+    // Log request body for POST/PUT/PATCH requests (but not for auth routes for security)
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && !path.includes('/auth/')) {
+      console.log(`📦 Request Body:`, JSON.stringify(req.body, null, 2));
+    }
+  }
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -192,17 +202,25 @@ app.use((req, res, next) => {
   res.on("finish", () => {
       const duration = Date.now() - start;
       if (path.startsWith("/api")) {
-        // Reduce noise from expected failures
+        // Log all API responses with status and timing
+        console.log(`📊 API Response: ${req.method} ${path} → ${res.statusCode} (${duration}ms)`);
+        
+        // Log response body for errors or in development mode
+        if (capturedJsonResponse && (res.statusCode >= 400 || process.env.NODE_ENV === 'development')) {
+          console.log(`📋 Response Body:`, JSON.stringify(capturedJsonResponse, null, 2));
+        }
+
+        // Reduce noise from expected failures in legacy logging
         if (
           (path === '/api/auth/me' && res.statusCode === 401) ||
           (path.includes('/api/') && res.statusCode === 401) ||
           (path.includes('/api/') && res.statusCode === 403) ||
           res.statusCode === 404
         ) {
-          return; // Don't log expected failures
+          return; // Don't log expected failures to legacy system
         }
 
-        // Only log errors and successful operations in development
+        // Only log errors and successful operations in development to legacy system
         if (process.env.NODE_ENV === 'development' && (res.statusCode >= 500 || res.statusCode < 400)) {
           let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
           if (capturedJsonResponse && res.statusCode >= 400) {
