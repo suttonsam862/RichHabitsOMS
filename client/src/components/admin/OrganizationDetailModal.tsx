@@ -52,6 +52,8 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { OptimisticToggle } from '@/components/ui/optimistic-toggle';
+import { useOptimisticCustomerStatus } from '@/hooks/useOptimisticCustomer';
 
 interface Customer {
   id: number | string;
@@ -134,6 +136,40 @@ interface OrganizationDetailModalProps {
   onClose: () => void;
   onUpdate: () => void;
 }
+
+// Customer Row Component with Optimistic Updates
+const CustomerRow = ({ customer }: { customer: Customer & { id: string; firstName: string; lastName: string; email: string; status: 'active' | 'inactive' | 'suspended'; priority: 'low' | 'medium' | 'high' } }) => {
+  const statusUpdate = useOptimisticCustomerStatus(customer);
+  
+  return (
+    <TableRow>
+      <TableCell className="font-medium">
+        {customer.firstName} {customer.lastName}
+      </TableCell>
+      <TableCell>{customer.email}</TableCell>
+      <TableCell>{customer.phone || '-'}</TableCell>
+      <TableCell>{customer.orders || 0}</TableCell>
+      <TableCell>
+        <OptimisticToggle
+          checked={statusUpdate.data.status === 'active'}
+          onToggle={() => {
+            const newStatus = statusUpdate.data.status === 'active' ? 'inactive' : 'active';
+            statusUpdate.updateField(newStatus);
+          }}
+          isPending={statusUpdate.isPending}
+          isOptimistic={statusUpdate.isOptimistic}
+          variant="badge"
+          checkedLabel="Active"
+          uncheckedLabel="Inactive"
+          size="sm"
+        />
+      </TableCell>
+      <TableCell>
+        {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : '-'}
+      </TableCell>
+    </TableRow>
+  );
+};
 
 export default function OrganizationDetailModal({
   organization,
@@ -615,24 +651,25 @@ export default function OrganizationDetailModal({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {organization.customers.map((customer) => (
-                      <TableRow key={customer.id}>
-                        <TableCell className="font-medium">
-                          {customer.firstName} {customer.lastName}
-                        </TableCell>
-                        <TableCell>{customer.email}</TableCell>
-                        <TableCell>{customer.phone || '-'}</TableCell>
-                        <TableCell>{customer.orders || 0}</TableCell>
-                        <TableCell>
-                          <Badge variant={customer.status === 'active' ? 'default' : 'secondary'}>
-                            {customer.status || 'active'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {organization.customers.map((customer) => {
+                      // Ensure customer has the required fields for optimistic updates
+                      const customerWithDefaults = {
+                        ...customer,
+                        id: customer.id?.toString() || '',
+                        firstName: customer.firstName || '',
+                        lastName: customer.lastName || '',
+                        email: customer.email || '',
+                        status: (customer.status as 'active' | 'inactive' | 'suspended') || 'active',
+                        priority: 'medium' as const
+                      };
+                      
+                      return (
+                        <CustomerRow 
+                          key={customer.id} 
+                          customer={customerWithDefaults} 
+                        />
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
