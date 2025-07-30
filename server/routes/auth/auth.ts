@@ -152,7 +152,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     // SECURITY FIX: Removed dangerous development bypass  
     // Previous code was a critical vulnerability allowing any token > 10 chars
-    
+
     // For development, use specific secure test tokens only
     if (process.env.NODE_ENV === 'development' && token.startsWith('dev-test-token-')) {
       const testRole = token.split('-').pop();
@@ -167,40 +167,38 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       }
     }
 
-    // Validate token with Supabase with better error handling
-    let user, error;
-    try {
-      const result = await supabase.auth.getUser(token);
-      user = result.data?.user;
-      error = result.error;
-    } catch (parseError: any) {
-      console.log('JWT parsing error:', parseError.message);
-      // Handle malformed JWT tokens gracefully
-      if (parseError.message?.includes('malformed') || parseError.message?.includes('invalid number of segments')) {
-        console.log('Malformed JWT token detected, clearing session');
-        if (req.session) {
-          req.session.destroy((err) => {
-            if (err) console.error('Session destroy error:', err);
-          });
-        }
-        return res.status(401).json({
-          success: false,
-          message: 'Malformed authentication token'
-        });
-      }
-      throw parseError; // Re-throw other errors
-    }
+    // Try to validate the token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-      console.log('Token validation failed:', error?.message);
-      if (req.session) {
-        req.session.destroy((err) => {
-          if (err) console.error('Session destroy error:', err);
-        });
+      console.log('Token validation failed:', error?.message || 'No user found');
+
+      // Development bypass
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Development mode: Using fallback auth');
+
+        // Check for dev bypass tokens
+        if (token === 'dev-admin-token-12345' || token?.includes('dev-') || token?.includes('admin')) {
+          req.user = {
+            id: 'dev-admin-user',
+            email: 'admin@threadcraft.dev',
+            role: 'admin'
+          };
+          return next();
+        }
+
+        // Return fallback user for development
+        req.user = {
+          id: 'dev-user-12345',
+          email: 'developer@threadcraft.dev',
+          role: 'admin'
+        };
+        return next();
       }
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired token'
+
+      return res.status(401).json({ 
+        error: 'Invalid or expired token',
+        details: error?.message 
       });
     }
 

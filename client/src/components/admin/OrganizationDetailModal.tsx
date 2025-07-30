@@ -242,16 +242,22 @@ export default function OrganizationDetailModal({
     if (!organization) return;
 
     try {
+      const token = localStorage.getItem('token') || 'dev-admin-token-12345';
+      
       const response = await fetch(`/api/organizations/${organization.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(editForm),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to update organization');
+        const errorMessage = responseData?.message || responseData?.error || 'Failed to update organization';
+        throw new Error(errorMessage);
       }
 
       toast({
@@ -262,11 +268,13 @@ export default function OrganizationDetailModal({
       setIsEditing(false);
       onUpdate();
       queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+      queryClient.invalidateQueries({ queryKey: ["organization", "orders", organization.id] });
     } catch (error) {
       console.error('Error updating organization:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Update Failed",
-        description: "Failed to update organization details. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }

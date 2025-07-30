@@ -109,18 +109,56 @@ async function updateOrganization(req: Request, res: Response) {
   try {
     console.log(`Updating organization: ${organizationId}`, req.body);
 
+    // Validate required fields
+    if (!name || !type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organization name and type are required'
+      });
+    }
+
     // For now, we'll update all customers with this organization name
     // In a real implementation, you'd have a separate organizations table
     const oldName = organizationId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
+    // First, check if any customers exist with this organization
+    const { data: existingCustomers, error: checkError } = await supabaseAdmin
+      .from('customers')
+      .select('id, company')
+      .ilike('company', `%${oldName}%`);
+
+    if (checkError) {
+      console.error('Error checking existing customers:', checkError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to check existing organization data'
+      });
+    }
+
+    if (!existingCustomers || existingCustomers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organization not found'
+      });
+    }
+
+    // Update organization customers
+    const updateData: any = {
+      company: name,
+      organization_type: type,
+      updated_at: new Date().toISOString()
+    };
+
+    // Only update sport if it's provided and type is sports
+    if (type === 'sports' && sport) {
+      updateData.sport = sport;
+    } else if (type !== 'sports') {
+      updateData.sport = null;
+    }
+
     const { data: updatedCustomers, error: updateError } = await supabaseAdmin
       .from('customers')
-      .update({
-        company: name,
-        organization_type: type,
-        sport: sport || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .ilike('company', `%${oldName}%`)
       .select();
 
@@ -128,7 +166,7 @@ async function updateOrganization(req: Request, res: Response) {
       console.error('Error updating organization:', updateError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to update organization'
+        message: `Database update failed: ${updateError.message}`
       });
     }
 
@@ -143,7 +181,8 @@ async function updateOrganization(req: Request, res: Response) {
         name,
         type,
         sport,
-        updatedCustomers: updatedCustomers?.length || 0
+        updatedCustomers: updatedCustomers?.length || 0,
+        customersUpdated: updatedCustomers?.map(c => ({ id: c.id, company: c.company }))
       }
     });
 
@@ -151,7 +190,7 @@ async function updateOrganization(req: Request, res: Response) {
     console.error('Error in updateOrganization:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}`
     });
   }
 }
@@ -251,6 +290,7 @@ async function deleteOrganization(req: Request, res: Response) {
 // Configure routes
 router.get('/:organizationId', getOrganizationDetails);
 router.patch('/:organizationId', requireAuth, requireRole(['admin']), updateOrganization);
+router.put('/:organizationId', requireAuth, requireRole(['admin']), updateOrganization); // Support both PATCH and PUT
 router.patch('/:organizationId/archive', requireAuth, requireRole(['admin']), archiveOrganization);
 router.delete('/:organizationId', requireAuth, requireRole(['admin']), deleteOrganization);
 
