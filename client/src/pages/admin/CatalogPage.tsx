@@ -1564,6 +1564,34 @@ export default function CatalogPage() {
     }
   };
 
+  // Handle null/undefined catalog data to prevent crashes
+  if (catalogItems === null || catalogItems === undefined) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Product Catalog</h1>
+            <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
+          </div>
+        </div>
+        
+        <Card className="rich-card">
+          <CardContent className="py-8 text-center">
+            <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2 text-foreground">Catalog unavailable, please try again later</h3>
+            <p className="text-muted-foreground mb-4">
+              The catalog data could not be loaded. This may be a temporary issue.
+            </p>
+            <Button onClick={() => refetch()} className="glass-button">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
