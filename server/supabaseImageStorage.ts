@@ -116,10 +116,10 @@ export class SupabaseImageStorage {
       // Process the image
       const { buffer: processedBuffer, contentType } = await this.processImage(fileBuffer, options);
 
-      // Generate unique filename
+      // Generate unique filename using standardized folder structure
       const fileExtension = options.format || 'jpg';
-      const fileName = `${catalogItemId}-${uuidv4()}.${fileExtension}`;
-      const filePath = `catalog-items/${fileName}`;
+      const fileName = `${uuidv4()}.${fileExtension}`;
+      const filePath = `catalog_items/${catalogItemId}/${fileName}`;
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
@@ -167,10 +167,10 @@ export class SupabaseImageStorage {
     try {
       await this.initializeBuckets();
 
-      // Generate unique filename
+      // Generate unique filename using standardized folder structure
       const fileExtension = originalName.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `${catalogItemId}-measurement-${uuidv4()}.${fileExtension}`;
-      const filePath = `measurement-charts/${fileName}`;
+      const fileName = `measurement-${uuidv4()}.${fileExtension}`;
+      const filePath = `catalog_items/${catalogItemId}/${fileName}`;
 
       // Determine content type
       let contentType = 'image/jpeg';

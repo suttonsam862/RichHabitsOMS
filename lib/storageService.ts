@@ -34,12 +34,56 @@ export interface FileMetadata {
 export class StorageService {
   private static readonly BUCKETS = {
     UPLOADS: 'uploads',
-    CATALOG_ITEMS: 'catalog_items',
-    ORDERS: 'orders',
-    CUSTOMER_PHOTOS: 'customer_photos',
-    PRODUCTION_IMAGES: 'production_images',
     PRIVATE_FILES: 'private_files'
   } as const;
+
+  // Standardized folder structure patterns
+  // All files MUST be organized within entity-based folders for proper organization
+  private static readonly FOLDER_PATTERNS = {
+    CATALOG_ITEMS: (itemId: string) => `catalog_items/${itemId}/`,
+    CUSTOMERS: (customerId: string) => `customers/${customerId}/`,
+    ORDERS: (orderId: string) => `orders/${orderId}/`,
+    ORDER_PRODUCTION: (orderId: string) => `orders/${orderId}/production/`,
+    ORDER_DESIGNS: (orderId: string) => `orders/${orderId}/designs/`,
+    DESIGN_TASKS: (taskId: string) => `design_tasks/${taskId}/`,
+    MANUFACTURER_MEDIA: (manufacturerId: string) => `manufacturers/${manufacturerId}/`
+  } as const;
+
+  /**
+   * Get standardized folder path for entity type
+   * Ensures consistent folder structure across all uploads
+   */
+  static getFolderPath(entityType: 'catalog_items' | 'customers' | 'orders' | 'design_tasks' | 'manufacturers', entityId: string, subFolder?: string): string {
+    let basePath: string;
+    
+    switch (entityType) {
+      case 'catalog_items':
+        basePath = this.FOLDER_PATTERNS.CATALOG_ITEMS(entityId);
+        break;
+      case 'customers':
+        basePath = this.FOLDER_PATTERNS.CUSTOMERS(entityId);
+        break;
+      case 'orders':
+        if (subFolder === 'production') {
+          basePath = this.FOLDER_PATTERNS.ORDER_PRODUCTION(entityId);
+        } else if (subFolder === 'designs') {
+          basePath = this.FOLDER_PATTERNS.ORDER_DESIGNS(entityId);
+        } else {
+          basePath = this.FOLDER_PATTERNS.ORDERS(entityId);
+        }
+        break;
+      case 'design_tasks':
+        basePath = this.FOLDER_PATTERNS.DESIGN_TASKS(entityId);
+        break;
+      case 'manufacturers':
+        basePath = this.FOLDER_PATTERNS.MANUFACTURER_MEDIA(entityId);
+        break;
+      default:
+        throw new Error(`Unsupported entity type: ${entityType}`);
+    }
+    
+    return basePath;
+  }
 
   /**
    * Upload a file to Supabase Storage
@@ -222,7 +266,10 @@ export class StorageService {
     const fileName = `${uuid}_${originalNameClean}`;
     const visibility = metadata.visibility || 'private'; // Customer photos are private by default
     const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.UPLOADS;
-    const path = `customer_photos/${fileName}`;
+    
+    // Use standardized folder structure: customers/{id}/
+    const folderPath = this.FOLDER_PATTERNS.CUSTOMERS(customerId);
+    const path = `${folderPath}${fileName}`;
 
     const uploadResult = await this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
@@ -271,8 +318,11 @@ export class StorageService {
     const variantSuffix = variant ? `_${variant}` : '';
     const fileName = `${uuid}_${originalNameClean}${variantSuffix}.${extension}`;
     const visibility = metadata.visibility || 'public'; // Catalog images are public by default
-    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.CATALOG_ITEMS;
-    const path = `catalog_items/${itemId}/images/${fileName}`;
+    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.UPLOADS;
+    
+    // Use standardized folder structure: catalog_items/{id}/
+    const folderPath = this.FOLDER_PATTERNS.CATALOG_ITEMS(itemId);
+    const path = `${folderPath}${fileName}`;
 
     const uploadResult = await this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
@@ -322,8 +372,11 @@ export class StorageService {
     const stagePrefix = stage ? `${stage}_` : '';
     const fileName = `${uuid}_${stagePrefix}${originalNameClean}.${extension}`;
     const visibility = metadata.visibility || 'private'; // Production images are private by default
-    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.ORDERS;
-    const path = `orders/${orderId}/production/${fileName}`;
+    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.UPLOADS;
+    
+    // Use standardized folder structure: orders/{id}/production/
+    const folderPath = this.FOLDER_PATTERNS.ORDER_PRODUCTION(orderId);
+    const path = `${folderPath}${fileName}`;
 
     const uploadResult = await this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
@@ -370,8 +423,11 @@ export class StorageService {
     const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
     const fileName = `${uuid}_design_${originalNameClean}.${extension}`;
     const visibility = metadata.visibility || 'private'; // Design files are private by default
-    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.ORDERS;
-    const path = `orders/${orderId}/designs/${fileName}`;
+    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.UPLOADS;
+    
+    // Use standardized folder structure: orders/{id}/designs/
+    const folderPath = this.FOLDER_PATTERNS.ORDER_DESIGNS(orderId);
+    const path = `${folderPath}${fileName}`;
 
     return this.uploadFile(bucket, path, file, {
       contentType: metadata.type,

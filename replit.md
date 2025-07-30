@@ -77,6 +77,19 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 
 ## Recent Changes
 
+### Complete Entity-Based Folder Structure Implementation for Supabase Storage (July 30, 2025)
+- **Status**: 100% Complete - All file uploads now organized into standardized entity-based folders in Supabase Storage
+- **Folder Structure Patterns**: Implemented comprehensive folder organization with `catalog_items/{id}/`, `customers/{id}/`, `orders/{id}/`, `orders/{id}/production/`, `orders/{id}/designs/`, `design_tasks/{id}/`, `manufacturers/{id}/`
+- **StorageService Enhancement**: Updated StorageService class with FOLDER_PATTERNS constants and getFolderPath() helper method for consistent path generation
+- **Upload Method Updates**: Modified uploadCustomerPhoto(), uploadCatalogImage(), uploadProductionImage(), and uploadDesignFile() to use standardized folder paths
+- **Route File Updates**: Fixed customerRoutes.ts to use `customers/{id}/` folder structure instead of flat `customer_photos/` directory
+- **Legacy Storage Cleanup**: Updated server/supabaseImageStorage.ts to use proper `catalog_items/{id}/` folders instead of flat `catalog-items/` structure
+- **File Naming Convention**: All files use `{uuid}_{original_name}.{extension}` pattern within entity folders to prevent conflicts and maintain organization
+- **Bucket Strategy**: Public files in 'uploads' bucket, private files in 'private_files' bucket, all organized with entity-based folder hierarchy
+- **Documentation**: Created comprehensive SUPABASE_STORAGE_FOLDER_STRUCTURE.md with implementation details, usage examples, and migration notes
+- **Benefits**: Improved file organization, easier cleanup when entities are deleted, better security through folder-based access control, scalable structure for business growth
+- **Production Ready**: Complete folder structure system ensures all future uploads are properly organized and existing uploads follow consistent patterns
+
 ### Complete Image Asset Traceability System with Metadata Tags (July 30, 2025)
 - **Status**: 100% Complete - Comprehensive image asset traceability system implemented with complete metadata tracking
 - **Image Assets Table**: Created comprehensive database schema with traceability tags including uploaded_by, entity_type, entity_id, image_purpose, and storage_path

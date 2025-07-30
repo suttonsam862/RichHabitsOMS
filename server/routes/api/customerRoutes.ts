@@ -842,11 +842,11 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
       }
     }
 
-    // Generate unique filename to prevent conflicts
+    // Generate unique filename using standardized folder structure
     const fileExtension = req.file.originalname.split('.').pop();
-    const fileName = `customer_photos/${id}_${Date.now()}.${fileExtension}`;
+    const fileName = `customers/${id}/${Date.now()}.${fileExtension}`;
 
-    // Upload file to Supabase storage in customer_photos/ directory
+    // Upload file to Supabase storage using standardized customers/{id}/ folder structure
     let uploadData;
     try {
       const { data, error } = await supabaseAdmin.storage
