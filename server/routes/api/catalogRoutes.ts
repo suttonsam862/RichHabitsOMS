@@ -87,10 +87,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
     res.status(200).json({
       success: true,
-      data: {
-        item: insertedItem,
-        message: 'Catalog item created successfully'
-      }
+      data: insertedItem
     });
 
   } catch (err: any) {
@@ -186,10 +183,7 @@ async function getAllCatalogItems(req: Request, res: Response) {
 
     res.status(200).json({
       success: true,
-      data: {
-        items: processedItems,
-        count: processedItems.length
-      }
+      data: processedItems
     });
 
   } catch (error: any) {
@@ -229,10 +223,7 @@ async function updateCatalogItem(req: Request, res: Response) {
 
     res.status(200).json({
       success: true,
-      data: {
-        item: result.data,
-        message: 'Catalog item updated successfully'
-      }
+      data: result.data
     });
 
   } catch (error: any) {
@@ -287,9 +278,7 @@ async function deleteCatalogItem(req: Request, res: Response) {
 
     res.status(200).json({
       success: true,
-      data: {
-        message: 'Catalog item deleted successfully'
-      }
+      data: { id: id }
     });
 
   } catch (error: any) {

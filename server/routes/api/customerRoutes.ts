@@ -148,15 +148,12 @@ export async function sendUserInvitation(req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       data: {
-        message: `Invitation sent successfully to ${email}`,
-        invitation: {
-          email,
-          firstName,
-          lastName,
-          role,
-          inviteUrl: emailSent ? undefined : inviteUrl,
-          expiresAt: expiresAt.toISOString()
-        }
+        email,
+        firstName,
+        lastName,
+        role,
+        inviteUrl: emailSent ? undefined : inviteUrl,
+        expiresAt: expiresAt.toISOString()
       }
     });
 

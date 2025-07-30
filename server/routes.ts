@@ -191,6 +191,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const { email, firstName, lastName, company, message } = req.body;
 
+    // Validate required fields
+    if (!email || !firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: email, firstName, and lastName are required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format'
+      });
+    }
+
     // Generate a unique token
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
@@ -216,8 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     return res.status(201).json({
       success: true,
-      message: 'Invitation created successfully',
-      invite
+      data: invite
     });
   });
 
@@ -1107,8 +1123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(201).json({
         success: true,
-        message: 'Order created successfully',
-        order: order
+        data: order
       });
 
     } catch (err) {
@@ -1192,6 +1207,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/register-with-invitation', async (req, res) => {
     try {
       const { email, password, username, firstName, lastName, invitationToken, role } = req.body;
+
+      // Validate required fields
+      if (!email || !password || !firstName || !lastName || !invitationToken) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: email, password, firstName, lastName, and invitationToken are required'
+        });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+
+      // Validate password length
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 6 characters long'
+        });
+      }
 
       // Verify invitation
       const { data: invitation, error: inviteError } = await supabase
@@ -1715,8 +1755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(201).json({
         success: true,
-        message: 'Account created successfully! User can log in with email: ' + email + ' and temporary password: ' + password,
-        user: {
+        data: {
           id: (data.user as any).id,
           email: (data.user as any).email,
           firstName,
@@ -1749,8 +1788,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(200).json({
         success: true,
-        imageUrl: mockImageUrl,
-        message: 'Image uploaded successfully (using placeholder for now)'
+        data: {
+          imageUrl: mockImageUrl
+        }
       });
 
     } catch (error) {
@@ -2008,6 +2048,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: false,
           message: 'User ID is required'
         });
+      }
+
+      // Validate required fields for update
+      if (!firstName || !lastName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: firstName and lastName are required'
+        });
+      }
+
+      // Validate email format if provided
+      if (email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid email format'
+          });
+        }
+      }
+
+      // Validate role if provided
+      if (role) {
+        const validRoles = ['customer', 'salesperson', 'designer', 'manufacturer', 'admin'];
+        if (!validRoles.includes(role)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid role specified'
+          });
+        }
       }
 
       console.log('Updating user', userId, 'with data:', { email, firstName, lastName, role, phone, company });
