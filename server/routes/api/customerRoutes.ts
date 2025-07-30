@@ -268,32 +268,25 @@ export async function verifyInvitation(req: Request, res: Response) {
  * Create a new customer in Supabase
  */
 export async function createCustomer(req: Request, res: Response) {
-  const {
-    id,
-    first_name,
-    firstName,
-    last_name, 
-    lastName,
-    email,
-    company,
-    phone,
-    address,
-    city,
-    state,
-    zip,
-    country,
-    sendInvite = true
-  } = req.body;
+  // Support both camelCase and snake_case field names
+  const first_name = req.body.first_name || req.body.firstName;
+  const last_name = req.body.last_name || req.body.lastName;
+  const email = req.body.email;
+  const company = req.body.company;
+  const phone = req.body.phone;
+  const address = req.body.address;
+  const city = req.body.city;
+  const state = req.body.state;
+  const zip = req.body.zip;
+  const country = req.body.country;
+  const id = req.body.id;
+  const sendInvite = req.body.sendInvite || true;
 
-  // Support both camelCase and snake_case formats
-  const finalFirstName = first_name || firstName;
-  const finalLastName = last_name || lastName;
-
-  // Validate required fields (accept both formats)
-  if (!finalFirstName || !finalLastName || !email) {
+  // Validate required fields
+  if (!first_name || !last_name || !email) {
     return res.status(400).json({
       success: false,
-      message: 'Missing required fields: firstName/first_name, lastName/last_name, and email are required'
+      message: 'Missing required fields: first_name, last_name, and email are required'
     });
   }
 
@@ -346,8 +339,8 @@ export async function createCustomer(req: Request, res: Response) {
         .from('customers')
         .insert({
           id: customerId,
-          first_name: finalFirstName,
-          last_name: finalLastName,
+          first_name: first_name,
+          last_name: last_name,
           email,
           company: company || '',
           phone: phone || '',
@@ -549,19 +542,17 @@ async function updateCustomer(req: Request, res: Response) {
     console.log(`📥 [${requestTimestamp}] Request body received:`, JSON.stringify(req.body, null, 2));
 
     // Handle both camelCase (frontend) and snake_case (database) field names
-    const {
-      firstName, first_name,
-      lastName, last_name,
-      email,
-      company,
-      phone,
-      address,
-      city,
-      state,
-      zip,
-      country,
-      status
-    } = req.body;
+    const first_name = req.body.first_name || req.body.firstName;
+    const last_name = req.body.last_name || req.body.lastName;
+    const email = req.body.email;
+    const company = req.body.company;
+    const phone = req.body.phone;
+    const address = req.body.address;
+    const city = req.body.city;
+    const state = req.body.state;
+    const zip = req.body.zip;
+    const country = req.body.country;
+    const status = req.body.status;
 
     // Validate that we have at least one field to update
     if (Object.keys(req.body).length === 0) {
@@ -575,17 +566,15 @@ async function updateCustomer(req: Request, res: Response) {
     // Build update object with snake_case field names for database
     const updateData: any = {};
 
-    // Map camelCase to snake_case and handle both formats with validation
-    if (firstName !== undefined || first_name !== undefined) {
-      const nameValue = firstName || first_name;
-      if (typeof nameValue === 'string' && nameValue.trim().length > 0) {
-        updateData.first_name = nameValue.trim();
+    // Validate and add fields to update data
+    if (first_name !== undefined) {
+      if (typeof first_name === 'string' && first_name.trim().length > 0) {
+        updateData.first_name = first_name.trim();
       }
     }
-    if (lastName !== undefined || last_name !== undefined) {
-      const nameValue = lastName || last_name;
-      if (typeof nameValue === 'string' && nameValue.trim().length > 0) {
-        updateData.last_name = nameValue.trim();
+    if (last_name !== undefined) {
+      if (typeof last_name === 'string' && last_name.trim().length > 0) {
+        updateData.last_name = last_name.trim();
       }
     }
     if (email !== undefined) {
