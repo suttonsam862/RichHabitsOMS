@@ -1,42 +1,93 @@
-import React from "react";
-import { BrowserRouter } from "react-router-dom";
-import { RequireAuth } from "./auth/RequireAuth";
-import { MainDashboardRouter } from "./auth/MainDashboardRouter";
-import { GlobalSpinner } from "./ui/global-spinner";
-import { useAuth } from "@/hooks/use-auth";
-import { FeatureErrorBoundary } from "./error/FeatureErrorBoundary";
 
-export function AppWithSpinner() {
-  const { loading } = useAuth();
-  const [initError, setInitError] = React.useState<string | null>(null);
+import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import { checkServerHealth } from '@/lib/globalFetchInterceptor';
 
-  React.useEffect(() => {
-    // Monitor for initialization errors
-    const handleError = (event: any) => {
-      if (event.type === 'unhandledrejection' || event.type === 'error') {
-        setInitError('Application initialization failed. Please refresh the page.');
+interface AppWithSpinnerProps {
+  children: React.ReactNode;
+}
+
+export function AppWithSpinner({ children }: AppWithSpinnerProps) {
+  const [serverReady, setServerReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 10;
+    const retryDelay = 2000;
+
+    const waitForServer = async () => {
+      try {
+        const ready = await checkServerHealth();
+        
+        if (!mounted) return;
+        
+        if (ready) {
+          setServerReady(true);
+          setLoading(false);
+          setError(null);
+        } else {
+          retryCount++;
+          
+          if (retryCount >= maxRetries) {
+            setError('Server is taking longer than expected to start. Please refresh the page.');
+            setLoading(false);
+          } else {
+            console.log(`⏳ Waiting for server... (${retryCount}/${maxRetries})`);
+            setTimeout(waitForServer, retryDelay);
+          }
+        }
+      } catch (err) {
+        if (!mounted) return;
+        
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          setError('Unable to connect to server. Please check your connection and refresh.');
+          setLoading(false);
+        } else {
+          setTimeout(waitForServer, retryDelay);
+        }
       }
     };
 
-    window.addEventListener('unhandledrejection', handleError);
-    window.addEventListener('error', handleError);
+    waitForServer();
 
     return () => {
-      window.removeEventListener('unhandledrejection', handleError);
-      window.removeEventListener('error', handleError);
+      mounted = false;
     };
   }, []);
 
-  if (initError) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-        <div className="flex flex-col items-center space-y-6">
-          <div className="text-red-400 text-xl font-medium">
-            {initError}
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <Loader2 className="animate-spin w-12 h-12 text-[#00d1ff]" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#00d1ff]/20 to-[#00ff9f]/20 blur-md"></div>
+          </div>
+          <div className="text-white/70 text-sm font-medium">
+            Waiting for server...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <div className="text-center space-y-4 max-w-md mx-auto px-4">
+          <div className="text-red-400 text-lg font-semibold">
+            Connection Error
+          </div>
+          <div className="text-white/70 text-sm">
+            {error}
           </div>
           <button 
-            onClick={() => window.location.reload()} 
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-[#00d1ff] text-black font-semibold rounded hover:bg-[#00d1ff]/80 transition-colors"
           >
             Refresh Page
           </button>
@@ -45,17 +96,5 @@ export function AppWithSpinner() {
     );
   }
 
-  if (loading) {
-    return <GlobalSpinner />;
-  }
-
-  return (
-    <BrowserRouter>
-      <FeatureErrorBoundary featureName="Main Application">
-        <RequireAuth>
-          <MainDashboardRouter />
-        </RequireAuth>
-      </FeatureErrorBoundary>
-    </BrowserRouter>
-  );
+  return <>{children}</>;
 }
