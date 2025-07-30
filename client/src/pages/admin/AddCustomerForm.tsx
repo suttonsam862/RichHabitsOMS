@@ -28,8 +28,8 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     company: '',
     phone: '',
@@ -70,12 +70,12 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
-    if (!formData.first_name.trim()) {
-      errors.first_name = 'First name is required';
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required';
     }
 
-    if (!formData.last_name.trim()) {
-      errors.last_name = 'Last name is required';
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required';
     }
 
     if (!formData.email.trim()) {
@@ -111,10 +111,10 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
         throw new Error('Authentication required. Please log in again.');
       }
 
-      // Transform camelCase to snake_case for backend compatibility
+      // Map camelCase form fields to snake_case for backend compatibility
       const transformedData = {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
         email: formData.email,
         company: formData.company || '',
         phone: formData.phone || '',
@@ -196,8 +196,8 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
 
   const resetForm = () => {
     setFormData({
-      first_name: '',
-      last_name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       company: '',
       phone: '',
@@ -234,33 +234,33 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name">First Name *</Label>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
-                  id="first_name"
-                  name="first_name"
-                  value={formData.first_name}
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleInputChange}
                   placeholder="John"
                   required
-                  className={formErrors.first_name ? 'border-destructive' : ''}
+                  className={formErrors.firstName ? 'border-destructive' : ''}
                 />
-                {formErrors.first_name && (
-                  <p className="text-sm text-destructive">{formErrors.first_name}</p>
+                {formErrors.firstName && (
+                  <p className="text-sm text-destructive">{formErrors.firstName}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name *</Label>
+                <Label htmlFor="lastName">Last Name *</Label>
                 <Input
-                  id="last_name"
-                  name="last_name"
-                  value={formData.last_name}
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
                   onChange={handleInputChange}
                   placeholder="Doe"
                   required
-                  className={formErrors.last_name ? 'border-destructive' : ''}
+                  className={formErrors.lastName ? 'border-destructive' : ''}
                 />
-                {formErrors.last_name && (
-                  <p className="text-sm text-destructive">{formErrors.last_name}</p>
+                {formErrors.lastName && (
+                  <p className="text-sm text-destructive">{formErrors.lastName}</p>
                 )}
               </div>
             </div>

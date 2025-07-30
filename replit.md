@@ -97,6 +97,7 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Toast Confirmations**: Both forms show success toast messages on successful form submission with descriptive confirmation messages
 - **Inline Error Messages**: Both forms display red-bordered error messages below form fields on submission failure with clear error descriptions
 - **Comprehensive Error Handling**: Forms clear previous errors on successful submission and set inline errors on failure with dual feedback (toast + inline)
+- **AddCustomerForm Field Mapping**: Updated AddCustomerForm.tsx to use camelCase fields in form state (firstName, lastName) and properly map to snake_case for backend submission (first_name, last_name)
 
 ### Enhanced uploadFile Method with Comprehensive Error Handling (July 30, 2025)
 - **Status**: 100% Complete - Enhanced StorageService.uploadFile(bucket, path, file) method with robust error handling and automatic bucket management
