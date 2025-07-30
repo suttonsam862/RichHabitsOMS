@@ -842,24 +842,24 @@ export interface ProductionTaskWithDetails extends ProductionTask {
 // API RESPONSE TYPES
 // =====================================
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
+// export interface ApiResponse<T = any> {
+//   success: boolean;
+//   data?: T;
+//   message?: string;
+//   error?: string;
+// }
 
-export interface PaginatedResponse<T = any> {
-  success: boolean;
-  data: {
-    items: T[];
-    count: number;
-    page?: number;
-    limit?: number;
-    total_pages?: number;
-  };
-  message?: string;
-}
+// export interface PaginatedResponse<T = any> {
+//   success: boolean;
+//   data: {
+//     items: T[];
+//     count: number;
+//     page?: number;
+//     limit?: number;
+//     total_pages?: number;
+//   };
+//   message?: string;
+// }
 
 // =====================================
 // IMAGE AND FILE TYPES
@@ -976,3 +976,155 @@ export interface NotificationPreferences {
 
 export type Tables = Database['public']['Tables'];
 export type Enums = Database['public']['Enums'];
+
+// Core User Types
+export interface User {
+  id: string;
+  email: string;
+  role: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  company?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Customer Types
+export interface Customer {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  profileImageUrl?: string;
+  companyLogoUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Order Types
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  productName: string;
+  description?: string;
+  size?: string;
+  color?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  customerId: string;
+  status: OrderStatus;
+  totalAmount: number;
+  tax?: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  orderItems?: OrderItem[];
+  customer?: Customer;
+}
+
+// export type OrderStatus = 'draft' | 'pending' | 'approved' | 'in_production' | 'completed' | 'cancelled';
+
+// Catalog Types
+export interface CatalogItem {
+  id: string;
+  name: string;
+  category: string;
+  sport: string;
+  sku: string;
+  basePrice: number;
+  unitCost: number;
+  status: CatalogItemStatus;
+  baseImageUrl?: string;
+  measurementChartUrl?: string;
+  hasMeasurements: boolean;
+  measurementInstructions?: string;
+  etaDays: string;
+  preferredManufacturerId?: string;
+  specifications?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CatalogItemStatus = 'active' | 'inactive' | 'discontinued';
+
+// Form Types
+export interface FormErrors {
+  [key: string]: string;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+  errors?: FormErrors;
+  timestamp?: string;
+}
+
+// Dashboard Types
+export interface DashboardStats {
+  totalOrders: number;
+  pendingOrders: number;
+  totalCustomers: number;
+  totalRevenue: number;
+}
+
+// File Upload Types
+export interface UploadedFile {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  uploadedAt: string;
+}
+
+// Authentication Types
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role?: string;
+}
+
+// Pagination Types
+export interface PaginationParams {
+  page: number;
+  limit: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}

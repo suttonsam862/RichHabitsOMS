@@ -1,11 +1,35 @@
-import { useAuth } from '@/hooks/use-auth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
 
-export default function AdminDashboard() {
+// UI Components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+
+// Hooks
+import { useAuth } from '../../hooks/use-auth';
+
+// Types
+interface DashboardStats {
+  totalOrders: number;
+  pendingOrders: number;
+  totalCustomers: number;
+  totalRevenue: number;
+}
+
+/**
+ * Admin Dashboard - Main administrative overview and control panel
+ */
+export default function AdminDashboard(): JSX.Element {
   const { user } = useAuth();
-  
+  const [stats, setStats] = useState<DashboardStats>({
+    totalOrders: 0,
+    pendingOrders: 0,
+    totalCustomers: 0,
+    totalRevenue: 0
+  });
+
   if (!user) return null;
-  
+
   return (
     <div className="space-y-6">
       <div>
@@ -14,7 +38,7 @@ export default function AdminDashboard() {
           Welcome, {user.firstName || user.username} ({user.role})
         </p>
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -27,7 +51,7 @@ export default function AdminDashboard() {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
@@ -39,7 +63,7 @@ export default function AdminDashboard() {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Design Tasks</CardTitle>
@@ -51,7 +75,7 @@ export default function AdminDashboard() {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -64,7 +88,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="col-span-1">
           <CardHeader>
@@ -74,7 +98,7 @@ export default function AdminDashboard() {
             <p>Orders will appear here.</p>
           </CardContent>
         </Card>
-        
+
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Order Status</CardTitle>

@@ -64,7 +64,7 @@ export async function sendUserInvitation(req: Request, res: Response) {
         message: 'Failed to check existing users'
       });
     }
-    
+
     const userExists = existingUsers?.users?.some(user => user.email === email);
 
     if (userExists) {
@@ -201,7 +201,7 @@ export async function verifyInvitation(req: Request, res: Response) {
           message: 'Invalid or expired invitation token'
         });
       }
-      
+
       invitation = data;
       console.log(`✅ Successfully retrieved invitation for token: ${token}`);
     } catch (error) {
@@ -313,7 +313,7 @@ export async function createCustomer(req: Request, res: Response) {
           message: 'Failed to validate customer uniqueness: ' + checkError.message
         });
       }
-      
+
       existingCustomer = data;
       console.log(`✅ Successfully checked customer existence for email: ${email}`);
     } catch (error) {
@@ -369,7 +369,7 @@ export async function createCustomer(req: Request, res: Response) {
           details: profileError.details || 'No additional details'
         });
       }
-      
+
       insertedProfile = data;
       console.log(`✅ Successfully created customer profile for: ${email}`);
     } catch (error) {
@@ -530,10 +530,10 @@ async function getAllCustomers(req: Request, res: Response) {
 async function updateCustomer(req: Request, res: Response) {
   const { id } = req.params;
   const requestTimestamp = new Date().toISOString();
-  
+
   try {
     console.log(`🔄 [${requestTimestamp}] Starting customer update for ID: ${id}`);
-    
+
     // Validate customer ID format (UUID)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!id || !uuidRegex.test(id)) {
@@ -597,7 +597,7 @@ async function updateCustomer(req: Request, res: Response) {
         });
       }
     }
-    
+
     // Handle optional fields (can be empty strings)
     if (company !== undefined) updateData.company = company || '';
     if (phone !== undefined) updateData.phone = phone || '';
@@ -647,7 +647,7 @@ async function updateCustomer(req: Request, res: Response) {
           details: checkError.details,
           hint: checkError.hint
         });
-        
+
         if (checkError.code === 'PGRST116') {
           return res.status(400).json({
             success: false,
@@ -659,7 +659,7 @@ async function updateCustomer(req: Request, res: Response) {
           message: 'Failed to verify customer: ' + checkError.message
         });
       }
-      
+
       existingCustomer = data;
       console.log(`✅ [${requestTimestamp}] Successfully verified customer exists`);
     } catch (error) {
@@ -705,7 +705,7 @@ async function updateCustomer(req: Request, res: Response) {
           message: 'Failed to update customer profile: ' + profileError.message
         });
       }
-      
+
       updatedProfile = data;
       console.log(`✅ [${requestTimestamp}] Successfully updated customer profile`);
     } catch (error) {
@@ -755,7 +755,7 @@ async function updateCustomer(req: Request, res: Response) {
     };
 
     console.log(`✅ [${requestTimestamp}] Sending success response to client`);
-    
+
     res.status(200).json({
       success: true,
       updatedCustomer: responseData
@@ -772,7 +772,7 @@ async function updateCustomer(req: Request, res: Response) {
       requestBody: req.body,
       timestamp: requestTimestamp
     });
-    
+
     return res.status(400).json({
       success: false,
       message: 'Unexpected error updating customer: ' + (err.message || 'Unknown error')
@@ -811,9 +811,9 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
         message: 'Failed to access storage system'
       });
     }
-    
+
     const bucketExists = buckets?.some(bucket => bucket.name === 'uploads');
-    
+
     if (!bucketExists) {
       console.log('Creating uploads bucket...');
       try {
@@ -822,7 +822,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
           allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
           fileSizeLimit: 5242880 // 5MB
         });
-        
+
         if (bucketError) {
           console.error('❌ Error creating bucket:', bucketError);
           return res.status(400).json({
@@ -843,7 +843,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
     // Generate unique filename to prevent conflicts
     const fileExtension = req.file.originalname.split('.').pop();
     const fileName = `customer_photos/${id}_${Date.now()}.${fileExtension}`;
-    
+
     // Upload file to Supabase storage in customer_photos/ directory
     let uploadData;
     try {
@@ -861,7 +861,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
           message: 'Failed to upload photo: ' + error.message
         });
       }
-      
+
       uploadData = data;
       console.log('✅ Photo upload successful:', data);
     } catch (error) {
@@ -904,7 +904,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
 
       if (updateError) {
         console.error('❌ Database update error:', updateError);
-        
+
         // If column doesn't exist, that's okay - photo is still uploaded
         if (updateError.code === 'PGRST204') {
           console.log('⚠️ profile_image_url column not found in customers table');
@@ -956,7 +956,7 @@ router.post('/:id/photo', requireAuth, requireRole(['admin']), handleCatalogImag
 // GET single customer endpoint
 router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   try {
     const { data: customer, error } = await supabaseAdmin
       .from('customers')
@@ -980,8 +980,7 @@ router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res
       company: customer.company,
       phone: customer.phone,
       address: customer.address,
-      city: customer.city,
-      state: customer.state,
+      city: customer.state,
       zip: customer.zip,
       country: customer.country,
       status: customer.status,

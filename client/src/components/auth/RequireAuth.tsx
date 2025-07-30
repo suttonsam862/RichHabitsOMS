@@ -1,13 +1,20 @@
-import { ReactNode } from 'react';
-import { useLocation, Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/use-auth';
+import React, { useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 
+// Hooks
+import { useAuth } from '../../hooks/use-auth';
+
+// Types
 interface RequireAuthProps {
-  children: ReactNode;
-  allowedRoles?: ('admin' | 'customer' | 'salesperson' | 'designer' | 'manufacturer' | 'catalog_manager')[];
+  children: React.ReactNode;
+  allowedRoles?: string[];
 }
 
-export function RequireAuth({ allowedRoles = [], children }: RequireAuthProps) {
+/**
+ * Authentication wrapper component that protects routes based on user authentication
+ * and optional role-based access control
+ */
+export const RequireAuth: React.FC<RequireAuthProps> = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -56,4 +63,4 @@ export function RequireAuth({ allowedRoles = [], children }: RequireAuthProps) {
   // If user is authenticated and authorized, render the children
   console.log('RequireAuth: Access granted for', user.role);
   return <>{children}</>;
-}
+};
