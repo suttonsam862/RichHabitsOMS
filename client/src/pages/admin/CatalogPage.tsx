@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
@@ -49,6 +49,8 @@ import {
   Sparkles
 } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CatalogItem {
   id: string;
@@ -124,6 +126,368 @@ const ONBOARDING_STEPS = [
     icon: Upload
   }
 ];
+
+// Enhanced Categorized Catalog View Component
+interface CategorizedCatalogViewProps {
+  items: CatalogItem[];
+  onEditItem: (item: CatalogItem) => void;
+  onDeleteItem: (itemId: string) => void;
+  isDeleting: boolean;
+}
+
+function CategorizedCatalogView({ items, onEditItem, onDeleteItem, isDeleting }: CategorizedCatalogViewProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'gallery' | 'compact'>('gallery');
+
+  // Group items by category and sort aesthetically
+  const categorizedItems = useMemo(() => {
+    const categories = new Map<string, CatalogItem[]>();
+    
+    // Sort items by category, then by price (premium first), then by name
+    const sortedItems = [...items].sort((a, b) => {
+      // First by category
+      if (a.category !== b.category) {
+        return a.category.localeCompare(b.category);
+      }
+      // Then by price (higher price first for premium appearance)
+      if (a.basePrice !== b.basePrice) {
+        return (b.basePrice || 0) - (a.basePrice || 0);
+      }
+      // Finally by name
+      return a.name.localeCompare(b.name);
+    });
+
+    sortedItems.forEach(item => {
+      const category = item.category || 'Uncategorized';
+      if (!categories.has(category)) {
+        categories.set(category, []);
+      }
+      categories.get(category)!.push(item);
+    });
+
+    return categories;
+  }, [items]);
+
+  const allCategories = ['all', ...Array.from(categorizedItems.keys()).sort()];
+  const displayItems = selectedCategory === 'all' ? items : categorizedItems.get(selectedCategory) || [];
+
+  return (
+    <div className="space-y-6">
+      {/* Category Navigation & View Controls */}
+      <Card className="rich-card">
+        <CardContent className="pt-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            {/* Category Tabs */}
+            <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full lg:w-auto">
+              <ScrollArea className="w-full">
+                <TabsList className="glass-surface inline-flex h-10 items-center justify-center rounded-md bg-rich-black/40 p-1 text-muted-foreground">
+                  {allCategories.map(category => (
+                    <TabsTrigger 
+                      key={category}
+                      value={category}
+                      className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-neon-blue data-[state=active]:text-rich-black data-[state=active]:shadow-sm"
+                    >
+                      {category === 'all' ? `All Items (${items.length})` : `${category} (${categorizedItems.get(category)?.length || 0})`}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </ScrollArea>
+            </Tabs>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={viewMode === 'gallery' ? 'default' : 'outline'}
+                onClick={() => setViewMode('gallery')}
+                className="glass-button"
+              >
+                Gallery
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                onClick={() => setViewMode('grid')}
+                className="glass-button"
+              >
+                Grid
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'compact' ? 'default' : 'outline'}
+                onClick={() => setViewMode('compact')}
+                className="glass-button"
+              >
+                Compact
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Items Display */}
+      {selectedCategory === 'all' ? (
+        // Show all categories with sections
+        <div className="space-y-8">
+          {Array.from(categorizedItems.entries()).map(([category, categoryItems]) => (
+            <CategorySection
+              key={category}
+              category={category}
+              items={categoryItems}
+              viewMode={viewMode}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
+              isDeleting={isDeleting}
+            />
+          ))}
+        </div>
+      ) : (
+        // Show selected category items
+        <ItemsGrid
+          items={displayItems}
+          viewMode={viewMode}
+          onEditItem={onEditItem}
+          onDeleteItem={onDeleteItem}
+          isDeleting={isDeleting}
+        />
+      )}
+    </div>
+  );
+}
+
+// Category Section Component
+interface CategorySectionProps {
+  category: string;
+  items: CatalogItem[];
+  viewMode: 'grid' | 'gallery' | 'compact';
+  onEditItem: (item: CatalogItem) => void;
+  onDeleteItem: (itemId: string) => void;
+  isDeleting: boolean;
+}
+
+function CategorySection({ category, items, viewMode, onEditItem, onDeleteItem, isDeleting }: CategorySectionProps) {
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <h2 className="text-2xl font-bold text-foreground">{category}</h2>
+        <Badge variant="outline" className="glass-surface">
+          {items.length} {items.length === 1 ? 'item' : 'items'}
+        </Badge>
+      </div>
+      <ItemsGrid
+        items={items}
+        viewMode={viewMode}
+        onEditItem={onEditItem}
+        onDeleteItem={onDeleteItem}
+        isDeleting={isDeleting}
+      />
+    </div>
+  );
+}
+
+// Items Grid Component with Different View Modes
+interface ItemsGridProps {
+  items: CatalogItem[];
+  viewMode: 'grid' | 'gallery' | 'compact';
+  onEditItem: (item: CatalogItem) => void;
+  onDeleteItem: (itemId: string) => void;
+  isDeleting: boolean;
+}
+
+function ItemsGrid({ items, viewMode, onEditItem, onDeleteItem, isDeleting }: ItemsGridProps) {
+  const getGridClasses = () => {
+    switch (viewMode) {
+      case 'gallery':
+        return 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6';
+      case 'grid':
+        return 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4';
+      case 'compact':
+        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3';
+      default:
+        return 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6';
+    }
+  };
+
+  if (items.length === 0) {
+    return (
+      <Card className="rich-card">
+        <CardContent className="py-16 text-center">
+          <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2 text-foreground">No items in this category</h3>
+          <p className="text-muted-foreground">Items you add to this category will appear here.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className={getGridClasses()}>
+      {items.map((item) => (
+        <CatalogItemCard
+          key={item.id}
+          item={item}
+          viewMode={viewMode}
+          onEdit={() => onEditItem(item)}
+          onDelete={() => onDeleteItem(item.id)}
+          isDeleting={isDeleting}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Enhanced Catalog Item Card
+interface CatalogItemCardProps {
+  item: CatalogItem;
+  viewMode: 'grid' | 'gallery' | 'compact';
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}
+
+function CatalogItemCard({ item, viewMode, onEdit, onDelete, isDeleting }: CatalogItemCardProps) {
+  const getCardClasses = () => {
+    const base = 'rich-card relative group hover:shadow-xl transition-all duration-300 hover:scale-[1.02]';
+    switch (viewMode) {
+      case 'gallery':
+        return `${base} overflow-hidden`;
+      case 'grid':
+        return `${base} aspect-square`;
+      case 'compact':
+        return `${base} flex flex-row`;
+      default:
+        return base;
+    }
+  };
+
+  const renderImage = () => {
+    if (!item.imageUrl) {
+      return (
+        <div className={`
+          ${viewMode === 'compact' ? 'w-24 h-24' : 'w-full h-48'} 
+          bg-gradient-to-br from-rich-black/20 to-glass-border/20 
+          flex items-center justify-center rounded-md
+        `}>
+          <ImageIcon className={`${viewMode === 'compact' ? 'w-8 h-8' : 'w-12 h-12'} text-muted-foreground`} />
+        </div>
+      );
+    }
+
+    return (
+      <div className={`${viewMode === 'compact' ? 'w-24 h-24 flex-shrink-0' : 'w-full h-48'} relative overflow-hidden rounded-md group`}>
+        <OptimizedImage
+          src={item.imageUrl}
+          alt={item.name}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+          loading="lazy"
+          placeholder="blur"
+          sizes="(max-width: 768px) 100vw, 400px"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-rich-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+    );
+  };
+
+  if (viewMode === 'compact') {
+    return (
+      <Card className={getCardClasses()}>
+        <CardContent className="p-4 flex items-center gap-4">
+          {renderImage()}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="font-semibold text-foreground truncate">{item.name}</h3>
+              <Badge variant={item.status === 'active' ? 'default' : 'secondary'} className="ml-2">
+                {item.status}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">{item.category} • {item.sport}</p>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-lg text-neon-blue">${(item.basePrice || 0).toFixed(2)}</span>
+              <div className="flex gap-1">
+                <Button size="sm" variant="outline" onClick={onEdit} className="h-8 w-8 p-0">
+                  <Edit className="w-3 h-3" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={onDelete} 
+                  disabled={isDeleting}
+                  className="h-8 w-8 p-0 hover:bg-red-500/10"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={getCardClasses()}>
+      <CardContent className="p-0">
+        {renderImage()}
+        
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-2">
+            <CardTitle className={`${viewMode === 'grid' ? 'text-sm' : 'text-lg'} text-foreground line-clamp-2`}>
+              {item.name}
+            </CardTitle>
+            <Badge variant={item.status === 'active' ? 'default' : 'secondary'} className="ml-2">
+              {item.status}
+            </Badge>
+          </div>
+          
+          <p className={`${viewMode === 'grid' ? 'text-xs' : 'text-sm'} text-muted-foreground mb-3`}>
+            {item.category} • {item.sport}
+          </p>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className={`${viewMode === 'grid' ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Price:</span>
+              <span className="font-bold text-neon-blue">${(item.basePrice || 0).toFixed(2)}</span>
+            </div>
+            
+            {viewMode === 'gallery' && (
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">SKU:</span>
+                  <span className="font-mono text-xs">{item.sku}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">ETA:</span>
+                  <span>{item.etaDays}</span>
+                </div>
+                {item.fabric && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Fabric:</span>
+                    <span className="truncate ml-2">{item.fabric}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2 mt-4">
+            <Button size="sm" variant="outline" onClick={onEdit} className="glass-button">
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={onDelete} 
+              disabled={isDeleting}
+              className="glass-button hover:bg-red-500/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function CatalogPage() {
   const [isAddingItem, setIsAddingItem] = useState(false);
@@ -806,78 +1170,14 @@ export default function CatalogPage() {
         </Card>
       )}
 
-      {/* Catalog Items Grid */}
+      {/* Categorized Catalog Display */}
       {!error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item: CatalogItem) => (
-            <Card key={item.id} className="rich-card relative group hover:shadow-xl transition-all duration-300">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg text-foreground">{item.name}</CardTitle>
-                  <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
-                    {item.status}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{item.category} • {item.sport}</p>
-              </CardHeader>
-              
-              <CardContent>
-                {item.imageUrl && (
-                  <div className="mb-4">
-                    <OptimizedImage
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-48 object-cover rounded-md"
-                      loading="lazy"
-                      placeholder="blur"
-                      sizes="(max-width: 768px) 100vw, 400px"
-                    />
-                  </div>
-                )}
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">SKU:</span>
-                    <span className="font-mono text-foreground">{item.sku}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Price:</span>
-                    <span className="font-semibold text-foreground">${(item.basePrice || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">ETA:</span>
-                    <span className="text-foreground">{item.etaDays}</span>
-                  </div>
-                  {item.fabric && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Fabric:</span>
-                      <span className="text-foreground">{item.fabric}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-end space-x-2 mt-4">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => startEditing(item)}
-                    className="glass-button"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteItemMutation.mutate(item.id)}
-                    className="glass-button hover:bg-red-500/10"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <CategorizedCatalogView 
+          items={filteredItems} 
+          onEditItem={startEditing}
+          onDeleteItem={(itemId) => deleteItemMutation.mutate(itemId)}
+          isDeleting={deleteItemMutation.isPending}
+        />
       )}
 
       {/* Empty State */}
