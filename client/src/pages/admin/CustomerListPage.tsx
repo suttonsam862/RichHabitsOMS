@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryKeys } from '@/lib/queryKeys';
 import { useDataSync } from '@/hooks/useDataSync';
+import { useGlobalDataSync, CACHE_KEYS, DATA_SYNC_EVENTS } from '@/hooks/useGlobalDataSync';
 import { getQueryFn } from '@/lib/queryClient';
 import AddCustomerForm from "./AddCustomerForm";
 import CustomerOnboardingFlow from "@/components/customer/CustomerOnboardingFlow";
@@ -131,6 +132,7 @@ export default function CustomerListPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { syncCustomers } = useDataSync();
+  const globalDataSync = useGlobalDataSync();
 
   const handleViewCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -143,8 +145,9 @@ export default function CustomerListPage() {
   };
 
   const handleOrganizationUpdate = async () => {
-    // Refresh the customer data when organization is updated
-    await syncCustomers();
+    // Refresh the customer data when organization is updated using global sync
+    await globalDataSync.syncCustomers();
+    globalDataSync.eventBus.emit(DATA_SYNC_EVENTS.CUSTOMER_UPDATED);
   };
 
   const handleEditOrganization = (organization: OrganizationCard) => {
@@ -171,7 +174,7 @@ export default function CustomerListPage() {
           title: "Organization Archived",
           description: `${organization.name} has been archived successfully.`,
         });
-        await syncCustomers();
+        await globalDataSync.syncCustomers();
       } else {
         throw new Error('Failed to archive organization');
       }
@@ -211,7 +214,7 @@ export default function CustomerListPage() {
           title: "Organization Deleted",
           description: `${organization.name} has been permanently deleted.`,
         });
-        await syncCustomers();
+        await globalDataSync.syncCustomers();
       } else {
         throw new Error('Failed to delete organization');
       }
@@ -237,9 +240,9 @@ export default function CustomerListPage() {
     }
   };
 
-  // Fetch customer data using standardized patterns
+  // Fetch customer data using standardized patterns with global sync
   const { data: customersResponse, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.customers.all, // Use standardized key
+    queryKey: CACHE_KEYS.customers, // Use global cache keys
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 1000 * 60 * 2, // 2 minutes for better sync
     gcTime: 1000 * 60 * 10, // 10 minutes
@@ -614,7 +617,7 @@ export default function CustomerListPage() {
                 size="sm" 
                 onClick={async () => {
                   console.log("Manually refreshing customer data...");
-                  await syncCustomers();
+                  await globalDataSync.syncCustomers();
                   refetch();
                 }}
                 disabled={isLoading}
@@ -749,7 +752,8 @@ export default function CustomerListPage() {
         onClose={() => setIsOnboardingFlowOpen(false)}
         onSuccess={async () => {
           setIsOnboardingFlowOpen(false);
-          await syncCustomers();
+          await globalDataSync.syncCustomers();
+          globalDataSync.eventBus.emit(DATA_SYNC_EVENTS.CUSTOMER_CREATED);
         }}
       />
 

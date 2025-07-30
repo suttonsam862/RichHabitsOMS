@@ -51,6 +51,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
+import { useGlobalDataSync, CACHE_KEYS, DATA_SYNC_EVENTS, createMutationSuccessHandler } from '@/hooks/useGlobalDataSync';
 import ManufacturerOnboardingFlow from '@/components/manufacturing/ManufacturerOnboardingFlow';
 import {
   Dialog,
@@ -203,6 +204,7 @@ interface Manufacturer {
 export default function ManufacturingManagement() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const globalDataSync = useGlobalDataSync();
 
   // Core state management
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -226,14 +228,38 @@ export default function ManufacturingManagement() {
   const [manufacturerFilter, setManufacturerFilter] = useState<string>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState<{start?: string; end?: string}>({});
 
-  // Data states
-  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
-  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
-  const [productionTasks, setProductionTasks] = useState<ProductionTask[]>([]);
-  const [designTasks, setDesignTasks] = useState<DesignTask[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // Replace state-based data with React Query using global cache keys
+  const { data: orders = [], isLoading: ordersLoading, refetch: refetchOrders } = useQuery({
+    queryKey: CACHE_KEYS.orders,
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const { data: manufacturers = [], isLoading: manufacturersLoading, refetch: refetchManufacturers } = useQuery({
+    queryKey: CACHE_KEYS.manufacturers,
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const { data: productionTasks = [], isLoading: tasksLoading, refetch: refetchTasks } = useQuery({
+    queryKey: CACHE_KEYS.productionTasks,
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const { data: designTasks = [], isLoading: designTasksLoading } = useQuery({
+    queryKey: CACHE_KEYS.designTasks,
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const { data: messages = [], isLoading: messagesLoading } = useQuery({
+    queryKey: CACHE_KEYS.messages,
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const loading = ordersLoading || manufacturersLoading || tasksLoading || designTasksLoading || messagesLoading;
 
   // Form states
   const [newManufacturerData, setNewManufacturerData] = useState({
@@ -258,168 +284,40 @@ export default function ManufacturingManagement() {
     completionPercentage: 0
   });
 
-  // Data fetching effect
+  // Listen to global data sync events for real-time updates
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    const cleanup = globalDataSync.eventBus.on(DATA_SYNC_EVENTS.ORDER_UPDATED, () => {
+      refetchOrders();
+    });
+    return cleanup;
+  }, [globalDataSync.eventBus, refetchOrders]);
 
-  // Disabled aggressive auto-refresh to prevent fetch spam
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     fetchAllData(true);
-  //   }, 30000);
-  //   return () => clearInterval(interval);
-  // }, []);
+  useEffect(() => {
+    const cleanup = globalDataSync.eventBus.on(DATA_SYNC_EVENTS.PRODUCTION_TASK_UPDATED, () => {
+      refetchTasks();
+    });
+    return cleanup;
+  }, [globalDataSync.eventBus, refetchTasks]);
 
-  // Comprehensive data fetching function with spam prevention
-  const fetchAllData = async (isRefresh = false) => {
-    // Prevent rapid successive calls
-    if (loading || refreshing) {
-      console.log('Fetch already in progress, skipping...');
-      return;
-    }
+  useEffect(() => {
+    const cleanup = globalDataSync.eventBus.on(DATA_SYNC_EVENTS.MANUFACTURER_ASSIGNED, () => {
+      refetchManufacturers();
+      refetchOrders();
+    });
+    return cleanup;
+  }, [globalDataSync.eventBus, refetchManufacturers, refetchOrders]);
 
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      const authToken = localStorage.getItem('authToken');
-      if (!authToken) {
-        console.error('No auth token found');
-        resetData();
-        return;
-      }
-
-      // Fetch all required data in parallel with error handling
-      const requests = [
-        { url: '/api/orders?include_relations=true', setter: setOrders, name: 'orders' },
-        { url: '/api/users/manufacturers', setter: setManufacturers, name: 'manufacturers' },
-        { url: '/api/production-tasks', setter: setProductionTasks, name: 'production tasks' },
-        { url: '/api/design-tasks', setter: setDesignTasks, name: 'design tasks' },
-        { url: '/api/messages', setter: setMessages, name: 'messages' }
-      ];
-
-      const results = await Promise.allSettled(
-        requests.map(req => 
-          fetch(req.url, {
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            }
-          })
-        )
-      );
-
-      // Process results individually to prevent one failure from breaking everything
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        const req = requests[i];
-        
-        try {
-          if (result.status === 'fulfilled' && result.value.ok) {
-            const data = await result.value.json();
-            const dataArray = Array.isArray(data.data) ? data.data : [];
-            
-            if (req.name === 'orders') {
-              // Enhance orders with priority calculation and additional data
-              const enhancedOrders = dataArray.map((order: any) => ({
-                ...order,
-                priority: calculateOrderPriority(order),
-                dueDate: calculateDueDate(order),
-              }));
-              req.setter(enhancedOrders);
-            } else {
-              req.setter(dataArray);
-            }
-            
-            console.log(`${req.name} loaded:`, dataArray.length);
-          } else {
-            console.warn(`Failed to fetch ${req.name}:`, result.status === 'fulfilled' ? result.value.status : 'Network error');
-            req.setter([]);
-          }
-        } catch (error) {
-          console.error(`Error processing ${req.name}:`, error);
-          req.setter([]);
-        }
-      }
-
-      // Process orders with enhanced details
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json();
-        const ordersArray = Array.isArray(ordersData.data) ? ordersData.data : [];
-
-        // Enhance orders with priority calculation and additional data
-        const enhancedOrders = ordersArray.map((order: any) => ({
-          ...order,
-          priority: calculateOrderPriority(order),
-          dueDate: calculateDueDate(order),
-        }));
-
-        setOrders(enhancedOrders);
-        console.log('Orders loaded:', enhancedOrders.length);
-      } else {
-        console.error('Failed to fetch orders:', ordersResponse.status);
-        setOrders([]);
-      }
-
-      // Process manufacturers with workload calculations
-      if (manufacturersResponse.ok) {
-        const manufacturersData = await manufacturersResponse.json();
-        const manufacturersArray = Array.isArray(manufacturersData.data) ? manufacturersData.data : [];
-        setManufacturers(manufacturersArray);
-        console.log('Manufacturers loaded:', manufacturersArray.length);
-      } else {
-        console.error('Failed to fetch manufacturers:', manufacturersResponse.status);
-        setManufacturers([]);
-      }
-
-      // Process production tasks
-      if (productionTasksResponse.ok) {
-        const tasksData = await productionTasksResponse.json();
-        const tasksArray = Array.isArray(tasksData.data) ? tasksData.data : [];
-        setProductionTasks(tasksArray);
-      } else {
-        setProductionTasks([]);
-      }
-
-      // Process design tasks
-      if (designTasksResponse.ok) {
-        const designData = await designTasksResponse.json();
-        const designArray = Array.isArray(designData.data) ? designData.data : [];
-        setDesignTasks(designArray);
-      } else {
-        setDesignTasks([]);
-      }
-
-      // Process messages
-      if (messagesResponse.ok) {
-        const messagesData = await messagesResponse.json();
-        const messagesArray = Array.isArray(messagesData.data) ? messagesData.data : [];
-        setMessages(messagesArray);
-      } else {
-        setMessages([]);
-      }
-
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      resetData();
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const resetData = () => {
-    setOrders([]);
-    setManufacturers([]);
-    setProductionTasks([]);
-    setDesignTasks([]);
-    setMessages([]);
-    setLoading(false);
-    setRefreshing(false);
+  // Manual refresh function for React Query data
+  const handleManualRefresh = async () => {
+    await Promise.all([
+      refetchOrders(),
+      refetchManufacturers(),
+      refetchTasks()
+    ]);
+    toast({
+      title: "Data Refreshed",
+      description: "All manufacturing data has been updated.",
+    });
   };
 
   // Helper functions for data processing
@@ -566,17 +464,18 @@ export default function ManufacturingManagement() {
       
       return response.json();
     },
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users', 'manufacturer'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users/manufacturers'] });
-      fetchAllData(true); // Refresh all data
-      toast({
-        title: 'Manufacturer Added Successfully',
-        description: response?.message || `${newManufacturerData.firstName} ${newManufacturerData.lastName} has been created`,
-      });
-      setShowTinderManufacturerDialog(false);
-      resetManufacturerForm();
-    },
+    onSuccess: createMutationSuccessHandler(globalDataSync, {
+      dataTypes: ['manufacturers', 'stats'],
+      eventType: DATA_SYNC_EVENTS.MANUFACTURER_CREATED,
+      customHandler: (response) => {
+        toast({
+          title: 'Manufacturer Added Successfully',
+          description: response?.message || `${newManufacturerData.firstName} ${newManufacturerData.lastName} has been created`,
+        });
+        setShowTinderManufacturerDialog(false);
+        resetManufacturerForm();
+      }
+    }),
     onError: (error: Error) => {
       console.error('Manufacturer creation failed:', error);
       toast({
@@ -678,21 +577,20 @@ export default function ManufacturingManagement() {
 
       return { successCount: successes, totalCount: data.orderIds.length };
     },
-    onSuccess: (result) => {
-      fetchAllData(true);
-      queryClient.invalidateQueries({ queryKey: ['enhanced-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/stats'] });
-      
-      const selectedManufacturer = manufacturers.find(m => m.id === selectedManufacturerId);
-      
-      toast({
-        title: 'Bulk Assignment Completed',
-        description: `Successfully assigned ${selectedManufacturer?.firstName || 'manufacturer'} to ${result.successCount} out of ${result.totalCount} orders`,
-      });
-      setShowBulkAssignDialog(false);
-      setSelectedOrders([]);
-      setSelectedManufacturerId('');
-    },
+    onSuccess: createMutationSuccessHandler(globalDataSync, {
+      dataTypes: ['orders', 'manufacturers', 'stats'],
+      eventType: DATA_SYNC_EVENTS.MANUFACTURER_ASSIGNED,
+      customHandler: (result) => {
+        const selectedManufacturer = manufacturers.find(m => m.id === selectedManufacturerId);
+        toast({
+          title: 'Bulk Assignment Completed',
+          description: `Successfully assigned ${selectedManufacturer?.firstName || 'manufacturer'} to ${result.successCount} out of ${result.totalCount} orders`,
+        });
+        setShowBulkAssignDialog(false);
+        setSelectedOrders([]);
+        setSelectedManufacturerId('');
+      }
+    }),
     onError: (error: Error) => {
       console.error('Bulk manufacturer assignment failed:', error);
       toast({
@@ -731,19 +629,19 @@ export default function ManufacturingManagement() {
       
       return response.json();
     },
-    onSuccess: (response) => {
-      fetchAllData(true);
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-      
-      const recipient = manufacturers.find(m => m.id === messageData.receiverId);
-      
-      toast({
-        title: 'Message Sent Successfully',
-        description: response?.message || `Message sent to ${recipient?.firstName || 'recipient'}`,
-      });
-      setShowMessageDialog(false);
-      resetMessageForm();
-    },
+    onSuccess: createMutationSuccessHandler(globalDataSync, {
+      dataTypes: ['messages'],
+      eventType: DATA_SYNC_EVENTS.MESSAGE_SENT,
+      customHandler: (response) => {
+        const recipient = manufacturers.find(m => m.id === messageData.receiverId);
+        toast({
+          title: 'Message Sent Successfully',
+          description: response?.message || `Message sent to ${recipient?.firstName || 'recipient'}`,
+        });
+        setShowMessageDialog(false);
+        resetMessageForm();
+      }
+    }),
     onError: (error: Error) => {
       console.error('Message sending failed:', error);
       toast({
@@ -784,19 +682,19 @@ export default function ManufacturingManagement() {
       
       return response.json();
     },
-    onSuccess: (response) => {
-      fetchAllData(true);
-      queryClient.invalidateQueries({ queryKey: ['/api/production-tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/stats'] });
-      const order = orders.find(o => o.id === progressData.orderId);
-      
-      toast({
-        title: 'Progress Updated Successfully', 
-        description: response?.message || `Progress updated for order ${order?.orderNumber || progressData.orderId}`,
-      });
-      setShowProgressDialog(false);
-      resetProgressForm();
-    },
+    onSuccess: createMutationSuccessHandler(globalDataSync, {
+      dataTypes: ['productionTasks', 'orders', 'stats'],
+      eventType: DATA_SYNC_EVENTS.PRODUCTION_TASK_UPDATED,
+      customHandler: (response) => {
+        const order = orders.find(o => o.id === progressData.orderId);
+        toast({
+          title: 'Progress Updated Successfully', 
+          description: response?.message || `Progress updated for order ${order?.orderNumber || progressData.orderId}`,
+        });
+        setShowProgressDialog(false);
+        resetProgressForm();
+      }
+    }),
     onError: (error: Error) => {
       console.error('Progress update failed:', error);
       toast({
@@ -967,11 +865,11 @@ export default function ManufacturingManagement() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchAllData(true)}
-              disabled={refreshing}
+              onClick={handleManualRefresh}
+              disabled={loading}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Refreshing...' : 'Refresh'}
             </Button>
             <Button
               onClick={() => setShowTinderManufacturerDialog(true)}

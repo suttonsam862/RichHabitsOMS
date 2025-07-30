@@ -30,6 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { safeFetch, circuitBreaker } from '@/lib/fetchCircuitBreaker';
 import { useSmartFetch } from '@/hooks/useSmartFetch';
+import { useGlobalDataSync, CACHE_KEYS, DATA_SYNC_EVENTS, createMutationSuccessHandler } from '@/hooks/useGlobalDataSync';
 import { 
   Plus, 
   Search, 
@@ -222,6 +223,7 @@ export default function EnhancedOrderManagement() {
   const { toast } = useToast();
   const { user, role } = useAuth();
   const [location, setLocation] = useLocation();
+  const globalDataSync = useGlobalDataSync();
 
   // Fetch orders with comprehensive data using smart fetch
   const { data: orders = [], isLoading: ordersLoading, refetch: refetchOrders, isBlocked, resetErrors } = useSmartFetch({
@@ -305,17 +307,18 @@ export default function EnhancedOrderManagement() {
       
       return response.json();
     },
-    onSuccess: (response) => {
-      toast({
-        title: "Order Created",
-        description: response?.message || "Order has been created successfully with team assignments.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['enhanced-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['team-workload'] });
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
-      refetchOrders();
-      resetForm();
-    },
+    onSuccess: createMutationSuccessHandler(globalDataSync, {
+      dataTypes: ['orders', 'customers', 'manufacturers', 'stats'],
+      eventType: DATA_SYNC_EVENTS.ORDER_CREATED,
+      customHandler: (response) => {
+        toast({
+          title: "Order Created",
+          description: response?.message || "Order has been created successfully with team assignments.",
+        });
+        refetchOrders();
+        resetForm();
+      }
+    }),
     onError: (error: Error) => {
       console.error('Order creation failed:', error);
       toast({
@@ -342,15 +345,17 @@ export default function EnhancedOrderManagement() {
       if (!response.ok) throw new Error('Failed to update order');
       return response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Order Updated",
-        description: "Order has been updated successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['enhanced-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['team-workload'] });
-      resetForm();
-    },
+    onSuccess: createMutationSuccessHandler(globalDataSync, {
+      dataTypes: ['orders', 'manufacturers', 'stats'],
+      eventType: DATA_SYNC_EVENTS.ORDER_UPDATED,
+      customHandler: () => {
+        toast({
+          title: "Order Updated",
+          description: "Order has been updated successfully.",
+        });
+        resetForm();
+      }
+    }),
     onError: (error) => {
       toast({
         title: "Update Failed",
