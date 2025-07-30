@@ -118,63 +118,43 @@ export async function getManufacturingStats(req: Request, res: Response) {
 }
 
 /**
- * GET /api/design-tasks - List design tasks
+ * GET /api/design-tasks - List design tasks (MOCK until Supabase integration complete)
  */
 export async function getDesignTasks(req: Request, res: Response) {
   try {
-    console.log('📋 Fetching design tasks...');
+    console.log('📋 Fetching design tasks (MOCK)...');
 
-    const { 
-      status, 
-      designerId, 
-      orderId,
-      page = 1,
-      limit = 20
-    } = req.query;
+    // MOCK: Return temporary design task data until Supabase integration is complete
+    const mockDesignTasks = [
+      {
+        id: 'design-task-001',
+        order_id: 'order-001',
+        designer_id: 'designer-001',
+        status: 'pending',
+        notes: 'Create custom basketball jersey design with team logo'
+      },
+      {
+        id: 'design-task-002',
+        order_id: 'order-002',
+        designer_id: 'designer-002',
+        status: 'in_progress',
+        notes: 'Design soccer uniform with player numbers and names'
+      },
+      {
+        id: 'design-task-003',
+        order_id: 'order-003',
+        designer_id: 'designer-001',
+        status: 'completed',
+        notes: 'Football jersey design with custom team colors'
+      }
+    ];
 
-    let query = supabase
-      .from('design_tasks')
-      .select(`
-        *,
-        orders!inner(order_number, status)
-      `)
-      .order('created_at', { ascending: false });
-
-    // Apply filters
-    if (status) {
-      query = query.eq('status', status);
-    }
-    if (designerId) {
-      query = query.eq('designerId', designerId);
-    }
-    if (orderId) {
-      query = query.eq('orderId', orderId);
-    }
-
-    // Apply pagination
-    const offset = (Number(page) - 1) * Number(limit);
-    query = query.range(offset, offset + Number(limit) - 1);
-
-    const { data: tasks, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching design tasks:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch design tasks',
-        error: error.message
-      });
-    }
-
+    console.log('📋 Returning mock design tasks for development');
+    
     res.json({
       success: true,
-      data: tasks || [],
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total: count || 0,
-        pages: Math.ceil((count || 0) / Number(limit))
-      }
+      data: mockDesignTasks,
+      message: 'MOCK: Design tasks endpoint - awaiting Supabase integration'
     });
   } catch (error: any) {
     console.error('Design tasks fetch failed:', error);

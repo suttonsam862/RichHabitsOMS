@@ -1,0 +1,46 @@
+Despite reports that critical Agent fixes were applied (including the customer update endpoint, circuit breaker, error handling, photo upload, etc.), the application remains functionally broken.
+
+You must now explain **why these changes are not working**, even though they appear in the codebase.
+
+Act as a forensic engineer and answer the following clearly:
+
+---
+
+1. ✅ Were the customer update endpoint and form truly connected?
+- Does `CustomerEditPage.tsx` correctly call `PUT /api/customers/:id` or `PATCH /api/customers/:id`?
+- Does the request actually fire in the browser network tab?
+- Does it hit the correct Express route?
+- Does the backend log the request?
+- Does Supabase execute the update?
+- Does the frontend reflect the updated data or throw an error?
+
+2. 🔄 Are any of the following mismatched?
+- HTTP method (PUT vs PATCH)
+- URL (e.g. missing ID or incorrect format)
+- Payload shape (camelCase vs snake_case)
+- Required headers (auth token, content-type)
+
+3. 🧱 Are backend routes mounted properly?
+- Are `PUT` or `PATCH` routes for `/api/customers/:id` actually mounted in Express?
+- Is the handler invoked?
+- Are errors silently swallowed?
+
+4. ❌ Is error handling broken or missing?
+- Are network/API errors properly caught in the form?
+- Is the toast system intercepting failed updates as if they were successful?
+
+5. 🔍 Could recent Agent edits have overwritten or conflicted with prior code?
+- Was `CustomerEditPage.tsx` replaced with an older version?
+- Was `customerRoutes.ts` reverted?
+- Are mutations using stale logic from TanStack Query or not calling the new API?
+
+---
+
+Please return a clear, structured answer with:
+
+- 🧠 Diagnosis per flow
+- 💣 Known issues or oversights
+- 🔧 Specific files or lines where fixes failed
+- 🧭 Recommendations for framing micro-prompts for the Agent (e.g. “Patch line 84 in customerRoutes.ts”)
+
+Your goal is to inform a batch of 30 isolated, low-risk Agent prompts that can be run overnight.

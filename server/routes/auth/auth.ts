@@ -167,14 +167,38 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       }
     }
 
-    // Try to validate the token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      console.log('Token validation failed:', error?.message || 'No user found');
-
-      // Development bypass
+    // Validate JWT format before attempting Supabase validation
+    const tokenSegments = token.split('.');
+    if (tokenSegments.length !== 3) {
+      console.log('⚠️  Malformed JWT token: invalid number of segments');
+      
+      // Development bypass for malformed tokens
       if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Development mode: Using dummy user for malformed token');
+        req.user = {
+          id: 'dev-fallback-user',
+          email: 'fallback@threadcraft.dev',
+          role: 'admin'
+        };
+        return next();
+      }
+      
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token format',
+        error: 'Token contains an invalid number of segments'
+      });
+    }
+
+    try {
+      // Try to validate the token with Supabase
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+
+      if (error || !user) {
+        console.log('Token validation failed:', error?.message || 'No user found');
+
+        // Development bypass
+        if (process.env.NODE_ENV === 'development') {
         console.log('🔧 Development mode: Using fallback auth');
 
         // Check for dev bypass tokens
@@ -223,6 +247,26 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
 
     next();
+  } catch (jwtError: any) {
+    console.log('⚠️  JWT token validation error:', jwtError?.message);
+    
+    // Development bypass for JWT parsing errors
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 Development mode: Using dummy user for JWT error');
+      req.user = {
+        id: 'dev-jwt-error-user',
+        email: 'jwt-error@threadcraft.dev',
+        role: 'admin'
+      };
+      return next();
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid JWT token format',
+      error: jwtError?.message || 'Token validation failed'
+    });
+  }
   } catch (error) {
     console.error('Authentication error:', error);
     return res.status(401).json({

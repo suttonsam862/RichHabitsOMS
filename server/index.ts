@@ -237,7 +237,7 @@ import userRolesRoutes from './routes/api/userRolesRoutes';
 import authRoutes from './routes/api/authRoutes';
 import imageVariantsRoutes from './routes/api/imageVariantsRoutes';
 import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
-import { messageRoutes } from './routes/api/messageRoutes';
+import messageRoutes from './routes/api/messageRoutes';
 import healthRoutes from './routes/health';
 import { 
   getManufacturingStats, 
