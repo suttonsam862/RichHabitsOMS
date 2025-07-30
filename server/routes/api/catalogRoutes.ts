@@ -368,7 +368,6 @@ router.get('/', getAllCatalogItems);
 router.get('/:id', getCatalogItem);
 router.post('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), createCatalogItem);
 router.patch('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), updateCatalogItem);
-router.put('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), updateCatalogItem);
 router.delete('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), deleteCatalogItem);
 
 export default router;

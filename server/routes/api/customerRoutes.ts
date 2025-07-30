@@ -785,7 +785,6 @@ router.post('/invite', requireAuth, requireRole(['admin']), sendUserInvitation);
 router.get('/verify/:token', verifyInvitation);
 router.post('/', requireAuth, requireRole(['admin']), createCustomer);
 
-router.put('/:id', requireAuth, requireRole(['admin']), updateCustomer);
 router.patch('/:id', requireAuth, requireRole(['admin']), updateCustomer);
 router.post('/:id/photo', requireAuth, requireRole(['admin']), handleCatalogImageUpload, uploadCustomerPhoto);
 

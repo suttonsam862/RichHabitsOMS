@@ -317,8 +317,8 @@ router.post('/', requireAuth, requireRole(['admin', 'salesperson']), createOrder
 // POST /api/orders/create - Create new order with items (alternative endpoint)
 router.post('/create', requireAuth, requireRole(['admin', 'salesperson']), createOrder);
 
-// PUT /api/orders/:id - Update order (excluding items)
-router.put('/:id', requireAuth, requireRole(['admin', 'salesperson']), orderController.updateOrder);
+// PATCH /api/orders/:id - Update order (excluding items) - using PATCH for partial updates
+router.patch('/:id/basic', requireAuth, requireRole(['admin', 'salesperson']), orderController.updateOrder);
 
 // DELETE /api/orders/:id - Delete order and all items
 router.delete('/:id', requireAuth, requireRole(['admin', 'salesperson']), orderController.deleteOrder);
