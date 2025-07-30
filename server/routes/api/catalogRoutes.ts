@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
+import { CatalogService } from '../../services/catalogService';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -203,97 +204,40 @@ async function createCatalogItem(req: Request, res: Response) {
 }
 
 /**
- * Update a catalog item
+ * Update a catalog item - BULLETPROOF VERSION
  */
 async function updateCatalogItem(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    console.log(`Updating catalog item ${id}:`, req.body);
-
-    const {
-      name,
-      category,
-      sport,
-      basePrice,
-      unitCost,
-      sku,
-      etaDays,
-      status,
-      description,
-      buildInstructions,
-      fabric,
-      sizes,
-      colors,
-      customizationOptions,
-      minQuantity,
-      maxQuantity
-    } = req.body;
+    console.log(`🔧 BULLETPROOF UPDATE: Updating catalog item ${id}`);
 
     // Handle file upload
-    let imageUrl = undefined;
     if (req.file) {
-      imageUrl = `/uploads/catalog/${req.file.filename}`;
+      req.body.imageUrl = `/uploads/catalog/${req.file.filename}`;
     }
 
-    // Parse arrays if they come as strings
-    const parseSizes = typeof sizes === 'string' ? JSON.parse(sizes) : (sizes || []);
-    const parseColors = typeof colors === 'string' ? JSON.parse(colors) : (colors || []);
-    const parseCustomizations = typeof customizationOptions === 'string' ? JSON.parse(customizationOptions) : (customizationOptions || []);
+    const result = await CatalogService.updateItem(id, req.body);
 
-    const updateData: any = {
-      name: name || '',
-      category: category || '',
-      sport: sport || '',
-      base_price: parseFloat(basePrice) || 0,
-      unit_cost: parseFloat(unitCost) || 0,
-      sku: sku || '',
-      eta_days: etaDays || '7-10 business days',
-      status: status || 'active',
-      description: description || '',
-      build_instructions: buildInstructions || '',
-      fabric: fabric || '',
-      sizes: JSON.stringify(parseSizes),
-      colors: JSON.stringify(parseColors),
-      customization_options: JSON.stringify(parseCustomizations),
-      min_quantity: parseInt(minQuantity) || 1,
-      max_quantity: parseInt(maxQuantity) || 1000,
-      updated_at: new Date().toISOString()
-    };
-
-    // Only update image_url if a new file was uploaded
-    if (imageUrl) {
-      updateData.image_url = imageUrl;
-    }
-
-    const { data: updatedItem, error } = await supabaseAdmin
-      .from('catalog_items')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating catalog item:', error);
+    if (!result.success) {
       return res.status(500).json({
         success: false,
         message: 'Failed to update catalog item',
-        error: error.message
+        error: result.error
       });
     }
-
-    console.log('Catalog item updated successfully:', id);
 
     res.json({
       success: true,
       message: 'Catalog item updated successfully',
-      data: updatedItem
+      data: result.data
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in updateCatalogItem:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: error.message
     });
   }
 }

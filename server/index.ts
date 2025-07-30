@@ -224,7 +224,7 @@ app.use((req, res, next) => {
 // Import API routes
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
-import catalogRoutes from './routes/api/catalogRoutes';
+import catalogRoutes from './routes/api/catalogRoutes-bulletproof';
 import customerRoutes from './routes/api/customerRoutes';
 import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
