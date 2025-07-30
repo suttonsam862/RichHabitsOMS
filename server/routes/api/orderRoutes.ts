@@ -5,6 +5,7 @@ import { OrderAuditLogger } from '../../services/auditLogger.js';
 import { AUDIT_ACTIONS } from '../../models/orderAuditLog.js';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ const supabaseAdmin = createClient(
 
 // Validation schemas
 const orderItemSchema = z.object({
+  id: z.string().uuid("Order item ID must be a valid UUID").optional(),
   catalog_item_id: z.string().uuid("Catalog item ID must be a valid UUID").optional().nullable(),
   product_name: z.string().min(1, "Product name is required"),
   description: z.string().optional(),
@@ -33,6 +35,7 @@ const orderItemSchema = z.object({
 });
 
 const createOrderSchema = z.object({
+  id: z.string().uuid("Order ID must be a valid UUID").optional(),
   customer_id: z.string().uuid("Customer ID must be a valid UUID"),
   order_number: z.string().optional(),
   salesperson_id: z.string().uuid().optional().nullable(),
@@ -181,6 +184,9 @@ async function createOrder(req: Request, res: Response) {
       orderData.order_number = generateOrderNumber();
     }
 
+    // Generate order ID if not provided by external client
+    const orderId = orderData.id || uuidv4();
+
     // Calculate total amount if not provided
     if (!orderData.total_amount) {
       orderData.total_amount = calculateTotalAmount(orderData.items);
@@ -191,6 +197,7 @@ async function createOrder(req: Request, res: Response) {
 
     // Transform to match database columns with explicit defaults
     const dbOrderData = {
+      id: orderId,
       customer_id: orderPayload.customer_id,
       order_number: orderPayload.order_number,
       salesperson_id: orderPayload.salesperson_id || null,
@@ -234,8 +241,9 @@ async function createOrder(req: Request, res: Response) {
 
     console.log('✅ Order created successfully:', createdOrder.id);
 
-    // Prepare order items with explicit defaults
+    // Prepare order items with explicit defaults and UUID fallback
     const orderItemsData = items.map(item => ({
+      id: item.id || uuidv4(), // Use provided ID or generate UUID
       order_id: createdOrder.id,
       product_name: item.product_name,
       description: item.description || null,

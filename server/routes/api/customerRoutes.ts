@@ -9,6 +9,7 @@ import { customerTransformers } from '../../utils/schemaTransformers';
 import crypto from 'crypto';
 import multer from 'multer';
 import { handleCatalogImageUpload } from '../../imageUpload.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
@@ -224,6 +225,7 @@ export async function verifyInvitation(req: Request, res: Response) {
  */
 export async function createCustomer(req: Request, res: Response) {
   const {
+    id,
     first_name,
     last_name,
     email,
@@ -270,8 +272,8 @@ export async function createCustomer(req: Request, res: Response) {
       });
     }
 
-    // Generate a unique ID for the customer
-    const customerId = crypto.randomUUID();
+    // Use provided ID or generate a unique ID for the customer
+    const customerId = id || uuidv4();
 
     console.log('Creating customer profile with ID:', customerId);
 
