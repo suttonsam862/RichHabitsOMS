@@ -34,12 +34,22 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     type: '',
     fabric_options: '',
     color_options: '',
-    size_options: ''
+    size_options: '',
+    sku: ''
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Generate SKU function
+  const generateSKU = (name: string, category: string): string => {
+    const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8);
+    const cleanCategory = category.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 4);
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 999).toString().padStart(3, '0');
+    return `${cleanCategory || 'ITEM'}-${cleanName || 'PRODUCT'}-${timestamp}-${random}`;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -98,17 +108,23 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     setIsSubmitting(true);
     
     try {
-      console.log('Submitting catalog item data:', formData);
+      // Generate SKU if not provided
+      const skuToUse = formData.sku.trim() || generateSKU(formData.name, formData.category);
+      
+      const submissionData = {
+        ...formData,
+        base_price: parseFloat(formData.base_price) || 0,
+        sku: skuToUse
+      };
+      
+      console.log('Submitting catalog item data:', submissionData);
       
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('Authentication required. Please log in again.');
       }
 
-      const response = await axios.post('/api/catalog-items', {
-        ...formData,
-        base_price: parseFloat(formData.base_price) || 0
-      }, {
+      const response = await axios.post('/api/catalog', submissionData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -118,7 +134,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       console.log('Catalog item created successfully:', response.data);
       
       // Success handling
-      queryClient.invalidateQueries({ queryKey: ['/api/catalog-items'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/catalog'] });
       
       toast({
         title: "Success!",

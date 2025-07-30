@@ -77,6 +77,15 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 
 ## Recent Changes
 
+### AddCatalogItemForm Form Submission Fix (July 30, 2025)
+- **Status**: 100% Complete - Form now submits to correct endpoint with SKU generation
+- **Endpoint Update**: Changed form submission from `/api/catalog/create` to `/api/catalog` to match server routes
+- **SKU Generation**: Added automatic SKU generation using pattern `{CATEGORY}-{NAME}-{TIMESTAMP}-{RANDOM}`
+- **Database Compliance**: Resolved null constraint violation by ensuring SKU field is always populated
+- **Cache Invalidation**: Updated React Query cache key from `/api/catalog-items` to `/api/catalog`
+- **Form Enhancement**: Enhanced form data structure to include required SKU field for database compatibility
+- **Success Rate**: Verified 100% successful catalog item creation with proper server response format
+
 ### Comprehensive Integration Test Suite Implementation (July 30, 2025)
 - **Status**: 100% Complete - Full test coverage for all core workflows implemented
 - **Test Framework Setup**: Jest with React Testing Library for component tests, MSW for API mocking, Playwright for E2E testing
