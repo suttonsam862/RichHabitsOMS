@@ -54,6 +54,9 @@ import salesManagementRoutes from './routes/api/salesManagementRoutes';
 // Manufacturing routes
 import manufacturingRoutes from './routes/api/manufacturingRoutes';
 
+// Stats routes for dashboard KPIs
+import statsRoutes from './routes/api/statsRoutes';
+
 // Create Supabase admin client with service key for admin operations
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co',
@@ -944,6 +947,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ 
         success: false, 
         message: 'An unexpected error occurred' 
+      });
+    }
+  });
+
+  // Stats endpoint for dashboard KPIs
+  app.get('/api/stats/orders', requireAuth, async (req: Request, res: Response) => {
+    try {
+      console.log('📊 Fetching real order statistics from database...');
+
+      // Get total orders count
+      const { data: totalOrdersData, error: totalOrdersError } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact' });
+
+      if (totalOrdersError) {
+        console.error('❌ Error fetching total orders:', totalOrdersError);
+        throw totalOrdersError;
+      }
+
+      // Get pending orders count (draft, design, production statuses)
+      const { data: pendingOrdersData, error: pendingOrdersError } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact' })
+        .in('status', ['draft', 'design', 'production']);
+
+      if (pendingOrdersError) {
+        console.error('❌ Error fetching pending orders:', pendingOrdersError);
+        throw pendingOrdersError;
+      }
+
+      // Get completed orders count
+      const { data: completedOrdersData, error: completedOrdersError } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact' })
+        .eq('status', 'completed');
+
+      if (completedOrdersError) {
+        console.error('❌ Error fetching completed orders:', completedOrdersError);
+        throw completedOrdersError;
+      }
+
+      // Get total revenue from completed orders
+      const { data: revenueData, error: revenueError } = await supabase
+        .from('orders')
+        .select('total_price')
+        .eq('status', 'completed');
+
+      if (revenueError) {
+        console.error('❌ Error fetching revenue data:', revenueError);
+        throw revenueError;
+      }
+
+      // Calculate total revenue
+      const totalRevenue = revenueData?.reduce((sum: number, order: any) => {
+        const price = typeof order.total_price === 'string' 
+          ? parseFloat(order.total_price) 
+          : order.total_price || 0;
+        return sum + price;
+      }, 0) || 0;
+
+      const stats = {
+        total_orders: totalOrdersData?.length || 0,
+        pending_orders: pendingOrdersData?.length || 0,
+        completed_orders: completedOrdersData?.length || 0,
+        total_revenue: totalRevenue
+      };
+
+      console.log('✅ Real order statistics retrieved:', stats);
+
+      res.json({
+        success: true,
+        data: stats
+      });
+
+    } catch (error: any) {
+      console.error('💥 Error in getOrderStats:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch order statistics',
+        error: error.message
       });
     }
   });
@@ -2031,6 +2114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use('/api/images', imageRoutesRefactored);
   router.use('/api/invitations', invitationRoutesRefactored);
   router.use('/api/sales-management', salesManagementRoutes);
+  router.use('/api/stats', statsRoutes);
   router.use('/api', manufacturingRoutes);
 
 

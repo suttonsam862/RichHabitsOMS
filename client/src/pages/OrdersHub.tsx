@@ -34,37 +34,19 @@ import OrderCreatePage from './orders/OrderCreatePage';
 export default function OrdersHub() {
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Fetch order statistics for the overview
-  const { data: statsData, isLoading: loadingStats, error: statsError } = useQuery({
-    queryKey: ['/api/orders/stats'],
+  // Fetch real order statistics from database
+  const { data: statsResponse, isLoading: loadingStats, error: statsError } = useQuery({
+    queryKey: ['/api/stats/orders'],
     queryFn: async () => {
-      try {
-        const response = await apiRequest('GET', '/api/orders/stats');
-        if (!response.ok) {
-          // If stats endpoint doesn't exist, return mock data for layout
-          return {
-            total_orders: 0,
-            pending_orders: 0,
-            completed_orders: 0,
-            total_revenue: 0
-          };
-        }
-        return response.json();
-      } catch (error) {
-        console.warn('Stats endpoint not available:', error);
-        return {
-          total_orders: 0,
-          pending_orders: 0,
-          completed_orders: 0,
-          total_revenue: 0
-        };
-      }
+      const response = await apiRequest('GET', '/api/stats/orders');
+      return response.json();
     },
-    retry: false,
+    retry: 2,
     refetchOnWindowFocus: false,
   });
 
-  const stats = statsData || {
+  // Extract stats from response or use fallback
+  const stats = (statsResponse?.success && statsResponse?.data) ? statsResponse.data : {
     total_orders: 0,
     pending_orders: 0,
     completed_orders: 0,
