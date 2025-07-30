@@ -754,11 +754,17 @@ export async function createDesignTask(req: Request, res: Response) {
       .from('design_tasks')
       .insert({
         order_id: orderId,
-        designer_id: designerId,
-        description,
-        notes,
-        due_date: dueDate,
-        status: 'pending'
+        designer_id: designerId || null,
+        description: description || null,
+        notes: notes || null,
+        due_date: dueDate || null,
+        status: 'pending',
+        priority: 'medium',
+        estimated_hours: 0,
+        actual_hours: 0,
+        progress_percentage: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single();
@@ -811,11 +817,17 @@ export async function createProductionTask(req: Request, res: Response) {
       .from('production_tasks')
       .insert({
         order_id: orderId,
-        manufacturer_id: manufacturerId,
-        description,
-        notes,
-        due_date: dueDate,
-        status: 'pending'
+        manufacturer_id: manufacturerId || null,
+        description: description || null,
+        notes: notes || null,
+        due_date: dueDate || null,
+        status: 'pending',
+        priority: 'medium',
+        estimated_hours: 0,
+        actual_hours: 0,
+        progress_percentage: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single();

@@ -101,27 +101,33 @@ router.post('/orders', requireAuth, async (req, res) => {
       orderData.orderNumber = `ORD-${year}${month}${day}-${random}`;
     }
 
-    // Prepare order data for database
+    // Prepare order data for database with explicit defaults
     const dbOrderData = {
       order_number: orderData.orderNumber,
       customer_id: orderData.customerId,
       salesperson_id: orderData.salespersonId || req.user?.id,
-      assigned_designer_id: orderData.assignedDesignerId,
-      assigned_manufacturer_id: orderData.assignedManufacturerId,
+      assigned_designer_id: orderData.assignedDesignerId || null,
+      assigned_manufacturer_id: orderData.assignedManufacturerId || null,
       status: orderData.status || 'draft',
       priority: orderData.priority || 'medium',
-      total_amount: orderData.totalAmount || 0,
-      tax: orderData.tax || 0,
-      discount: orderData.discount || 0,
-      notes: orderData.notes,
-      internal_notes: orderData.internalNotes,
-      customer_requirements: orderData.customerRequirements,
-      delivery_address: orderData.deliveryAddress,
-      delivery_instructions: orderData.deliveryInstructions,
+      total_amount: parseFloat(orderData.totalAmount?.toString()) || 0.00,
+      tax: parseFloat(orderData.tax?.toString()) || 0.00,
+      discount: parseFloat(orderData.discount?.toString()) || 0.00,
+      notes: orderData.notes || null,
+      internal_notes: orderData.internalNotes || null,
+      customer_requirements: orderData.customerRequirements || null,
+      delivery_address: orderData.deliveryAddress || null,
+      delivery_instructions: orderData.deliveryInstructions || null,
       rush_order: orderData.rushOrder || false,
-      estimated_delivery_date: orderData.estimatedDeliveryDate,
-      logo_url: orderData.logoUrl,
-      company_name: orderData.companyName
+      estimated_delivery_date: orderData.estimatedDeliveryDate || null,
+      actual_delivery_date: null,
+      logo_url: orderData.logoUrl || null,
+      company_name: orderData.companyName || null,
+      is_paid: false,
+      stripe_session_id: null,
+      payment_date: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
     // Create order (trigger will auto-assign team members if not specified)
@@ -140,26 +146,29 @@ router.post('/orders', requireAuth, async (req, res) => {
       });
     }
 
-    // Add order items if provided
+    // Add order items if provided with explicit defaults
     if (orderData.items && orderData.items.length > 0) {
       const orderItems = orderData.items.map((item: any) => ({
         order_id: order.id,
-        catalog_item_id: item.catalogItemId,
+        catalog_item_id: item.catalogItemId || null,
         product_name: item.productName,
-        description: item.description,
-        size: item.size,
-        color: item.color,
-        fabric: item.fabric,
-        customization: item.customization,
+        description: item.description || null,
+        size: item.size || null,
+        color: item.color || null,
+        fabric: item.fabric || null,
+        customization: item.customization || null,
         specifications: item.specifications || {},
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        total_price: item.totalPrice,
-        custom_image_url: item.customImageUrl,
-        design_file_url: item.designFileUrl,
-        production_notes: item.productionNotes,
+        quantity: parseInt(item.quantity?.toString()) || 1,
+        unit_price: parseFloat(item.unitPrice?.toString()) || 0.00,
+        total_price: parseFloat(item.totalPrice?.toString()) || 0.00,
+        custom_image_url: item.customImageUrl || null,
+        design_file_url: item.designFileUrl || null,
+        production_notes: item.productionNotes || null,
         status: item.status || 'pending',
-        estimated_completion_date: item.estimatedCompletionDate
+        estimated_completion_date: item.estimatedCompletionDate || null,
+        actual_completion_date: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }));
 
       const { error: itemsError } = await supabaseAdmin

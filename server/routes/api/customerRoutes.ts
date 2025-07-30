@@ -77,7 +77,7 @@ export async function sendUserInvitation(req: Request, res: Response) {
       timestamp: Date.now()
     };
 
-    // Store invitation in Supabase (we'll create a table for this)
+    // Store invitation in Supabase with explicit defaults
     const { error: inviteError } = await supabaseAdmin
       .from('user_invitations')
       .insert({
@@ -88,7 +88,10 @@ export async function sendUserInvitation(req: Request, res: Response) {
         invitation_token: invitationToken,
         expires_at: expiresAt.toISOString(),
         created_at: new Date().toISOString(),
-        status: 'pending'
+        updated_at: new Date().toISOString(),
+        status: 'pending',
+        sent_count: 0,
+        last_sent_at: new Date().toISOString()
       });
 
     if (inviteError) {

@@ -189,15 +189,24 @@ async function createOrder(req: Request, res: Response) {
     // Prepare order data (excluding items for separate insertion)
     const { items, ...orderPayload } = orderData;
 
-    // Transform to match database columns
+    // Transform to match database columns with explicit defaults
     const dbOrderData = {
       customer_id: orderPayload.customer_id,
       order_number: orderPayload.order_number,
       salesperson_id: orderPayload.salesperson_id || null,
-      status: orderPayload.status,
-      total_amount: orderPayload.total_amount,
-      tax: orderPayload.tax || 0,
+      status: orderPayload.status || 'draft',
+      total_amount: parseFloat(orderPayload.total_amount?.toString()) || 0.00,
+      tax: parseFloat(orderPayload.tax?.toString()) || 0.00,
+      discount: 0.00,
       notes: orderPayload.notes || null,
+      internal_notes: null,
+      customer_requirements: null,
+      delivery_address: null,
+      delivery_instructions: null,
+      priority: 'medium',
+      rush_order: false,
+      estimated_delivery_date: null,
+      actual_delivery_date: null,
       is_paid: orderPayload.is_paid || false,
       stripe_session_id: orderPayload.stripe_session_id || null,
       payment_date: orderPayload.payment_date || null,
@@ -225,17 +234,25 @@ async function createOrder(req: Request, res: Response) {
 
     console.log('✅ Order created successfully:', createdOrder.id);
 
-    // Prepare order items with the new order ID
+    // Prepare order items with explicit defaults
     const orderItemsData = items.map(item => ({
       order_id: createdOrder.id,
       product_name: item.product_name,
       description: item.description || null,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_price: item.total_price,
+      quantity: parseInt(item.quantity?.toString()) || 1,
+      unit_price: parseFloat(item.unit_price?.toString()) || 0.00,
+      total_price: parseFloat(item.total_price?.toString()) || 0.00,
       color: item.color || null,
       size: item.size || null,
-      catalog_item_id: null // Can be linked later if needed
+      fabric: null,
+      customization: null,
+      status: 'pending',
+      production_notes: null,
+      estimated_completion_date: null,
+      actual_completion_date: null,
+      catalog_item_id: item.catalog_item_id || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }));
 
     console.log('📦 Inserting order items:', orderItemsData.length);

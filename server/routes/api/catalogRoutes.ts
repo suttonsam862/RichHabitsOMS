@@ -50,19 +50,24 @@ async function createCatalogItem(req: Request, res: Response) {
     // Generate a unique ID for the catalog item
     const itemId = crypto.randomUUID();
 
-    // Insert catalog item into database
+    // Insert catalog item into database with explicit defaults
     const { data: insertedItem, error: itemError } = await supabaseAdmin
       .from('catalog_items')
       .insert({
         id: itemId,
         name,
         description: description || '',
-        base_price: parseFloat(base_price),
+        base_price: parseFloat(base_price) || 0.00,
         category: category || '',
         type: type || '',
         fabric_options: fabric_options || '',
         color_options: color_options || '',
         size_options: size_options || '',
+        status: 'active',
+        unit_cost: 0.00,
+        min_quantity: 1,
+        max_quantity: 1000,
+        eta_days: '7-10 business days',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

@@ -184,7 +184,7 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
       });
     }
 
-    // Create enhanced user profile using admin client
+    // Create enhanced user profile using admin client with explicit defaults
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('enhanced_user_profiles')
       .insert({
@@ -194,16 +194,19 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
         first_name: firstName,
         last_name: lastName,
         role,
-        phone,
-        company,
-        department,
-        title,
+        phone: phone || null,
+        company: company || null,
+        department: department || null,
+        title: title || null,
         status: isTemporaryPassword ? 'pending_activation' : 'active',
         is_email_verified: true,
+        last_login: null,
         permissions: {},
         custom_attributes: {
           requires_password_setup: isTemporaryPassword
-        }
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single();
@@ -225,7 +228,7 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
       try {
         const invitationToken = generateInvitationToken();
         
-        // Store invitation in database
+        // Store invitation in database with explicit defaults
         await supabase
           .from('user_invitations')
           .insert({
@@ -236,6 +239,11 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
             invitation_token: invitationToken,
             invited_by: currentUser.id,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+            status: 'pending',
+            sent_count: 1,
+            last_sent_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           });
 
         // Generate email template
