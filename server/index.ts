@@ -229,9 +229,7 @@ import customerRoutes from './routes/api/customerRoutes';
 import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
 import organizationRoutes from './routes/api/organizationRoutes';
-import optimizedImageRoutes from './routes/api/optimizedImageRoutes.js';
-import comprehensiveImageRoutes from './routes/api/comprehensiveImageRoutes';
-import fixedImageRoutes from './routes/api/fixedImageRoutes';
+import unifiedImageRoutes from './routes/api/unifiedImageRoutes';
 import invitationRoutes from './routes/api/invitationRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
 import securityRoutes from './routes/api/securityRoutes';
@@ -336,12 +334,10 @@ import {
     app.use('/api/users', authenticateRequest);
     app.use('/api/design-tasks', authenticateRequest);
     app.use('/api/production-tasks', authenticateRequest);
-    app.use('/api/images', authenticateRequest);
+    app.use('/api/images-unified', authenticateRequest);
     app.use('/api/invitations', authenticateRequest);
     app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
-    app.use('/api/catalog/:catalogItemId/images', authenticateRequest);
-    app.use('/api/images-fixed', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
@@ -351,9 +347,7 @@ import {
     app.use('/api/dashboard', dashboardRoutes);
     app.use('/api/orders', orderRoutes);
     app.use('/api/organizations', organizationRoutes);
-    app.use('/api/images', optimizedImageRoutes);
-    app.use('/api/images-v2', comprehensiveImageRoutes); // NEW: Comprehensive image system
-    app.use('/api/images-fixed', fixedImageRoutes); // FIXED: Supabase Storage issues resolved
+    app.use('/api/images-unified', unifiedImageRoutes); // UNIFIED: Single standardized image system
     app.use('/api', imageVariantsRoutes); // Image variants routes
     app.use('/api', enhancedOrderRoutes); // Enhanced order management routes
     app.use('/api/invitations', invitationRoutes);
@@ -527,7 +521,7 @@ app.use('/api/catalog-options', catalogOptionsRoutes);
 app.use('/api/fabric-options', fabricOptionsRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/health', healthRoutes);
-app.use('/api/images', optimizedImageRoutes);
+app.use('/api/images-unified', unifiedImageRoutes);
 app.use('/api/invitations', invitationRoutes);
 app.use('/api/user-management', userManagementRoutes);
 app.use('/api/security', securityRoutes);

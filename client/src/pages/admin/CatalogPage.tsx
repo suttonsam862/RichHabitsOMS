@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryKeys } from '@/lib/queryKeys';
 import { useDataSync } from '@/hooks/useDataSync';
 import { getQueryFn } from '@/lib/queryClient';
+import { UnifiedImageUploader } from '@/components/ui/UnifiedImageUploader';
 import { 
   Plus, 
   Search, 
@@ -841,12 +842,7 @@ export default function CatalogPage() {
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
-  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
-  const [uploadTargetItemId, setUploadTargetItemId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CatalogFormData>({
     name: '',
     category: '',
@@ -958,18 +954,7 @@ export default function CatalogPage() {
         }
       });
 
-      // Add image if selected with validation
-      if (selectedFile) {
-        // Validate file size (5MB limit)
-        if (selectedFile.size > 5 * 1024 * 1024) {
-          throw new Error('Image file size must be less than 5MB');
-        }
-        // Validate file type
-        if (!selectedFile.type.startsWith('image/')) {
-          throw new Error('Please select a valid image file');
-        }
-        formDataToSend.append('image', selectedFile);
-      }
+      // Note: Image upload now handled separately via UnifiedImageUploader
 
       const response = await fetch('/api/catalog', {
         method: 'POST',
@@ -1057,16 +1042,7 @@ export default function CatalogPage() {
         }
       });
 
-      // Add image if selected with validation
-      if (selectedFile) {
-        if (selectedFile.size > 5 * 1024 * 1024) {
-          throw new Error('Image file size must be less than 5MB');
-        }
-        if (!selectedFile.type.startsWith('image/')) {
-          throw new Error('Please select a valid image file');
-        }
-        formDataToSend.append('image', selectedFile);
-      }
+      // Note: Image upload now handled separately via UnifiedImageUploader
 
       const response = await fetch(`/api/catalog/${id}`, {
         method: 'PATCH',
@@ -1152,103 +1128,22 @@ export default function CatalogPage() {
     }
   });
 
-  // Upload image variants mutation
-  const uploadImageVariantsMutation = useMutation({
-    mutationFn: async ({ catalogItemId, files }: { catalogItemId: string; files: File[] }) => {
-      const formData = new FormData();
-      
-      files.forEach((file) => {
-        formData.append('images', file);
-      });
-
-      const response = await fetch(`/api/images-fixed/catalog/${catalogItemId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || 'dev-admin-token-12345'}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to upload images');
-      }
-
-      return response.json();
-    },
-    onSuccess: async (data) => {
+  // Handle unified image upload completion
+  const handleImageUploadComplete = async (result: any) => {
+    if (result.success) {
       toast({
-        title: "Images Uploaded",
-        description: `Successfully processed ${data.data?.statistics?.filesProcessed || 0} images with multiple variants.`,
+        title: "Image Uploaded Successfully",
+        description: "Catalog item image has been updated with optimized variants.",
       });
       await syncCatalog();
-      setShowImageUploadModal(false);
-      setSelectedFiles([]);
-      setUploadTargetItemId(null);
-    },
-    onError: (error) => {
+      refetch(); // Refresh catalog data
+    } else {
       toast({
         title: "Upload Failed",
-        description: `Failed to upload images: ${error.message}`,
+        description: result.error || "Failed to upload image",
         variant: "destructive",
       });
     }
-  });
-
-  // Handle multiple file selection for image variants
-  const handleMultipleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length > 0) {
-      setSelectedFiles(files);
-    }
-  };
-
-  // Handle file selection with validation
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please select a valid image file (JPEG, PNG, WebP, or GIF)",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      toast({
-        title: "File Too Large",
-        description: "Image size must be less than 5MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedFile(file);
-    
-    // Create preview with error handling
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview(e.target?.result as string);
-      toast({
-        title: "Image Selected",
-        description: `${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
-      });
-    };
-    reader.onerror = () => {
-      toast({
-        title: "File Read Error",
-        description: "Failed to read the selected image file",
-        variant: "destructive",
-      });
-    };
-    reader.readAsDataURL(file);
   };
 
   // Generate SKU with enhanced algorithm
@@ -1297,8 +1192,7 @@ export default function CatalogPage() {
       minQuantity: 1,
       maxQuantity: 1000
     });
-    setSelectedFile(null);
-    setImagePreview(null);
+
     setCurrentStep(0);
   };
 
@@ -1654,42 +1548,13 @@ export default function CatalogPage() {
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="image" className="text-foreground">Product Image</Label>
-              <div className="border-2 border-dashed border-glass-border rounded-lg p-6 text-center">
-                {imagePreview ? (
-                  <div className="space-y-4">
-                    <img src={imagePreview} alt="Preview" className="mx-auto max-h-48 rounded-lg" />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedFile(null);
-                        setImagePreview(null);
-                      }}
-                      className="glass-button"
-                    >
-                      Remove Image
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <div>
-                      <Label htmlFor="file-upload" className="cursor-pointer">
-                        <span className="text-neon-blue hover:text-neon-blue/80">Upload an image</span>
-                        <Input
-                          id="file-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF up to 10MB</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <Label className="text-foreground">Product Image</Label>
+              <UnifiedImageUploader
+                itemType="catalog_item"
+                itemId={editingItem?.id}
+                onUploadComplete={handleImageUploadComplete}
+                allowMultiple={false}
+              />
             </div>
           </div>
         );

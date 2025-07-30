@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { UnifiedImageUploader } from '@/components/ui/UnifiedImageUploader';
 
 // File type validation
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB

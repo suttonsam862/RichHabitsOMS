@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Eye, Edit, Trash2, Plus, Search, Filter, ChevronDown, Send, Palette, Factory, CheckCircle, XCircle, Upload, Image, AlertTriangle } from "lucide-react";
+import { UnifiedImageUploader } from "@/components/ui/UnifiedImageUploader";
 
 interface OrderItem {
   id?: number;
@@ -62,8 +63,7 @@ export default function OrderManagePage() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingItemImage, setUploadingItemImage] = useState<number | null>(null);
+
 
   // Fetch orders
   const { data: orders = [], isLoading } = useQuery<Order[]>({
@@ -215,113 +215,50 @@ export default function OrderManagePage() {
     }
   };
 
-  // Handle logo file upload
-  const handleLogoUpload = async (file: File) => {
-    if (!editingOrder) return;
-
-    // Validate file type
-    if (!file.type.includes('webp') && !file.type.includes('image')) {
+  // Handle logo upload completion
+  const handleLogoUploadComplete = (result: any) => {
+    if (result.success && editingOrder) {
+      setEditingOrder({
+        ...editingOrder,
+        logoUrl: result.urls.medium || result.urls.original
+      });
       toast({
-        title: "Invalid file type",
-        description: "Please upload a WebP image file",
+        title: "Logo Uploaded",
+        description: "Customer logo uploaded successfully"
+      });
+    } else {
+      toast({
+        title: "Upload Failed",
+        description: result.error || "Could not upload logo",
         variant: "destructive"
       });
-      return;
-    }
-
-    setUploadingLogo(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('logo', file);
-      formData.append('customerId', editingOrder.customerId);
-
-      const response = await fetch('/api/upload/logo', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setEditingOrder({
-          ...editingOrder,
-          logoUrl: result.logoUrl,
-          companyName: result.companyName || editingOrder.companyName
-        });
-
-        toast({
-          title: "Success",
-          description: "Logo uploaded successfully"
-        });
-      } else {
-        throw new Error('Upload failed');
-      }
-    } catch (error) {
-      toast({
-        title: "Upload failed",
-        description: "Could not upload logo. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setUploadingLogo(false);
     }
   };
 
-  // Handle item image upload
-  const handleItemImageUpload = async (file: File, itemIndex: number) => {
-    if (!editingOrder) return;
+  // Handle item image upload completion
+  const handleItemImageUploadComplete = (result: any, itemIndex: number) => {
+    if (result.success && editingOrder) {
+      const updatedItems = [...editingOrder.items];
+      updatedItems[itemIndex] = {
+        ...updatedItems[itemIndex],
+        imageUrl: result.urls.medium || result.urls.original
+      };
+      
+      setEditingOrder({
+        ...editingOrder,
+        items: updatedItems
+      });
 
-    // Validate file type
-    if (!file.type.includes('image')) {
       toast({
-        title: "Invalid file type",
-        description: "Please upload an image file (JPG, PNG, WebP)",
+        title: "Image Uploaded",
+        description: "Product image uploaded successfully"
+      });
+    } else {
+      toast({
+        title: "Upload Failed",
+        description: result.error || "Could not upload product image",
         variant: "destructive"
       });
-      return;
-    }
-
-    setUploadingItemImage(itemIndex);
-
-    try {
-      const formData = new FormData();
-      formData.append('itemImage', file);
-      formData.append('orderId', editingOrder.id);
-      formData.append('itemIndex', itemIndex.toString());
-
-      const response = await fetch('/api/upload/item-image', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const updatedItems = [...editingOrder.items];
-        updatedItems[itemIndex] = { 
-          ...updatedItems[itemIndex], 
-          imageUrl: result.imageUrl 
-        };
-
-        setEditingOrder({
-          ...editingOrder,
-          items: updatedItems
-        });
-
-        toast({
-          title: "Success",
-          description: "Product image uploaded successfully"
-        });
-      } else {
-        throw new Error('Upload failed');
-      }
-    } catch (error) {
-      toast({
-        title: "Upload failed",
-        description: "Could not upload product image. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setUploadingItemImage(null);
     }
   };
 
@@ -678,38 +615,16 @@ export default function OrderManagePage() {
                 <Label className="text-lg font-semibold mb-3 block">Customer Logo & Branding</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="logoUpload">Upload Customer Logo (WebP)</Label>
+                    <Label>Upload Customer Logo</Label>
                     <div className="mt-2">
-                      <div className="flex items-center justify-center w-full">
-                        <label 
-                          htmlFor="logoUpload" 
-                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                        >
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-8 h-8 mb-4 text-gray-500" />
-                            <p className="mb-2 text-sm text-gray-500">
-                              <span className="font-semibold">Click to upload</span> customer logo
-                            </p>
-                            <p className="text-xs text-gray-500">WebP, PNG, or JPG (MAX. 2MB)</p>
-                          </div>
-                          <input 
-                            id="logoUpload" 
-                            type="file" 
-                            className="hidden" 
-                            accept=".webp,.png,.jpg,.jpeg"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleLogoUpload(file);
-                            }}
-                            disabled={uploadingLogo}
-                          />
-                        </label>
-                      </div>
-                      {uploadingLogo && (
-                        <div className="mt-2 text-sm text-blue-600">
-                          Uploading logo...
-                        </div>
-                      )}
+                      <UnifiedImageUploader
+                        itemType="order"
+                        itemId={editingOrder?.id || ''}
+                        onUploadComplete={handleLogoUploadComplete}
+                        allowMultiple={false}
+                        acceptedFileTypes={['image/jpeg', 'image/jpg', 'image/png', 'image/webp']}
+                        maxFileSize={2 * 1024 * 1024}
+                      />
                     </div>
 
                     <div className="mt-3">
@@ -936,21 +851,15 @@ export default function OrderManagePage() {
                                 </div>
                               )}
 
-                              <label className="cursor-pointer">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) handleItemImageUpload(file, index);
-                                  }}
-                                  disabled={uploadingItemImage === index}
-                                />
-                                <div className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                                  {uploadingItemImage === index ? 'Uploading...' : (item.imageUrl ? 'Change' : 'Upload')}
-                                </div>
-                              </label>
+                              <UnifiedImageUploader
+                                itemType="order_item"
+                                itemId={`${editingOrder?.id}-${index}`}
+                                onUploadComplete={(result) => handleItemImageUploadComplete(result, index)}
+                                allowMultiple={false}
+                                acceptedFileTypes={['image/jpeg', 'image/jpg', 'image/png', 'image/webp']}
+                                maxFileSize={5 * 1024 * 1024}
+                                compact={true}
+                              />
                             </div>
                           </div>
 
