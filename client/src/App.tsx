@@ -9,6 +9,8 @@ import { RequireAuth } from "./components/auth/RequireAuth";
 import { MainDashboardRouter } from "./components/auth/MainDashboardRouter";
 import { NavigationManager } from "./components/navigation/NavigationManager";
 import { ErrorBoundary } from "./components/error/ErrorBoundary";
+import { GlobalErrorBoundary } from "./components/error/GlobalErrorBoundary";
+import { FeatureErrorBoundary } from "./components/error/FeatureErrorBoundary";
 
 // Dashboard components
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
@@ -73,7 +75,7 @@ if (typeof window !== 'undefined') {
 
 function App() {
   return (
-    <ErrorBoundary>
+    <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
@@ -107,7 +109,9 @@ function App() {
                   path="/dashboard/admin" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
-                      <AdminDashboard />
+                      <FeatureErrorBoundary featureName="Admin Dashboard">
+                        <AdminDashboard />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
@@ -194,7 +198,9 @@ function App() {
                   path="/orders/create" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson']}>
-                      <OrderCreatePage />
+                      <FeatureErrorBoundary featureName="Order Creation">
+                        <OrderCreatePage />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
@@ -203,7 +209,9 @@ function App() {
                   path="/orders/enhanced" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson']}>
-                      <EnhancedOrderManagement />
+                      <FeatureErrorBoundary featureName="Enhanced Order Management">
+                        <EnhancedOrderManagement />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
@@ -239,7 +247,9 @@ function App() {
                   path="/design-tasks" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'designer']}>
-                      <DesignTasks />
+                      <FeatureErrorBoundary featureName="Design Tasks">
+                        <DesignTasks />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
@@ -248,7 +258,9 @@ function App() {
                   path="/production" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'manufacturer']}>
-                      <Production />
+                      <FeatureErrorBoundary featureName="Production Management">
+                        <Production />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
@@ -275,7 +287,9 @@ function App() {
                   path="/manufacturer-assignment" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
-                      <AdminManufacturerAssignment />
+                      <FeatureErrorBoundary featureName="Manufacturer Assignment">
+                        <AdminManufacturerAssignment />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
@@ -295,7 +309,9 @@ function App() {
                   path="/admin/catalog" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'catalog_manager']}>
-                      <CatalogPage />
+                      <FeatureErrorBoundary featureName="Catalog Management">
+                        <CatalogPage />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
@@ -304,7 +320,9 @@ function App() {
                   path="/admin/customers" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
-                      <CustomerListPage />
+                      <FeatureErrorBoundary featureName="Customer Management">
+                        <CustomerListPage />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
@@ -426,7 +444,7 @@ function App() {
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
-    </ErrorBoundary>
+    </GlobalErrorBoundary>
   );
 }
 
