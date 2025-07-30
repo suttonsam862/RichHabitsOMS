@@ -237,6 +237,7 @@ import userRolesRoutes from './routes/api/userRolesRoutes';
 import authRoutes from './routes/api/authRoutes';
 import imageVariantsRoutes from './routes/api/imageVariantsRoutes';
 import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
+import { messageRoutes } from './routes/api/messageRoutes';
 import healthRoutes from './routes/health';
 import { 
   getManufacturingStats, 
@@ -338,6 +339,7 @@ import {
     app.use('/api/invitations', authenticateRequest);
     app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
+    app.use('/api/messages', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
@@ -355,6 +357,7 @@ import {
 app.use('/api/security', securityRoutes);
     app.use('/api/user-roles', userRolesRoutes);
 app.use('/api/users', userManagementRoutes);
+    app.use('/api/messages', messageRoutes);
 
     // Manufacturing Management API endpoints
     app.get('/api/manufacturing/stats', getManufacturingStats);
