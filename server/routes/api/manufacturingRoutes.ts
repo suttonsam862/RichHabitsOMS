@@ -426,7 +426,8 @@ export async function updateManufacturer(req: Request, res: Response) {
       email,
       notes,
       preferredCategories,
-      pricingTiers
+      pricingTiers,
+      capabilities
     } = req.body;
 
     // Validate manufacturer ID
@@ -450,6 +451,7 @@ export async function updateManufacturer(req: Request, res: Response) {
     if (notes !== undefined) updateData.notes = notes;
     if (preferredCategories !== undefined) updateData.preferredCategories = preferredCategories;
     if (pricingTiers !== undefined) updateData.pricingTiers = pricingTiers;
+    if (capabilities !== undefined) updateData.capabilities = capabilities;
 
     // Update user metadata in Supabase Auth
     const { data: updatedUser, error } = await supabaseAdmin.auth.admin.updateUserById(id, {
@@ -478,7 +480,8 @@ export async function updateManufacturer(req: Request, res: Response) {
       custom_attributes: {
         notes: updatedUser.user?.user_metadata?.notes || '',
         preferredCategories: updatedUser.user?.user_metadata?.preferredCategories || [],
-        pricingTiers: updatedUser.user?.user_metadata?.pricingTiers || []
+        pricingTiers: updatedUser.user?.user_metadata?.pricingTiers || [],
+        capabilities: updatedUser.user?.user_metadata?.capabilities || {}
       },
       role: updatedUser.user?.user_metadata?.role || 'manufacturer',
       updatedAt: new Date().toISOString()

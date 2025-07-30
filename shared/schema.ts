@@ -48,6 +48,7 @@ export const userProfiles = pgTable('user_profiles', {
   company: text('company'),
   createdAt: timestamp('created_at').defaultNow(),
   stripeCustomerId: text('stripe_customer_id'),
+  capabilities: jsonb('capabilities').default('{}'), // Manufacturer capabilities (fabrics, max_order_volume, sports, etc.)
 });
 
 // Customers table

@@ -40,7 +40,23 @@ const manufacturerFormSchema = z.object({
     category: z.string(),
     basePrice: z.number().min(0),
     markup: z.number().min(0).max(100)
-  })).default([])
+  })).default([]),
+  capabilities: z.object({
+    fabrics: z.array(z.string()).default([]),
+    max_order_volume: z.number().min(0).default(1000),
+    sports: z.array(z.string()).default([]),
+    equipment: z.array(z.string()).default([]),
+    certifications: z.array(z.string()).default([]),
+    lead_time_days: z.number().min(1).default(14),
+    specialties: z.array(z.string()).default([]),
+    min_order_quantity: z.number().min(1).default(25),
+    rush_order_available: z.boolean().default(false),
+    rush_lead_time_days: z.number().min(1).default(7),
+    quality_grades: z.array(z.string()).default([]),
+    size_ranges: z.array(z.string()).default([]),
+    color_capabilities: z.array(z.string()).default([]),
+    additional_services: z.array(z.string()).default([])
+  }).default({})
 });
 
 type ManufacturerFormData = z.infer<typeof manufacturerFormSchema>;
@@ -62,6 +78,22 @@ interface Manufacturer {
       basePrice: number;
       markup: number;
     }>;
+    capabilities?: {
+      fabrics?: string[];
+      max_order_volume?: number;
+      sports?: string[];
+      equipment?: string[];
+      certifications?: string[];
+      lead_time_days?: number;
+      specialties?: string[];
+      min_order_quantity?: number;
+      rush_order_available?: boolean;
+      rush_lead_time_days?: number;
+      quality_grades?: string[];
+      size_ranges?: string[];
+      color_capabilities?: string[];
+      additional_services?: string[];
+    };
   };
 }
 
@@ -123,7 +155,23 @@ export default function ManufacturerEditPage() {
         email: manufacturer.email || '',
         notes: customAttrs.notes || '',
         preferredCategories: customAttrs.preferredCategories || [],
-        pricingTiers: customAttrs.pricingTiers || []
+        pricingTiers: customAttrs.pricingTiers || [],
+        capabilities: {
+          fabrics: customAttrs.capabilities?.fabrics || [],
+          max_order_volume: customAttrs.capabilities?.max_order_volume || 1000,
+          sports: customAttrs.capabilities?.sports || [],
+          equipment: customAttrs.capabilities?.equipment || [],
+          certifications: customAttrs.capabilities?.certifications || [],
+          lead_time_days: customAttrs.capabilities?.lead_time_days || 14,
+          specialties: customAttrs.capabilities?.specialties || [],
+          min_order_quantity: customAttrs.capabilities?.min_order_quantity || 25,
+          rush_order_available: customAttrs.capabilities?.rush_order_available || false,
+          rush_lead_time_days: customAttrs.capabilities?.rush_lead_time_days || 7,
+          quality_grades: customAttrs.capabilities?.quality_grades || [],
+          size_ranges: customAttrs.capabilities?.size_ranges || [],
+          color_capabilities: customAttrs.capabilities?.color_capabilities || [],
+          additional_services: customAttrs.capabilities?.additional_services || []
+        }
       });
     }
   }, [manufacturer, form]);
@@ -144,7 +192,8 @@ export default function ManufacturerEditPage() {
           phone: data.phone,
           notes: data.notes,
           preferredCategories: data.preferredCategories,
-          pricingTiers: data.pricingTiers
+          pricingTiers: data.pricingTiers,
+          capabilities: data.capabilities
         })
       });
       
