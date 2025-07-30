@@ -59,6 +59,7 @@ export default function CatalogItemEditPage() {
   // State for image upload
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [isSubmitDisabled, setIsSubmitDisabled] = React.useState(false);
 
   // Fetch catalog item data
   const { data: catalogItem, isLoading } = useQuery({
@@ -187,6 +188,9 @@ export default function CatalogItemEditPage() {
       
       // Navigate back to catalog
       navigate('/admin/catalog');
+      
+      // Re-enable submit after 1 second
+      setTimeout(() => setIsSubmitDisabled(false), 1000);
     },
     onError: (error: Error) => {
       toast({
@@ -194,6 +198,9 @@ export default function CatalogItemEditPage() {
         description: error.message,
         variant: "destructive",
       });
+      
+      // Re-enable submit after 1 second on error
+      setTimeout(() => setIsSubmitDisabled(false), 1000);
     }
   });
 
@@ -328,8 +335,17 @@ export default function CatalogItemEditPage() {
   };
 
   const onSubmit = (data: CatalogItemFormData) => {
-    // Check validation before submitting
-    if (!validation.canSubmit) {
+    // Check validation and submit state before submitting
+    if (!validation.canSubmit || isSubmitDisabled) {
+      if (isSubmitDisabled) {
+        toast({
+          title: "Please wait",
+          description: "Form is being processed. Please wait before submitting again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       toast({
         title: "Cannot submit form",
         description: validation.errors.length > 0 
@@ -342,6 +358,8 @@ export default function CatalogItemEditPage() {
       return;
     }
     
+    // Disable submit button immediately
+    setIsSubmitDisabled(true);
     updateMutation.mutate(data);
   };
 
@@ -1004,16 +1022,22 @@ export default function CatalogItemEditPage() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={updateMutation.isPending || !validation.canSubmit}
-                  className={`bg-blue-600 hover:bg-blue-700 ${!validation.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={updateMutation.isPending || !validation.canSubmit || isSubmitDisabled}
+                  className={`bg-blue-600 hover:bg-blue-700 ${(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}`}
                   title={!validation.canSubmit ? 
                     (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                    isSubmitDisabled ? "Please wait before submitting again" :
                     "Save catalog item changes"}
                 >
                   {updateMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Updating...
+                    </>
+                  ) : isSubmitDisabled ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2" />
+                      Processing...
                     </>
                   ) : (
                     <>

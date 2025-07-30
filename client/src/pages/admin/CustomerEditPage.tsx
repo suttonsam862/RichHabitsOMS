@@ -252,6 +252,7 @@ export default function CustomerEditPage() {
   };
 
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [isSubmitDisabled, setIsSubmitDisabled] = React.useState(false);
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
@@ -388,6 +389,9 @@ export default function CustomerEditPage() {
         
         // Navigate back to customer detail page
         navigate(`/admin/customers/${customerId}`);
+        
+        // Re-enable submit after 1 second
+        setTimeout(() => setIsSubmitDisabled(false), 1000);
       } else {
         // If success is not true, treat it as an error
         const errorMessage = data?.message || 'Update completed but server did not confirm success';
@@ -417,12 +421,24 @@ export default function CustomerEditPage() {
         localStorage.removeItem('authToken');
         navigate('/login');
       }
+      
+      // Re-enable submit after 1 second on error
+      setTimeout(() => setIsSubmitDisabled(false), 1000);
     }
   });
 
   const onSubmit = (data: CustomerFormData) => {
-    // Check validation before submitting
-    if (!validation.canSubmit) {
+    // Check validation and submit state before submitting
+    if (!validation.canSubmit || isSubmitDisabled) {
+      if (isSubmitDisabled) {
+        toast({
+          title: "Please wait",
+          description: "Form is being processed. Please wait before submitting again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       toast({
         title: "Cannot submit form",
         description: validation.errors.length > 0 
@@ -435,6 +451,8 @@ export default function CustomerEditPage() {
       return;
     }
     
+    // Disable submit button immediately
+    setIsSubmitDisabled(true);
     updateCustomerMutation.mutate(data);
   };
 
@@ -929,14 +947,15 @@ export default function CustomerEditPage() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={updateCustomerMutation.isPending || !validation.canSubmit}
-                  className={!validation.canSubmit ? "opacity-50 cursor-not-allowed" : ""}
+                  disabled={updateCustomerMutation.isPending || !validation.canSubmit || isSubmitDisabled}
+                  className={(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}
                   title={!validation.canSubmit ? 
                     (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                    isSubmitDisabled ? "Please wait before submitting again" :
                     "Save customer changes"}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {updateCustomerMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  {updateCustomerMutation.isPending ? 'Saving...' : isSubmitDisabled ? 'Processing...' : 'Save Changes'}
                 </Button>
               </div>
             </form>

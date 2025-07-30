@@ -156,6 +156,7 @@ export default function OrderEditPage() {
   const queryClient = useQueryClient();
   const [showManufacturerDialog, setShowManufacturerDialog] = useState(false);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<string>('');
+  const [isSubmitDisabled, setIsSubmitDisabled] = useState(false);
 
   const isEditing = id !== 'new';
 
@@ -411,6 +412,9 @@ export default function OrderEditPage() {
       
       // Navigate to order list or detail page
       navigate('/orders');
+      
+      // Re-enable submit after 1 second
+      setTimeout(() => setIsSubmitDisabled(false), 1000);
     },
     onError: (error: Error) => {
       toast({
@@ -418,12 +422,24 @@ export default function OrderEditPage() {
         description: error.message,
         variant: 'destructive',
       });
+      
+      // Re-enable submit after 1 second on error
+      setTimeout(() => setIsSubmitDisabled(false), 1000);
     },
   });
 
   const onSubmit = (data: OrderEditFormValues) => {
-    // Check validation before submitting
-    if (!validation.canSubmit) {
+    // Check validation and submit state before submitting
+    if (!validation.canSubmit || isSubmitDisabled) {
+      if (isSubmitDisabled) {
+        toast({
+          title: "Please wait",
+          description: "Form is being processed. Please wait before submitting again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       toast({
         title: "Cannot submit form",
         description: validation.errors.length > 0 
@@ -436,6 +452,8 @@ export default function OrderEditPage() {
       return;
     }
     
+    // Disable submit button immediately
+    setIsSubmitDisabled(true);
     saveMutation.mutate(data);
   };
 
@@ -1103,15 +1121,21 @@ export default function OrderEditPage() {
             )}
             <Button
               type="submit"
-              disabled={saveMutation.isPending || !validation.canSubmit}
-              className={`bg-blue-600 hover:bg-blue-700 ${!validation.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={saveMutation.isPending || !validation.canSubmit || isSubmitDisabled}
+              className={`bg-blue-600 hover:bg-blue-700 ${(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}`}
               title={!validation.canSubmit ? 
                 (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                isSubmitDisabled ? "Please wait before submitting again" :
                 "Save order changes"}
             >
-              {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              <Save className="w-4 h-4 mr-2" />
-              {isEditing ? 'Update Order' : 'Create Order'}
+              {saveMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : isSubmitDisabled ? (
+                <Loader2 className="w-4 h-4 mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              {saveMutation.isPending ? 'Saving...' : isSubmitDisabled ? 'Processing...' : (isEditing ? 'Update Order' : 'Create Order')}
             </Button>
           </div>
         </form>
