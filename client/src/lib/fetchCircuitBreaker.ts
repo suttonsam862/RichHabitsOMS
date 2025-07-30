@@ -46,6 +46,11 @@ class FetchCircuitBreaker {
   }
 
   canMakeRequest(endpoint: string): boolean {
+    // Always allow requests in development mode
+    if (import.meta.env.DEV) {
+      return true;
+    }
+
     const state = this.getState(endpoint);
     const now = Date.now();
 
@@ -76,6 +81,11 @@ class FetchCircuitBreaker {
   }
 
   recordFailure(endpoint: string, error?: any): void {
+    // Don't record failures in development mode
+    if (import.meta.env.DEV) {
+      return;
+    }
+
     const state = this.getState(endpoint);
     const now = Date.now();
 
@@ -132,15 +142,7 @@ export const circuitBreaker = new FetchCircuitBreaker();
 export async function safeFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const endpoint = url.split('?')[0]; // Remove query params for circuit breaker key
 
-  // Bypass circuit breaker in development environment
-  if (import.meta.env.DEV) {
-    console.log('🔧 Development mode: Bypassing circuit breaker for', endpoint);
-    return fetch(url, options);
-  }
-
-  if (circuitBreaker.canMakeRequest(endpoint)) {
-    // Request allowed, proceed
-  } else {
+  if (circuitBreaker.shouldBlockRequest(endpoint)) {
     const error = new Error(`Circuit breaker is OPEN for ${endpoint}`);
     (error as any).circuitBreakerBlocked = true;
     throw error;

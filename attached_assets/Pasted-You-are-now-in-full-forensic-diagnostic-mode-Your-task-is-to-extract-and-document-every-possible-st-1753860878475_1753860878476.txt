@@ -1,0 +1,94 @@
+You are now in full forensic diagnostic mode. Your task is to extract and document every possible structural and functional detail of the ThreadCraft application that affects its ability to operate core CRUD workflows and dashboard features.
+
+This is not a repair prompt — this is a **total system mapping** to confirm what exists, what’s broken, what’s missing, and what needs to be rebuilt.
+
+---
+
+🔍 PLEASE RETURN STRUCTURED DATA FOR THE FOLLOWING:
+
+### 1. PAGE-LEVEL INVENTORY
+- List every page/component under `/client/src/pages/admin/`
+- For each, state:
+  - What it is supposed to do (business purpose)
+  - What data it fetches
+  - What endpoint(s) it uses
+  - Whether the endpoint works
+  - Whether the component renders conditionally based on data
+  - Any error boundary or fallback logic
+
+### 2. API ENDPOINT MAP (server/routes/api/)
+- List every API route file
+- For each, list:
+  - Available endpoints (e.g. `POST /api/customers/create`)
+  - What database tables it interacts with
+  - Whether it uses Supabase or raw SQL
+  - Whether it has proper error handling
+  - Whether the endpoint is wired to the frontend
+
+### 3. DATABASE TABLE INVENTORY
+- Pull a schema-level map of all tables
+  - Table name
+  - Column names and types
+  - Foreign keys and relationships
+  - Any missing or mismatched fields vs frontend usage
+- Highlight any tables referenced in code that **don’t exist**
+
+### 4. CIRCUIT BREAKER SYSTEM
+- Show where `safeFetch()` is called throughout the frontend
+- Determine where `shouldBlockRequest()` is invoked (or not)
+- Confirm whether the dev-mode bypass logic is actually used
+- Identify all components affected by circuit breaker state
+
+### 5. IMAGE UPLOAD INFRASTRUCTURE
+- List all files related to image/file upload:
+  - Routes, middleware, handlers, shared utils
+- Identify which are currently active and which are unused
+- Check for:
+  - Customer-specific upload logic
+  - Catalog image upload handling
+  - Supabase Storage vs local file handling
+- Confirm if `ImageUploader.tsx` or DropZone logic exists in any form
+
+### 6. FORM SUBMISSION SYSTEM
+- Identify all major forms (Customer, Catalog Item, Manufacturer, Order)
+- For each, report:
+  - Where the data goes (what API endpoint)
+  - Whether the form matches backend schema (camelCase vs snake_case)
+  - Whether there is client-side validation
+  - Whether the endpoint accepts and returns a response
+  - Whether the form has a success/failure UX
+
+### 7. FEATURE BOUNDARY & ERROR HANDLING
+- Identify all usage of `FeatureErrorBoundary`, `ErrorBoundary`, or custom fallbacks
+- Determine:
+  - Which admin pages are wrapped in the same boundaries
+  - Whether the same error ID logic is reused
+  - What triggers fallback UI on crash
+- Confirm if the error boundary pattern explains the shared failure on Catalog + Manufacturer Assignment pages
+
+### 8. CUSTOMER UPDATE SYSTEM
+- Confirm if there is a `CustomerEditPage.tsx` or equivalent
+- Check for:
+  - PATCH or PUT route in `customerRoutes.ts`
+  - Frontend logic that uses it
+  - Whether Supabase update is correctly mapped
+
+### 9. ROLE-BASED ROUTING AND RBAC
+- Confirm how each role (admin, designer, etc.) is routed
+- Check if any routes are accessible without proper backend enforcement
+- Confirm if Supabase RLS policies exist for:
+  - customers
+  - orders
+  - manufacturers
+- Highlight any table without RLS
+
+---
+
+🧠 FINAL REQUIREMENTS
+
+Please return this as a structured report grouped by each of the 9 sections above.
+
+DO NOT assume features exist just because they are referenced.  
+DO NOT assume endpoints are working unless they return success.
+
+You are not patching bugs. You are mapping the entire battlefield so we can fix the system from the inside out.
