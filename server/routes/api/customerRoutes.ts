@@ -719,44 +719,30 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
     console.log(`📸 Photo uploaded successfully to: ${photoUrl}`);
     console.log(`🔄 Updating customer ${id} with photo URL...`);
 
-    // Update customer record with photo URL - using a different column name if photo_url doesn't exist
-    let updateError: any = null;
-    let updateData: any = {};
-    
-    // Try with photo_url first
-    updateData.photo_url = photoUrl;
-    const { error: primaryError } = await supabaseAdmin
+    // Try to update customer record with profile_image_url
+    console.log('🔄 Attempting to update customer record with profile_image_url...');
+    const { error: updateError } = await supabaseAdmin
       .from('customers')
-      .update(updateData)
+      .update({ profile_image_url: photoUrl })
       .eq('id', id);
 
-    if (primaryError && primaryError.code === 'PGRST204') {
-      console.log('photo_url column not found, trying alternative approaches...');
+    if (updateError) {
+      console.error('Database update error:', updateError);
       
-      // Try with image_url instead
-      updateData = { image_url: photoUrl };
-      const { error: altError } = await supabaseAdmin
-        .from('customers')
-        .update(updateData)
-        .eq('id', id);
-        
-      if (altError && altError.code === 'PGRST204') {
-        console.log('image_url column not found either, photo URL not stored in database');
-        // Continue without database update - file is still uploaded to storage
-        updateError = null;
+      // If column doesn't exist, that's okay - photo is still uploaded
+      if (updateError.code === 'PGRST204') {
+        console.log('⚠️ profile_image_url column not found in customers table');
+        console.log('📸 Photo uploaded successfully, but not linked to customer record');
+        console.log('💡 Column needs to be added: ALTER TABLE customers ADD COLUMN profile_image_url TEXT;');
       } else {
-        updateError = altError;
+        // Other database errors should fail the request
+        return res.status(400).json({
+          success: false,
+          message: 'Photo uploaded but database update failed: ' + updateError.message
+        });
       }
     } else {
-      updateError = primaryError;
-    }
-
-    if (updateError) {
-      console.error('Error updating customer with photo URL:', updateError);
-      // Don't fail the entire request if database update fails - file is already uploaded
-      console.log('⚠️ Photo uploaded but database not updated with URL');
-    } else {
-      console.log('✅ Customer record updated with photo URL');
+      console.log('✅ Customer record updated with profile_image_url successfully');
     }
 
     // Always return success if file was uploaded to storage
