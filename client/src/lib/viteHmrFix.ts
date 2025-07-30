@@ -1,3 +1,4 @@
+
 /**
  * Vite HMR Connection Fix for Replit Environment
  * Prevents console spam from connection polling and WebSocket errors
@@ -8,9 +9,14 @@ const maxHmrAttempts = 2;
 let lastHmrAttempt = 0;
 const hmrAttemptCooldown = 30000; // 30 seconds
 
+// Utility to check if we're in development mode
+const isDevelopment = (): boolean => {
+  return import.meta.env.DEV || process.env.NODE_ENV === 'development';
+};
+
 // Override EventSource for Vite HMR fallback connections
 export function suppressViteHmrSpam() {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && isDevelopment()) {
     // Store original EventSource
     const OriginalEventSource = window.EventSource;
     
@@ -21,7 +27,7 @@ export function suppressViteHmrSpam() {
           
           // Check if this is a Vite HMR connection
           const urlStr = typeof url === 'string' ? url : url.toString();
-          if (urlStr.includes('_vite_ping') || urlStr.includes('hmr')) {
+          if (urlStr.includes('_vite_ping') || urlStr.includes('hmr') || urlStr.includes('/@vite/')) {
             // Apply rate limiting for HMR connections
             if (hmrConnectionAttempts >= maxHmrAttempts && now - lastHmrAttempt < hmrAttemptCooldown) {
               // Return a dummy EventSource that doesn't actually connect
@@ -38,7 +44,7 @@ export function suppressViteHmrSpam() {
           
           // Suppress error logging for HMR connections
           this.addEventListener('error', (event) => {
-            if (urlStr.includes('_vite_ping') || urlStr.includes('hmr')) {
+            if (urlStr.includes('_vite_ping') || urlStr.includes('hmr') || urlStr.includes('/@vite/')) {
               event.preventDefault();
               event.stopPropagation();
             }
@@ -47,31 +53,46 @@ export function suppressViteHmrSpam() {
       };
     }
 
-    // Override fetch for Vite ping requests
+    // Override fetch for Vite ping requests - but don't interfere with global interceptor
     const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-      const url = args[0];
-      const urlStr = typeof url === 'string' ? url : url.toString();
+    let viteOverrideActive = false;
+    
+    if (!viteOverrideActive) {
+      viteOverrideActive = true;
       
-      // Intercept Vite ping requests and handle them silently
-      if (urlStr.includes('_vite_ping') || urlStr.includes('/@vite/')) {
-        try {
-          return await originalFetch(...args);
-        } catch (error) {
-          // Return a mock successful response for ping requests to prevent console spam
-          return new Response('ok', { status: 200, statusText: 'OK' });
+      window.fetch = async (...args) => {
+        const url = args[0];
+        const urlStr = typeof url === 'string' ? url : url.toString();
+        
+        // Only handle Vite-specific requests
+        if (urlStr.includes('_vite_ping') || urlStr.includes('/@vite/')) {
+          try {
+            return await originalFetch(...args);
+          } catch (error) {
+            // Silently handle Vite ping failures - these are expected in development
+            if (import.meta.env.VITE_DEBUG_VERBOSE) {
+              console.debug('Vite HMR ping failed (expected in development):', error);
+            }
+            // Return a mock successful response for ping requests to prevent console spam
+            return new Response('ok', { status: 200, statusText: 'OK' });
+          }
         }
-      }
-      
-      return originalFetch(...args);
-    };
+        
+        // Pass through to original fetch (which may be the global interceptor)
+        return originalFetch(...args);
+      };
+    }
+  }
+}
 
-    // Enhanced console suppression targeting specific Vite messages
+// Enhanced console suppression targeting specific Vite messages
+export function suppressViteConsoleSpam() {
+  if (typeof window !== 'undefined' && isDevelopment()) {
     const originalConsoleWarn = console.warn;
     const originalConsoleError = console.error;
     const originalConsoleInfo = console.info;
 
-    // Override console methods to filter Vite HMR messages
+    // Vite message patterns to suppress
     const viteMessagePatterns = [
       '[vite] server connection lost',
       '[vite] connecting...',
@@ -80,7 +101,9 @@ export function suppressViteHmrSpam() {
       'hmr update',
       'vite:ws',
       'WebSocket connection to',
-      'Failed to establish a connection'
+      'Failed to establish a connection',
+      'WebSocket is already in CLOSING or CLOSED state',
+      'Connection failed'
     ];
 
     const shouldSuppressMessage = (message: string): boolean => {
@@ -98,7 +121,7 @@ export function suppressViteHmrSpam() {
 
     console.error = (...args) => {
       const message = args.join(' ');
-      if (!shouldSuppressMessage(message)) {
+      if (!shouldSuppressMessage(message) && !import.meta.env.VITE_SUPPRESS_DEV_ERRORS) {
         originalConsoleError.apply(console, args);
       }
     };
@@ -114,10 +137,10 @@ export function suppressViteHmrSpam() {
 
 // Additional WebSocket state management
 export function enhanceWebSocketStability() {
-  if (typeof window !== 'undefined' && window.WebSocket) {
+  if (typeof window !== 'undefined' && window.WebSocket && isDevelopment()) {
     const OriginalWebSocket = window.WebSocket;
     let wsConnectionCount = 0;
-    const maxConcurrentConnections = 3;
+    const maxConcurrentConnections = 2; // Reduced from 3
 
     window.WebSocket = class extends OriginalWebSocket {
       private isViteHmr: boolean;
@@ -125,48 +148,53 @@ export function enhanceWebSocketStability() {
       constructor(url: string | URL, protocols?: string | string[]) {
         const urlStr = typeof url === 'string' ? url : url.toString();
         
-        // Detect Vite HMR connections and determine URL to use
-        let finalUrl = url;
-        let skipConnection = false;
+        // Detect Vite HMR connections
+        this.isViteHmr = urlStr.includes('_vite_ping') || 
+                        urlStr.includes('hmr') || 
+                        urlStr.includes('/@vite/') ||
+                        urlStr.includes('ws://') || 
+                        urlStr.includes('wss://');
         
-        if (urlStr.includes('_vite_ping') || urlStr.includes('ws://') || urlStr.includes('wss://')) {
-          if (urlStr.includes('localhost') || urlStr.includes('127.0.0.1')) {
-            // This is likely a Vite HMR connection
-            if (wsConnectionCount >= maxConcurrentConnections) {
-              // Prevent too many concurrent WebSocket connections
-              finalUrl = 'ws://localhost:0'; // Invalid URL that will fail quickly
-              skipConnection = true;
-            }
-          }
+        // Limit concurrent WebSocket connections for HMR
+        if (this.isViteHmr && wsConnectionCount >= maxConcurrentConnections) {
+          // Create a dummy WebSocket that fails quickly
+          super('ws://localhost:0');
+          this.close();
+          return;
         }
 
-        super(finalUrl, protocols);
+        super(url, protocols);
         
-        this.isViteHmr = urlStr.includes('_vite_ping') || urlStr.includes('hmr');
-        
-        if (!skipConnection) {
+        if (this.isViteHmr) {
           wsConnectionCount++;
         }
 
         // Enhanced error handling
         this.addEventListener('open', () => {
-          if (this.isViteHmr) {
-            wsConnectionCount = Math.max(0, wsConnectionCount - 1);
+          if (this.isViteHmr && import.meta.env.VITE_DEBUG_VERBOSE) {
+            console.debug('Vite HMR WebSocket connected');
           }
         });
 
         this.addEventListener('close', () => {
           if (this.isViteHmr) {
             wsConnectionCount = Math.max(0, wsConnectionCount - 1);
+            if (import.meta.env.VITE_DEBUG_VERBOSE) {
+              console.debug('Vite HMR WebSocket closed');
+            }
           }
         });
 
         this.addEventListener('error', (event) => {
           if (this.isViteHmr) {
-            // Suppress Vite HMR WebSocket errors
+            // Suppress Vite HMR WebSocket errors unless in verbose mode
             event.preventDefault();
             event.stopPropagation();
             wsConnectionCount = Math.max(0, wsConnectionCount - 1);
+            
+            if (import.meta.env.VITE_DEBUG_VERBOSE) {
+              console.debug('Vite HMR WebSocket error (suppressed):', event);
+            }
           }
         });
       }
@@ -176,7 +204,10 @@ export function enhanceWebSocketStability() {
 
 // Initialize all fixes
 export function initViteHmrFixes() {
-  suppressViteHmrSpam();
-  enhanceWebSocketStability();
-  console.log('Vite HMR connection fixes initialized');
+  if (isDevelopment()) {
+    suppressViteHmrSpam();
+    suppressViteConsoleSpam();
+    enhanceWebSocketStability();
+    console.log('🔧 Vite HMR connection fixes initialized for development');
+  }
 }

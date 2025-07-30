@@ -86,7 +86,12 @@ export class StorageService {
   }
 
   /**
-   * Upload a file to Supabase Storage
+   * Upload a file to Supabase Storage with comprehensive error handling
+   * @param bucket - The Supabase storage bucket name
+   * @param path - The file path within the bucket
+   * @param file - The file data (Buffer, Uint8Array, or File)
+   * @param options - Upload configuration options
+   * @returns Promise<UploadResult> with success status, URLs, and error details
    */
   static async uploadFile(
     bucket: string,
@@ -100,6 +105,24 @@ export class StorageService {
     }
   ): Promise<UploadResult> {
     try {
+      // Validate inputs
+      if (!bucket || !path || !file) {
+        return {
+          success: false,
+          error: 'Missing required parameters: bucket, path, and file are required'
+        };
+      }
+
+      // Ensure bucket exists
+      const bucketResult = await this.ensureBucketExists(bucket, options?.visibility);
+      if (!bucketResult.success) {
+        return {
+          success: false,
+          error: `Failed to ensure bucket exists: ${bucketResult.error}`
+        };
+      }
+
+      // Perform the upload
       const { data, error } = await supabase.storage
         .from(bucket)
         .upload(path, file, {
@@ -109,14 +132,150 @@ export class StorageService {
         });
 
       if (error) {
-        console.error('Storage upload error:', error);
+        console.error(`❌ Storage upload error for ${bucket}/${path}:`, error);
+        
+        // Handle specific error types
+        if (error.message.includes('already exists')) {
+          return {
+            success: false,
+            error: `File already exists at ${path}. Use upsert: true to overwrite.`
+          };
+        }
+        
+        if (error.message.includes('bucket not found')) {
+          return {
+            success: false,
+            error: `Storage bucket '${bucket}' not found. Please check bucket configuration.`
+          };
+        }
+        
+        if (error.message.includes('file size')) {
+          return {
+            success: false,
+            error: 'File is too large. Please reduce file size and try again.'
+          };
+        }
+
         return {
           success: false,
-          error: error.message
+          error: `Upload failed: ${error.message}`
+        };
+      }
+
+      if (!data || !data.path) {
+        return {
+          success: false,
+          error: 'Upload completed but no file path returned from storage'
         };
       }
 
       const visibility = options?.visibility || 'public';
+
+      // Generate appropriate URL based on visibility
+      let publicUrl: string | undefined;
+      let url: string;
+
+      if (visibility === 'public') {
+        // Get public URL for public files
+        const { data: publicUrlData } = supabase.storage
+          .from(bucket)
+          .getPublicUrl(data.path);
+        
+        publicUrl = publicUrlData.publicUrl;
+        url = publicUrlData.publicUrl;
+      } else {
+        // For private files, store the path and generate signed URLs when needed
+        url = data.path;
+        publicUrl = undefined;
+      }
+
+      console.log(`✅ File uploaded successfully: ${bucket}/${data.path} (${visibility})`);
+
+      return {
+        success: true,
+        url,
+        path: data.path,
+        publicUrl,
+        visibility
+      };
+
+    } catch (error) {
+      console.error(`❌ Unexpected error during file upload to ${bucket}/${path}:`, error);
+      
+      // Handle different error types
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return {
+          success: false,
+          error: 'Network error: Unable to connect to storage service. Please check your connection.'
+        };
+      }
+      
+      if (error instanceof Error && error.message.includes('unauthorized')) {
+        return {
+          success: false,
+          error: 'Authentication error: Invalid or expired storage credentials.'
+        };
+      }
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unexpected upload error occurred'
+      };
+    }
+  }
+
+  /**
+   * Ensure a storage bucket exists, create if it doesn't
+   * @param bucketName - Name of the bucket to ensure exists
+   * @param visibility - Whether the bucket should be public or private
+   * @returns Promise with success status and error details
+   */
+  private static async ensureBucketExists(
+    bucketName: string, 
+    visibility: 'public' | 'private' = 'public'
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Check if bucket exists
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error('❌ Error listing buckets:', listError);
+        return { success: false, error: `Failed to list buckets: ${listError.message}` };
+      }
+
+      const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+
+      if (!bucketExists) {
+        console.log(`📦 Creating storage bucket: ${bucketName} (${visibility})`);
+        
+        // Create the bucket
+        const { error: createError } = await supabase.storage.createBucket(bucketName, {
+          public: visibility === 'public',
+          allowedMimeTypes: [
+            'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf', 'text/plain', 'application/json'
+          ],
+          fileSizeLimit: 10485760 // 10MB limit
+        });
+
+        if (createError) {
+          console.error(`❌ Error creating bucket ${bucketName}:`, createError);
+          return { success: false, error: `Failed to create bucket: ${createError.message}` };
+        }
+
+        console.log(`✅ Successfully created bucket: ${bucketName}`);
+      }
+
+      return { success: true };
+
+    } catch (error) {
+      console.error(`❌ Unexpected error ensuring bucket ${bucketName} exists:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unexpected bucket error'
+      };
+    }
+  }
       
       // Generate URL based on visibility
       let publicUrl: string | undefined;

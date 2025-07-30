@@ -2,179 +2,154 @@
  * Enhanced WebSocket connection fix for Replit environments
  * Addresses Vite HMR connection polling issues and console spam
  */
+
+// Utility to detect development environment
+const isDevelopment = (): boolean => {
+  return import.meta.env?.DEV || process.env.NODE_ENV === 'development';
+};
+
 export const fixWebSocketConnection = () => {
   if (typeof window !== 'undefined') {
-    // Store the original WebSocket constructor
-    const OriginalWebSocket = window.WebSocket;
-    let connectionAttempts = 0;
-    const maxConnectionAttempts = 3;
+    // Only apply comprehensive error suppression in development
+    if (isDevelopment()) {
+      setupDevelopmentErrorSuppression();
+    }
 
-    // Create a proxy constructor that intercepts WebSocket creation
-    window.WebSocket = function(url: string | URL, protocols?: string | string[]) {
-      let urlString = typeof url === 'string' ? url : url.toString();
-
-      // Enhanced Vite HMR WebSocket detection and fixing
-      if (urlString.includes('localhost:undefined') || urlString.includes('undefined') || urlString.includes('_vite_ping')) {
-        connectionAttempts++;
-        
-        // Limit connection attempts to prevent spam
-        if (connectionAttempts > maxConnectionAttempts) {
-          // Return a mock WebSocket that prevents further polling
-          return {
-            addEventListener: () => {},
-            removeEventListener: () => {},
-            send: () => {},
-            close: () => {},
-            readyState: WebSocket.CLOSED,
-            onopen: null,
-            onclose: null,
-            onerror: null,
-            onmessage: null,
-            bufferedAmount: 0,
-            extensions: '',
-            protocol: '',
-            url: urlString,
-            binaryType: 'blob',
-            dispatchEvent: () => false,
-            CONNECTING: WebSocket.CONNECTING,
-            OPEN: WebSocket.OPEN,
-            CLOSING: WebSocket.CLOSING,
-            CLOSED: WebSocket.CLOSED
-          } as WebSocket;
-        }
-
-        // Get the current host and protocol
-        const currentHost = window.location.hostname;
-        const currentPort = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-        try {
-          // Parse URL to get path and query parameters
-          const originalUrl = new URL(urlString.replace('undefined', currentPort).replace('localhost:undefined', `${currentHost}:${currentPort}`));
-          const path = originalUrl.pathname;
-          const searchParams = originalUrl.search;
-
-          // Construct a proper WebSocket URL with enhanced Replit handling
-          let fixedUrl;
-          if (currentHost.includes('replit') || currentHost.includes('repl.co')) {
-            // For Replit, use the secure protocol without explicit port
-            fixedUrl = `wss://${currentHost}${path}${searchParams}`;
-          } else {
-            // For local development
-            fixedUrl = `${protocol}//${currentHost}:${currentPort}${path}${searchParams}`;
-          }
-
-          // Create WebSocket with enhanced error handling
-          const ws = new OriginalWebSocket(fixedUrl, protocols);
-
-          // Suppress error logging for HMR connections to reduce console spam
-          ws.addEventListener('error', (event) => {
-            // Silently handle HMR connection errors
-            event.preventDefault();
-            event.stopPropagation();
-          });
-
-          ws.addEventListener('close', (event) => {
-            // Reset connection attempts on successful close
-            if (event.code === 1000) {
-              connectionAttempts = 0;
-            }
-          });
-
-          ws.addEventListener('open', () => {
-            // Reset connection attempts on successful connection
-            connectionAttempts = 0;
-          });
-
-          return ws;
-        } catch (e) {
-          // Silently handle WebSocket creation errors for HMR
-          return {
-            addEventListener: () => {},
-            removeEventListener: () => {},
-            send: () => {},
-            close: () => {},
-            readyState: WebSocket.CLOSED,
-            onopen: null,
-            onclose: null,
-            onerror: null,
-            onmessage: null,
-            bufferedAmount: 0,
-            extensions: '',
-            protocol: '',
-            url: urlString,
-            binaryType: 'blob',
-            dispatchEvent: () => false,
-            CONNECTING: WebSocket.CONNECTING,
-            OPEN: WebSocket.OPEN,
-            CLOSING: WebSocket.CLOSING,
-            CLOSED: WebSocket.CLOSED
-          } as WebSocket;
-        }
-      }
-
-      // For all other WebSocket connections, use the original constructor
-      return new OriginalWebSocket(url, protocols);
-    } as any;
-
-    // Copy prototype and properties from original WebSocket
-    window.WebSocket.prototype = OriginalWebSocket.prototype;
-    Object.defineProperties(window.WebSocket, 
-      Object.getOwnPropertyDescriptors(OriginalWebSocket));
+    // Always setup WebSocket improvements
+    setupWebSocketImprovements();
   }
 };
 
-// Fix for WebSocket connection issues in Replit environment
-export function fixWebSocketError() {
-  // Override WebSocket to handle connection issues gracefully
-  if (typeof window !== 'undefined' && window.WebSocket) {
-    const OriginalWebSocket = window.WebSocket;
+function setupDevelopmentErrorSuppression() {
+  // Handle unhandled promise rejections more intelligently
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
 
-    window.WebSocket = class extends OriginalWebSocket {
-      constructor(url: string | URL, protocols?: string | string[]) {
-        super(url, protocols);
+    // Only suppress specific development-related errors
+    if (reason && (
+        // Vite HMR errors
+        reason.message?.includes('_vite_ping') ||
+        reason.message?.includes('[vite] server connection lost') ||
+        reason.message?.includes('HMR') ||
+        reason.message?.includes('WebSocket') ||
 
-        // Add error handling for connection issues
-        this.addEventListener('error', (event) => {
-          console.warn('WebSocket connection error (handled):', event);
-        });
+        // Network errors that are expected in development
+        (reason.message?.includes('Failed to fetch') && isDevelopmentEndpoint(reason)) ||
+        (reason.message?.includes('NetworkError') && isDevelopmentEndpoint(reason)) ||
 
-        this.addEventListener('close', (event) => {
-          if (event.code !== 1000) {
-            console.warn('WebSocket closed unexpectedly:', event.code, event.reason);
-          }
-        });
+        // Empty or meaningless errors
+        reason === '' ||
+        (typeof reason === 'object' && Object.keys(reason).length === 0) ||
+        String(reason).trim() === ''
+    )) {
+      // Suppress these errors in development
+      event.preventDefault();
+
+      // Log to console only in verbose debug mode
+      if (import.meta.env.VITE_DEBUG_VERBOSE) {
+        console.debug('Suppressed development error:', reason);
       }
-    };
-  }
+      return;
+    }
 
-  // Handle unhandled promise rejections more comprehensively
-  if (typeof window !== 'undefined') {
-    const originalHandler = window.onunhandledrejection;
-    window.onunhandledrejection = (event) => {
-      const reason = event.reason;
-      
-      // Only suppress WebSocket and HMR-related errors
-      if (reason && (
-          reason.message?.includes('WebSocket') ||
-          reason.message?.includes('_vite_ping') ||
-          reason.message?.includes('[vite] server connection lost') ||
-          reason.message?.includes('HMR') ||
-          // Only suppress expected auth failures during startup
-          (reason.status === 401 && reason.message?.includes('Not authenticated') && !window.location.pathname.includes('/login')) ||
-          String(reason).trim() === ''
-      )) {
-        // Suppress these errors completely
+    // Allow all other errors to be handled normally
+    console.error('🚨 Unhandled Promise Rejection:', reason);
+
+    // Structure error information for debugging
+    const errorInfo = {
+      type: 'unhandledrejection',
+      reason: reason?.message || reason,
+      stack: reason?.stack,
+      timestamp: new Date().toISOString(),
+      url: window.location.href
+    };
+
+    // Only log detailed info for non-auth errors to avoid spam
+    if (!reason?.message?.includes('auth') && !reason?.message?.includes('401')) {
+      console.error('Error details:', errorInfo);
+    }
+
+    // Clean up auth errors gracefully
+    if (reason?.message?.includes('auth') || 
+        reason?.message?.includes('token') ||
+        reason?.message?.includes('401')) {
+      console.log('Authentication error detected, clearing invalid session');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
+    }
+  });
+}
+
+function isDevelopmentEndpoint(reason: any): boolean {
+  const message = reason?.message || '';
+  const url = reason?.url || '';
+
+  return message.includes('localhost') ||
+         message.includes('127.0.0.1') ||
+         url.includes('localhost') ||
+         url.includes('127.0.0.1') ||
+         message.includes('_vite_ping');
+}
+
+function setupWebSocketImprovements() {
+  // Store the original WebSocket constructor
+  const OriginalWebSocket = window.WebSocket;
+  let connectionAttempts = 0;
+  const maxConnectionAttempts = 2; // Reduced from 3
+
+  // Create a proxy constructor that intercepts WebSocket creation
+  window.WebSocket = function(url: string | URL, protocols?: string | string[]) {
+    let urlString = typeof url === 'string' ? url : url.toString();
+
+    // Detect if this is a Vite HMR WebSocket
+    const isViteHmr = urlString.includes('ws://') || 
+                     urlString.includes('wss://') ||
+                     urlString.includes('_vite_ping') ||
+                     urlString.includes('hmr');
+
+    // Rate limit HMR connections in development
+    if (isViteHmr && isDevelopment() && connectionAttempts >= maxConnectionAttempts) {
+      console.debug('WebSocket connection rate limited for HMR');
+      // Return a mock WebSocket that fails immediately
+      const mockWs = new OriginalWebSocket('ws://localhost:0');
+      setTimeout(() => mockWs.close(), 0);
+      return mockWs;
+    }
+
+    if (isViteHmr) {
+      connectionAttempts++;
+      // Reset counter after some time
+      setTimeout(() => {
+        connectionAttempts = Math.max(0, connectionAttempts - 1);
+      }, 10000);
+    }
+
+    // Create the actual WebSocket
+    const ws = new OriginalWebSocket(url, protocols);
+
+    // Add enhanced error handling for HMR WebSockets
+    if (isViteHmr && isDevelopment()) {
+      ws.addEventListener('error', (event) => {
+        // Suppress HMR WebSocket errors in development
         event.preventDefault();
-        return;
-      }
+        event.stopPropagation();
 
-      // Call original handler for other rejections
-      if (originalHandler) {
-        originalHandler.call(window, event);
-      }
-    };
-  }
+        if (import.meta.env.VITE_DEBUG_VERBOSE) {
+          console.debug('WebSocket error suppressed for HMR:', event);
+        }
+      });
 
-  console.log('WebSocket connection fix applied for Replit environment');
+      ws.addEventListener('close', (event) => {
+        if (import.meta.env.VITE_DEBUG_VERBOSE) {
+          console.debug('WebSocket closed for HMR:', event.code, event.reason);
+        }
+      });
+    }
+
+    return ws;
+  } as any;
+
+  // Preserve the original constructor's prototype
+  window.WebSocket.prototype = OriginalWebSocket.prototype;
 }
