@@ -1,73 +1,91 @@
 import { randomBytes } from 'crypto';
-import { db } from './db';
-import { users } from '@shared/schema';
-import { and, eq } from 'drizzle-orm';
-import * as bcrypt from 'bcrypt';
+import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from './email';
+
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY!;
+
+// Create Supabase admin client for user management
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const APP_URL = process.env.APP_URL || `http://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
 
 /**
- * Generate a secure setup token for a new user
+ * Generate a secure setup token for inviting new users
+ * Using Supabase Auth for modern user management
  */
-export async function generateSetupToken(userId: number): Promise<string> {
-  // Generate a random token
+export async function generateSetupToken(email: string): Promise<string> {
+  // Generate a random invitation token
   const token = randomBytes(32).toString('hex');
   
-  // Set expiration to 7 days from now
-  const expires = new Date();
-  expires.setDate(expires.getDate() + 7);
-  
-  // Update the user record with the token and expiration
-  await db.update(users)
-    .set({ 
-      setupToken: token,
-      setupTokenExpires: expires
-    })
-    .where(eq(users.id, userId));
-  
-  return token;
+  try {
+    // Create an invitation in Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: {
+        invitation_token: token,
+        invitation_expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+      }
+    });
+    
+    if (error) {
+      console.error('Error creating user invitation:', error);
+      throw error;
+    }
+    
+    return token;
+  } catch (error) {
+    console.error('Error generating setup token:', error);
+    throw error;
+  }
 }
 
 /**
  * Verify if a setup token is valid
+ * Using Supabase Auth for verification
  */
-export async function verifySetupToken(token: string): Promise<number | null> {
-  // Find user with this token
-  const [user] = await db.select()
-    .from(users)
-    .where(
-      and(
-        eq(users.setupToken, token),
-        // Ensure token hasn't expired
-        // @ts-ignore - TypeScript doesn't recognize the comparison operation correctly
-        users.setupTokenExpires > new Date()
-      )
+export async function verifySetupToken(token: string): Promise<string | null> {
+  try {
+    // Query users by invitation token in metadata
+    const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (error) {
+      console.error('Error verifying setup token:', error);
+      return null;
+    }
+    
+    // Find user with matching invitation token
+    const user = users.users.find(u => 
+      u.user_metadata?.invitation_token === token &&
+      new Date(u.user_metadata?.invitation_expires) > new Date()
     );
-  
-  if (!user) {
+    
+    return user ? user.id : null;
+  } catch (error) {
+    console.error('Error verifying setup token:', error);
     return null;
   }
-  
-  return user.id;
 }
 
 /**
  * Complete the user setup process
+ * Using Supabase Auth for password setting
  */
-export async function completeSetup(userId: number, password: string): Promise<boolean> {
+export async function completeSetup(userId: string, password: string): Promise<boolean> {
   try {
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Update user password using Supabase Admin API
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: password,
+      user_metadata: {
+        setup_completed: true,
+        invitation_token: null,
+        invitation_expires: null
+      }
+    });
     
-    // Update the user record
-    await db.update(users)
-      .set({ 
-        password: hashedPassword,
-        setupToken: null,
-        setupTokenExpires: null
-      })
-      .where(eq(users.id, userId));
+    if (error) {
+      console.error('Error completing setup:', error);
+      return false;
+    }
     
     return true;
   } catch (error) {

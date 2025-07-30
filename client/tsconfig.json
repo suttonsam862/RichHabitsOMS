@@ -4,10 +4,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "@lib/*": ["../lib/*"],
+      "@assets/*": ["../attached_assets/*"]
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../env.d.ts"
   ]
 }
