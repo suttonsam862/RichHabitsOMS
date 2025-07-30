@@ -30,6 +30,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     name: '',
     description: '',
     basePrice: '',
+    unitCost: '',
     category: '',
     sport: '',
     fabric: '',
@@ -83,8 +84,20 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       errors.basePrice = 'Base price is required';
     } else {
       const price = parseFloat(formData.basePrice);
-      if (isNaN(price) || price < 0) {
-        errors.basePrice = 'Please enter a valid price (0 or greater)';
+      if (isNaN(price)) {
+        errors.basePrice = 'Please enter a valid number';
+      } else if (price < 0) {
+        errors.basePrice = 'Base price must be a positive number (0 or greater)';
+      }
+    }
+    
+    // Validate unitCost if provided
+    if (formData.unitCost.trim()) {
+      const cost = parseFloat(formData.unitCost);
+      if (isNaN(cost)) {
+        errors.unitCost = 'Please enter a valid number';
+      } else if (cost < 0) {
+        errors.unitCost = 'Unit cost must be a positive number (0 or greater)';
       }
     }
     
@@ -113,6 +126,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       const submissionData = {
         ...formData,
         basePrice: parseFloat(formData.basePrice) || 0,
+        unitCost: parseFloat(formData.unitCost) || 0,
         sku: skuToUse
       };
       
