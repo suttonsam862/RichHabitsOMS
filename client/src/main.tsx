@@ -25,61 +25,16 @@ errorHandler;
 // Initialize toast event handler
 toastEventHandler.initialize();
 
-// Override console methods to suppress fetch error spam completely
-const originalConsoleWarn = console.warn;
+// Minimal console filtering for development
 const originalConsoleError = console.error;
-const originalConsoleLog = console.log;
-
-console.warn = (...args) => {
-  const message = args.join(' ');
-  if (message.includes('Failed to fetch') || 
-      message.includes('Network request failed') ||
-      message.includes('NetworkError') ||
-      message.includes('WebSocket') ||
-      message.includes('_vite_ping') ||
-      message.includes('vite') ||
-      message.includes('HMR') ||
-      message.includes('hot reload') ||
-      message.includes('[vite]') ||
-      message.includes('server connection lost') ||
-      message.includes('Polling for restart')) {
-    return; // Completely suppress these messages
-  }
-  originalConsoleWarn.apply(console, args);
-};
-
 console.error = (...args) => {
   const message = args.join(' ');
-  if (message.includes('Failed to fetch') || 
-      message.includes('Network request failed') ||
-      message.includes('NetworkError') ||
-      message.includes('WebSocket') ||
-      message.includes('_vite_ping') ||
-      message.includes('vite') ||
-      message.includes('HMR') ||
-      message.includes('hot reload') ||
-      message.includes('[vite]') ||
-      message.includes('server connection lost') ||
-      message.includes('Polling for restart')) {
-    return; // Completely suppress these messages
+  // Only suppress Vite HMR noise, not application errors
+  if (message.includes('_vite_ping') || message.includes('[vite] server connection lost')) {
+    return;
   }
   originalConsoleError.apply(console, args);
 };
-
-console.log = (...args) => {
-  const message = args.join(' ');
-  if (message.includes('Failed to fetch') || 
-      message.includes('Network request failed') ||
-      message.includes('NetworkError') ||
-      message.includes('[vite]') ||
-      message.includes('server connection lost') ||
-      message.includes('Polling for restart')) {
-    return; // Completely suppress these messages
-  }
-  originalConsoleLog.apply(console, args);
-};
-
-// Note: Global error handlers are now managed by the comprehensive errorHandler
 
 import { queryClient } from './lib/queryClient';
 

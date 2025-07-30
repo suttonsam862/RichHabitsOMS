@@ -7,15 +7,12 @@ import { MutationProvider } from "./context/MutationContext";
 import { AppWithSpinner } from "./components/AppWithSpinner";
 import { GlobalErrorBoundary } from "./components/error/GlobalErrorBoundary";
 
-// Enhanced error handling for network failures
+// Basic error handling - don't suppress all rejections
 const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-  // Complete suppression of all unhandled rejections
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  return false;
+  console.error('Unhandled promise rejection:', event.reason);
+  // Don't prevent default - let React handle it properly
 };
 
-// Set up global error handling
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', handleUnhandledRejection);
 }
