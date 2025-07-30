@@ -424,19 +424,22 @@ async function getAllCustomers(req: Request, res: Response) {
  */
 async function updateCustomer(req: Request, res: Response) {
   const { id } = req.params;
+  const requestTimestamp = new Date().toISOString();
   
   try {
+    console.log(`🔄 [${requestTimestamp}] Starting customer update for ID: ${id}`);
+    
     // Validate customer ID format (UUID)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!id || !uuidRegex.test(id)) {
+      console.error(`❌ [${requestTimestamp}] Invalid customer ID format: ${id}`);
       return res.status(400).json({
         success: false,
-        message: 'Invalid customer ID format'
+        message: 'Invalid customer ID format - must be a valid UUID'
       });
     }
 
-    console.log(`Updating customer profile with ID: ${id}`);
-    console.log('Request body:', req.body);
+    console.log(`📥 [${requestTimestamp}] Request body received:`, JSON.stringify(req.body, null, 2));
 
     // Handle both camelCase (frontend) and snake_case (database) field names
     const {
@@ -453,17 +456,44 @@ async function updateCustomer(req: Request, res: Response) {
       status
     } = req.body;
 
+    // Validate that we have at least one field to update
+    if (Object.keys(req.body).length === 0) {
+      console.error(`❌ [${requestTimestamp}] No update fields provided`);
+      return res.status(400).json({
+        success: false,
+        message: 'No update fields provided'
+      });
+    }
+
     // Build update object with snake_case field names for database
     const updateData: any = {};
 
-    // Map camelCase to snake_case and handle both formats
+    // Map camelCase to snake_case and handle both formats with validation
     if (firstName !== undefined || first_name !== undefined) {
-      updateData.first_name = firstName || first_name;
+      const nameValue = firstName || first_name;
+      if (typeof nameValue === 'string' && nameValue.trim().length > 0) {
+        updateData.first_name = nameValue.trim();
+      }
     }
     if (lastName !== undefined || last_name !== undefined) {
-      updateData.last_name = lastName || last_name;
+      const nameValue = lastName || last_name;
+      if (typeof nameValue === 'string' && nameValue.trim().length > 0) {
+        updateData.last_name = nameValue.trim();
+      }
     }
-    if (email !== undefined) updateData.email = email;
+    if (email !== undefined) {
+      if (typeof email === 'string' && email.includes('@')) {
+        updateData.email = email.trim().toLowerCase();
+      } else if (email !== null) {
+        console.error(`❌ [${requestTimestamp}] Invalid email format: ${email}`);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+    }
+    
+    // Handle optional fields (can be empty strings)
     if (company !== undefined) updateData.company = company || '';
     if (phone !== undefined) updateData.phone = phone || '';
     if (address !== undefined) updateData.address = address || '';
@@ -471,32 +501,66 @@ async function updateCustomer(req: Request, res: Response) {
     if (state !== undefined) updateData.state = state || '';
     if (zip !== undefined) updateData.zip = zip || '';
     if (country !== undefined) updateData.country = country || '';
-    if (status !== undefined) updateData.status = status;
+    if (status !== undefined) {
+      const validStatuses = ['active', 'inactive', 'suspended'];
+      if (validStatuses.includes(status)) {
+        updateData.status = status;
+      } else {
+        console.error(`❌ [${requestTimestamp}] Invalid status value: ${status}`);
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+        });
+      }
+    }
 
-    console.log('Update data to be sent to database (updated):', updateData);
+    console.log(`📤 [${requestTimestamp}] Final update data for Supabase:`, JSON.stringify(updateData, null, 2));
+
+    // Verify we have fields to update after validation
+    if (Object.keys(updateData).length === 0) {
+      console.error(`❌ [${requestTimestamp}] No valid update fields after validation`);
+      return res.status(400).json({
+        success: false,
+        message: 'No valid update fields provided after validation'
+      });
+    }
 
     // First check if customer exists
+    console.log(`🔍 [${requestTimestamp}] Checking if customer exists with ID: ${id}`);
     const { data: existingCustomer, error: checkError } = await supabaseAdmin
       .from('customers')
-      .select('id')
+      .select('id, email, first_name, last_name')
       .eq('id', id)
       .single();
 
     if (checkError) {
+      console.error(`❌ [${requestTimestamp}] Error checking customer existence:`, {
+        code: checkError.code,
+        message: checkError.message,
+        details: checkError.details,
+        hint: checkError.hint
+      });
+      
       if (checkError.code === 'PGRST116') {
         return res.status(404).json({
           success: false,
-          message: 'Customer not found'
+          message: `Customer not found with ID: ${id}`
         });
       }
-      console.error('Error checking customer existence:', checkError);
       return res.status(500).json({
         success: false,
         message: 'Failed to verify customer: ' + checkError.message
       });
     }
 
+    console.log(`✅ [${requestTimestamp}] Customer found:`, {
+      id: existingCustomer.id,
+      email: existingCustomer.email,
+      name: `${existingCustomer.first_name} ${existingCustomer.last_name}`
+    });
+
     // Update customer in database
+    console.log(`🔄 [${requestTimestamp}] Executing Supabase update query...`);
     const { data: updatedProfile, error: profileError } = await supabaseAdmin
       .from('customers')
       .update(updateData)
@@ -505,8 +569,14 @@ async function updateCustomer(req: Request, res: Response) {
       .single();
 
     if (profileError) {
-      console.error('Error updating customer profile:', profileError);
-      console.error('Profile error details:', JSON.stringify(profileError, null, 2));
+      console.error(`❌ [${requestTimestamp}] Supabase update error:`, {
+        code: profileError.code,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint,
+        updateData: updateData,
+        customerId: id
+      });
 
       return res.status(500).json({
         success: false,
@@ -516,13 +586,19 @@ async function updateCustomer(req: Request, res: Response) {
     }
 
     if (!updatedProfile) {
+      console.error(`❌ [${requestTimestamp}] No profile returned after update - customer may not exist`);
       return res.status(404).json({
         success: false,
         message: 'Customer not found after update'
       });
     }
 
-    console.log('Customer profile updated successfully:', updatedProfile);
+    console.log(`✅ [${requestTimestamp}] Customer profile updated successfully:`, {
+      id: updatedProfile.id,
+      email: updatedProfile.email,
+      name: `${updatedProfile.first_name} ${updatedProfile.last_name}`,
+      fieldsUpdated: Object.keys(updateData)
+    });
 
     // Success response with updated customer data in camelCase format
     const responseData = {
@@ -547,6 +623,8 @@ async function updateCustomer(req: Request, res: Response) {
       lastOrder: null
     };
 
+    console.log(`✅ [${requestTimestamp}] Sending success response to client`);
+    
     res.status(200).json({
       success: true,
       message: 'Customer updated successfully',
@@ -555,7 +633,17 @@ async function updateCustomer(req: Request, res: Response) {
     });
 
   } catch (err: any) {
-    console.error('Unexpected error updating customer:', err);
+    console.error(`💥 [${requestTimestamp}] Unexpected error updating customer:`, {
+      customerId: id,
+      error: {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      },
+      requestBody: req.body,
+      timestamp: requestTimestamp
+    });
+    
     return res.status(500).json({
       success: false,
       message: 'Unexpected error updating customer: ' + (err.message || 'Unknown error')
