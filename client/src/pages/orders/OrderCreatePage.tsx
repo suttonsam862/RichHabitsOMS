@@ -196,24 +196,35 @@ export default function OrderCreatePage() {
     mutationFn: async (data: OrderFormValues) => {
       console.log('Creating order with data:', data);
       
-      // Calculate total price for each item
-      const itemsWithTotals = data.items.map(item => ({
-        ...item,
-        totalPrice: item.quantity * item.unitPrice,
+      // Transform items to match controller expectations (snake_case fields)
+      const items = data.items.map(item => ({
+        product_name: item.productName,
+        description: item.description || '',
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.quantity * item.unitPrice,
+        color: item.color || '',
+        size: item.size || ''
       }));
 
+      // Calculate order totals
+      const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
+      const tax = subtotal * 0.08; // 8% tax rate - adjust as needed
+      const total = subtotal + tax;
+
       const orderData = {
-        orderNumber: data.orderNumber,
-        customerId: data.customerId,
+        customer_id: data.customerId,
+        order_number: data.orderNumber,
         status: data.status,
         notes: data.notes || '',
-        items: itemsWithTotals,
-        totalAmount: itemsWithTotals.reduce((sum, item) => sum + item.totalPrice, 0),
+        items: items,
+        total_amount: total,
+        tax: tax
       };
 
       console.log('Sending order data to API:', orderData);
 
-      const response = await apiRequest('POST', '/api/orders', orderData);
+      const response = await apiRequest('POST', '/api/orders/create', orderData);
       return response;
     },
     onSuccess: async (data) => {

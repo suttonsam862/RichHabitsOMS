@@ -275,23 +275,34 @@ export default function EnhancedOrderManagement() {
         throw new Error('At least one order item is required');
       }
 
-      // Clean and validate order data
+      // Transform items to match controller expectations (snake_case fields)  
+      const items = orderData.items.map(item => ({
+        product_name: item.productName?.trim() || item.product_name || '',
+        description: item.description || '',
+        quantity: Math.max(1, item.quantity || 1),
+        unit_price: Math.max(0, item.unitPrice || item.unit_price || 0),
+        total_price: Math.round((Math.max(1, item.quantity || 1) * Math.max(0, item.unitPrice || item.unit_price || 0)) * 100) / 100,
+        color: item.color || '',
+        size: item.size || ''
+      }));
+
+      // Calculate order totals
+      const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
+      const tax = Math.round((subtotal * 0.08) * 100) / 100; // 8% tax rate
+      const total = Math.round((subtotal + tax - (orderData.discount || 0)) * 100) / 100;
+
+      // Structure data for /api/orders/create endpoint matching controller schema
       const cleanedData = {
-        ...orderData,
-        orderNumber: orderData.orderNumber?.trim(),
-        totalAmount: Math.round((orderData.totalAmount || 0) * 100) / 100, // Round to 2 decimals
-        tax: Math.round((orderData.tax || 0) * 100) / 100,
-        discount: Math.round((orderData.discount || 0) * 100) / 100,
-        items: orderData.items.map(item => ({
-          ...item,
-          productName: item.productName?.trim(),
-          quantity: Math.max(1, item.quantity || 1),
-          unitPrice: Math.max(0, item.unitPrice || 0),
-          totalPrice: Math.round((item.quantity * item.unitPrice) * 100) / 100
-        }))
+        customer_id: orderData.customerId,
+        order_number: orderData.orderNumber?.trim(),
+        status: orderData.status || 'draft',
+        notes: orderData.notes || '',
+        items: items,
+        total_amount: total,
+        tax: tax
       };
 
-      const response = await fetch("/api/orders", {
+      const response = await fetch("/api/orders/create", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

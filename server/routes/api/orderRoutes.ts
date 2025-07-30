@@ -17,6 +17,9 @@ router.get('/:id', requireAuth, orderController.getOrderById);
 // POST /api/orders - Create new order with items
 router.post('/', requireAuth, requireRole(['admin', 'salesperson']), orderController.createOrder);
 
+// POST /api/orders/create - Create new order with items (alternative endpoint)
+router.post('/create', requireAuth, requireRole(['admin', 'salesperson']), orderController.createOrder);
+
 // PUT /api/orders/:id - Update order (excluding items)
 router.put('/:id', requireAuth, requireRole(['admin', 'salesperson']), orderController.updateOrder);
 
