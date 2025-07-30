@@ -169,6 +169,7 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Path Standardization**: Consistent file organization patterns using UUID + original filename to prevent collisions
 - **Visibility Control**: Public/private file system with appropriate bucket policies and signed URL generation
 - **Centralized Metadata**: image_assets table with comprehensive metadata tracking, RLS policies, and role-based access control
+- **Storage Cleanup Utility**: Automated orphaned file detection and cleanup with cross-reference validation against image_assets table
 - **Error Handling**: Unified error responses and comprehensive logging throughout
 - **Type Safety**: Full TypeScript support with proper interfaces and return types
 - **Integration Ready**: Successfully integrated into catalog image routes with ready patterns for other routes

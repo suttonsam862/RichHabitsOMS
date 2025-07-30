@@ -248,6 +248,7 @@ import customerRoutes from './routes/api/customerRoutes';
 import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
 import orderImageRoutes from './routes/api/orderImageRoutes';
+import storageCleanupRoutes from './routes/api/storageCleanupRoutes';
 import organizationRoutes from './routes/api/organizationRoutes';
 import unifiedImageRoutes from './routes/api/unifiedImageRoutes';
 import invitationRoutes from './routes/api/invitationRoutes';
@@ -362,6 +363,7 @@ import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, delete
     app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
     app.use('/api/messages', authenticateRequest);
+    app.use('/api/storage-cleanup', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
@@ -383,6 +385,7 @@ app.use('/api/security', securityRoutes);
 app.use('/api/users', userManagementRoutes);
     app.use('/api/messages', messageRoutes);
     app.use('/api/manufacturing', manufacturingRoutes);
+    app.use('/api/storage-cleanup', storageCleanupRoutes);
 
     // Manufacturing Management API endpoints (individual handlers for compatibility)
     app.get('/api/manufacturing/stats', getManufacturingStats);
