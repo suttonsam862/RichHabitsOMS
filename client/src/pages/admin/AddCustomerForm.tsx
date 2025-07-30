@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { handlePostCreationRedirect } from '@/utils/navigation';
 import { 
   Dialog,
   DialogContent,
@@ -23,6 +25,7 @@ interface AddCustomerFormProps {
 export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: AddCustomerFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     first_name: '',
@@ -129,6 +132,15 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
       resetForm();
       if (onSuccess) onSuccess();
       if (onClose) onClose();
+      
+      // Redirect to customer detail/edit page and scroll to top
+      handlePostCreationRedirect(
+        response.data,
+        'customer',
+        navigate,
+        '/admin/customers',
+        '/admin/customers'
+      );
       
     } catch (error: any) {
       console.error('Error adding customer:', error);

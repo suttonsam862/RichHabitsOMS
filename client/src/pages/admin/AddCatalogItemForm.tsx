@@ -1,7 +1,9 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { handlePostCreationRedirect } from '@/utils/navigation';
 import { 
   Dialog,
   DialogContent,
@@ -25,6 +27,7 @@ interface AddCatalogItemFormProps {
 export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess }: AddCatalogItemFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -157,6 +160,15 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       resetForm();
       if (onSuccess) onSuccess();
       if (onClose) onClose();
+      
+      // Redirect to catalog item detail/edit page and scroll to top
+      handlePostCreationRedirect(
+        response.data,
+        'catalogItem',
+        navigate,
+        '/admin/catalog',
+        '/admin/catalog'
+      );
       
     } catch (error: any) {
       console.error('Error adding catalog item:', error);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { handlePostCreationRedirect } from '@/utils/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useSafeQuery } from '@/hooks/useSafeQuery';
@@ -261,7 +262,14 @@ export default function OrderCreatePage() {
       const randomOrderNum = 'ORD' + Math.floor(100000 + Math.random() * 900000);
       form.setValue('orderNumber', randomOrderNum);
       
-      navigate('/orders');
+      // Redirect to order edit page and scroll to top
+      handlePostCreationRedirect(
+        data,
+        'order',
+        navigate,
+        '/orders/edit',
+        '/orders'
+      );
     },
     onError: (error: any) => {
       console.error('Error creating order:', error);
