@@ -1594,9 +1594,65 @@ export default function CatalogPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-neon-blue" />
-        <span className="ml-2 text-foreground">Loading catalog...</span>
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Product Catalog</h1>
+            <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
+          </div>
+          <div className="flex space-x-2">
+            <div className="w-20 h-10 bg-glass-border/20 animate-pulse rounded-md"></div>
+            <div className="w-24 h-10 bg-glass-border/20 animate-pulse rounded-md"></div>
+          </div>
+        </div>
+
+        {/* Search Skeleton */}
+        <Card className="rich-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <div className="w-64 h-10 bg-glass-border/20 animate-pulse rounded-md"></div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Loading State with Spinner */}
+        <Card className="rich-card">
+          <CardContent className="py-16 text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-neon-blue mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Loading catalog...</h3>
+            <p className="text-muted-foreground">Fetching your product inventory</p>
+          </CardContent>
+        </Card>
+
+        {/* Catalog Items Skeleton Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, index) => (
+            <Card key={index} className="rich-card">
+              <CardContent className="p-6">
+                {/* Image Skeleton */}
+                <AspectRatio ratio={16 / 9} className="mb-4">
+                  <div className="w-full h-full bg-glass-border/20 animate-pulse rounded-md"></div>
+                </AspectRatio>
+                
+                {/* Content Skeleton */}
+                <div className="space-y-3">
+                  <div className="h-5 bg-glass-border/20 animate-pulse rounded w-3/4"></div>
+                  <div className="h-4 bg-glass-border/20 animate-pulse rounded w-1/2"></div>
+                  <div className="flex justify-between items-center">
+                    <div className="h-4 bg-glass-border/20 animate-pulse rounded w-16"></div>
+                    <div className="h-6 bg-glass-border/20 animate-pulse rounded w-20"></div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <div className="h-8 bg-glass-border/20 animate-pulse rounded w-16"></div>
+                    <div className="h-8 bg-glass-border/20 animate-pulse rounded w-16"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
