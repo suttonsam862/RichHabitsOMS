@@ -410,6 +410,96 @@ export async function getManufacturingQueue(req: Request, res: Response) {
 }
 
 /**
+ * PATCH /api/manufacturing/manufacturers/:id - Update manufacturer record
+ */
+export async function updateManufacturer(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    console.log(`🔧 Updating manufacturer ${id}...`);
+    console.log('Request body:', req.body);
+
+    const {
+      firstName,
+      lastName,
+      company,
+      phone,
+      email,
+      notes,
+      preferredCategories,
+      pricingTiers
+    } = req.body;
+
+    // Validate manufacturer ID
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Manufacturer ID is required'
+      });
+    }
+
+    // Use Supabase Admin Auth to update user metadata
+    const updateData: any = {};
+    
+    // Update basic profile fields
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (company !== undefined) updateData.company = company;
+    if (phone !== undefined) updateData.phone = phone;
+
+    // Handle manufacturer-specific fields
+    if (notes !== undefined) updateData.notes = notes;
+    if (preferredCategories !== undefined) updateData.preferredCategories = preferredCategories;
+    if (pricingTiers !== undefined) updateData.pricingTiers = pricingTiers;
+
+    // Update user metadata in Supabase Auth
+    const { data: updatedUser, error } = await supabaseAdmin.auth.admin.updateUserById(id, {
+      user_metadata: updateData
+    });
+
+    if (error) {
+      console.error('Error updating manufacturer:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update manufacturer',
+        error: error.message
+      });
+    }
+
+    console.log('✅ Manufacturer updated successfully:', id);
+
+    // Return updated manufacturer data
+    const transformedManufacturer = {
+      id: updatedUser.user?.id,
+      firstName: updatedUser.user?.user_metadata?.firstName || '',
+      lastName: updatedUser.user?.user_metadata?.lastName || '',
+      email: updatedUser.user?.email || '',
+      company: updatedUser.user?.user_metadata?.company || '',
+      phone: updatedUser.user?.user_metadata?.phone || '',
+      custom_attributes: {
+        notes: updatedUser.user?.user_metadata?.notes || '',
+        preferredCategories: updatedUser.user?.user_metadata?.preferredCategories || [],
+        pricingTiers: updatedUser.user?.user_metadata?.pricingTiers || []
+      },
+      role: updatedUser.user?.user_metadata?.role || 'manufacturer',
+      updatedAt: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      message: 'Manufacturer updated successfully',
+      data: transformedManufacturer
+    });
+  } catch (error: any) {
+    console.error('❌ Manufacturer update failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+}
+
+/**
  * GET /api/manufacturing/manufacturers - List all manufacturers (using approach from userManagementRoutes)
  */
 export async function getManufacturers(req: Request, res: Response) {
@@ -771,6 +861,7 @@ router.get('/manufacturing/queue', getManufacturingQueue);
 // Manufacturer management routes
 router.get('/manufacturing/manufacturers', getManufacturers);
 router.post('/manufacturing/manufacturers', createManufacturer);
+router.patch('/manufacturing/manufacturers/:id', updateManufacturer);
 
 // Get design tasks with development fallback
 router.get('/design-tasks', requireAuth, async (req: Request, res: Response) => {

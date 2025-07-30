@@ -265,6 +265,7 @@ import manufacturingRoutes, {
   getManufacturingQueue,
   getManufacturers,
   createManufacturer,
+  updateManufacturer,
   getUserManufacturers
 } from './routes/api/manufacturingRoutes';
 
@@ -384,6 +385,7 @@ app.use('/api/users', userManagementRoutes);
     app.get('/api/manufacturing/stats', getManufacturingStats);
     app.get('/api/manufacturing/manufacturers', getManufacturers);
     app.post('/api/manufacturing/manufacturers', createManufacturer);
+    app.patch('/api/manufacturing/manufacturers/:id', updateManufacturer);
     app.get('/api/users/manufacturers', getUserManufacturers);
     app.get('/api/design-tasks', getDesignTasks);
     app.get('/api/production-tasks', getProductionTasks);

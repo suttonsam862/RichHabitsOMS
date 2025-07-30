@@ -131,7 +131,7 @@ export default function ManufacturerEditPage() {
   // Update manufacturer mutation
   const updateManufacturerMutation = useMutation({
     mutationFn: async (data: ManufacturerFormData) => {
-      const response = await fetch(`/api/user-management/users/${id}`, {
+      const response = await fetch(`/api/manufacturing/manufacturers/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
