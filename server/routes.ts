@@ -608,8 +608,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return success
       return res.json({
         success: true,
-        message: 'Invite link generated successfully',
-        inviteLink: recoveryLink
+        data: {
+          inviteLink: recoveryLink
+        }
       });
     } catch (err: any) {
       console.error('Error sending invite:', err);
@@ -639,8 +640,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ success: false, message: 'Failed to fetch users' });
       }
 
-      // Return the user profiles directly
-      return res.json(profiles || []);
+      // Return the user profiles with standardized format
+      return res.json({
+        success: true,
+        data: profiles || []
+      });
     } catch (err) {
       console.error('Unexpected error fetching users:', err);
       return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
@@ -661,7 +665,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!email || !username || !role) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Email, username, and role are required' 
+          message: 'Missing required fields: email, username, and role are required' 
+        });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+
+      // Validate role
+      const validRoles = ['customer', 'salesperson', 'designer', 'manufacturer', 'admin'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid role specified'
         });
       }
 
@@ -1547,7 +1569,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       console.log('Customer', customerId, 'details retrieved successfully');
-      return res.json(customer);
+      return res.json({
+        success: true,
+        data: customer
+      });
     } catch (err: any) {
       console.error('Error fetching customer details:', err);
       return res.status(500).json({
@@ -1562,6 +1587,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { customerId } = req.params;
       const { firstName, lastName, email, phone, company, address, city, state, zip, country, status } = req.body;
+
+      // Validate required fields
+      if (!firstName || !lastName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: firstName and lastName are required'
+        });
+      }
+
+      // Validate email format if provided
+      if (email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid email format'
+          });
+        }
+      }
 
       console.log('Updating customer', customerId);
 
@@ -1600,8 +1644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(200).json({
         success: true,
-        message: 'Customer updated successfully',
-        customer: {
+        data: {
           id: authUser.user?.id,
           firstName,
           lastName,

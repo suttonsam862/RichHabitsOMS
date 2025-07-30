@@ -395,8 +395,7 @@ export async function createCustomer(req: Request, res: Response) {
         email: insertedProfile.email,
         company: insertedProfile.company,
         phone: insertedProfile.phone,
-        created_at: insertedProfile.created_at,
-        message: 'Customer created successfully'
+        created_at: insertedProfile.created_at
       }
     });
 
