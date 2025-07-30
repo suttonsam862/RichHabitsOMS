@@ -337,7 +337,7 @@ function App() {
                 />
 
                 <Route 
-                  path="/admin/customers/edit/:customerId" 
+                  path="/admin/customers/:customerId/edit" 
                   element={
                     <RequireAuth allowedRoles={['admin']}>
                       <CustomerEditPage />

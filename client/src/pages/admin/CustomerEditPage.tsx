@@ -35,6 +35,7 @@ interface Customer extends CustomerFormData {
   lastOrder?: string;
   created_at: string;
   photo_url?: string;
+  profile_image_url?: string;
 }
 
 export default function CustomerEditPage() {
@@ -81,7 +82,8 @@ export default function CustomerEditPage() {
         spent: data.spent || '0',
         lastOrder: data.lastOrder || data.last_order,
         created_at: data.created_at,
-        photo_url: data.photo_url
+        photo_url: data.photo_url,
+        profile_image_url: data.profile_image_url
       } as Customer;
     },
     enabled: !!customerId
@@ -543,22 +545,36 @@ export default function CustomerEditPage() {
                 {/* Current Photo Display */}
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
-                    {customer.photo_url ? (
+                    {(customer.profile_image_url || customer.photo_url) ? (
                       <img
-                        src={customer.photo_url}
+                        src={customer.profile_image_url || customer.photo_url}
                         alt={`${customer.firstName} ${customer.lastName}`}
                         className="w-20 h-20 rounded-full object-cover border border-gray-200"
+                        onError={(e) => {
+                          // Fallback to default avatar if image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.nextElementSibling?.classList.remove('hidden');
+                        }}
                       />
-                    ) : (
+                    ) : null}
+                    {!(customer.profile_image_url || customer.photo_url) && (
                       <div className="w-20 h-20 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
                         <User className="w-8 h-8 text-gray-400" />
                       </div>
                     )}
+                    {/* Hidden fallback avatar for image load errors */}
+                    <div className="w-20 h-20 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center hidden">
+                      <User className="w-8 h-8 text-gray-400" />
+                    </div>
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground">
-                      {customer.photo_url ? 'Current customer photo' : 'No photo uploaded'}
+                      {(customer.profile_image_url || customer.photo_url) ? 'Current customer photo' : 'No photo uploaded'}
                     </p>
+                    {customer.profile_image_url && (
+                      <p className="text-xs text-green-600 mt-1">✓ Stored in Supabase Storage</p>
+                    )}
                   </div>
                 </div>
 
