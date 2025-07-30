@@ -246,16 +246,16 @@ app.use((req, res, next) => {
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import catalogRoutes from './routes/api/catalogRoutes';
-import catalogImageRoutes from './routes/api/catalogImageRoutes';
+// import catalogImageRoutes from './routes/api/catalogImageRoutes'; // Removed - using Supabase Storage only
 import imageReorderRoutes from './routes/api/imageReorderRoutes';
 import imageAccessRoutes from './routes/api/imageAccessRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
-import orderImageRoutes from './routes/api/orderImageRoutes';
+// import orderImageRoutes from './routes/api/orderImageRoutes'; // Removed - using Supabase Storage only
 import storageCleanupRoutes from './routes/api/storageCleanupRoutes';
 import organizationRoutes from './routes/api/organizationRoutes';
-import unifiedImageRoutes from './routes/api/unifiedImageRoutes';
+// import unifiedImageRoutes from './routes/api/unifiedImageRoutes'; // Removed - using Supabase Storage only
 import invitationRoutes from './routes/api/invitationRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
 import securityRoutes from './routes/api/securityRoutes';
@@ -264,7 +264,7 @@ import authRoutes from './routes/api/authRoutes';
 import imageVariantsRoutes from './routes/api/imageVariantsRoutes';
 import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
 import messageRoutes from './routes/api/messageRoutes';
-import uploadTestRoutes from './routes/api/uploadTestRoutes';
+
 import healthRoutes from './routes/health';
 import manufacturingRoutes, { 
   getManufacturingStats, 
@@ -276,7 +276,7 @@ import manufacturingRoutes, {
   updateManufacturer,
   getUserManufacturers
 } from './routes/api/manufacturingRoutes';
-import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, deleteManufacturerMedia } from './routes/api/manufacturerMediaRoutes';
+// import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, deleteManufacturerMedia } from './routes/api/manufacturerMediaRoutes'; // Removed - using Supabase Storage only
 
 (async () => {
   try {
@@ -377,14 +377,14 @@ import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, delete
     app.use('/api/catalog-options', catalogOptionsRoutes);
     app.use('/api/fabric-options', fabricOptionsRoutes);
     app.use('/api/catalog', catalogRoutes);
-    app.use('/api/catalog', catalogImageRoutes);
+    // app.use('/api/catalog', catalogImageRoutes); // Removed - using Supabase Storage only
     app.use('/api', imageReorderRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/dashboard', dashboardRoutes);
     app.use('/api/orders', orderRoutes);
-    app.use('/api/orders', orderImageRoutes);
+    // app.use('/api/orders', orderImageRoutes); // Removed - using Supabase Storage only
     app.use('/api/organizations', organizationRoutes);
-    app.use('/api/images-unified', unifiedImageRoutes); // UNIFIED: Single standardized image system
+    // app.use('/api/images-unified', unifiedImageRoutes); // Removed - using Supabase Storage only
     app.use('/api/images/access', imageAccessRoutes); // Image access and temporary links
     app.use('/api', imageVariantsRoutes); // Image variants routes
     app.use('/api', enhancedOrderRoutes); // Enhanced order management routes
@@ -394,7 +394,7 @@ app.use('/api/security', securityRoutes);
     app.use('/api/user-roles', userRolesRoutes);
 app.use('/api/users', userManagementRoutes);
     app.use('/api/messages', messageRoutes);
-    app.use('/api/upload-test', uploadTestRoutes);
+
     app.use('/api/manufacturing', manufacturingRoutes);
     app.use('/api/storage-cleanup', storageCleanupRoutes);
 

@@ -932,7 +932,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
       success: true,
       message: 'Photo uploaded successfully to customer_photos/ directory',
       photoUrl,
-      storageLocation: `uploads/customer_photos/${id}_${Date.now()}.${req.file.originalname.split('.').pop()}`
+      storageLocation: `customer_photos/${id}_${Date.now()}.jpg`
     });
 
   } catch (error: any) {

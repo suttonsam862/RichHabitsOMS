@@ -1,0 +1,75 @@
+Please perform a complete database schema integrity check for the ThreadCraft application.
+
+Verify the following:
+
+---
+
+### ✅ TABLE PRESENCE
+
+Confirm that the following tables exist:
+
+- user_profiles  
+- customers  
+- catalog_items  
+- catalog_categories  
+- catalog_sports  
+- catalog_fabrics  
+- orders  
+- order_items  
+- design_tasks  
+- production_tasks  
+- manufacturers (or manufacturers_view if merged into user_profiles)  
+- user_invitations  
+- messages  
+- image_assets (if used)  
+- activity_logs (optional, but referenced in some UI logic)
+
+---
+
+### 🧩 COLUMN INTEGRITY
+
+For each table, confirm:
+
+- Primary key is present and correctly typed (UUID or SERIAL)
+- All referenced fields in code are present (e.g., `profile_image_url`, `fabric_id`, `images`, `metadata`)
+- All foreign key references exist and are valid (e.g., `orders.customer_id → customers.id`)
+- All columns referenced in frontend forms or backend handlers exist (use actual field names, not assumptions)
+
+---
+
+### ⚙️ FIELD TYPES AND DEFAULTS
+
+- Are all numeric fields typed correctly (e.g., base_price NUMERIC(10, 2))?
+- Are created_at and updated_at timestamp fields present with default values?
+- Do enum fields like `order_status`, `task_status`, `payment_status`, and `message_status` exist and match expected values?
+
+---
+
+### 🔒 RELATIONSHIP ENFORCEMENT
+
+- Do all foreign keys enforce ON DELETE CASCADE where needed?
+- Are optional fields nullable?
+- Are enum and constraint checks active (e.g., `status` IN 'active', 'inactive')?
+
+---
+
+### 🔐 RLS CHECK (OPTIONAL)
+
+- Are RLS policies currently enabled?
+- Are the relevant policies applied for user_profiles, customers, orders, catalog_items?
+
+---
+
+📋 Output Format:
+
+- ✅ Table verified  
+- ⚠️ Partial — missing fields or weak constraints  
+- ❌ Missing or broken — table or key not found
+
+For each issue found, include:
+
+- Table and column name  
+- What’s missing or wrong  
+- Suggested SQL fix (optional)  
+
+This audit will be used to finalize DB cleanup and unlock full app stability.

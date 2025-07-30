@@ -324,28 +324,6 @@ router.post('/onboarding/preferences', async (req, res) => {
 });
 
 // Tax certificate upload removed - using Supabase Storage only
-// router.post('/onboarding/tax-certificate', async (req, res) => {
-        file_path: req.file.path,
-        original_filename: req.file.originalname,
-        file_size_bytes: req.file.size,
-        mime_type: req.file.mimetype
-      });
-
-    if (error) {
-      console.error('Error saving tax certificate:', error);
-      return res.status(400).json({ success: false, message: error.message });
-    }
-
-    res.json({
-      success: true,
-      message: 'Tax exemption certificate uploaded successfully'
-    });
-
-  } catch (error) {
-    console.error('Error uploading tax certificate:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-});
 
 // Complete registration and create user account
 router.post('/complete-registration', async (req, res) => {

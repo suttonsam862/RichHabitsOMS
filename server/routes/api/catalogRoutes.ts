@@ -98,36 +98,7 @@ async function createCatalogItem(req: Request, res: Response) {
   }
 }
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), 'uploads', 'catalog');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
+// Local file upload removed - using Supabase Storage only
 
 /**
  * Get all catalog items
@@ -206,7 +177,7 @@ async function updateCatalogItem(req: Request, res: Response) {
 
     // Handle file upload
     if (req.file) {
-      req.body.imageUrl = `/uploads/catalog/${req.file.filename}`;
+      // Image URL handled by Supabase Storage
     }
 
     const result = await CatalogService.updateItem(id, req.body);
@@ -354,8 +325,8 @@ async function getCatalogItem(req: Request, res: Response) {
 // Configure routes
 router.get('/', getAllCatalogItems);
 router.get('/:id', getCatalogItem);
-router.post('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), createCatalogItem);
-router.patch('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), upload.single('image'), updateCatalogItem);
+router.post('/', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), createCatalogItem);
+router.patch('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), updateCatalogItem);
 router.delete('/:id', requireAuth, requireRole(['admin', 'catalog_manager', 'customer_catalog_manager']), deleteCatalogItem);
 
 export default router;

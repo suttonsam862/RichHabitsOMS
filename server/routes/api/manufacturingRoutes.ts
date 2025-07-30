@@ -929,7 +929,7 @@ router.get('/design-tasks', requireAuth, async (req: Request, res: Response) => 
               {
                 id: 'file-1',
                 filename: 'soccer-design-v1.png',
-                filePath: '/uploads/designs/mock-design.png',
+                filePath: 'https://example.supabase.co/storage/v1/object/public/designs/mock-design.png',
                 fileType: 'image/png'
               }
             ]
