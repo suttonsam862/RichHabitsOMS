@@ -1,0 +1,75 @@
+Run a complete, post-prompt audit of the ThreadCraft codebase.
+
+Despite running an entire suite of Agent fix prompts, **none of the core data creation features work**. This includes:
+
+❌ Adding Customers  
+❌ Creating Orders  
+❌ Adding Manufacturers  
+❌ Adding Catalog Items  
+
+From a user standpoint, the system appears unchanged — the same network errors, data creation failures, and broken form flows persist. No meaningful fix has been observed across any of the features that were targeted.
+
+You must now verify whether the Agent:
+
+1. Made any actual changes to the codebase
+2. Applied those changes correctly in the right files
+3. Fully implemented each fix prompt’s goal
+4. Resolved **any** of the previously audited failures
+
+---
+
+### 🔎 Please answer the following in order:
+
+### 1. **Agent Change Log**
+- List all files that were modified by the Agent since the last verified audit
+- Show code diffs or describe what was changed, per file
+- If no changes were made to core files (`AddCustomerForm.tsx`, `orderRoutes.ts`, etc.), confirm that explicitly
+
+---
+
+### 2. **Fix Prompt Impact Validation**
+For each of the following areas, report:
+
+#### a. Add Customer  
+- Was the form submission logic changed?  
+- Is Supabase insert logic correct now?  
+- Do schema mismatches still exist (e.g. `firstName` vs `first_name`)?
+
+#### b. Add Catalog Item  
+- Was form validation patched?  
+- Is the item correctly stored in Supabase with image and variant data?
+
+#### c. Add Manufacturer  
+- Was any backend route updated to support manufacturer creation?  
+- Is the frontend form correctly wired?
+
+#### d. Create Order  
+- Were order creation endpoints or form components changed?  
+- Is nested item insertion working (`order_items`, totals, etc.)?
+
+For each:  
+✅ Fully Fixed  
+⚠️ Attempted but Incomplete  
+❌ Not Attempted / No Change
+
+---
+
+### 3. **Codebase Functionality Score**
+Recalculate the project’s actual working functionality as a percentage.
+
+- What percentage of critical features are currently working as expected?
+- What percentage of the system is actively broken or unusable?
+- What is the new adjusted grade (A–F) for production readiness?
+
+---
+
+### 4. **Next Required Fixes – Top 3 (Non-Negotiable)**
+Based on what’s still broken:
+- List the 3 most urgent fixes needed to make **any** part of the system usable again.
+- Focus on establishing baseline functionality — not enhancements.
+
+---
+
+### 5. **Strategic Recommendations**
+Given the complete failure of the Agent prompts to deliver working code:
+- Should we re-ru
