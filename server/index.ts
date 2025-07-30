@@ -248,6 +248,7 @@ import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import catalogRoutes from './routes/api/catalogRoutes';
 import catalogImageRoutes from './routes/api/catalogImageRoutes';
 import imageReorderRoutes from './routes/api/imageReorderRoutes';
+import imageAccessRoutes from './routes/api/imageAccessRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
@@ -363,6 +364,7 @@ import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, delete
     app.use('/api/design-tasks', authenticateRequest);
     app.use('/api/production-tasks', authenticateRequest);
     app.use('/api/images-unified', authenticateRequest);
+    app.use('/api/images/access', authenticateRequest);
     app.use('/api/invitations', authenticateRequest);
     app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
@@ -381,6 +383,7 @@ import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, delete
     app.use('/api/orders', orderImageRoutes);
     app.use('/api/organizations', organizationRoutes);
     app.use('/api/images-unified', unifiedImageRoutes); // UNIFIED: Single standardized image system
+    app.use('/api/images/access', imageAccessRoutes); // Image access and temporary links
     app.use('/api', imageVariantsRoutes); // Image variants routes
     app.use('/api', enhancedOrderRoutes); // Enhanced order management routes
     app.use('/api/invitations', invitationRoutes);

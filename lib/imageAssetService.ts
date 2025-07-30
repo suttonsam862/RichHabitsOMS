@@ -348,6 +348,194 @@ export class ImageAssetService {
   }
 
   /**
+   * Generate temporary access link for private images
+   */
+  static async generateTemporaryAccessLink(
+    imageId: string, 
+    expiresInSeconds: number = 3600 // Default 1 hour
+  ): Promise<{ signedUrl: string; expiresAt: string }> {
+    try {
+      console.log(`🔗 Generating temporary access link for image: ${imageId} (expires in ${expiresInSeconds}s)`);
+      
+      // Get image record to verify access and get storage path
+      const imageRecord = await this.getImageAssetById(imageId);
+      if (!imageRecord) {
+        throw new Error(`Image asset not found: ${imageId}`);
+      }
+
+      // Generate signed URL for temporary access
+      const { data, error } = await supabase.storage
+        .from(imageRecord.storage_bucket || 'uploads')
+        .createSignedUrl(imageRecord.storage_path, expiresInSeconds);
+
+      if (error) {
+        console.error('❌ Failed to generate signed URL:', error);
+        throw new Error(`Failed to generate signed URL: ${error.message}`);
+      }
+
+      const expiresAt = new Date(Date.now() + (expiresInSeconds * 1000)).toISOString();
+      
+      // Log access for audit trail
+      await this.updateImageAsset(imageId, {
+        metadata: {
+          ...imageRecord.metadata,
+          last_access_generated: new Date().toISOString(),
+          access_count: (imageRecord.metadata?.access_count || 0) + 1
+        }
+      });
+
+      console.log(`✅ Generated temporary access link expires at: ${expiresAt}`);
+      return {
+        signedUrl: data.signedUrl,
+        expiresAt
+      };
+    } catch (error: any) {
+      console.error('❌ Temporary access link generation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate bulk temporary access links for multiple images
+   */
+  static async generateBulkTemporaryAccessLinks(
+    imageIds: string[],
+    expiresInSeconds: number = 3600
+  ): Promise<Array<{ imageId: string; signedUrl: string; expiresAt: string; error?: string }>> {
+    try {
+      console.log(`🔗 Generating ${imageIds.length} temporary access links`);
+      
+      const results = await Promise.allSettled(
+        imageIds.map(async (imageId) => {
+          const result = await this.generateTemporaryAccessLink(imageId, expiresInSeconds);
+          return { imageId, ...result };
+        })
+      );
+
+      return results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          return {
+            imageId: imageIds[index],
+            signedUrl: '',
+            expiresAt: '',
+            error: result.reason.message || 'Unknown error'
+          };
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ Bulk temporary access link generation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate temporary access links for entity images (by entity type and ID)
+   */
+  static async generateEntityTemporaryAccessLinks(
+    entityType: ImageAssetRecord['entity_type'],
+    entityId: string,
+    imagePurpose?: ImageAssetRecord['image_purpose'],
+    expiresInSeconds: number = 3600
+  ): Promise<Array<{ 
+    imageId: string; 
+    filename: string;
+    signedUrl: string; 
+    expiresAt: string; 
+    image_purpose?: string;
+    error?: string 
+  }>> {
+    try {
+      console.log(`🔗 Generating entity access links: ${entityType}:${entityId}`);
+      
+      // Get all images for this entity
+      const images = await this.getImageAssetsByEntity(entityType, entityId, imagePurpose);
+      
+      if (images.length === 0) {
+        console.log(`ℹ️ No images found for ${entityType}:${entityId}`);
+        return [];
+      }
+
+      // Generate access links for all images
+      const imageIds = images.map(img => img.id!);
+      const accessLinks = await this.generateBulkTemporaryAccessLinks(imageIds, expiresInSeconds);
+      
+      // Merge with image metadata
+      return accessLinks.map(link => {
+        const imageRecord = images.find(img => img.id === link.imageId);
+        return {
+          ...link,
+          filename: imageRecord?.filename || 'unknown',
+          image_purpose: imageRecord?.image_purpose
+        };
+      });
+    } catch (error: any) {
+      console.error('❌ Entity temporary access links generation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate temporary download link with custom filename
+   */
+  static async generateDownloadLink(
+    imageId: string,
+    downloadFilename?: string,
+    expiresInSeconds: number = 3600
+  ): Promise<{ downloadUrl: string; expiresAt: string; filename: string }> {
+    try {
+      console.log(`📥 Generating download link for image: ${imageId}`);
+      
+      // Get image record
+      const imageRecord = await this.getImageAssetById(imageId);
+      if (!imageRecord) {
+        throw new Error(`Image asset not found: ${imageId}`);
+      }
+
+      // Use original filename or provided filename
+      const filename = downloadFilename || imageRecord.original_filename;
+      
+      // Generate signed URL with download transform
+      const { data, error } = await supabase.storage
+        .from(imageRecord.storage_bucket || 'uploads')
+        .createSignedUrl(
+          imageRecord.storage_path, 
+          expiresInSeconds,
+          {
+            download: filename // This forces download with specified filename
+          }
+        );
+
+      if (error) {
+        console.error('❌ Failed to generate download URL:', error);
+        throw new Error(`Failed to generate download URL: ${error.message}`);
+      }
+
+      const expiresAt = new Date(Date.now() + (expiresInSeconds * 1000)).toISOString();
+      
+      // Log download access
+      await this.updateImageAsset(imageId, {
+        metadata: {
+          ...imageRecord.metadata,
+          last_download_generated: new Date().toISOString(),
+          download_count: (imageRecord.metadata?.download_count || 0) + 1
+        }
+      });
+
+      console.log(`✅ Generated download link for: ${filename}`);
+      return {
+        downloadUrl: data.signedUrl,
+        expiresAt,
+        filename
+      };
+    } catch (error: any) {
+      console.error('❌ Download link generation error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get storage usage statistics
    */
   static async getStorageStats(entityType?: ImageAssetRecord['entity_type']): Promise<{

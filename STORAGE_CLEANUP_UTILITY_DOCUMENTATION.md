@@ -155,4 +155,40 @@ CREATE POLICY "Users can upload images" ON image_assets
 - Flexible metadata storage
 - Clean separation of concerns
 
-This implementation provides enterprise-grade image asset management with complete traceability while maintaining backward compatibility with existing systems.
+## 🔗 Temporary Access Link System
+
+### Secure Private Image Access
+- **Single Image Links**: Generate temporary access for individual images with configurable expiration (1-24 hours)
+- **Bulk Link Generation**: Create multiple temporary links simultaneously for efficient batch operations
+- **Entity-Based Access**: Generate links for all images belonging to specific entities (orders, catalog items, etc.)
+- **Download Links**: Special download links with custom filenames for file download workflows
+
+### API Endpoints
+- `POST /api/images/access/generate` - Single image temporary access link
+- `POST /api/images/access/bulk-generate` - Bulk image temporary access links
+- `POST /api/images/access/entity-generate` - Entity-based temporary access links
+- `POST /api/images/access/download` - Download links with custom filenames
+- `GET /api/images/access/entity/:entityType/:entityId` - Convenience endpoint for entity access
+
+### Security Features
+- **Signed URLs**: Cryptographically signed URLs with automatic expiration
+- **Access Logging**: Track link generation and usage for audit trails
+- **Purpose-Based Filtering**: Filter by image purpose (production, design, gallery, etc.)
+- **User Authentication**: All endpoints require proper authentication tokens
+- **Rate Limiting**: Protected against abuse with request throttling
+
+### Usage Analytics
+- Track access link generation frequency
+- Monitor download patterns and usage statistics
+- Audit trail for compliance and security investigations
+- Metadata tracking for access count and last access timestamps
+
+### React Component Integration
+- **TemporaryAccessLinkGenerator**: Complete React component for generating temporary access links
+- **Tabbed Interface**: Single image, bulk images, and entity-based generation modes
+- **Configurable Expiration**: 1-24 hour expiration options with visual countdown
+- **Copy to Clipboard**: One-click copying of generated links
+- **Purpose Filtering**: Filter images by purpose for entity-based generation
+- **Real-time Status**: Visual indicators for link expiration and generation status
+
+This implementation provides enterprise-grade image asset management with complete traceability, secure temporary access, and comprehensive audit capabilities while maintaining backward compatibility with existing systems.

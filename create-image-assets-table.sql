@@ -1,151 +1,96 @@
--- Create image_assets table for comprehensive image metadata and traceability
--- This table stores all image metadata with tags for uploaded_by, entity_type, entity_id
+-- CREATE IMAGE ASSETS TABLE FOR COMPREHENSIVE TRACEABILITY
+-- Run this in Supabase SQL Editor to create the image_assets table
 
+-- Create the image_assets table with comprehensive metadata tracking
 CREATE TABLE IF NOT EXISTS image_assets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
-  -- Basic image information
   filename VARCHAR(255) NOT NULL,
   original_filename VARCHAR(255) NOT NULL,
   file_size BIGINT NOT NULL DEFAULT 0,
   mime_type VARCHAR(100) NOT NULL,
-  
-  -- Storage information
-  storage_path TEXT NOT NULL UNIQUE, -- Path in Supabase Storage
-  public_url TEXT, -- Public accessible URL
+  storage_path TEXT NOT NULL UNIQUE,
+  public_url TEXT,
   storage_bucket VARCHAR(100) NOT NULL DEFAULT 'uploads',
   
   -- Traceability tags
-  uploaded_by UUID REFERENCES auth.users(id), -- Who uploaded the image
-  entity_type VARCHAR(50) NOT NULL, -- 'catalog_item', 'order', 'design_task', 'customer', etc.
-  entity_id UUID NOT NULL, -- ID of the related entity
+  uploaded_by UUID REFERENCES auth.users(id),
+  entity_type VARCHAR(50) NOT NULL,
+  entity_id UUID NOT NULL,
+  image_purpose VARCHAR(100),
+  processing_status VARCHAR(50) DEFAULT 'completed',
   
-  -- Image metadata
-  image_purpose VARCHAR(100), -- 'gallery', 'profile', 'production', 'design', 'logo', etc.
-  alt_text TEXT,
-  caption TEXT,
-  is_primary BOOLEAN DEFAULT FALSE,
-  display_order INTEGER DEFAULT 0,
-  
-  -- Processing information
-  image_width INTEGER,
-  image_height INTEGER,
-  is_processed BOOLEAN DEFAULT FALSE,
-  processing_status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed'
-  
-  -- Timestamps
+  -- Timestamps and soft delete
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ NULL, -- Soft delete support
+  deleted_at TIMESTAMPTZ NULL,
   
-  -- JSON metadata for additional information
-  metadata JSONB DEFAULT '{}',
-  
-  -- Indexes for performance
-  CONSTRAINT valid_entity_type CHECK (entity_type IN (
-    'catalog_item', 
-    'order', 
-    'design_task', 
-    'customer', 
-    'manufacturer', 
-    'user_profile',
-    'organization'
-  )),
-  
-  CONSTRAINT valid_image_purpose CHECK (image_purpose IN (
-    'gallery', 
-    'profile', 
-    'production', 
-    'design', 
-    'logo', 
-    'thumbnail',
-    'hero',
-    'attachment'
-  )),
-  
-  CONSTRAINT valid_processing_status CHECK (processing_status IN (
-    'pending',
-    'processing', 
-    'completed', 
-    'failed'
-  ))
+  -- Additional metadata
+  metadata JSONB DEFAULT '{}'
 );
 
--- Create indexes for performance
+-- Create indexes for performance optimization
 CREATE INDEX IF NOT EXISTS idx_image_assets_entity ON image_assets(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_image_assets_uploaded_by ON image_assets(uploaded_by);
-CREATE INDEX IF NOT EXISTS idx_image_assets_created_at ON image_assets(created_at);
-CREATE INDEX IF NOT EXISTS idx_image_assets_storage_path ON image_assets(storage_path);
-CREATE INDEX IF NOT EXISTS idx_image_assets_deleted_at ON image_assets(deleted_at) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_image_assets_purpose ON image_assets(image_purpose);
+CREATE INDEX IF NOT EXISTS idx_image_assets_created_at ON image_assets(created_at);
+CREATE INDEX IF NOT EXISTS idx_image_assets_deleted_at ON image_assets(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_image_assets_storage_path ON image_assets(storage_path);
 
--- GIN index for JSONB metadata searches
-CREATE INDEX IF NOT EXISTS idx_image_assets_metadata ON image_assets USING GIN(metadata);
-
--- Create updated_at trigger
-CREATE OR REPLACE FUNCTION update_image_assets_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_image_assets_updated_at
-  BEFORE UPDATE ON image_assets
-  FOR EACH ROW
-  EXECUTE FUNCTION update_image_assets_updated_at();
-
--- RLS Policies for image_assets table
+-- Create Row Level Security (RLS) policies
 ALTER TABLE image_assets ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can view images they uploaded or images related to entities they have access to
+-- Users can view images they uploaded or admin users can view all
 CREATE POLICY "Users can view their uploaded images" ON image_assets
-  FOR SELECT
-  USING (
+  FOR SELECT USING (
     uploaded_by = auth.uid() OR
-    -- Admin users can see all
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE id = auth.uid() AND role = 'admin'
-    ) OR
-    -- Users can see images for entities they have access to (implement based on your access control)
-    entity_type = 'catalog_item' -- Catalog items are generally viewable
+    EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Policy: Users can insert images they upload
+-- Users can only upload images with their own uploaded_by tag
 CREATE POLICY "Users can upload images" ON image_assets
-  FOR INSERT
-  WITH CHECK (uploaded_by = auth.uid());
+  FOR INSERT WITH CHECK (uploaded_by = auth.uid());
 
--- Policy: Users can update images they uploaded or admins can update any
-CREATE POLICY "Users can update their images" ON image_assets
-  FOR UPDATE
-  USING (
+-- Users can update images they uploaded or admin users can update all
+CREATE POLICY "Users can update their uploaded images" ON image_assets
+  FOR UPDATE USING (
     uploaded_by = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE id = auth.uid() AND role IN ('admin', 'salesperson')
-    )
+    EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Policy: Users can soft delete images they uploaded or admins can delete any
-CREATE POLICY "Users can delete their images" ON image_assets
-  FOR UPDATE
-  USING (
+-- Users can soft delete images they uploaded or admin users can delete all
+CREATE POLICY "Users can delete their uploaded images" ON image_assets
+  FOR UPDATE USING (
     uploaded_by = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE id = auth.uid() AND role IN ('admin', 'salesperson')
-    )
+    EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Add comments for documentation
-COMMENT ON TABLE image_assets IS 'Comprehensive image metadata and traceability table';
-COMMENT ON COLUMN image_assets.uploaded_by IS 'User who uploaded the image (auth.users.id)';
-COMMENT ON COLUMN image_assets.entity_type IS 'Type of entity this image belongs to';
-COMMENT ON COLUMN image_assets.entity_id IS 'ID of the specific entity this image belongs to';
-COMMENT ON COLUMN image_assets.image_purpose IS 'Purpose/category of the image (gallery, profile, etc.)';
-COMMENT ON COLUMN image_assets.storage_path IS 'Path in Supabase Storage bucket';
-COMMENT ON COLUMN image_assets.deleted_at IS 'Soft delete timestamp - NULL means not deleted';
-COMMENT ON COLUMN image_assets.metadata IS 'Additional JSON metadata for extensibility';
+-- Add helpful comments
+COMMENT ON TABLE image_assets IS 'Comprehensive image asset tracking with metadata tags for traceability';
+COMMENT ON COLUMN image_assets.uploaded_by IS 'UUID reference to auth.users(id) - tracks who uploaded the image';
+COMMENT ON COLUMN image_assets.entity_type IS 'Type of entity (catalog_item, order, design_task, customer, etc.)';
+COMMENT ON COLUMN image_assets.entity_id IS 'UUID of the specific entity the image belongs to';
+COMMENT ON COLUMN image_assets.image_purpose IS 'Purpose category (gallery, profile, production, design, logo, etc.)';
+COMMENT ON COLUMN image_assets.storage_path IS 'Exact path in Supabase Storage for file location';
+COMMENT ON COLUMN image_assets.processing_status IS 'Current processing state (completed, pending, failed)';
+COMMENT ON COLUMN image_assets.metadata IS 'JSONB field for extensible custom metadata';
+
+-- Insert sample data for testing (optional)
+INSERT INTO image_assets (
+  filename, original_filename, file_size, mime_type, storage_path, public_url,
+  uploaded_by, entity_type, entity_id, image_purpose, metadata
+) VALUES (
+  'sample-image-001.jpg',
+  'original-sample.jpg',
+  2048000,
+  'image/jpeg',
+  'catalog_items/sample-uuid/images/sample-image-001.jpg',
+  'https://your-project.supabase.co/storage/v1/object/public/uploads/catalog_items/sample-uuid/images/sample-image-001.jpg',
+  (SELECT id FROM auth.users LIMIT 1),
+  'catalog_item',
+  '550e8400-e29b-41d4-a716-446655440000',
+  'gallery',
+  '{"access_count": 0, "last_access_generated": null}'::jsonb
+) ON CONFLICT (storage_path) DO NOTHING;
+
+-- Success message
+SELECT 'Image assets table created successfully with indexes and RLS policies!' AS result;
