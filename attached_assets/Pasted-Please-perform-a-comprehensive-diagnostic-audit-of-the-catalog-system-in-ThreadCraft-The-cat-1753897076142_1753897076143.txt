@@ -1,0 +1,79 @@
+Please perform a comprehensive diagnostic audit of the **catalog system** in ThreadCraft.
+
+The catalog must support:
+
+- ✅ Creating new catalog items
+- ✅ Editing existing catalog items
+- ✅ Uploading and rendering multiple images
+- ✅ Linking items to categories, sports, and optionally fabrics
+- ✅ Storing consistent pricing, variants, and manufacturer preferences
+
+Please evaluate the full end-to-end flow and identify any and all issues:
+
+---
+
+1. ✅ Catalog Item Creation (AddCatalogItemForm.tsx)
+- Is the form rendering correctly with all fields?
+- Are required fields enforced (name, category, sport, base_price)?
+- Is the POST request sent to the correct route (`/api/catalog/create`)?
+- Are field names formatted as snake_case in the request body?
+- Does the backend handler parse and validate the request?
+- Does Supabase insert the record successfully?
+- Does the response return status 201 and a valid item?
+
+2. ✅ Catalog Item Editing (CatalogItemEditPage.tsx)
+- Does the form load existing data correctly?
+- Can the user edit status, price, variants, manufacturer, images?
+- Are updates submitted to the correct PATCH or PUT endpoint?
+- Is the backend route implemented and wired?
+- Does it update the catalog_items table successfully?
+
+3. ✅ Image Upload & Storage
+- Is the `UnifiedImageUploader` integrated in both add/edit forms?
+- Are images uploaded to Supabase Storage under `catalog_items/{id}/images`?
+- Are the uploaded image URLs saved to a JSONB column (e.g., `images`)?
+- Is there a mismatch between temporary fields like `imageVariants.gallery` vs real DB fields?
+- Are old/deleted images cleaned up properly?
+
+4. ✅ Schema and Column Matching
+- Does the frontend use field names that match the DB (e.g., `base_price`, `unit_cost`, `status`, `fabric_id`)?
+- Are there any camelCase vs snake_case mismatches?
+- Are fields like `images` or `preferred_manufacturer_id` present in the table?
+
+5. ✅ Backend Logic and Response
+- Do the `/api/catalog/create` and `/api/catalog/update/:id` routes:
+  - Validate incoming data
+  - Return clear success/failure messages
+  - Fail gracefully on bad input
+- Are numeric fields parsed safely (e.g., parseFloat)?
+
+6. ✅ Connected Data Integrity
+- Can catalog items be linked to:
+  - Categories (`catalog_categories`)
+  - Sports (`catalog_sports`)
+  - Fabrics (`catalog_fabrics`)
+- Are these reference fields stored as UUIDs or names?
+- Are invalid or missing links breaking inserts?
+
+7. ✅ UI Behavior
+- Are form errors shown properly on validation failure?
+- Is there a toast or redirect after successful creation/edit?
+- Is image preview working before submit?
+
+---
+
+📋 RETURN RESULTS IN THIS FORMAT:
+
+✅ Fully Working  
+⚠️ Partially Working — explain  
+❌ Not Working — explain  
+
+For each section, provide:
+
+- What’s working
+- What’s broken (and why)
+- Files or lines likely involved
+- Any unhandled edge cases
+- What exact fixes are needed
+
+This audit will be used to permanently fix catalog creation/editing with a batch of scoped Agent prompts.

@@ -58,20 +58,23 @@ export default function CustomerEditPage() {
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadRetryCount, setUploadRetryCount] = React.useState(0);
 
-  const { data: customer, isLoading } = useQuery({
+  const { data: customer, isLoading, error: customerError } = useQuery({
     queryKey: ['/api/customers', customerId],
     queryFn: async () => {
-      const response = await fetch(`/api/customers/${customerId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      try {
+        const response = await fetch(`/api/customers/${customerId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          const errorMessage = errorData?.message || `Failed to fetch customer details (${response.status})`;
+          throw new Error(errorMessage);
         }
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch customer details');
-      }
-
-      const data = await response.json();
+        const data = await response.json();
 
       // Convert snake_case response to camelCase for frontend
       return {
@@ -94,6 +97,12 @@ export default function CustomerEditPage() {
         photo_url: data.photo_url,
         profile_image_url: data.profile_image_url
       } as Customer;
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          throw new Error('Network error. Please check your connection and try again.');
+        }
+        throw error;
+      }
     },
     enabled: !!customerId
   });
@@ -235,23 +244,44 @@ export default function CustomerEditPage() {
   // Photo upload mutation
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('image', file); // Changed from 'file' to 'image' to match middleware
+      try {
+        const formData = new FormData();
+        formData.append('image', file); // Changed from 'file' to 'image' to match middleware
 
-      const response = await fetch(`/api/customers/${customerId}/photo`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: formData
-      });
+        const response = await fetch(`/api/customers/${customerId}/photo`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: formData
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to upload photo');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          let errorMessage = 'Failed to upload photo';
+          
+          if (errorData?.message) {
+            errorMessage = errorData.message;
+          } else if (response.status === 413) {
+            errorMessage = 'File size too large. Please choose a smaller image.';
+          } else if (response.status === 415) {
+            errorMessage = 'Invalid file format. Please upload a valid image file.';
+          } else if (response.status === 401) {
+            errorMessage = 'Authentication failed. Please refresh the page and try again.';
+          } else if (response.status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          }
+          
+          throw new Error(errorMessage);
+        }
+
+        return response.json();
+      } catch (error: any) {
+        if (error.name === 'TypeError' || error.message.includes('fetch')) {
+          throw new Error('Network error. Please check your connection and try again.');
+        }
+        throw error;
       }
-
-      return response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -642,6 +672,44 @@ export default function CustomerEditPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (customerError && !isLoading) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center space-x-4 mb-6">
+          <Button variant="ghost" onClick={() => navigate('/admin/customers')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Customers
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="mb-4">
+              <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Failed to Load Customer</h3>
+              <p className="text-muted-foreground mb-4">
+                {customerError.message || 'Unable to fetch customer details. Please try again.'}
+              </p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="outline"
+                className="mr-2"
+              >
+                Try Again
+              </Button>
+              <Button 
+                onClick={() => navigate('/admin/customers')} 
+                variant="default"
+              >
+                Back to Customers
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
