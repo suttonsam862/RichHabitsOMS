@@ -16,6 +16,8 @@ import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
 import { useFieldValidation } from "@/hooks/useFieldValidation";
 import { getFieldStyles } from "@/lib/utils";
+import { validateFile } from '@/utils/fileValidation';
+import { compressImage, shouldCompress, getCompressionSettings, formatFileSize } from '@/utils/imageCompression';
 
 const customerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -157,39 +159,45 @@ export default function CustomerEditPage() {
   });
 
   // File handling functions
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
+      // Use centralized validation
+      const validation = validateFile(file);
+      if (!validation.isValid) {
         toast({
-          title: "Invalid file type",
-          description: "Please select a JPEG, PNG, or WebP image file.",
+          title: "Invalid file",
+          description: validation.error || 'Please select a valid image file.',
           variant: "destructive",
         });
         return;
       }
 
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        toast({
-          title: "File too large",
-          description: "Please select an image file smaller than 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setSelectedFile(file);
+      let fileToUse = file;
       
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewUrl(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      // Compress image if needed
+      if (shouldCompress(file, 1024)) {
+        try {
+          const settings = getCompressionSettings(file.size / 1024);
+          const result = await compressImage(file, settings);
+          fileToUse = result.file;
+          
+          console.log(`Customer photo compressed: ${formatFileSize(result.originalSize)} → ${formatFileSize(result.compressedSize)} (${result.compressionRatio}% reduction)`);
+          
+          toast({
+            title: "Image optimized",
+            description: `File size reduced by ${result.compressionRatio}% for faster upload`,
+          });
+        } catch (error) {
+          console.warn('Image compression failed, using original:', error);
+        }
+      }
+
+      setSelectedFile(fileToUse);
+      
+      // Create preview URL using createObjectURL for better memory management
+      const objectUrl = URL.createObjectURL(fileToUse);
+      setPreviewUrl(objectUrl);
     }
   };
 

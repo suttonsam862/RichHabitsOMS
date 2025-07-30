@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { compressImage, shouldCompress, getCompressionSettings, formatFileSize } from '@/utils/imageCompression';
 
 interface MediaFile {
   id: string;
@@ -160,7 +161,7 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -183,11 +184,29 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
       return;
     }
 
-    setSelectedFiles([file]);
+    let fileToUse = file;
+
+    // Compress image files if needed
+    if (file.type.startsWith('image/') && shouldCompress(file, 1024)) {
+      try {
+        const settings = getCompressionSettings(file.size / 1024);
+        const result = await compressImage(file, settings);
+        fileToUse = result.file;
+        
+        toast({
+          title: 'Image compressed',
+          description: `Reduced size by ${result.compressionRatio}% for faster upload`,
+        });
+      } catch (error) {
+        console.warn('Image compression failed, using original:', error);
+      }
+    }
+
+    setSelectedFiles([fileToUse]);
     setUploadError(null);
     setIsUploading(true);
     uploadMutation.mutate({
-      file,
+      file: fileToUse,
       type: uploadType,
       description: uploadDescription
     });

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { compressImage, shouldCompress, getCompressionSettings, formatFileSize } from '@/utils/imageCompression';
 import { Upload, X, Image as ImageIcon, Eye, Trash2 } from 'lucide-react';
 
 interface ProductionImage {
@@ -63,9 +64,11 @@ export function ProductionImageUploader({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    // Validate file types and sizes
-    const validFiles = acceptedFiles.filter(file => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    // Process files with compression
+    const processedFiles: File[] = [];
+    
+    for (const file of acceptedFiles) {
       const isValidType = file.type.startsWith('image/');
       const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
       
@@ -75,7 +78,7 @@ export function ProductionImageUploader({
           description: `${file.name} is not a valid image file. Please select a JPEG, PNG, or WebP image.`,
           variant: "destructive"
         });
-        return false;
+        continue;
       }
       
       if (!isValidSize) {
@@ -84,13 +87,28 @@ export function ProductionImageUploader({
           description: `${file.name} exceeds 5MB limit. Please compress the image or choose a smaller file.`,
           variant: "destructive"
         });
-        return false;
+        continue;
       }
-      
-      return true;
-    });
 
-    setPreviewFiles(prev => [...prev, ...validFiles]);
+      let fileToUse = file;
+
+      // Compress if needed
+      if (shouldCompress(file, 1024)) {
+        try {
+          const settings = getCompressionSettings(file.size / 1024);
+          const result = await compressImage(file, settings);
+          fileToUse = result.file;
+          
+          console.log(`Compressed ${file.name}: ${formatFileSize(result.originalSize)} → ${formatFileSize(result.compressedSize)}`);
+        } catch (error) {
+          console.warn('Compression failed for', file.name, error);
+        }
+      }
+
+      processedFiles.push(fileToUse);
+    }
+
+    setPreviewFiles(prev => [...prev, ...processedFiles]);
   }, [toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

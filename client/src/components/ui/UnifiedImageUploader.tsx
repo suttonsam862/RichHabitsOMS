@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Upload, X, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { validateFile } from '@/utils/fileValidation';
+import { compressImage, shouldCompress, getCompressionSettings, formatFileSize, type CompressionResult } from '@/utils/imageCompression';
 
 export interface UploadResult {
   success: boolean;
@@ -77,6 +79,8 @@ export function UnifiedImageUploader({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
@@ -94,34 +98,51 @@ export function UnifiedImageUploader({
     setRetryCount(0);
   }, [preview]);
 
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file size
-    if (file.size > maxSizeBytes) {
-      setUploadError(`File size must be less than ${maxSizeMB}MB`);
-      return;
-    }
-
-    // Validate file type
-    if (!accept.split(',').some(type => file.type === type.trim())) {
-      setUploadError('Invalid file type. Please select a valid image file.');
+    // Validate file using centralized utility
+    const validation = validateFile(file);
+    if (!validation.isValid) {
+      setUploadError(validation.error || 'Invalid file');
       return;
     }
 
     setUploadError(null);
+    setCompressionResult(null);
     
     // Clean up previous preview URL to prevent memory leaks
     if (preview && preview.startsWith('blob:')) {
       URL.revokeObjectURL(preview);
     }
+
+    let fileToUse = file;
     
-    setSelectedFile(file);
+    // Compress image if needed
+    if (shouldCompress(file, 1024)) { // 1MB threshold
+      try {
+        setIsCompressing(true);
+        const settings = getCompressionSettings(file.size / 1024);
+        const result = await compressImage(file, settings);
+        
+        setCompressionResult(result);
+        fileToUse = result.file;
+        
+        console.log(`Image compressed: ${formatFileSize(result.originalSize)} → ${formatFileSize(result.compressedSize)} (${result.compressionRatio}% reduction)`);
+      } catch (error) {
+        console.warn('Image compression failed, using original:', error);
+        // Continue with original file if compression fails
+      } finally {
+        setIsCompressing(false);
+      }
+    }
+    
+    setSelectedFile(fileToUse);
 
     // Generate preview using createObjectURL for better memory management
     if (showPreview) {
-      const objectUrl = URL.createObjectURL(file);
+      const objectUrl = URL.createObjectURL(fileToUse);
       setPreview(objectUrl);
     }
   }, [maxSizeBytes, maxSizeMB, accept, showPreview, preview]);
@@ -273,7 +294,12 @@ export function UnifiedImageUploader({
               <div>
                 <p className="font-medium text-gray-900">{selectedFile.name}</p>
                 <p className="text-sm text-gray-500">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  {formatFileSize(selectedFile.size)}
+                  {compressionResult && (
+                    <span className="text-green-600 ml-2">
+                      (Compressed {compressionResult.compressionRatio}% from {formatFileSize(compressionResult.originalSize)})
+                    </span>
+                  )}
                 </p>
               </div>
               {!uploadSuccess && (
@@ -313,6 +339,13 @@ export function UnifiedImageUploader({
               className="max-w-full max-h-48 mx-auto rounded"
             />
           </div>
+        </div>
+      )}
+
+      {/* Compression Status */}
+      {isCompressing && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm text-blue-600">Compressing image for optimal upload...</p>
         </div>
       )}
 
