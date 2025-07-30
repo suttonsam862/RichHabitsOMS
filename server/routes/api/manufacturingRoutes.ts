@@ -4,7 +4,20 @@
 import { Request, Response, Router } from 'express';
 import { requireAuth, requireRole } from '../auth/auth.js';
 import { supabase } from '../../db';
+import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+
+// Create Supabase admin client with service key for admin operations
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co',
+  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 const router = Router();
 
@@ -402,8 +415,8 @@ export async function getManufacturers(req: Request, res: Response) {
   try {
     console.log('👥 Fetching manufacturers using Supabase Auth...');
 
-    // Use Supabase Auth to get all users like the working userManagementRoutes does
-    const { data: authUsers, error } = await supabase.auth.admin.listUsers();
+    // Use Supabase Admin Auth to get all users like the working userManagementRoutes does
+    const { data: authUsers, error } = await supabaseAdmin.auth.admin.listUsers();
 
     if (error) {
       console.error('Error fetching auth users:', error);
@@ -491,7 +504,7 @@ export async function createManufacturer(req: Request, res: Response) {
     }
 
     // Create user in Supabase Auth with manufacturer role (no password required for admin creation)
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email.toLowerCase(),
       email_confirm: true,
       password: Math.random().toString(36).substring(2, 15), // Random password, user can reset later
@@ -706,6 +719,10 @@ router.post('/production-tasks', createProductionTask);
 
 // Manufacturing queue route
 router.get('/manufacturing/queue', getManufacturingQueue);
+
+// Manufacturer management routes
+router.get('/manufacturing/manufacturers', getManufacturers);
+router.post('/manufacturing/manufacturers', createManufacturer);
 
 // Get design tasks with development fallback
 router.get('/design-tasks', requireAuth, async (req: Request, res: Response) => {
