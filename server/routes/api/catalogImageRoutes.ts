@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
+import StorageService from '../../../lib/storageService.js';
 
 const router = Router();
 
@@ -57,36 +58,34 @@ router.post('/:itemId/images', requireAuth, requireRole(['admin', 'catalog_manag
       .jpeg({ quality: 90 })
       .toBuffer();
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('catalog-images')
-      .upload(storagePath, processedImage, {
-        contentType: 'image/jpeg',
-        upsert: false
-      });
+    // Upload using StorageService
+    const uploadResult = await StorageService.uploadCatalogImage(
+      itemId,
+      processedImage,
+      {
+        name: req.file.originalname,
+        size: processedImage.length,
+        type: 'image/jpeg'
+      }
+    );
 
-    if (uploadError) {
-      console.error('❌ Supabase upload error:', uploadError);
+    if (!uploadResult.success) {
+      console.error('❌ Storage service upload error:', uploadResult.error);
       return res.status(500).json({
         success: false,
         message: 'Failed to upload image to storage',
-        error: uploadError.message
+        error: uploadResult.error
       });
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('catalog-images')
-      .getPublicUrl(storagePath);
-
-    if (!urlData.publicUrl) {
+    if (!uploadResult.publicUrl) {
       return res.status(500).json({
         success: false,
         message: 'Failed to get public URL for uploaded image'
       });
     }
 
-    console.log('✅ Image uploaded successfully:', urlData.publicUrl);
+    console.log('✅ Image uploaded successfully:', uploadResult.publicUrl);
 
     // Update catalog item with new image (append to existing images in imageVariants.gallery)
     const { data: catalogItem, error: fetchError } = await supabase
@@ -105,7 +104,7 @@ router.post('/:itemId/images', requireAuth, requireRole(['admin', 'catalog_manag
     const existingImages = Array.isArray(existingVariants.gallery) ? existingVariants.gallery : [];
     const newImage = {
       id: uuidv4(),
-      url: urlData.publicUrl,
+      url: uploadResult.publicUrl,
       alt: req.file.originalname,
       isPrimary: existingImages.length === 0, // First image is primary
       uploadedAt: new Date().toISOString()
