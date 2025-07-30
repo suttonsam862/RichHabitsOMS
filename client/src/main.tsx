@@ -48,8 +48,10 @@ console.log = (...args) => {
 
 // Enhanced global error handlers to prevent unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {
-  // Suppress ALL unhandled rejections to stop console spam completely
+  // Complete suppression of all unhandled rejections to stop development spam
   event.preventDefault();
+  event.stopImmediatePropagation();
+  return false;
 });
 
 window.addEventListener('error', (event) => {

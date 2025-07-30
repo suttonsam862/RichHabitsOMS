@@ -60,8 +60,10 @@ import ProductLibrary from "./pages/ProductLibrary";
 
 // Enhanced error handling for network failures
 const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-  // Suppress all unhandled rejections to stop console spam
+  // Complete suppression of all unhandled rejections
   event.preventDefault();
+  event.stopImmediatePropagation();
+  return false;
 };
 
 // Set up global error handling

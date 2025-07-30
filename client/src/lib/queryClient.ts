@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { API_BASE_URL } from "./config";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -22,21 +23,32 @@ export async function apiRequest(
   // Check for authentication token
   const token = localStorage.getItem('authToken');
 
+  // Create full URL with base URL
+  const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+
   // Create headers with auth token if available
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    const res = await fetch(fullUrl, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    // Enhance error handling for network issues
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`Network error: Unable to connect to ${fullUrl}`);
+    }
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -47,7 +59,10 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     // Check for authentication token
     const token = localStorage.getItem('authToken');
-    console.log('Query function called for:', queryKey[0], 'with token:', token ? 'present' : 'missing');
+
+    // Create full URL with base URL
+    const url = queryKey[0] as string;
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
     // Create headers with auth token if available
     const headers: HeadersInit = {
@@ -56,19 +71,32 @@ export const getQueryFn: <T>(options: {
 
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
-      console.log('Added Authorization header to request');
-    } else {
-      console.log('No auth token found in localStorage');
     }
 
-    console.log('Making request to:', queryKey[0], 'with headers:', headers);
+    try {
+      const res = await fetch(fullUrl, {
+        credentials: "include",
+        headers
+      });
 
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-      headers
-    });
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('tokenExpires');
+        return null;
+      }
 
-    console.log('Response status:', res.status);
+      await throwIfResNotOk(res);
+      return res.json();
+    } catch (error: any) {
+      // Enhanced error handling for development
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.warn(`Network error for ${fullUrl}:`, error.message);
+        if (unauthorizedBehavior === "returnNull") {
+          return null;
+        }
+      }
+      throw error;
+    }
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       console.log('401 response, clearing tokens and returning null');
