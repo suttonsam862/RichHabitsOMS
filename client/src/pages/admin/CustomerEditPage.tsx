@@ -325,17 +325,29 @@ export default function CustomerEditPage() {
       // Clear any previous errors
       setSubmitError(null);
       
-      toast({
-        title: "Customer updated",
-        description: "Customer information has been successfully updated.",
-      });
-      
-      // Invalidate both the specific customer and customers list
-      queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
-      
-      // Navigate back to customer detail page
-      navigate(`/admin/customers/${customerId}`);
+      // Only show success toast if API response indicates success
+      if (data && data.success === true) {
+        toast({
+          title: "Customer updated",
+          description: "Customer information has been successfully updated.",
+        });
+        
+        // Invalidate both the specific customer and customers list
+        queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
+        queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+        
+        // Navigate back to customer detail page
+        navigate(`/admin/customers/${customerId}`);
+      } else {
+        // If success is not true, treat it as an error
+        const errorMessage = data?.message || 'Update completed but server did not confirm success';
+        setSubmitError(errorMessage);
+        toast({
+          title: "Update uncertain",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       console.error('Customer update failed:', error);
