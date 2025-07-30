@@ -214,6 +214,13 @@ export default function CustomerEditPage() {
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
+      // Ensure we have a valid customer ID
+      if (!customerId) {
+        throw new Error('Customer ID is required');
+      }
+
+      console.log(`Updating customer with ID: ${customerId}`, data);
+
       const response = await fetch(`/api/customers/${customerId}`, {
         method: 'PATCH',
         headers: {
@@ -224,20 +231,26 @@ export default function CustomerEditPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update customer');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: Failed to update customer`;
+        throw new Error(errorMessage);
       }
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Customer updated successfully:', data);
       toast({
         title: "Customer updated",
         description: "Customer information has been successfully updated.",
       });
+      // Invalidate both the specific customer and customers list
+      queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       navigate(`/admin/customers/${customerId}`);
     },
     onError: (error) => {
+      console.error('Customer update failed:', error);
       toast({
         title: "Update failed",
         description: error.message || "Failed to update customer information.",
