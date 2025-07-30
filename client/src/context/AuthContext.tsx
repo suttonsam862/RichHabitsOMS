@@ -20,7 +20,7 @@ interface AuthContextType {
   checkAuth: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -87,14 +87,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRole(userData.user?.role || null);
         setAuthCheckAttempts(0); // Reset attempts on success
       } else if (response.status === 401) {
-        // Expected when not logged in
+        // Expected when not logged in - clear auth state
         setUser(null);
         setRole(null);
+        setAuthCheckAttempts(0); // Don't count 401 as failure
       } else {
         console.warn('Auth check failed:', response.status);
         setAuthCheckAttempts(prev => prev + 1);
       }
     } catch (error) {
+      // Handle network errors gracefully during startup
+      if (error instanceof Error && error.message.includes('Server not ready')) {
+        console.debug('🔄 Auth check delayed - server starting up');
+        setTimeout(checkAuth, AUTH_RETRY_DELAY);
+        return;
+      }
+      
       console.warn('Auth check error:', error);
       setAuthCheckAttempts(prev => prev + 1);
       
@@ -102,6 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (authCheckAttempts < MAX_AUTH_ATTEMPTS - 1) {
         setTimeout(checkAuth, AUTH_RETRY_DELAY);
         return;
+      } else {
+        // Max attempts reached - clear auth state and stop retrying
+        setUser(null);
+        setRole(null);
       }
     }
 

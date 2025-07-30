@@ -75,6 +75,13 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit): Pro
     if (response.ok) {
       fetchAttemptCounts.delete(attemptKey);
     } else {
+      // Handle specific error cases
+      if (response.status === 401 && url.includes('/api/auth/me')) {
+        // Expected 401 for unauthenticated users - don't count as failure
+        console.debug('🔒 Expected auth check for unauthenticated user');
+        return response;
+      }
+      
       // Increment attempt count on failure
       attempts.count++;
       attempts.lastAttempt = now;
@@ -88,6 +95,15 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit): Pro
 
     return response;
   } catch (error) {
+    // Handle network errors gracefully for auth endpoints
+    if (url.includes('/api/auth/me')) {
+      console.debug('🔒 Auth endpoint network error (expected during startup)');
+      return new Response(JSON.stringify({ success: false, message: 'Not authenticated' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Increment attempt count on error
     attempts.count++;
     attempts.lastAttempt = now;
