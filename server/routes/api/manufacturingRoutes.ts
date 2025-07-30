@@ -33,11 +33,13 @@ export async function getManufacturingStats(req: Request, res: Response) {
       .from('orders')
       .select('*', { count: 'exact', head: true });
 
-    // Get orders by status
+    // Get orders by status - always handle as array
     const { data: ordersByStatus } = await supabase
       .from('orders')
       .select('status')
       .not('status', 'is', null);
+    
+    const safeOrdersByStatus = ordersByStatus || [];
 
     // Get production orders (ready for manufacturing)
     const { count: productionOrders } = await supabase
@@ -82,6 +84,8 @@ export async function getManufacturingStats(req: Request, res: Response) {
       .select('created_at, updated_at')
       .eq('status', 'completed')
       .gte('updated_at', thirtyDaysAgo.toISOString());
+    
+    const safeRecentCompletedOrders = recentCompletedOrders || [];
 
     let avgCompletionTime = 0;
     if (recentCompletedOrders && recentCompletedOrders.length > 0) {

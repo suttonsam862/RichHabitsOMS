@@ -51,22 +51,21 @@ async function getDashboardStats(req: Request, res: Response) {
       recentActivity: [] as any[]
     };
 
-    // Get recent orders for activity feed
+    // Get recent orders for activity feed - always handle as array
     const { data: recentOrders } = await supabaseAdmin
       .from('orders')
       .select('id, status, created_at, total_amount')
       .order('created_at', { ascending: false })
       .limit(5);
 
-    if (recentOrders) {
-      stats.recentActivity = recentOrders.map(order => ({
-        id: order.id,
-        type: 'order',
-        message: `Order #${order.id} - ${order.status}`,
-        amount: order.total_amount,
-        timestamp: order.created_at
-      }));
-    }
+    const safeRecentOrders = recentOrders || [];
+    stats.recentActivity = safeRecentOrders.map(order => ({
+      id: order.id,
+      type: 'order',
+      message: `Order #${order.id} - ${order.status}`,
+      amount: order.total_amount,
+      timestamp: order.created_at
+    }));
 
     console.log('Dashboard stats:', stats);
 

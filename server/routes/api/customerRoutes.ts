@@ -364,28 +364,27 @@ async function getAllCustomers(req: Request, res: Response) {
     const authUsers = authData.users;
     const customers: any[] = [];
 
-    // Process customers from the customers table first
-    if (customerProfiles && customerProfiles.length > 0) {
-      for (const profile of customerProfiles) {
-        const authUser = authUsers.find(u => u.id === profile.id || u.email === profile.email);
+    // Process customers from the customers table first - always handle as array
+    const safeCustomerProfiles = customerProfiles || [];
+    for (const profile of safeCustomerProfiles) {
+      const authUser = authUsers.find(u => u.id === profile.id || u.email === profile.email);
 
-        customers.push({
-          id: profile.id,
-          email: profile.email,
-          firstName: profile.first_name || '',
-          lastName: profile.last_name || '',
-          company: profile.company || '',
-          phone: profile.phone || '',
-          sport: profile.sport || '',
-          organizationType: profile.organization_type || 'business',
-          orders: 0,
-          spent: '$0.00',
-          lastOrder: null,
-          status: authUser?.email_confirmed_at ? 'active' : 'pending',
-          created_at: profile.created_at || authUser?.created_at,
-          userId: authUser?.id
-        });
-      }
+      customers.push({
+        id: profile.id,
+        email: profile.email,
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
+        company: profile.company || '',
+        phone: profile.phone || '',
+        sport: profile.sport || '',
+        organizationType: profile.organization_type || 'business',
+        orders: 0,
+        spent: '$0.00',
+        lastOrder: null,
+        status: authUser?.email_confirmed_at ? 'active' : 'pending',
+        created_at: profile.created_at || authUser?.created_at,
+        userId: authUser?.id
+      });
     }
 
     // Also include auth users with customer role who might not be in customers table
@@ -412,7 +411,7 @@ async function getAllCustomers(req: Request, res: Response) {
       });
     }
 
-    console.log(`Found ${customers.length} total customers (${customerProfiles?.length || 0} from profiles, ${customerRoleUsers.length} from auth only)`);
+    console.log(`Found ${customers.length} total customers (${safeCustomerProfiles.length} from profiles, ${customerRoleUsers.length} from auth only)`);
 
     res.status(200).json({
       success: true,
