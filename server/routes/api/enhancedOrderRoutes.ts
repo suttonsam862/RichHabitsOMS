@@ -126,8 +126,8 @@ router.post('/orders', requireAuth, async (req, res) => {
       is_paid: false,
       stripe_session_id: null,
       payment_date: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: 'NOW()',
+      updated_at: 'NOW()'
     };
 
     // Create order (trigger will auto-assign team members if not specified)
@@ -167,8 +167,8 @@ router.post('/orders', requireAuth, async (req, res) => {
         status: item.status || 'pending',
         estimated_completion_date: item.estimatedCompletionDate || null,
         actual_completion_date: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: 'NOW()',
+        updated_at: 'NOW()'
       }));
 
       const { error: itemsError } = await supabaseAdmin
@@ -245,7 +245,7 @@ router.patch('/orders/:id', requireAuth, async (req, res) => {
     if (updates.logoUrl !== undefined) dbUpdates.logo_url = updates.logoUrl;
     if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName;
     
-    dbUpdates.updated_at = new Date().toISOString();
+    dbUpdates.updated_at = 'NOW()';
 
     const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from('orders')

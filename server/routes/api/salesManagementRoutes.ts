@@ -162,7 +162,7 @@ async function updateSalesperson(req: Request, res: Response) {
       .update({
         ...updateData,
         updated_by: req.user?.id,
-        updated_at: new Date().toISOString()
+        updated_at: 'NOW()'
       })
       .eq('id', id)
       .select()

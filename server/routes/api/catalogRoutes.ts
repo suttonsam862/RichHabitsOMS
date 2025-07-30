@@ -68,8 +68,8 @@ async function createCatalogItem(req: Request, res: Response) {
         min_quantity: 1,
         max_quantity: 1000,
         eta_days: '7-10 business days',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: 'NOW()',
+        updated_at: 'NOW()'
       })
       .select()
       .single();

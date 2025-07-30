@@ -207,8 +207,8 @@ export async function getProductionTasks(req: Request, res: Response) {
           status: 'pending',
           priority: 'high',
           due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created_at: 'NOW()',
+          updated_at: 'NOW()',
           orders: {
             id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
             order_number: 'ORD-ERROR-TEST-FINAL',
@@ -232,8 +232,8 @@ export async function getProductionTasks(req: Request, res: Response) {
           status: 'in_progress',
           priority: 'medium',
           due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created_at: 'NOW()',
+          updated_at: 'NOW()',
           orders: {
             id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
             order_number: 'ORD-ERROR-TEST-FINAL',
@@ -257,8 +257,8 @@ export async function getProductionTasks(req: Request, res: Response) {
           status: 'pending',
           priority: 'low',
           due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created_at: 'NOW()',
+          updated_at: 'NOW()',
           orders: {
             id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
             order_number: 'ORD-ERROR-TEST-FINAL',

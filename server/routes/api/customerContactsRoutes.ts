@@ -67,7 +67,7 @@ async function createCustomerContact(req: Request, res: Response) {
         .from('customer_contacts')
         .update({ 
           is_primary: false,
-          updated_at: new Date().toISOString()
+          updated_at: 'NOW()'
         })
         .eq('customer_id', contactData.customerId)
         .eq('is_primary', true);
@@ -140,7 +140,7 @@ async function updateCustomerContact(req: Request, res: Response) {
           .from('customer_contacts')
           .update({ 
             is_primary: false,
-            updated_at: new Date().toISOString()
+            updated_at: 'NOW()'
           })
           .eq('customer_id', existingContact.customer_id)
           .eq('is_primary', true)
@@ -166,7 +166,7 @@ async function updateCustomerContact(req: Request, res: Response) {
         contact_time_preference: updateData.contactTimePreference,
         communication_frequency: updateData.communicationFrequency,
         notes: updateData.notes,
-        updated_at: new Date().toISOString()
+        updated_at: 'NOW()'
       })
       .eq('id', id)
       .select()
@@ -206,7 +206,7 @@ async function deleteCustomerContact(req: Request, res: Response) {
       .from('customer_contacts')
       .update({
         is_active: false,
-        updated_at: new Date().toISOString()
+        updated_at: 'NOW()'
       })
       .eq('id', id);
 

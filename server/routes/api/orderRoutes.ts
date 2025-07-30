@@ -210,8 +210,8 @@ async function createOrder(req: Request, res: Response) {
       is_paid: orderPayload.is_paid || false,
       stripe_session_id: orderPayload.stripe_session_id || null,
       payment_date: orderPayload.payment_date || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: 'NOW()',
+      updated_at: 'NOW()'
     };
 
     console.log('💾 Inserting order:', dbOrderData);
@@ -251,8 +251,8 @@ async function createOrder(req: Request, res: Response) {
       estimated_completion_date: null,
       actual_completion_date: null,
       catalog_item_id: item.catalog_item_id || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: 'NOW()',
+      updated_at: 'NOW()'
     }));
 
     console.log('📦 Inserting order items:', orderItemsData.length);
@@ -411,8 +411,8 @@ async function patchOrder(req: Request, res: Response) {
       }
     });
 
-    // Add updated timestamp
-    dbUpdateData.updated_at = new Date().toISOString();
+    // Add updated timestamp using database server time
+    dbUpdateData.updated_at = 'NOW()';
 
     console.log('🗄️ Database update fields:', Object.keys(dbUpdateData));
 
@@ -497,7 +497,7 @@ async function patchOrder(req: Request, res: Response) {
             status: item.status || 'pending',
             production_notes: item.productionNotes || item.production_notes || '',
             estimated_completion_date: item.estimatedCompletionDate || item.estimated_completion_date || null,
-            updated_at: new Date().toISOString()
+            updated_at: 'NOW()'
           };
 
           if (item.id && existingItemIds.has(item.id)) {
@@ -585,7 +585,7 @@ async function patchOrder(req: Request, res: Response) {
         // Update order with new total
         const { error: totalUpdateError } = await supabaseAdmin
           .from('orders')
-          .update({ total_amount: newTotalAmount, updated_at: new Date().toISOString() })
+          .update({ total_amount: newTotalAmount, updated_at: 'NOW()' })
           .eq('id', orderId);
 
         if (totalUpdateError) {

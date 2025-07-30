@@ -87,8 +87,8 @@ export async function sendUserInvitation(req: Request, res: Response) {
         role,
         invitation_token: invitationToken,
         expires_at: expiresAt.toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: 'NOW()',
+        updated_at: 'NOW()',
         status: 'pending',
         sent_count: 0,
         last_sent_at: new Date().toISOString()
@@ -185,7 +185,7 @@ export async function verifyInvitation(req: Request, res: Response) {
         .from('user_invitations')
         .update({ 
           status: 'expired',
-          updated_at: new Date().toISOString()
+          updated_at: 'NOW()'
         })
         .eq('invitation_token', token);
 
@@ -288,8 +288,8 @@ export async function createCustomer(req: Request, res: Response) {
         state: state || '',
         zip: zip || '',
         country: country || '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: 'NOW()',
+        updated_at: 'NOW()'
       })
       .select()
       .single();
@@ -567,8 +567,8 @@ async function updateCustomer(req: Request, res: Response) {
       name: `${existingCustomer.first_name} ${existingCustomer.last_name}`
     });
 
-    // Add updated timestamp
-    updateData.updated_at = new Date().toISOString();
+    // Add updated timestamp using database server time
+    updateData.updated_at = 'NOW()';
 
     // Update customer in database
     console.log(`🔄 [${requestTimestamp}] Executing Supabase update query...`);
@@ -734,7 +734,7 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
       .from('customers')
       .update({ 
         profile_image_url: photoUrl,
-        updated_at: new Date().toISOString()
+        updated_at: 'NOW()'
       })
       .eq('id', id);
 

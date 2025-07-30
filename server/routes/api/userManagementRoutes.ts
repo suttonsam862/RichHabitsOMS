@@ -205,8 +205,8 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
         custom_attributes: {
           requires_password_setup: isTemporaryPassword
         },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: 'NOW()',
+        updated_at: 'NOW()'
       })
       .select()
       .single();
@@ -241,9 +241,9 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
             status: 'pending',
             sent_count: 1,
-            last_sent_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            last_sent_at: 'NOW()',
+            created_at: 'NOW()',
+            updated_at: 'NOW()'
           });
 
         // Generate email template
@@ -332,7 +332,7 @@ router.patch('/users/:id', requireAuth, requireRole(['admin']), async (req: Requ
     // Update user profile with custom attributes support
     const updateData: any = {
       ...updates,
-      updated_at: new Date().toISOString()
+      updated_at: 'NOW()'
     };
 
     // Handle manufacturer-specific fields as custom attributes
@@ -437,7 +437,7 @@ router.delete('/users/:id', requireAuth, requireRole(['admin']), async (req: Req
         .from('enhanced_user_profiles')
         .update({
           status: 'terminated',
-          updated_at: new Date().toISOString()
+          updated_at: 'NOW()'
         })
         .eq('id', id);
 

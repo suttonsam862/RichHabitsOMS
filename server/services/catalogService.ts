@@ -110,8 +110,8 @@ export class CatalogItemProcessor {
       processedData.base_image_url = inputData.imageUrl;
     }
 
-    // Always update timestamp
-    processedData.updated_at = new Date().toISOString();
+    // Always update timestamp using database server time
+    processedData.updated_at = 'NOW()';
 
     return processedData;
   }
@@ -245,7 +245,7 @@ export class CatalogService {
       console.log(`🔧 Updating catalog item ${id} with processed data...`);
       
       const processedData = CatalogItemProcessor.processItemData(itemData);
-      processedData.updated_at = new Date().toISOString();
+      processedData.updated_at = 'NOW()';
 
       const { data: updatedItem, error } = await supabase
         .from('catalog_items')

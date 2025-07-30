@@ -146,7 +146,7 @@ async function updateOrganization(req: Request, res: Response) {
     const updateData: any = {
       company: name,
       organization_type: type,
-      updated_at: new Date().toISOString()
+      updated_at: 'NOW()'
     };
 
     // Only update sport if it's provided and type is sports
@@ -211,8 +211,8 @@ async function archiveOrganization(req: Request, res: Response) {
       .from('customers')
       .update({
         is_archived: true,
-        archived_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        archived_at: 'NOW()',
+        updated_at: 'NOW()'
       })
       .ilike('company', `%${oldName}%`)
       .select();
