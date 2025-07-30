@@ -53,6 +53,7 @@ export default function CustomerEditPage() {
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadRetryCount, setUploadRetryCount] = React.useState(0);
 
   const { data: customer, isLoading } = useQuery({
     queryKey: ['/api/customers', customerId],
@@ -199,11 +200,18 @@ export default function CustomerEditPage() {
       URL.revokeObjectURL(previewUrl);
     }
     setPreviewUrl(null);
+    setUploadRetryCount(0);
     // Reset file input
     const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
     }
+  };
+
+  const retryPhotoUpload = () => {
+    if (!selectedFile) return;
+    setIsUploading(true);
+    uploadPhotoMutation.mutate(selectedFile);
   };
 
   // Cleanup preview URL on component unmount
@@ -247,9 +255,11 @@ export default function CustomerEditPage() {
       setSelectedFile(null);
       setPreviewUrl(null);
       setIsUploading(false);
+      setUploadRetryCount(0);
     },
     onError: (error) => {
       setIsUploading(false);
+      setUploadRetryCount(prev => prev + 1);
       toast({
         title: "Upload failed",
         description: error.message || "Failed to upload customer photo.",
@@ -793,32 +803,73 @@ export default function CustomerEditPage() {
                 {/* Photo Upload Interface */}
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                   {previewUrl ? (
-                    <div className="text-center">
+                    <div className="text-center space-y-4">
                       <img
                         src={previewUrl}
                         alt="Preview"
-                        className="mx-auto w-32 h-32 rounded-full object-cover border border-gray-200 mb-4"
+                        className="mx-auto w-32 h-32 rounded-full object-cover border border-gray-200"
                       />
-                      <div className="flex justify-center space-x-2">
-                        <Button
-                          type="button"
-                          onClick={handlePhotoUpload}
-                          disabled={isUploading || uploadPhotoMutation.isPending}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          {isUploading || uploadPhotoMutation.isPending ? 'Uploading...' : 'Upload Photo'}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleFileRemove}
-                          disabled={isUploading || uploadPhotoMutation.isPending}
-                        >
-                          <X className="w-4 h-4 mr-2" />
-                          Remove
-                        </Button>
-                      </div>
+                      
+                      {/* Upload Error with Retry */}
+                      {uploadPhotoMutation.isError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
+                          <p className="text-sm text-red-600">
+                            {uploadPhotoMutation.error?.message || 'Upload failed'}
+                          </p>
+                          {uploadRetryCount < 3 && (
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                type="button"
+                                onClick={retryPhotoUpload}
+                                disabled={isUploading || uploadPhotoMutation.isPending}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 border-red-300 hover:bg-red-50"
+                              >
+                                Retry Upload
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleFileRemove}
+                                className="text-gray-600"
+                              >
+                                Reset
+                              </Button>
+                            </div>
+                          )}
+                          {uploadRetryCount >= 3 && (
+                            <p className="text-xs text-red-500">
+                              Maximum retry attempts reached. Please check your connection and try again later.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Upload Buttons */}
+                      {!uploadPhotoMutation.isError && (
+                        <div className="flex justify-center space-x-2">
+                          <Button
+                            type="button"
+                            onClick={handlePhotoUpload}
+                            disabled={isUploading || uploadPhotoMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            {isUploading || uploadPhotoMutation.isPending ? 'Uploading...' : 'Upload Photo'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleFileRemove}
+                            disabled={isUploading || uploadPhotoMutation.isPending}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Remove
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center">

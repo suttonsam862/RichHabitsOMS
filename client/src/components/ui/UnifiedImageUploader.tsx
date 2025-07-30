@@ -76,6 +76,7 @@ export function UnifiedImageUploader({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
@@ -90,6 +91,7 @@ export function UnifiedImageUploader({
     setUploadProgress(0);
     setUploadError(null);
     setUploadSuccess(false);
+    setRetryCount(0);
   }, [preview]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,6 +207,7 @@ export function UnifiedImageUploader({
 
     } catch (error: any) {
       setUploadError(error.message || 'Upload failed');
+      setRetryCount(prev => prev + 1);
       onUploadComplete({
         success: false,
         error: error.message || 'Upload failed'
@@ -213,6 +216,12 @@ export function UnifiedImageUploader({
       setIsUploading(false);
     }
   }, [selectedFile, entityId, uploadType, onUploadComplete, onUploadProgress]);
+
+  const retryUpload = useCallback(() => {
+    setUploadError(null);
+    setUploadProgress(0);
+    handleUpload();
+  }, [handleUpload]);
 
   const removeFile = useCallback(() => {
     setSelectedFile(null);
@@ -318,10 +327,36 @@ export function UnifiedImageUploader({
         </div>
       )}
 
-      {/* Error Message */}
+      {/* Error Message with Retry */}
       {uploadError && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
           <p className="text-sm text-red-600">{uploadError}</p>
+          {retryCount < 3 && selectedFile && (
+            <div className="flex gap-2">
+              <Button
+                onClick={retryUpload}
+                disabled={isUploading}
+                variant="outline"
+                size="sm"
+                className="text-red-600 border-red-300 hover:bg-red-50"
+              >
+                Retry Upload
+              </Button>
+              <Button
+                onClick={resetState}
+                variant="ghost"
+                size="sm"
+                className="text-gray-600"
+              >
+                Reset
+              </Button>
+            </div>
+          )}
+          {retryCount >= 3 && (
+            <p className="text-xs text-red-500">
+              Maximum retry attempts reached. Please check your connection and try again later.
+            </p>
+          )}
         </div>
       )}
 

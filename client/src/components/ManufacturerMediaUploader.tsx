@@ -67,6 +67,9 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
   const [uploadType, setUploadType] = useState<string>('logo');
   const [uploadDescription, setUploadDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   // Fetch existing media files
   const { data: mediaFiles = [], isLoading, refetch } = useQuery<MediaFile[]>({
@@ -104,8 +107,13 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
       });
       refetch();
       setUploadDescription('');
+      setSelectedFiles([]);
+      setUploadError(null);
+      setRetryCount(0);
     },
     onError: (error: any) => {
+      setUploadError(error.message);
+      setRetryCount(prev => prev + 1);
       toast({
         title: 'Upload failed',
         description: error.message,
@@ -175,12 +183,36 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
       return;
     }
 
+    setSelectedFiles([file]);
+    setUploadError(null);
     setIsUploading(true);
     uploadMutation.mutate({
       file,
       type: uploadType,
       description: uploadDescription
     });
+  };
+
+  const retryUpload = () => {
+    if (selectedFiles.length === 0) return;
+    
+    setUploadError(null);
+    setIsUploading(true);
+    uploadMutation.mutate({
+      file: selectedFiles[0],
+      type: uploadType,
+      description: uploadDescription
+    });
+  };
+
+  const resetUpload = () => {
+    setSelectedFiles([]);
+    setUploadError(null);
+    setRetryCount(0);
+    setUploadDescription('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleDelete = (mediaId: string) => {
@@ -285,6 +317,7 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
             </div>
           </div>
 
+          {/* Upload Status */}
           {isUploading && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
@@ -292,6 +325,39 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
                 Uploading file... Please wait.
               </AlertDescription>
             </Alert>
+          )}
+
+          {/* Upload Error with Retry */}
+          {uploadError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
+              <p className="text-sm text-red-600">{uploadError}</p>
+              {retryCount < 3 && selectedFiles.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={retryUpload}
+                    disabled={isUploading}
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    Retry Upload
+                  </Button>
+                  <Button
+                    onClick={resetUpload}
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-600"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              )}
+              {retryCount >= 3 && (
+                <p className="text-xs text-red-500">
+                  Maximum retry attempts reached. Please check your connection and try again later.
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

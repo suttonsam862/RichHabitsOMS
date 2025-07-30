@@ -60,6 +60,8 @@ export function ProductionImageUploader({
   const [caption, setCaption] = useState('');
   const [images, setImages] = useState<ProductionImage[]>(existingImages);
   const [previewFiles, setPreviewFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     // Validate file types and sizes
@@ -104,6 +106,18 @@ export function ProductionImageUploader({
     setPreviewFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const retryUpload = () => {
+    setUploadError(null);
+    uploadImages();
+  };
+
+  const resetUpload = () => {
+    setPreviewFiles([]);
+    setUploadError(null);
+    setRetryCount(0);
+    setCaption('');
+  };
+
   const uploadImages = async () => {
     if (previewFiles.length === 0) {
       toast({
@@ -145,6 +159,8 @@ export function ProductionImageUploader({
         setImages(newImages);
         setPreviewFiles([]);
         setCaption('');
+        setUploadError(null);
+        setRetryCount(0);
         
         toast({
           title: "Upload successful",
@@ -157,6 +173,8 @@ export function ProductionImageUploader({
       }
     } catch (error) {
       console.error('Upload error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload images');
+      setRetryCount(prev => prev + 1);
       toast({
         title: "Upload failed",
         description: error instanceof Error ? error.message : 'Failed to upload images',
@@ -297,24 +315,59 @@ export function ProductionImageUploader({
             </div>
           )}
 
+          {/* Upload Error with Retry */}
+          {uploadError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
+              <p className="text-sm text-red-600">{uploadError}</p>
+              {retryCount < 3 && previewFiles.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={retryUpload}
+                    disabled={uploading}
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    Retry Upload
+                  </Button>
+                  <Button
+                    onClick={resetUpload}
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-600"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              )}
+              {retryCount >= 3 && (
+                <p className="text-xs text-red-500">
+                  Maximum retry attempts reached. Please check your connection and try again later.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Upload Button */}
-          <Button 
-            onClick={uploadImages} 
-            disabled={uploading || previewFiles.length === 0}
-            className="w-full"
-          >
-            {uploading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload {previewFiles.length} Image{previewFiles.length !== 1 ? 's' : ''}
-              </>
-            )}
-          </Button>
+          {!uploadError && (
+            <Button 
+              onClick={uploadImages} 
+              disabled={uploading || previewFiles.length === 0}
+              className="w-full"
+            >
+              {uploading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload {previewFiles.length} Image{previewFiles.length !== 1 ? 's' : ''}
+                </>
+              )}
+            </Button>
+          )}
         </CardContent>
       </Card>
 

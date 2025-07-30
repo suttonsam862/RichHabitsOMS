@@ -101,8 +101,8 @@ export function formatFileSize(bytes: number): string {
  * Generates validation message for UI display
  */
 export function getValidationMessage(options: FileValidationOptions = DEFAULT_VALIDATION_OPTIONS): string {
-  const { maxSizeMB = 5, allowedTypes = DEFAULT_VALIDATION_OPTIONS.allowedTypes } = options;
-  const typeNames = allowedTypes.map(type => type.split('/')[1].toUpperCase()).join(', ');
+  const { maxSizeMB = 5, allowedTypes = DEFAULT_VALIDATION_OPTIONS.allowedTypes! } = options;
+  const typeNames = allowedTypes!.map(type => type.split('/')[1].toUpperCase()).join(', ');
   return `${typeNames} up to ${maxSizeMB}MB`;
 }
 
