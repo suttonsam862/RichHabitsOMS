@@ -338,7 +338,7 @@ export default function OrderEditPage() {
   const saveMutation = useMutation({
     mutationFn: async (data: OrderEditFormValues) => {
       const endpoint = isEditing ? `/api/orders/${id}` : '/api/orders/create';
-      const method = isEditing ? 'PUT' : 'POST';
+      const method = isEditing ? 'PATCH' : 'POST';
 
       // Transform data for API
       const transformedData = {
@@ -353,7 +353,15 @@ export default function OrderEditPage() {
         })),
       };
 
-      const response = await apiRequest(method, endpoint, transformedData);
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify(transformedData),
+      });
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to save order');

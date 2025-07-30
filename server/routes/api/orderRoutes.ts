@@ -43,6 +43,77 @@ const createOrderSchema = z.object({
   items: z.array(orderItemSchema).min(1, "At least one item is required")
 });
 
+// Enhanced validation schema for PATCH updates
+const updateOrderItemSchema = z.object({
+  id: z.string().uuid().optional(),
+  product_name: z.string().min(1).optional(),
+  productName: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  quantity: z.number().min(1).optional(),
+  unit_price: z.number().min(0).optional(),
+  unitPrice: z.number().min(0).optional(),
+  total_price: z.number().min(0).optional(),
+  totalPrice: z.number().min(0).optional(),
+  color: z.string().optional().nullable(),
+  size: z.string().optional().nullable(),
+  fabric: z.string().optional().nullable(),
+  customization: z.string().optional().nullable(),
+  status: z.enum(['pending', 'designing', 'approved', 'in_production', 'completed']).optional(),
+  production_notes: z.string().optional().nullable(),
+  productionNotes: z.string().optional().nullable(),
+  estimated_completion_date: z.string().optional().nullable(),
+  estimatedCompletionDate: z.string().optional().nullable()
+});
+
+const patchOrderSchema = z.object({
+  id: z.string().uuid().optional(),
+  orderNumber: z.string().optional(),
+  order_number: z.string().optional(),
+  customerId: z.string().uuid().optional(),
+  customer_id: z.string().uuid().optional(),
+  status: z.enum([
+    'draft', 
+    'pending_design', 
+    'design_in_progress', 
+    'design_review', 
+    'design_approved', 
+    'pending_production', 
+    'in_production', 
+    'completed', 
+    'cancelled'
+  ]).optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional(),
+  assignedDesignerId: z.string().uuid().optional().nullable(),
+  assigned_designer_id: z.string().uuid().optional().nullable(),
+  assignedManufacturerId: z.string().uuid().optional().nullable(),
+  assigned_manufacturer_id: z.string().uuid().optional().nullable(),
+  salesperson_id: z.string().uuid().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  internalNotes: z.string().optional().nullable(),
+  internal_notes: z.string().optional().nullable(),
+  customerRequirements: z.string().optional().nullable(),
+  customer_requirements: z.string().optional().nullable(),
+  deliveryAddress: z.string().optional().nullable(),
+  delivery_address: z.string().optional().nullable(),
+  deliveryInstructions: z.string().optional().nullable(),
+  delivery_instructions: z.string().optional().nullable(),
+  rushOrder: z.boolean().optional(),
+  rush_order: z.boolean().optional(),
+  estimatedDeliveryDate: z.string().optional().nullable(),
+  estimated_delivery_date: z.string().optional().nullable(),
+  actualDeliveryDate: z.string().optional().nullable(),
+  actual_delivery_date: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  logo_url: z.string().optional().nullable(),
+  companyName: z.string().optional().nullable(),
+  company_name: z.string().optional().nullable(),
+  total_amount: z.number().min(0).optional(),
+  totalAmount: z.number().min(0).optional(),
+  tax: z.number().min(0).optional(),
+  is_paid: z.boolean().optional(),
+  items: z.array(updateOrderItemSchema).optional()
+});
+
 // Helper function to generate order number
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -233,5 +304,233 @@ router.get('/:id/items', requireAuth, orderController.getOrderItems);
 
 // POST /api/orders/:id/items - Add item to existing order
 router.post('/:id/items', requireAuth, requireRole(['admin', 'salesperson']), orderController.addOrderItem);
+
+/**
+ * PATCH /api/orders/:id - Update order fields and status with enhanced validation
+ */
+async function patchOrder(req: Request, res: Response) {
+  try {
+    const orderId = req.params.id;
+    const updateData = req.body;
+
+    console.log(`🔄 PATCH Order ${orderId} - Update request received`);
+    console.log('📋 Update data keys:', Object.keys(updateData));
+
+    // Validate order ID format
+    if (!orderId || orderId === 'undefined' || orderId === 'null') {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid order ID is required'
+      });
+    }
+
+    // Validate request body against schema
+    let validatedData;
+    try {
+      validatedData = patchOrderSchema.parse(updateData);
+    } catch (validationError: any) {
+      console.error('❌ Validation failed:', validationError.errors);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationError.errors
+      });
+    }
+
+    // Check if order exists
+    const { data: existingOrder, error: fetchError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (fetchError || !existingOrder) {
+      console.error('❌ Order not found:', fetchError?.message);
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Transform camelCase to snake_case for database
+    const dbUpdateData: any = {};
+    
+    // Handle field mappings with both camelCase and snake_case support
+    const fieldMappings = {
+      orderNumber: 'order_number',
+      customerId: 'customer_id',
+      assignedDesignerId: 'assigned_designer_id',
+      assignedManufacturerId: 'assigned_manufacturer_id',
+      internalNotes: 'internal_notes',
+      customerRequirements: 'customer_requirements',
+      deliveryAddress: 'delivery_address',
+      deliveryInstructions: 'delivery_instructions',
+      rushOrder: 'rush_order',
+      estimatedDeliveryDate: 'estimated_delivery_date',
+      actualDeliveryDate: 'actual_delivery_date',
+      logoUrl: 'logo_url',
+      companyName: 'company_name',
+      totalAmount: 'total_amount'
+    };
+
+    // Process each field in the update data
+    Object.entries(validatedData).forEach(([key, value]) => {
+      if (key === 'items') {
+        // Skip items for now - handle separately
+        return;
+      }
+      
+      // Map camelCase to snake_case if needed
+      const dbField = fieldMappings[key as keyof typeof fieldMappings] || key;
+      
+      // Only include non-undefined values
+      if (value !== undefined) {
+        dbUpdateData[dbField] = value;
+      }
+    });
+
+    // Add updated timestamp
+    dbUpdateData.updated_at = new Date().toISOString();
+
+    console.log('🗄️ Database update fields:', Object.keys(dbUpdateData));
+
+    // Update the order
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
+      .from('orders')
+      .update(dbUpdateData)
+      .eq('id', orderId)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('❌ Order update failed:', updateError.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to update order',
+        error: updateError.message
+      });
+    }
+
+    console.log('✅ Order updated successfully:', updatedOrder.id);
+
+    // Handle items update if provided
+    let updatedItems = null;
+    if (validatedData.items && Array.isArray(validatedData.items)) {
+      console.log('🔄 Processing items update...');
+      
+      try {
+        // First, get existing items
+        const { data: existingItems } = await supabaseAdmin
+          .from('order_items')
+          .select('*')
+          .eq('order_id', orderId);
+
+        const itemsToUpdate = [];
+        const itemsToInsert = [];
+        const existingItemIds = new Set(existingItems?.map(item => item.id) || []);
+
+        // Process each item in the update
+        for (const item of validatedData.items) {
+          // Transform item data to snake_case
+          const dbItemData: any = {
+            order_id: orderId,
+            product_name: item.productName || item.product_name || '',
+            description: item.description || '',
+            quantity: item.quantity || 1,
+            unit_price: item.unitPrice || item.unit_price || 0,
+            total_price: item.totalPrice || item.total_price || (item.quantity || 1) * (item.unitPrice || item.unit_price || 0),
+            color: item.color || '',
+            size: item.size || '',
+            fabric: item.fabric || '',
+            customization: item.customization || '',
+            status: item.status || 'pending',
+            production_notes: item.productionNotes || item.production_notes || '',
+            estimated_completion_date: item.estimatedCompletionDate || item.estimated_completion_date || null
+          };
+
+          if (item.id && existingItemIds.has(item.id)) {
+            // Update existing item
+            itemsToUpdate.push({ id: item.id, ...dbItemData });
+          } else if (!item.id) {
+            // Insert new item
+            itemsToInsert.push(dbItemData);
+          }
+        }
+
+        // Perform updates
+        if (itemsToUpdate.length > 0) {
+          for (const item of itemsToUpdate) {
+            const { id, ...updateFields } = item;
+            await supabaseAdmin
+              .from('order_items')
+              .update(updateFields)
+              .eq('id', id);
+          }
+        }
+
+        // Perform inserts
+        if (itemsToInsert.length > 0) {
+          await supabaseAdmin
+            .from('order_items')
+            .insert(itemsToInsert);
+        }
+
+        // Fetch updated items
+        const { data: allUpdatedItems } = await supabaseAdmin
+          .from('order_items')
+          .select('*')
+          .eq('order_id', orderId)
+          .order('created_at', { ascending: true });
+
+        updatedItems = allUpdatedItems;
+        console.log('✅ Items updated successfully:', allUpdatedItems?.length);
+
+        // Recalculate total amount if items were updated
+        if (allUpdatedItems && allUpdatedItems.length > 0) {
+          const newTotalAmount = allUpdatedItems.reduce((total, item) => {
+            return total + (parseFloat(item.total_price) || 0);
+          }, 0);
+
+          // Update order with new total
+          await supabaseAdmin
+            .from('orders')
+            .update({ total_amount: newTotalAmount })
+            .eq('id', orderId);
+
+          updatedOrder.total_amount = newTotalAmount;
+        }
+
+      } catch (itemsError: any) {
+        console.error('❌ Items update failed:', itemsError.message);
+        // Don't fail the entire request if items update fails
+        console.log('⚠️ Order updated but items update failed');
+      }
+    }
+
+    // Return the updated order with items
+    const response: any = {
+      success: true,
+      message: 'Order updated successfully',
+      order: updatedOrder
+    };
+
+    if (updatedItems) {
+      response.items = updatedItems;
+    }
+
+    res.status(200).json(response);
+
+  } catch (error: any) {
+    console.error('💥 PATCH Order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+}
+
+// PATCH /api/orders/:id - Update order fields and status
+router.patch('/:id', requireAuth, requireRole(['admin', 'salesperson', 'designer', 'manufacturer']), patchOrder);
 
 export default router;

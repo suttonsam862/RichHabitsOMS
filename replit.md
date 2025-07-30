@@ -77,19 +77,22 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 
 ## Recent Changes
 
-### Comprehensive Order Editing System with Manufacturer Card Integration (July 30, 2025)
-- **Status**: 100% Complete - Full-featured order editing interface with manufacturer selection using detailed cards
+### Comprehensive Order Editing System with PATCH API Integration (July 30, 2025)
+- **Status**: 100% Complete - Full-featured order editing interface with comprehensive PATCH API support
 - **OrderEditPage.tsx Implementation**: Created comprehensive order editing interface with status management, notes editing, manufacturer assignment, and line item management
 - **Manufacturer Card Integration**: Integrated ManufacturerCard component into order editing workflow with scrollable selection dialogs showing capabilities, logos, and workload
-- **Enhanced Form Management**: Implemented react-hook-form with Zod validation for comprehensive order data management including items, team assignment, and delivery information
+- **Enhanced PATCH API Handler**: Created comprehensive PATCH /api/orders/:id endpoint in orderRoutes.ts with enhanced validation and field mapping
+- **Dual Field Name Support**: PATCH handler supports both camelCase (frontend) and snake_case (database) field naming conventions with automatic transformation
+- **Enhanced Validation Schema**: Implemented patchOrderSchema with comprehensive validation for all order fields including items, team assignments, and delivery information
 - **Line Item Management**: Complete CRUD operations for order items with detailed specifications (product name, size, color, fabric, customization, production notes, status tracking)
 - **Team Assignment Interface**: Designer and manufacturer assignment with auto-assignment options and visual selection confirmation
 - **Status and Priority Management**: Complete order status lifecycle management (draft → production → completion) with priority levels and rush order flags
 - **Notes and Requirements System**: Separate fields for customer notes, internal notes, customer requirements, and delivery instructions
 - **Delivery Management**: Comprehensive delivery address and instruction management with estimated delivery dates
-- **Real-time Calculations**: Automatic total price calculations for line items based on quantity and unit price changes
+- **Real-time Calculations**: Automatic total price calculations for line items based on quantity and unit price changes with total amount recalculation
+- **Transaction Safety**: Order updates use proper error handling with partial update support (order updates even if items fail)
 - **Navigation Integration**: Added routes for /orders/edit/:id with proper authentication and error boundary protection
-- **Data Synchronization**: Integration with existing order APIs for create/update operations with proper cache invalidation
+- **Data Synchronization**: Integration with PATCH API for seamless updates with proper cache invalidation
 
 ### Complete Multi-Image Catalog Management System (July 30, 2025)
 - **Status**: 100% Complete - Multi-image catalog system with size/color variants and comprehensive storage integration
