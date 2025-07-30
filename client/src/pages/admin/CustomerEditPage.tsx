@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const customerSchema = z.object({
@@ -34,6 +34,7 @@ interface Customer extends CustomerFormData {
   spent: string;
   lastOrder?: string;
   created_at: string;
+  photo_url?: string;
 }
 
 export default function CustomerEditPage() {
@@ -41,6 +42,11 @@ export default function CustomerEditPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Photo upload state
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
 
   const { data: customer, isLoading } = useQuery({
     queryKey: ['/api/customers', customerId],
@@ -95,6 +101,116 @@ export default function CustomerEditPage() {
       });
     }
   }, [customer, form]);
+
+  // File handling functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select a JPEG, PNG, or WebP image file.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast({
+          title: "File too large",
+          description: "Please select an image file smaller than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreviewUrl(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFileRemove = () => {
+    setSelectedFile(null);
+    // Clean up preview URL to prevent memory leaks
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    // Reset file input
+    const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  // Cleanup preview URL on component unmount
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  // Photo upload mutation
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/customers/${customerId}/photo`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to upload photo');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Photo uploaded",
+        description: "Customer photo has been successfully uploaded.",
+      });
+      // Refresh customer data to get the new photo URL
+      queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
+      // Clear the upload state
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setIsUploading(false);
+    },
+    onError: (error) => {
+      setIsUploading(false);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload customer photo.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handlePhotoUpload = async () => {
+    if (!selectedFile) return;
+    
+    setIsUploading(true);
+    uploadPhotoMutation.mutate(selectedFile);
+  };
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
@@ -262,6 +378,90 @@ export default function CustomerEditPage() {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* Photo Upload Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Customer Photo</h3>
+                
+                {/* Current Photo Display */}
+                <div className="flex items-center space-x-4">
+                  <div className="flex-shrink-0">
+                    {customer.photo_url ? (
+                      <img
+                        src={customer.photo_url}
+                        alt={`${customer.firstName} ${customer.lastName}`}
+                        className="w-20 h-20 rounded-full object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
+                        <User className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">
+                      {customer.photo_url ? 'Current customer photo' : 'No photo uploaded'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Photo Upload Interface */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                  {previewUrl ? (
+                    <div className="text-center">
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="mx-auto w-32 h-32 rounded-full object-cover border border-gray-200 mb-4"
+                      />
+                      <div className="flex justify-center space-x-2">
+                        <Button
+                          type="button"
+                          onClick={handlePhotoUpload}
+                          disabled={isUploading || uploadPhotoMutation.isPending}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {isUploading || uploadPhotoMutation.isPending ? 'Uploading...' : 'Upload Photo'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleFileRemove}
+                          disabled={isUploading || uploadPhotoMutation.isPending}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                      <div className="flex flex-col items-center">
+                        <label
+                          htmlFor="photo-upload"
+                          className="cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                        >
+                          <span>Upload a photo</span>
+                          <input
+                            id="photo-upload"
+                            name="photo-upload"
+                            type="file"
+                            className="sr-only"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            onChange={handleFileSelect}
+                          />
+                        </label>
+                        <p className="pl-1 text-gray-500">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        PNG, JPG, WebP up to 5MB
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <FormField

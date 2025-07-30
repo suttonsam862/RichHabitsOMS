@@ -520,10 +520,37 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
       });
     }
 
-    // Upload file to Supabase storage (example, adjust as needed)
+    console.log(`Uploading photo for customer ${id}, file: ${req.file.originalname}, size: ${req.file.size}`);
+
+    // Ensure bucket exists or create it
+    const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === 'customer-photos');
+    
+    if (!bucketExists) {
+      console.log('Creating customer-photos bucket...');
+      const { error: bucketError } = await supabaseAdmin.storage.createBucket('customer-photos', {
+        public: true,
+        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+        fileSizeLimit: 5242880 // 5MB
+      });
+      
+      if (bucketError) {
+        console.error('Error creating bucket:', bucketError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to initialize storage bucket: ' + bucketError.message
+        });
+      }
+    }
+
+    // Generate unique filename to prevent conflicts
+    const fileExtension = req.file.originalname.split('.').pop();
+    const fileName = `${id}_${Date.now()}.${fileExtension}`;
+    
+    // Upload file to Supabase storage
     const { data, error } = await supabaseAdmin.storage
       .from('customer-photos')
-      .upload(`${id}/${req.file.originalname}`, req.file.buffer, {
+      .upload(fileName, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: true
       });
@@ -532,11 +559,16 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
       console.error('Error uploading photo to Supabase:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to upload photo'
+        message: 'Failed to upload photo: ' + error.message
       });
     }
 
-    const photoUrl = `https://your-supabase-url.supabase.co/storage/v1/object/public/${data.path}`; // Adjust URL
+    // Get the public URL for the uploaded photo
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from('customer-photos')
+      .getPublicUrl(fileName);
+
+    const photoUrl = publicUrl;
 
     // Update customer record with photo URL
     const { error: updateError } = await supabaseAdmin
