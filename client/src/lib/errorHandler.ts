@@ -54,8 +54,8 @@ class ErrorHandler {
         userAgent: navigator.userAgent
       });
 
-      // DON'T prevent default behavior temporarily - let errors show
-      // event.preventDefault();
+      // Prevent page refresh from error handling
+      event.preventDefault();
       
       // Log structured error
       this.logError(error);

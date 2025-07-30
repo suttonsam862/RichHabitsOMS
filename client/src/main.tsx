@@ -20,7 +20,10 @@ const ignoredErrorMessages = [
   'load failed',
   'vite hmr ping failed',
   '0.0.0.0 requests blocked',
-  'not authenticated'
+  'not authenticated',
+  'polling for restart',
+  'vite connecting',
+  'hmr update'
 ];
 
 // Global unhandled promise rejection handler

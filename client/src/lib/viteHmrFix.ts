@@ -30,7 +30,10 @@ console.error = (...args: any[]) => {
       message.includes('hmr') ||
       message.includes('ping') ||
       message.includes('0.0.0.0:5173') ||
-      message.includes('server connection lost')
+      message.includes('0.0.0.0:5000') ||
+      message.includes('server connection lost') ||
+      message.includes('polling for restart') ||
+      message.includes('vite connecting')
     ) {
       viteErrorCount++;
       errorMessageCache.set(messageKey, now);
@@ -63,7 +66,7 @@ if (import.meta.env.DEV) {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     
     // Rewrite 0.0.0.0 URLs to use current origin (Replit-specific fix)
-    if (url.includes('0.0.0.0:5173') || url.includes('0.0.0.0:3000')) {
+    if (url.includes('0.0.0.0:5173') || url.includes('0.0.0.0:3000') || url.includes('0.0.0.0:5000')) {
       const rewrittenUrl = url.replace(/https?:\/\/0\.0\.0\.0:\d+/, window.location.origin);
       console.debug('🔄 Rewriting Vite ping URL:', url, '→', rewrittenUrl);
       
