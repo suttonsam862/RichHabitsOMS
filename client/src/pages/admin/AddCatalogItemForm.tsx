@@ -54,7 +54,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     return `${cleanCategory || 'ITEM'}-${cleanName || 'PRODUCT'}-${timestamp}-${random}`;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -74,6 +74,14 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     if (generalError) {
       setGeneralError('');
     }
+  };
+
+  const handleGenerateSKU = () => {
+    const newSKU = generateSKU(formData.name, formData.category);
+    setFormData(prev => ({
+      ...prev,
+      sku: newSKU
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -379,7 +387,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={generateSKU}
+                  onClick={handleGenerateSKU}
                   className="whitespace-nowrap"
                 >
                   Generate SKU
