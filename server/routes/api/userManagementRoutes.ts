@@ -48,6 +48,13 @@ const updateUserSchema = z.object({
   title: z.string().optional(),
   status: z.enum(['active', 'inactive', 'suspended', 'terminated', 'pending_activation']).optional(),
   role: z.string().optional(),
+  notes: z.string().optional(),
+  preferredCategories: z.array(z.string()).optional(),
+  pricingTiers: z.array(z.object({
+    category: z.string(),
+    basePrice: z.number().min(0),
+    markup: z.number().min(0).max(100)
+  })).optional(),
 });
 
 /**
@@ -288,10 +295,10 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
 });
 
 /**
- * PUT /api/user-management/users/:id
- * Update user information
+ * PATCH /api/user-management/users/:id
+ * Update user information (including manufacturer-specific fields)
  */
-router.put('/users/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+router.patch('/users/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const currentUser = (req as any).user;
@@ -314,13 +321,33 @@ router.put('/users/:id', requireAuth, requireRole(['admin']), async (req: Reques
       .eq('id', id)
       .single();
 
-    // Update user profile
+    // Update user profile with custom attributes support
+    const updateData: any = {
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+
+    // Handle manufacturer-specific fields as custom attributes
+    if (updates.notes || updates.preferredCategories || updates.pricingTiers) {
+      // Get existing custom attributes
+      const existingAttributes = currentData?.custom_attributes || {};
+      
+      updateData.custom_attributes = {
+        ...existingAttributes,
+        ...(updates.notes !== undefined && { notes: updates.notes }),
+        ...(updates.preferredCategories !== undefined && { preferredCategories: updates.preferredCategories }),
+        ...(updates.pricingTiers !== undefined && { pricingTiers: updates.pricingTiers })
+      };
+
+      // Remove these from the main update object since they're now in custom_attributes
+      delete updateData.notes;
+      delete updateData.preferredCategories;
+      delete updateData.pricingTiers;
+    }
+
     const { data: updatedUser, error } = await supabase
       .from('enhanced_user_profiles')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

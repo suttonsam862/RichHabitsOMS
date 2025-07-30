@@ -54,6 +54,7 @@ import UserManagementPage from './pages/admin/UserManagementPage';
 import SecurityManagementPage from './pages/admin/SecurityManagementPage';
 import CatalogPage from './pages/admin/CatalogPage';
 import CatalogItemEditPage from './pages/admin/CatalogItemEditPage';
+import ManufacturerEditPage from './pages/admin/ManufacturerEditPage';
 import AnalyticsPage from "./pages/admin/AnalyticsPage";
 import LegalManagementPage from "./pages/admin/LegalManagementPage";
 import CustomerInvitesPage from "./pages/admin/CustomerInvitesPage";
@@ -353,6 +354,17 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin']}>
                       <CustomerEditPage />
+                    </RequireAuth>
+                  } 
+                />
+
+                <Route 
+                  path="/admin/manufacturers/:id/edit" 
+                  element={
+                    <RequireAuth allowedRoles={['admin']}>
+                      <FeatureErrorBoundary featureName="Manufacturer Edit">
+                        <ManufacturerEditPage />
+                      </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
                 />
