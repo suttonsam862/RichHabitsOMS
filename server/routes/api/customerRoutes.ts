@@ -5,6 +5,7 @@ import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, getCustomerInviteEmailTemplate } from '../../email';
 import { requireAuth, requireRole } from '../auth/auth';
+import { customerTransformers } from '../../utils/schemaTransformers';
 import crypto from 'crypto';
 
 const router = Router();
@@ -261,18 +262,16 @@ export async function createCustomer(req: Request, res: Response) {
     const customerId = crypto.randomUUID();
 
     console.log('Creating customer profile with ID:', customerId);
-    // Insert customer directly into database - bypassing Supabase Auth issues
-    const { data: insertedProfile, error: profileError } = await supabaseAdmin
-      .from('customers')
-      .insert({
-        id: customerId,
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        company: company || '',
-        phone: phone || '',
-        address: address || '',
-        city: city || '',
+    // Use schema transformer for database insertion
+    const customerData = customerTransformers.toDatabase({
+      id: customerId,
+      firstName,
+      lastName,
+      email,
+      company: company || '',
+      phone: phone || '',
+      address: address || '',
+      city: city || '',
         state: state || '',
         zip: zip || '',
         country: country || '',
