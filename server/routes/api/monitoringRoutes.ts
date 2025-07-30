@@ -2,12 +2,13 @@
 import { Router, Request, Response } from 'express';
 import SystemMonitor from '../../monitoring/SystemMonitor.js';
 import SecurityMonitor from '../../monitoring/SecurityMonitor.js';
+import { requireAuth, requireRole } from '../auth/auth.js';
 
 const router = Router();
 const systemMonitor = SystemMonitor.getInstance();
 const securityMonitor = SecurityMonitor.getInstance();
 
-// System health endpoint
+// System health endpoint (public for load balancer health checks)
 router.get('/health', async (req: Request, res: Response) => {
   try {
     const health = systemMonitor.getSystemHealth();
@@ -27,7 +28,7 @@ router.get('/health', async (req: Request, res: Response) => {
 });
 
 // Performance metrics endpoint
-router.get('/metrics', async (req: Request, res: Response) => {
+router.get('/metrics', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const hours = parseInt(req.query.hours as string) || 24;
     const metrics = systemMonitor.getPerformanceMetrics(hours);
@@ -47,7 +48,7 @@ router.get('/metrics', async (req: Request, res: Response) => {
 });
 
 // System alerts endpoint
-router.get('/alerts', async (req: Request, res: Response) => {
+router.get('/alerts', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const alerts = systemMonitor.getActiveAlerts();
     
@@ -66,7 +67,7 @@ router.get('/alerts', async (req: Request, res: Response) => {
 });
 
 // Resolve alert endpoint
-router.post('/alerts/:alertId/resolve', async (req: Request, res: Response) => {
+router.post('/alerts/:alertId/resolve', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { alertId } = req.params;
     const resolved = systemMonitor.resolveAlert(alertId);
@@ -93,7 +94,7 @@ router.post('/alerts/:alertId/resolve', async (req: Request, res: Response) => {
 });
 
 // Security alerts endpoint
-router.get('/security/alerts', async (req: Request, res: Response) => {
+router.get('/security/alerts', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
     const alerts = securityMonitor.getSecurityAlerts(limit);
@@ -113,7 +114,7 @@ router.get('/security/alerts', async (req: Request, res: Response) => {
 });
 
 // Threat intelligence endpoint
-router.get('/security/threats', async (req: Request, res: Response) => {
+router.get('/security/threats', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const intelligence = securityMonitor.getThreatIntelligence();
     
@@ -132,7 +133,7 @@ router.get('/security/threats', async (req: Request, res: Response) => {
 });
 
 // Access patterns endpoint
-router.get('/security/patterns', async (req: Request, res: Response) => {
+router.get('/security/patterns', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { userId, ipAddress, hours } = req.query;
     const patterns = securityMonitor.getAccessPatterns(
@@ -156,7 +157,7 @@ router.get('/security/patterns', async (req: Request, res: Response) => {
 });
 
 // Block IP endpoint
-router.post('/security/block-ip', async (req: Request, res: Response) => {
+router.post('/security/block-ip', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { ipAddress, reason } = req.body;
     

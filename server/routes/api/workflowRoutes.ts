@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
 import WorkflowEngine from '../../workflow/WorkflowEngine.js';
+import { requireAuth, requireRole } from '../auth/auth.js';
 
 const router = Router();
 const workflowEngine = WorkflowEngine.getInstance();
 
 // Initialize new workflow
-router.post('/workflows/initialize', async (req: Request, res: Response) => {
+router.post('/workflows/initialize', requireAuth, requireRole(['admin', 'salesperson', 'designer', 'manufacturer']), async (req: Request, res: Response) => {
   try {
     const { workflowType, entityId, entityType, metadata } = req.body;
 
@@ -38,7 +39,7 @@ router.post('/workflows/initialize', async (req: Request, res: Response) => {
 });
 
 // Transition workflow to next step
-router.post('/workflows/:workflowId/transition', async (req: Request, res: Response) => {
+router.post('/workflows/:workflowId/transition', requireAuth, requireRole(['admin', 'salesperson', 'designer', 'manufacturer']), async (req: Request, res: Response) => {
   try {
     const { workflowId } = req.params;
     const { targetStep, actor, metadata } = req.body;
@@ -72,7 +73,7 @@ router.post('/workflows/:workflowId/transition', async (req: Request, res: Respo
 });
 
 // Get workflow status
-router.get('/workflows/:workflowId', async (req: Request, res: Response) => {
+router.get('/workflows/:workflowId', requireAuth, async (req: Request, res: Response) => {
   try {
     const { workflowId } = req.params;
     const workflowState = workflowEngine.getWorkflowState(workflowId);
@@ -99,7 +100,7 @@ router.get('/workflows/:workflowId', async (req: Request, res: Response) => {
 });
 
 // Get workflow history
-router.get('/workflows/:workflowId/history', async (req: Request, res: Response) => {
+router.get('/workflows/:workflowId/history', requireAuth, async (req: Request, res: Response) => {
   try {
     const { workflowId } = req.params;
     const history = workflowEngine.getWorkflowHistory(workflowId);
@@ -119,7 +120,7 @@ router.get('/workflows/:workflowId/history', async (req: Request, res: Response)
 });
 
 // Check actor permissions
-router.post('/workflows/:workflowId/check-permissions', async (req: Request, res: Response) => {
+router.post('/workflows/:workflowId/check-permissions', requireAuth, requireRole(['admin', 'salesperson', 'designer', 'manufacturer']), async (req: Request, res: Response) => {
   try {
     const { workflowId } = req.params;
     const { actor, action } = req.body;
@@ -160,7 +161,7 @@ router.post('/workflows/:workflowId/check-permissions', async (req: Request, res
 });
 
 // Get workflow step requirements
-router.get('/:workflowId/step/:stepId/requirements', async (req: Request, res: Response) => {
+router.get('/:workflowId/step/:stepId/requirements', requireAuth, async (req: Request, res: Response) => {
   try {
     const { workflowId, stepId } = req.params;
     const requirements = await workflowEngine.getStepRequirements(workflowId, stepId);
@@ -180,7 +181,7 @@ router.get('/:workflowId/step/:stepId/requirements', async (req: Request, res: R
 });
 
 // Validate step requirements
-router.post('/:workflowId/step/:stepId/validate', async (req: Request, res: Response) => {
+router.post('/:workflowId/step/:stepId/validate', requireAuth, requireRole(['admin', 'salesperson', 'designer', 'manufacturer']), async (req: Request, res: Response) => {
   try {
     const { workflowId, stepId } = req.params;
     const { context } = req.body;
@@ -202,7 +203,7 @@ router.post('/:workflowId/step/:stepId/validate', async (req: Request, res: Resp
 });
 
 // Get workflow performance metrics
-router.get('/metrics/:workflowType', async (req: Request, res: Response) => {
+router.get('/metrics/:workflowType', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { workflowType } = req.params;
     const { startDate, endDate } = req.query;
@@ -228,7 +229,7 @@ router.get('/metrics/:workflowType', async (req: Request, res: Response) => {
 });
 
 // Get workflow bottleneck analysis
-router.get('/bottlenecks/:workflowType', async (req: Request, res: Response) => {
+router.get('/bottlenecks/:workflowType', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { workflowType } = req.params;
 
@@ -249,7 +250,7 @@ router.get('/bottlenecks/:workflowType', async (req: Request, res: Response) => 
 });
 
 // Get workflow analytics
-router.get('/analytics/:workflowType', async (req: Request, res: Response) => {
+router.get('/analytics/:workflowType', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
   try {
     const { workflowType } = req.params;
     const { startDate, endDate } = req.query;

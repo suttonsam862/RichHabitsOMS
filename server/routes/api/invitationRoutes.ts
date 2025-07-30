@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import { requireAuth, requireRole } from '../auth/auth.js';
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ const upload = multer({
 });
 
 // Create invitation with enhanced options
-router.post('/create', async (req, res) => {
+router.post('/create', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
     const {
       email,
@@ -516,7 +517,7 @@ router.post('/complete-registration', async (req, res) => {
 });
 
 // Admin: List all invitations with detailed info
-router.get('/admin/list', async (req, res) => {
+router.get('/admin/list', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
