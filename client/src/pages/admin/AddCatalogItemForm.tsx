@@ -200,12 +200,13 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     setFormData({
       name: '',
       description: '',
-      base_price: '',
+      basePrice: '',
+      unitCost: '',
       category: '',
-      type: '',
-      fabric_options: '',
-      color_options: '',
-      size_options: ''
+      sport: '',
+      fabric: '',
+      status: 'active',
+      sku: ''
     });
     setFormErrors({});
     setGeneralError('');
@@ -261,23 +262,43 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="base_price">Base Price *</Label>
+                <Label htmlFor="basePrice">Base Price *</Label>
                 <Input
-                  id="base_price"
-                  name="base_price"
+                  id="basePrice"
+                  name="basePrice"
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.base_price}
+                  value={formData.basePrice}
                   onChange={handleInputChange}
                   placeholder="99.99"
                   required
-                  className={formErrors.base_price ? 'border-destructive' : ''}
+                  className={formErrors.basePrice ? 'border-destructive' : ''}
                 />
-                {formErrors.base_price && (
-                  <p className="text-sm text-destructive">{formErrors.base_price}</p>
+                {formErrors.basePrice && (
+                  <p className="text-sm text-destructive">{formErrors.basePrice}</p>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="unitCost">Unit Cost</Label>
+                <Input
+                  id="unitCost"
+                  name="unitCost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.unitCost}
+                  onChange={handleInputChange}
+                  placeholder="75.00"
+                  className={formErrors.unitCost ? 'border-destructive' : ''}
+                />
+                {formErrors.unitCost && (
+                  <p className="text-sm text-destructive">{formErrors.unitCost}</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Input
@@ -288,50 +309,63 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
                   placeholder="Apparel"
                 />
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="type">Item Type</Label>
-              <Input
-                id="type"
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                placeholder="Jersey, Shorts, etc."
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="fabric_options">Fabric Options</Label>
-              <Input
-                id="fabric_options"
-                name="fabric_options"
-                value={formData.fabric_options}
-                onChange={handleInputChange}
-                placeholder="Cotton, Polyester, etc."
-              />
+              <div className="space-y-2">
+                <Label htmlFor="sport">Sport</Label>
+                <Input
+                  id="sport"
+                  name="sport"
+                  value={formData.sport}
+                  onChange={handleInputChange}
+                  placeholder="Basketball, Football, etc."
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="color_options">Color Options</Label>
+                <Label htmlFor="fabric">Fabric</Label>
                 <Input
-                  id="color_options"
-                  name="color_options"
-                  value={formData.color_options}
+                  id="fabric"
+                  name="fabric"
+                  value={formData.fabric}
                   onChange={handleInputChange}
-                  placeholder="Red, Blue, Green"
+                  placeholder="Cotton, Polyester, etc."
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="size_options">Size Options</Label>
-                <Input
-                  id="size_options"
-                  name="size_options"
-                  value={formData.size_options}
+                <Label htmlFor="status">Status</Label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
                   onChange={handleInputChange}
-                  placeholder="S, M, L, XL"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="discontinued">Discontinued</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sku">SKU</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="sku"
+                  name="sku"
+                  value={formData.sku}
+                  onChange={handleInputChange}
+                  placeholder="Auto-generated SKU"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generateSKU}
+                  className="whitespace-nowrap"
+                >
+                  Generate SKU
+                </Button>
               </div>
             </div>
           </div>
