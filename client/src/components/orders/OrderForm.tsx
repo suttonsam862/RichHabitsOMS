@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
+import { useSafeQuery } from "@/hooks/useSafeQuery";
+import { useSafeFormSubmission } from "@/hooks/useSafeFormSubmission";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { getQueryFn } from "@/lib/queryClient";
 
 import {
   Form,
@@ -60,9 +62,13 @@ export function OrderForm({ initialData, onSubmit }: OrderFormProps) {
   const [total, setTotal] = useState(0);
   const [tax, setTax] = useState(0);
 
-  // Fetch customers
-  const { data: customers, isLoading: customersLoading } = useQuery({
+  // Fetch customers with safe query
+  const { data: customers, isLoading: customersLoading } = useSafeQuery({
     queryKey: ["/api/users?role=customer"],
+    queryFn: () => getQueryFn({ on401: "returnNull" })({ queryKey: ["/api/users?role=customer"] }),
+    component: "OrderForm",
+    action: "fetchCustomers",
+    showErrorToUser: true
   });
 
   // Setup form with initial data or defaults

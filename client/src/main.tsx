@@ -8,12 +8,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "./context/AuthContext";
 import { fixWebSocketConnection } from "./lib/fixWebSocketError";
 import { initViteHmrFixes } from "./lib/viteHmrFix";
+import { errorHandler } from "./lib/errorHandler";
+import { toastEventHandler } from "./lib/toastEventHandler";
 
 // Fix WebSocket connections for Replit environment
 fixWebSocketConnection();
 
 // Initialize comprehensive Vite HMR fixes
 initViteHmrFixes();
+
+// Initialize comprehensive error handling
+errorHandler;
+
+// Initialize toast event handler
+toastEventHandler.initialize();
 
 // Override console methods to suppress fetch error spam completely
 const originalConsoleWarn = console.warn;
@@ -69,74 +77,7 @@ console.log = (...args) => {
   originalConsoleLog.apply(console, args);
 };
 
-// Enhanced global error handlers to prevent unhandled promise rejections and Vite connection spam
-window.addEventListener('unhandledrejection', (event) => {
-  const reason = event.reason;
-  
-  // Enhanced suppression for Vite HMR and development errors
-  if (reason && (
-    // Vite HMR connection errors
-    reason.message?.includes('WebSocket') ||
-    reason.message?.includes('_vite_ping') ||
-    reason.message?.includes('vite') ||
-    reason.message?.includes('HMR') ||
-    reason.message?.includes('hot reload') ||
-    // Network errors
-    reason.message?.includes('Failed to fetch') ||
-    reason.message?.includes('NetworkError') ||
-    reason.message?.includes('Connection refused') ||
-    // Auth errors
-    reason.message?.includes('401') ||
-    reason.message?.includes('403') ||
-    reason.message?.includes('404') ||
-    // Status codes
-    reason.status === 404 ||
-    reason.status === 401 ||
-    reason.status === 403 ||
-    // Error types
-    reason.name === 'NetworkError' ||
-    reason.name === 'TypeError' ||
-    reason.name === 'AbortError'
-  )) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    return false;
-  }
-  
-  // Complete suppression of empty or null rejections
-  if (!reason || 
-      (typeof reason === 'object' && Object.keys(reason).length === 0) ||
-      reason === '' ||
-      String(reason).trim() === '') {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    return false;
-  }
-});
-
-window.addEventListener('error', (event) => {
-  // Enhanced error suppression for Vite and development issues
-  if (
-    event.error?.message?.includes('Failed to fetch') ||
-    event.error?.message?.includes('WebSocket') ||
-    event.error?.message?.includes('_vite_ping') ||
-    event.error?.message?.includes('vite') ||
-    event.error?.message?.includes('HMR') ||
-    event.error?.message?.includes('401') ||
-    event.error?.message?.includes('403') ||
-    event.error?.message?.includes('404') ||
-    event.error?.message?.includes('NetworkError') ||
-    event.error?.message?.includes('Connection refused')
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-    return false;
-  }
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Global error:', event.error);
-  }
-});
+// Note: Global error handlers are now managed by the comprehensive errorHandler
 
 import { queryClient } from './lib/queryClient';
 

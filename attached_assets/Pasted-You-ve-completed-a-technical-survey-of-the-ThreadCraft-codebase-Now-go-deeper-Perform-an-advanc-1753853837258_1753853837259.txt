@@ -1,0 +1,72 @@
+You’ve completed a technical survey of the ThreadCraft codebase. Now go deeper.
+
+Perform an advanced intelligence sweep to understand the design decisions, unspoken assumptions, fragility points, and long-term maintainability risks embedded in the system’s structure and flow.
+
+Focus not on "what exists", but **why it exists**, and **where it will break first under real-world pressure**.
+
+Please return detailed, developer-facing intelligence on the following:
+
+---
+
+🔍 1. **Schema–Code Drift Risk Profile**
+- Where are the most dangerous mismatches between code expectations and database schema?
+- What parts of the codebase are making assumptions about field names or types that are incorrect?
+- Are there schema migrations tracked? If not, where is drift most likely to occur again?
+
+🔍 2. **Duplicate Functionality Danger Zones**
+- Identify all areas where multiple implementations exist for the same function (e.g., image upload, order handling).
+- Which implementation is currently active?
+- Are any deprecated versions still reachable via the frontend or API?
+
+🔍 3. **API & Endpoint Intelligence**
+- Which routes are actively used by the frontend?
+- Which endpoints are defined but never called?
+- Which APIs are redundant or conflicting in function?
+
+🔍 4. **State Management Weak Points**
+- Where is state duplicated across components or out of sync with the server?
+- Are there places where React Query is bypassed, leading to stale or incorrect views?
+- Where would introducing global state (e.g. Zustand or context unification) improve data consistency?
+
+🔍 5. **RBAC & Auth Vulnerability Assessment**
+- Where can role assumptions be bypassed (e.g., misaligned frontend vs backend access control)?
+- Are there routes that rely only on frontend checks without matching backend enforcement?
+- Are RLS policies consistently applied in Supabase across all access-controlled tables?
+
+🔍 6. **Data Lifecycle Integrity**
+- When a new entity (customer, order, manufacturer) is created:
+  - Is it correctly propagated through the database and the UI?
+  - Where does propagation break or fail silently?
+  - Are there manual workarounds coded in due to race conditions?
+
+🔍 7. **Real-Time System Incompletion**
+- What is the intended use of WebSocket features based on code comments or client hooks?
+- Where in the app would real-time updates make sense but are currently not wired in?
+- What would be required to make real-time design task updates functional?
+
+🔍 8. **Form and Modal System Scalability**
+- How scalable is the current modal system with increasing roles and features?
+- Are form validation rules abstracted or copied per modal?
+- Could a form kit or shared schema-based validation system reduce duplication?
+
+🔍 9. **Testing Coverage Weak Points**
+- Which parts of the app are completely untested but represent high risk (e.g., payment, manufacturer assignment)?
+- Are there utilities or services being used across critical features that have zero tests?
+- What test setup is missing (e.g., database seeding, auth mocking)?
+
+🔍 10. **Deployment & Environment Fragility**
+- Are .env variables clearly separated for dev vs production?
+- Is the app hardcoded to run only on Replit?
+- What challenges will arise when moving to a custom domain or Vercel/Render/AWS?
+
+---
+
+📊 OUTPUT FORMAT:
+Return your answers in structured sections (matching the 10 questions). Include source paths or code references wherever possible.
+
+This intelligence will be used to:
+- Anticipate future system failures
+- Prioritize architectural improvements
+- Develop stable, forward-compatible assistant prompts
+
+⚠️ You are not fixing anything. You are generating strategic code intelligence for future tooling.

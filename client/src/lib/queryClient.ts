@@ -1,4 +1,4 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryFunction } from "@tanstack/react-query";
 import { API_BASE_URL } from "./config";
 
 async function throwIfResNotOk(res: Response) {
@@ -97,18 +97,6 @@ export const getQueryFn: <T>(options: {
       }
       throw error;
     }
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      console.log('401 response, clearing tokens and returning null');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('tokenExpires');
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    const data = await res.json();
-    console.log('Successfully fetched data:', data);
-    return data;
   };
 
 // Centralized token management

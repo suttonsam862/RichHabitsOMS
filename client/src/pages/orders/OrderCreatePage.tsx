@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { useSafeQuery } from '@/hooks/useSafeQuery';
+import { useSafeMutation } from '@/hooks/useSafeMutation';
+import { useSafeFormSubmission } from '@/hooks/useSafeFormSubmission';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Card,
   CardContent,
