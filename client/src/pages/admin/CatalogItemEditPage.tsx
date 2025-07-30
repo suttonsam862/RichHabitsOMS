@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star, Eye, Trash2, Download, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -318,9 +319,125 @@ export default function CatalogItemEditPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading catalog item...</span>
+        <div className="flex items-center space-x-4 mb-6">
+          <Button variant="ghost" onClick={() => navigate('/admin/catalog')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Catalog
+          </Button>
+        </div>
+        
+        {/* Header Skeleton */}
+        <div className="mb-6">
+          <Skeleton className="h-8 w-56 mb-2" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Basic Information Form */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Basic Fields */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-14" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+
+              {/* Sizes Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-5 w-12" />
+                  <Skeleton className="h-8 w-20" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              </div>
+
+              {/* Colors Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-8 w-20" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-20" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Image Management */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Upload Area */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
+                <div className="text-center space-y-4">
+                  <Skeleton className="h-12 w-12 rounded mx-auto" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-48 mx-auto" />
+                    <Skeleton className="h-4 w-36 mx-auto" />
+                  </div>
+                  <Skeleton className="h-10 w-32 mx-auto" />
+                </div>
+              </div>
+
+              {/* Image Gallery */}
+              <div className="space-y-4">
+                <Skeleton className="h-5 w-20" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <Skeleton className="h-32 w-full rounded" />
+                    <div className="absolute top-2 right-2 space-x-1">
+                      <Skeleton className="h-6 w-6 rounded" />
+                      <Skeleton className="h-6 w-6 rounded" />
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <Skeleton className="h-32 w-full rounded" />
+                    <div className="absolute top-2 right-2 space-x-1">
+                      <Skeleton className="h-6 w-6 rounded" />
+                      <Skeleton className="h-6 w-6 rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
