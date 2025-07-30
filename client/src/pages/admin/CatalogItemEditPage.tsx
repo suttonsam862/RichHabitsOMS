@@ -6,10 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star, Eye, Trash2, Download, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const catalogItemSchema = z.object({
@@ -596,76 +597,144 @@ export default function CatalogItemEditPage() {
                 )}
                 
                 {imagesFieldArray.fields.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {imagesFieldArray.fields.map((field, index) => {
-                      const image = form.getValues(`images.${index}`);
-                      return (
-                        <div key={field.id} className="relative group border rounded-lg overflow-hidden">
-                          <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                            <img
-                              src={image.url}
-                              alt={image.alt || `Product image ${index + 1}`}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw1MCA0NUw2NSA2NUgzNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
-                              }}
-                            />
-                          </div>
-                          
-                          {image.isPrimary && (
-                            <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center">
-                              <Star className="w-3 h-3 mr-1" />
-                              Primary
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>{imagesFieldArray.fields.length} image{imagesFieldArray.fields.length !== 1 ? 's' : ''} uploaded</span>
+                      <span>Click images to preview • Hover for actions</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {imagesFieldArray.fields.map((field, index) => {
+                        const image = form.getValues(`images.${index}`);
+                        return (
+                          <div key={field.id} className="relative group border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
+                            {/* Drag handle */}
+                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <div className="bg-white rounded p-1 shadow-sm cursor-move" title="Drag to reorder">
+                                <GripVertical className="w-4 h-4 text-gray-600" />
+                              </div>
                             </div>
-                          )}
-                          
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <div className="space-x-2">
-                              {!image.isPrimary && (
+                            
+                            <div className="aspect-square bg-gray-100 flex items-center justify-center relative">
+                              <img
+                                src={image.url}
+                                alt={image.alt || `Product image ${index + 1}`}
+                                className="w-full h-full object-cover cursor-pointer"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw1MCA0NUw2NSA2NUgzNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+                                }}
+                              />
+                              
+                              {/* Image overlay for preview */}
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center cursor-pointer">
+                                    <Eye className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                                  </div>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl w-full">
+                                  <DialogHeader>
+                                    <DialogTitle>Image Preview - {image.alt || `Product Image ${index + 1}`}</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div className="flex justify-center bg-gray-50 rounded-lg p-4">
+                                      <img
+                                        src={image.url}
+                                        alt={image.alt || `Product image ${index + 1}`}
+                                        className="max-h-96 w-auto object-contain"
+                                      />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div>
+                                        <span className="font-medium text-muted-foreground">Status:</span>
+                                        <span className={`ml-2 px-2 py-1 rounded text-xs ${image.isPrimary ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'}`}>
+                                          {image.isPrimary ? 'Primary Image' : 'Gallery Image'}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-muted-foreground">Alt Text:</span>
+                                        <span className="ml-2">{image.alt || 'Not set'}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-end space-x-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => window.open(image.url, '_blank')}
+                                      >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Open Full Size
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                            
+                            {/* Primary badge */}
+                            {image.isPrimary && (
+                              <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center shadow-sm">
+                                <Star className="w-3 h-3 mr-1" />
+                                Primary
+                              </div>
+                            )}
+                            
+                            {/* Hover actions */}
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="flex space-x-2">
+                                {!image.isPrimary && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => setPrimaryImage(index)}
+                                    className="text-xs shadow-sm"
+                                    title="Set as primary image"
+                                  >
+                                    <Star className="w-3 h-3 mr-1" />
+                                    Set Primary
+                                  </Button>
+                                )}
                                 <Button
                                   type="button"
                                   size="sm"
-                                  variant="secondary"
-                                  onClick={() => setPrimaryImage(index)}
-                                  className="text-xs"
+                                  variant="destructive"
+                                  onClick={() => removeImage(index)}
+                                  className="text-xs shadow-sm"
+                                  title="Delete image"
                                 >
-                                  <Star className="w-3 h-3 mr-1" />
-                                  Set Primary
+                                  <Trash2 className="w-3 h-3" />
                                 </Button>
-                              )}
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => removeImage(index)}
-                                className="text-xs"
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
+                              </div>
+                            </div>
+                            
+                            {/* Alt text input */}
+                            <div className="p-3 border-t bg-gray-50">
+                              <FormField
+                                control={form.control}
+                                name={`images.${index}.alt`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input 
+                                        placeholder="Add alt text for accessibility..." 
+                                        {...field}
+                                        className="text-xs border-gray-200 focus:border-blue-500"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Image {index + 1} • {image.isPrimary ? 'Primary' : 'Gallery'}
+                              </div>
                             </div>
                           </div>
-                          
-                          <div className="p-2">
-                            <FormField
-                              control={form.control}
-                              name={`images.${index}.alt`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input 
-                                      placeholder="Alt text (optional)" 
-                                      {...field}
-                                      className="text-xs"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
