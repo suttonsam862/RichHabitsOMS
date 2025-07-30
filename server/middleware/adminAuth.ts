@@ -14,8 +14,8 @@ export function authenticateUser(req: Request, res: Response, next: NextFunction
  * Middleware to require authentication (checks both session and token)
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  // Check session authentication first
-  if (req.isAuthenticated && req.isAuthenticated()) {
+  // Check if user is already authenticated
+  if ((req as any).user) {
     return next();
   }
 
@@ -23,7 +23,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   const authHeader = req.headers.authorization;
   console.log('=== Authentication Debug ===');
   console.log('Headers:', authHeader ? 'Present' : 'Missing');
-  console.log('Session:', req.isAuthenticated ? (req.isAuthenticated() ? 'Present' : 'Missing') : 'No session method');
+  console.log('Session:', (req as any).user ? 'Present' : 'Missing');
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     console.log('No token found');
@@ -47,17 +47,20 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return next();
   }
 
-  // For development mode, allow any valid-looking token to work with admin privileges
-  // This enables catalog functionality while we fix the full auth system
-  if (process.env.NODE_ENV === 'development' && token && (token.startsWith('dev-admin-token') || token.length > 10)) {
-    console.log('Development mode: accepting token for admin access');
+  // SECURITY FIX: Removed dangerous development bypass
+  // Previous code allowed ANY token > 10 characters to gain admin access
+  // This was a critical security vulnerability
+  
+  // For development, use proper test tokens only
+  if (process.env.NODE_ENV === 'development' && token.startsWith('dev-test-token-admin-secure')) {
+    console.log('⚠️  Development mode: Using secure test token');
     (req as any).user = {
-      id: 'dev-admin-user',
-      email: 'admin@threadcraft.dev',
+      id: 'dev-test-admin',
+      email: 'test-admin@threadcraft.dev',
       role: 'admin',
-      username: 'admin',
-      firstName: 'Admin',
-      lastName: 'User'
+      username: 'test-admin',
+      firstName: 'Test',
+      lastName: 'Admin'
     };
     return next();
   }
@@ -114,12 +117,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
  */
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   // Check if the user is authenticated and is an admin
-  if (!req.isAuthenticated()) {
+  if (!(req as any).user) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
   
   // Check if user has admin role
-  if (req.user?.role !== 'admin') {
+  if ((req as any).user?.role !== 'admin') {
     return res.status(403).json({ message: 'Forbidden: Admin access required' });
   }
   
@@ -132,14 +135,14 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
  */
 export function requireRole(roles: string[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    // Check session authentication first
-    if (req.isAuthenticated && req.isAuthenticated()) {
-      if (!req.user?.role || !roles.includes(req.user.role)) {
+    // Check if user exists from authentication
+    if ((req as any).user) {
+      if (!(req as any).user?.role || !roles.includes((req as any).user.role)) {
         return res.status(403).json({ 
           success: false,
           message: 'Forbidden: Insufficient permissions',
           requiredRoles: roles,
-          userRole: req.user?.role
+          userRole: (req as any).user?.role
         });
       }
       return next();

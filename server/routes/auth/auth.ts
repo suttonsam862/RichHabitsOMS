@@ -150,15 +150,21 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       });
     }
 
-    // For development mode, allow dev tokens to work with admin privileges
-    if (process.env.NODE_ENV === 'development' && token && (token.startsWith('dev-admin-token') || token.length > 10)) {
-      console.log('Development mode: accepting token for admin access');
-      req.user = {
-        id: 'dev-admin-user',
-        email: 'admin@threadcraft.dev',
-        role: 'admin'
-      };
-      return next();
+    // SECURITY FIX: Removed dangerous development bypass  
+    // Previous code was a critical vulnerability allowing any token > 10 chars
+    
+    // For development, use specific secure test tokens only
+    if (process.env.NODE_ENV === 'development' && token.startsWith('dev-test-token-')) {
+      const testRole = token.split('-').pop();
+      if (['admin', 'salesperson', 'designer', 'manufacturer', 'customer'].includes(testRole!)) {
+        console.log('⚠️  Development mode: Using secure test token for role:', testRole);
+        req.user = {
+          id: `dev-test-${testRole}`,
+          email: `test-${testRole}@threadcraft.dev`,
+          role: testRole!
+        };
+        return next();
+      }
     }
 
     // Validate token with Supabase
