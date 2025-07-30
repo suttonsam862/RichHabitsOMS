@@ -133,7 +133,10 @@ function UserPermissionsPageContent() {
       });
       if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
-    }
+    },
+    staleTime: 300000, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
+    retry: false
   });
 
   // Fetch role usage statistics
@@ -149,7 +152,10 @@ function UserPermissionsPageContent() {
       });
       if (!response.ok) throw new Error('Failed to fetch role statistics');
       return response.json();
-    }
+    },
+    staleTime: 600000, // Cache for 10 minutes
+    refetchOnWindowFocus: false,
+    retry: false
   });
 
   // Create role mutation with enhanced validation

@@ -7,11 +7,24 @@ const router = express.Router();
 // Get enhanced orders with comprehensive stakeholder data
 router.get('/orders/enhanced', requireAuth, async (req, res) => {
   try {
-    console.log('📋 Fetching enhanced orders with stakeholder data');
+    console.log('📋 Fetching enhanced orders with basic query (preventing image_url error)');
 
+    // Use basic orders table to avoid column reference issues
     const { data: orders, error } = await supabaseAdmin
-      .from('order_management_view')
-      .select('*')
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        customer_id,
+        status,
+        total_amount,
+        created_at,
+        updated_at,
+        priority,
+        notes,
+        logo_url,
+        company_name
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {

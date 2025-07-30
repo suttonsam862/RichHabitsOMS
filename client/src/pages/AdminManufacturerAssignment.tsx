@@ -263,16 +263,22 @@ export default function ManufacturingManagement() {
     fetchAllData();
   }, []);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchAllData(true);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Disabled aggressive auto-refresh to prevent fetch spam
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     fetchAllData(true);
+  //   }, 30000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
-  // Comprehensive data fetching function
+  // Comprehensive data fetching function with spam prevention
   const fetchAllData = async (isRefresh = false) => {
+    // Prevent rapid successive calls
+    if (loading || refreshing) {
+      console.log('Fetch already in progress, skipping...');
+      return;
+    }
+
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -287,45 +293,58 @@ export default function ManufacturingManagement() {
         return;
       }
 
-      // Fetch all required data in parallel
-      const [
-        ordersResponse,
-        manufacturersResponse,
-        productionTasksResponse,
-        designTasksResponse,
-        messagesResponse
-      ] = await Promise.all([
-        fetch('/api/orders?include_relations=true', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
+      // Fetch all required data in parallel with error handling
+      const requests = [
+        { url: '/api/orders?include_relations=true', setter: setOrders, name: 'orders' },
+        { url: '/api/users/manufacturers', setter: setManufacturers, name: 'manufacturers' },
+        { url: '/api/production-tasks', setter: setProductionTasks, name: 'production tasks' },
+        { url: '/api/design-tasks', setter: setDesignTasks, name: 'design tasks' },
+        { url: '/api/messages', setter: setMessages, name: 'messages' }
+      ];
+
+      const results = await Promise.allSettled(
+        requests.map(req => 
+          fetch(req.url, {
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        )
+      );
+
+      // Process results individually to prevent one failure from breaking everything
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        const req = requests[i];
+        
+        try {
+          if (result.status === 'fulfilled' && result.value.ok) {
+            const data = await result.value.json();
+            const dataArray = Array.isArray(data.data) ? data.data : [];
+            
+            if (req.name === 'orders') {
+              // Enhance orders with priority calculation and additional data
+              const enhancedOrders = dataArray.map((order: any) => ({
+                ...order,
+                priority: calculateOrderPriority(order),
+                dueDate: calculateDueDate(order),
+              }));
+              req.setter(enhancedOrders);
+            } else {
+              req.setter(dataArray);
+            }
+            
+            console.log(`${req.name} loaded:`, dataArray.length);
+          } else {
+            console.warn(`Failed to fetch ${req.name}:`, result.status === 'fulfilled' ? result.value.status : 'Network error');
+            req.setter([]);
           }
-        }),
-        fetch('/api/users/manufacturers', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        }),
-        fetch('/api/production-tasks', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        }),
-        fetch('/api/design-tasks', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        }),
-        fetch('/api/messages', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        })
-      ]);
+        } catch (error) {
+          console.error(`Error processing ${req.name}:`, error);
+          req.setter([]);
+        }
+      }
 
       // Process orders with enhanced details
       if (ordersResponse.ok) {
@@ -426,8 +445,10 @@ export default function ManufacturingManagement() {
   const { data: manufacturingStats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['/api/manufacturing/stats'],
     queryFn: getQueryFn,
-    refetchInterval: 30000, // Refresh every 30 seconds
-    staleTime: 20000, // Consider data stale after 20 seconds
+    refetchInterval: false, // Disabled automatic polling to prevent spam
+    staleTime: 300000, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
+    retry: false // Don't retry failed requests
   });
 
   // Computed values for dashboard metrics (fallback if API fails)

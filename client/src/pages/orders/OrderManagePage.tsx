@@ -68,7 +68,9 @@ export default function OrderManagePage() {
   // Fetch orders
   const { data: orders = [], isLoading } = useQuery<Order[]>({
     queryKey: ['/api/orders'],
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: false, // Disabled aggressive polling to prevent spam
+    refetchOnWindowFocus: false,
+    staleTime: 300000 // Cache for 5 minutes
   });
 
   // Update order mutation

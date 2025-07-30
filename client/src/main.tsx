@@ -3,6 +3,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
+// Initialize global fetch spam prevention ASAP
+import "./lib/globalFetchInterceptor";
 import App from "./App.tsx";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "./context/AuthContext";

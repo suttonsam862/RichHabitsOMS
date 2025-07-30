@@ -28,6 +28,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { safeFetch, circuitBreaker } from '@/lib/fetchCircuitBreaker';
+import { useSmartFetch } from '@/hooks/useSmartFetch';
 import { 
   Plus, 
   Search, 
@@ -221,83 +223,36 @@ export default function EnhancedOrderManagement() {
   const { user, role } = useAuth();
   const [location, setLocation] = useLocation();
 
-  // Fetch orders with comprehensive data
-  const { data: orders = [], isLoading: ordersLoading, refetch: refetchOrders } = useQuery({
-    queryKey: ['enhanced-orders'],
-    queryFn: async () => {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token missing');
-      }
-
-      const response = await fetch("/api/orders/enhanced", {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Network error' }));
-        throw new Error(errorData.message || `Failed to fetch orders: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data.success ? data.orders : [];
-    },
-    refetchInterval: 30000, // Refresh every 30 seconds (reduced frequency)
-    retry: (failureCount, error: any) => {
-      if (error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false; // Don't retry auth errors
-      }
-      return failureCount < 2;
-    },
-    staleTime: 10000 // Cache for 10 seconds
+  // Fetch orders with comprehensive data using smart fetch
+  const { data: orders = [], isLoading: ordersLoading, refetch: refetchOrders, isBlocked, resetErrors } = useSmartFetch({
+    endpoint: '/api/orders/enhanced',
+    enablePolling: false,
+    maxRetries: 0, // Disable retries completely to prevent spam
+    staleTime: 600000 // Cache for 10 minutes
   });
 
-  // Fetch customers
-  const { data: customers = [], isLoading: customersLoading } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
-      const response = await fetch("/api/customers", {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch customers');
-      const data = await response.json();
-      return data.success ? data.data : [];
-    }
+  // Fetch customers using smart fetch
+  const { data: customers = [], isLoading: customersLoading } = useSmartFetch({
+    endpoint: '/api/customers',
+    enablePolling: false,
+    maxRetries: 0,
+    staleTime: 600000 // Cache for 10 minutes
   });
 
-  // Fetch team members with workload stats
-  const { data: teamMembers = [], isLoading: teamLoading } = useQuery({
-    queryKey: ['team-workload'],
-    queryFn: async () => {
-      const response = await fetch("/api/team/workload", {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch team data');
-      const data = await response.json();
-      return data.success ? data.teamMembers : [];
-    }
+  // Fetch team members with workload stats using smart fetch
+  const { data: teamMembers = [], isLoading: teamLoading } = useSmartFetch({
+    endpoint: '/api/team/workload',
+    enablePolling: false,
+    maxRetries: 0,
+    staleTime: 600000 // Cache for 10 minutes
   });
 
-  // Fetch catalog items
-  const { data: catalogItems = [] } = useQuery({
-    queryKey: ['catalog'],
-    queryFn: async () => {
-      const response = await fetch("/api/catalog", {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch catalog');
-      const data = await response.json();
-      return data.success ? data.data : [];
-    }
+  // Fetch catalog items using smart fetch
+  const { data: catalogItems = [] } = useSmartFetch({
+    endpoint: '/api/catalog',
+    enablePolling: false,
+    maxRetries: 0,
+    staleTime: 600000 // Cache for 10 minutes
   });
 
   // Create order mutation

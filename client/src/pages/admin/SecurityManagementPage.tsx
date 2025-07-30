@@ -156,6 +156,10 @@ export default function SecurityManagementPage() {
       const result = await response.json();
       return result.data;
     },
+    retry: false, // Don't retry failed requests
+    refetchOnWindowFocus: false,
+    staleTime: 600000, // Cache for 10 minutes
+    enabled: false // Disable until endpoint is fixed
   });
 
   // Fetch permission templates
@@ -176,6 +180,10 @@ export default function SecurityManagementPage() {
       const result = await response.json();
       return result.data;
     },
+    retry: false, // Don't retry failed requests  
+    refetchOnWindowFocus: false,
+    staleTime: 600000, // Cache for 10 minutes
+    enabled: false // Disable until endpoint is fixed
   });
 
   // MFA setup mutation

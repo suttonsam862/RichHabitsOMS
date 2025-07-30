@@ -185,12 +185,13 @@ export default function UserManagementPage() {
 
       return response.json();
     },
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 300000, // Cache for 5 minutes
+    refetchOnWindowFocus: false, // Disable refetch on focus
     retry: (failureCount, error: any) => {
       if (error?.message?.includes('401') || error?.message?.includes('403')) {
         return false; // Don't retry auth errors
       }
-      return failureCount < 3;
+      return failureCount < 1; // Reduced retry attempts
     },
   });
 
