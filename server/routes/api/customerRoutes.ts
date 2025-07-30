@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sendEmail, getCustomerInviteEmailTemplate } from '../../email';
 import { requireAuth, requireRole } from '../auth/auth';
 import { customerTransformers } from '../../utils/schemaTransformers';
+import { validateRequiredFields, validateCustomerData } from '../../utils/validation';
 import crypto from 'crypto';
 
 import { v4 as uuidv4 } from 'uuid';

@@ -261,7 +261,7 @@ import userManagementRoutes from './routes/api/userManagementRoutes';
 import securityRoutes from './routes/api/securityRoutes';
 import userRolesRoutes from './routes/api/userRolesRoutes';
 import authRoutes from './routes/api/authRoutes';
-import imageVariantsRoutes from './routes/api/imageVariantsRoutes';
+// import imageVariantsRoutes from './routes/api/imageVariantsRoutes'; // Removed - using Supabase Storage only
 import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
 import messageRoutes from './routes/api/messageRoutes';
 
@@ -386,7 +386,7 @@ import manufacturingRoutes, {
     app.use('/api/organizations', organizationRoutes);
     // app.use('/api/images-unified', unifiedImageRoutes); // Removed - using Supabase Storage only
     app.use('/api/images/access', imageAccessRoutes); // Image access and temporary links
-    app.use('/api', imageVariantsRoutes); // Image variants routes
+    // app.use('/api', imageVariantsRoutes); // Removed - using Supabase Storage only
     app.use('/api', enhancedOrderRoutes); // Enhanced order management routes
     app.use('/api/invitations', invitationRoutes);
     app.use('/api/user-management', userManagementRoutes);
@@ -405,10 +405,7 @@ app.use('/api/users', userManagementRoutes);
     app.patch('/api/manufacturing/manufacturers/:id', updateManufacturer);
     app.get('/api/users/manufacturers', getUserManufacturers);
     
-    // Manufacturer media routes
-    app.post('/api/manufacturing/manufacturers/:id/media', authenticateRequest, uploadMiddleware, uploadManufacturerMedia);
-    app.get('/api/manufacturing/manufacturers/:id/media', authenticateRequest, getManufacturerMedia);
-    app.delete('/api/manufacturing/manufacturers/:id/media/:mediaId', authenticateRequest, deleteManufacturerMedia);
+    // Manufacturer media routes removed - using Supabase Storage only
     app.get('/api/design-tasks', getDesignTasks);
     app.get('/api/production-tasks', getProductionTasks);
     app.get('/api/manufacturing/queue', getManufacturingQueue);

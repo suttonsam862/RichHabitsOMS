@@ -161,7 +161,7 @@ export function fixWebSocketError() {
           reason.message?.includes('[vite] server connection lost') ||
           reason.message?.includes('HMR') ||
           // Only suppress expected auth failures during startup
-          (reason.status === 401 && reason.message?.includes('Not authenticated') && !window.location.pathname.includes('/login'))
+          (reason.status === 401 && reason.message?.includes('Not authenticated') && !window.location.pathname.includes('/login')) ||
           String(reason).trim() === ''
       )) {
         // Suppress these errors completely

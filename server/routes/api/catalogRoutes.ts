@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
 import crypto from 'crypto';
 import { CatalogService } from '../../services/catalogService';
+import { validateRequiredFields, validateCatalogItemData, standardizeApiResponse } from '../../utils/validation';
 
 
 const router = Router();
