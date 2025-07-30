@@ -40,6 +40,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { useDataSync } from '@/hooks/useDataSync';
 import { useGlobalDataSync, CACHE_KEYS, DATA_SYNC_EVENTS } from '@/hooks/useGlobalDataSync';
 import { getQueryFn } from '@/lib/queryClient';
+import { useUndoableDelete } from '@/hooks/useUndoableDelete';
 import AddCustomerForm from "./AddCustomerForm";
 import CustomerOnboardingFlow from "@/components/customer/CustomerOnboardingFlow";
 import OrganizationDetailModal from "@/components/admin/OrganizationDetailModal";
@@ -134,6 +135,42 @@ export default function CustomerListPage() {
   const { syncCustomers } = useDataSync();
   const globalDataSync = useGlobalDataSync();
 
+  // Undoable delete hook for organizations
+  const {
+    softDelete: softDeleteOrganization,
+    isPendingDelete: isOrganizationPendingDelete,
+    isDeleting: isDeletingOrganization,
+    isRestoring: isRestoringOrganization
+  } = useUndoableDelete({
+    entityName: 'organization',
+    deleteEndpoint: '/api/organizations',
+    invalidateQueries: [CACHE_KEYS.customers],
+    onDeleteSuccess: () => {
+      globalDataSync.syncCustomers();
+    },
+    onRestoreSuccess: () => {
+      globalDataSync.syncCustomers();
+    }
+  });
+
+  // Undoable delete hook for individual customers
+  const {
+    softDelete: softDeleteCustomer,
+    isPendingDelete: isCustomerPendingDelete,
+    isDeleting: isDeletingCustomer,
+    isRestoring: isRestoringCustomer
+  } = useUndoableDelete({
+    entityName: 'customer',
+    deleteEndpoint: '/api/customers',
+    invalidateQueries: [CACHE_KEYS.customers],
+    onDeleteSuccess: () => {
+      globalDataSync.syncCustomers();
+    },
+    onRestoreSuccess: () => {
+      globalDataSync.syncCustomers();
+    }
+  });
+
   const handleViewCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     setIsViewCustomerDialogOpen(true);
@@ -187,44 +224,26 @@ export default function CustomerListPage() {
     }
   };
 
-  const handleDeleteOrganization = async (organization: OrganizationCard) => {
-    if (!confirm(`Are you sure you want to permanently delete ${organization.name}? This action cannot be undone and will remove all associated data.`)) {
-      return;
-    }
+  const handleDeleteOrganization = (organization: OrganizationCard) => {
+    // Use soft delete with 5-second undo prompt
+    softDeleteOrganization(
+      organization.id.toString(),
+      organization,
+      organization.name
+    );
+  };
 
-    const confirmDelete = prompt(`To confirm deletion, type "${organization.name}" exactly:`);
-    if (confirmDelete !== organization.name) {
-      toast({
-        title: "Deletion Cancelled",
-        description: "Organization name did not match. Deletion cancelled.",
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/organizations/${organization.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
-        }
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Organization Deleted",
-          description: `${organization.name} has been permanently deleted.`,
-        });
-        await globalDataSync.syncCustomers();
-      } else {
-        throw new Error('Failed to delete organization');
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete organization. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleDeleteCustomer = (customer: Customer) => {
+    // Use soft delete with 5-second undo prompt for individual customers
+    const customerName = customer.firstName && customer.lastName 
+      ? `${customer.firstName} ${customer.lastName}` 
+      : customer.name || customer.email || 'Customer';
+    
+    softDeleteCustomer(
+      customer.id.toString(),
+      customer,
+      customerName
+    );
   };
 
   const handleSendOrganizationEmail = (organization: OrganizationCard) => {
@@ -501,9 +520,10 @@ export default function CustomerListPage() {
                     e.stopPropagation();
                     handleDeleteOrganization(organization);
                   }}
+                  disabled={isDeletingOrganization || isRestoringOrganization}
                 >
                   <Trash2 className="mr-2 h-3 w-3" />
-                  Delete
+                  {isOrganizationPendingDelete(organization.id.toString()) ? 'Deleting...' : 'Delete'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -805,6 +825,49 @@ export default function CustomerListPage() {
                     <p className="text-foreground capitalize">{selectedCustomer.organizationType || "Business"}</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-between pt-4 border-t border-glass-border">
+                <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Navigate to edit customer page
+                      window.location.href = `/customers/edit/${selectedCustomer.id}`;
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Customer
+                  </Button>
+                  {selectedCustomer.email && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        window.location.href = `mailto:${selectedCustomer.email}`;
+                      }}
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Send Email
+                    </Button>
+                  )}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-400 hover:bg-red-500/10 hover:text-red-300 border-red-400/30 hover:border-red-400"
+                  onClick={() => {
+                    setIsViewCustomerDialogOpen(false);
+                    handleDeleteCustomer(selectedCustomer);
+                  }}
+                  disabled={isDeletingCustomer || isRestoringCustomer || isCustomerPendingDelete(selectedCustomer.id.toString())}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {isCustomerPendingDelete(selectedCustomer.id.toString()) ? 'Deleting...' : 'Delete Customer'}
+                </Button>
               </div>
             </div>
           )}

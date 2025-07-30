@@ -159,6 +159,22 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **User Experience**: Provides users with clear visibility into when records were last modified for better context and confidence
 - **Production Ready**: Complete timestamp display system across all edit interfaces for improved record tracking
 
+### 5-Second Undo Prompt System for Soft Delete Operations (July 30, 2025)
+- **Status**: 100% Complete - Comprehensive undoable delete system implemented with 5-second undo prompts
+- **useUndoableDelete Hook**: Created centralized hook for managing soft deletes with automatic undo functionality and timeout management
+- **Toast Notification System**: Shows initial deletion notification followed by undo prompt toast with action button
+- **CustomerListPage Integration**: Implemented soft delete for both organizations and individual customers with role-specific access control
+- **Customer Detail Actions**: Added edit, email, and delete buttons to customer detail dialog with undoable delete functionality
+- **Automatic Restoration**: Failed deletions automatically restore items with proper database synchronization and cache invalidation
+- **Pending Delete Tracking**: Visual feedback shows "Deleting..." state while items are pending permanent deletion
+- **Global Data Sync**: Integrates with existing data synchronization system to maintain consistent UI state across components
+- **Production Ready**: Complete soft delete system prevents accidental data loss with user-friendly undo mechanism
+- **Configurable Timeouts**: Default 5-second undo window with customizable timeout periods for different entity types
+- **Entity Support**: Supports organizations, customers, and extensible to other entity types with proper endpoint configuration
+- **State Management**: Tracks pending deletes, provides deletion/restoration status, and maintains reference to original data for restoration
+- **Error Handling**: Comprehensive error handling for both deletion and restoration operations with user-friendly feedback
+- **Performance Optimized**: Efficient state tracking with automatic cleanup and minimal re-renders during deletion workflows
+
 ### Enhanced UI Loading States with Comprehensive Skeleton Components (July 30, 2025)
 - **Status**: 100% Complete - Professional skeleton loading states implemented across admin edit pages
 - **CustomerEditPage.tsx**: Added comprehensive skeleton showing profile photo section, personal information form fields, contact details, and address information
