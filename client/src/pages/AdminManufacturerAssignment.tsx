@@ -421,7 +421,15 @@ export default function ManufacturingManagement() {
     return dueDate.toISOString();
   };
 
-  // Computed values for dashboard metrics
+  // Manufacturing statistics query using React Query
+  const { data: manufacturingStats, isLoading: statsLoading, error: statsError } = useQuery({
+    queryKey: ['/api/manufacturing/stats'],
+    queryFn: getQueryFn,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 20000, // Consider data stale after 20 seconds
+  });
+
+  // Computed values for dashboard metrics (fallback if API fails)
   const metrics = useMemo(() => {
     const totalOrders = orders.length;
     const ordersInProduction = orders.filter(o => o.status === 'in_production').length;
@@ -815,7 +823,7 @@ export default function ManufacturingManagement() {
           </div>
         </div>
 
-        {/* Dashboard Metrics */}
+        {/* Dashboard Metrics - Real Database Statistics */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -823,7 +831,13 @@ export default function ManufacturingManagement() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.totalOrders}</div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  manufacturingStats?.data?.totalOrders || metrics.totalOrders
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Active in system
               </p>
@@ -836,7 +850,13 @@ export default function ManufacturingManagement() {
               <Factory className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{metrics.ordersInProduction}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  manufacturingStats?.data?.productionOrders || metrics.ordersInProduction
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Currently manufacturing
               </p>
@@ -849,7 +869,13 @@ export default function ManufacturingManagement() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{metrics.pendingAssignment}</div>
+              <div className="text-2xl font-bold text-orange-600">
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  manufacturingStats?.data?.pendingAssignment || metrics.pendingAssignment
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Awaiting manufacturer
               </p>
@@ -862,7 +888,13 @@ export default function ManufacturingManagement() {
               <XCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{metrics.overdueOrders}</div>
+              <div className="text-2xl font-bold text-red-600">
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  manufacturingStats?.data?.overdueOrders || metrics.overdueOrders
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Past due date
               </p>
@@ -875,7 +907,13 @@ export default function ManufacturingManagement() {
               <Timer className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics.avgCompletionTime}d</div>
+              <div className="text-2xl font-bold">
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  `${manufacturingStats?.data?.avgCompletionTime || metrics.avgCompletionTime}d`
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Days average
               </p>
@@ -884,13 +922,19 @@ export default function ManufacturingManagement() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Utilization</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Active Manufacturers</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{Math.round(metrics.manufacturerUtilization)}%</div>
+              <div className="text-2xl font-bold text-green-600">
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  manufacturingStats?.data?.activeManufacturers || manufacturers.length
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Manufacturer capacity
+                Available for work
               </p>
             </CardContent>
           </Card>

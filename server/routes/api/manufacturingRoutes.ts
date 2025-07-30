@@ -8,6 +8,115 @@ import { requireAuth, requireRole } from '../auth/auth.js';
 const router = Router();
 
 /**
+ * GET /api/manufacturing/stats - Get manufacturing dashboard statistics
+ */
+export async function getManufacturingStats(req: Request, res: Response) {
+  try {
+    console.log('📊 Fetching manufacturing dashboard statistics...');
+    
+    // Get total orders count
+    const { count: totalOrders } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true });
+
+    // Get orders by status
+    const { data: ordersByStatus } = await supabase
+      .from('orders')
+      .select('status')
+      .not('status', 'is', null);
+
+    // Get production orders (ready for manufacturing)
+    const { count: productionOrders } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['design_approved', 'in_production']);
+
+    // Get orders pending assignment
+    const { count: pendingAssignment } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'design_approved')
+      .is('manufacturerId', null);
+
+    // Get completed orders
+    const { count: completedOrders } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'completed');
+
+    // Get overdue orders (orders past due date)
+    const today = new Date().toISOString().split('T')[0];
+    const { count: overdueOrders } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .lt('dueDate', today)
+      .not('status', 'eq', 'completed');
+
+    // Get active manufacturers count
+    const { count: activeManufacturers } = await supabase
+      .from('user_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'manufacturer')
+      .eq('status', 'active');
+
+    // Get average completion time (for completed orders in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const { data: recentCompletedOrders } = await supabase
+      .from('orders')
+      .select('created_at, updated_at')
+      .eq('status', 'completed')
+      .gte('updated_at', thirtyDaysAgo.toISOString());
+
+    let avgCompletionTime = 0;
+    if (recentCompletedOrders && recentCompletedOrders.length > 0) {
+      const totalTime = recentCompletedOrders.reduce((sum, order: any) => {
+        const start = new Date(order.created_at as string);
+        const end = new Date(order.updated_at as string);
+        return sum + (end.getTime() - start.getTime());
+      }, 0);
+      avgCompletionTime = Math.round(totalTime / recentCompletedOrders.length / (1000 * 60 * 60 * 24)); // days
+    }
+
+    // Calculate status distribution
+    const statusCounts: Record<string, number> = {};
+    if (ordersByStatus) {
+      ordersByStatus.forEach((order: any) => {
+        const status = order.status as string;
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+    }
+
+    const stats = {
+      totalOrders: totalOrders || 0,
+      productionOrders: productionOrders || 0,
+      pendingAssignment: pendingAssignment || 0,
+      completedOrders: completedOrders || 0,
+      overdueOrders: overdueOrders || 0,
+      activeManufacturers: activeManufacturers || 0,
+      avgCompletionTime: avgCompletionTime || 0,
+      statusDistribution: statusCounts,
+      lastUpdated: new Date().toISOString()
+    };
+
+    console.log('📊 Manufacturing stats calculated:', stats);
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error: any) {
+    console.error('❌ Manufacturing stats fetch failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch manufacturing statistics',
+      error: error.message
+    });
+  }
+}
+
+/**
  * GET /api/design-tasks - List design tasks
  */
 export async function getDesignTasks(req: Request, res: Response) {
@@ -327,6 +436,9 @@ export async function createProductionTask(req: Request, res: Response) {
 
 // Apply authentication middleware
 router.use(requireAuth);
+
+// Manufacturing statistics route (no role restriction for dashboard)
+router.get('/manufacturing/stats', getManufacturingStats);
 
 // Design task routes
 router.get('/design-tasks', getDesignTasks);
