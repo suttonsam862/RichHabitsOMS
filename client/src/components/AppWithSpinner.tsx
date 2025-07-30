@@ -1,0 +1,493 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useMutationTracker } from "../context/MutationContext";
+import { GlobalSpinner } from "./ui/global-spinner";
+import { AppLayout } from "./layout/AppLayout";
+import { RequireAuth } from "./auth/RequireAuth";
+import { MainDashboardRouter } from "./auth/MainDashboardRouter";
+import { NavigationManager } from "./navigation/NavigationManager";
+import { FeatureErrorBoundary } from "./error/FeatureErrorBoundary";
+
+// Dashboard components
+import AdminDashboard from "../pages/dashboard/AdminDashboard";
+import SalespersonDashboard from "../pages/dashboard/SalespersonDashboard";
+import DesignerDashboard from "../pages/dashboard/DesignerDashboard";
+import ManufacturerDashboard from "../pages/dashboard/ManufacturerDashboard";
+import CustomerDashboard from "../pages/dashboard/CustomerDashboard";
+
+// Customer pages
+import CustomerOrdersPage from "../pages/customer/OrdersPage";
+import CustomerMessagesPage from "../pages/customer/MessagesPage";
+
+// Other pages
+import { NotFound } from "../pages/not-found";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
+import SetupPassword from "../pages/SetupPassword";
+import Orders from "../pages/Orders";
+import OrderDetail from "../pages/OrderDetail";
+import OrderEditor from "../pages/OrderEditor";
+import OrderEditPage from "../pages/OrderEditPage";
+import OrderCreatePage from "../pages/orders/OrderCreatePage";
+import OrderManagePage from "../pages/orders/OrderManagePage";
+import EnhancedOrderManagement from "../pages/orders/EnhancedOrderManagement";
+import EnhancedOrderManagementWithCards from "../pages/orders/EnhancedOrderManagementWithCards";
+import OrdersHub from "../pages/OrdersHub";
+import DesignTasks from "../pages/DesignTasks";
+import Messages from "../pages/Messages";
+import Production from "../pages/Production";
+import Payments from "../pages/Payments";
+import PaymentSuccess from "../pages/PaymentSuccess";
+import PaymentCancel from "../pages/PaymentCancel";
+import AdminManufacturerAssignment from "../pages/AdminManufacturerAssignment";
+
+// CustomerList is already imported via CustomerListPage
+import CustomerListPage from "../pages/admin/CustomerListPage";
+import CustomerDetailsPage from "../pages/admin/CustomerDetailsPage";
+import CustomerEditPage from "../pages/admin/CustomerEditPage";
+import SettingsPage from '../pages/admin/SettingsPage';
+import UserPermissionsPage from '../pages/admin/UserPermissionsPage';
+import CustomPermissionsBuilder from '../pages/admin/CustomPermissionsBuilder';
+import UserManagementPage from '../pages/admin/UserManagementPage';
+import SecurityManagementPage from '../pages/admin/SecurityManagementPage';
+import CatalogPage from '../pages/admin/CatalogPage';
+import CatalogItemEditPage from '../pages/admin/CatalogItemEditPage';
+import ManufacturerEditPage from '../pages/admin/ManufacturerEditPage';
+import AnalyticsPage from "../pages/admin/AnalyticsPage";
+import ProductionTimelinePage from "../pages/ProductionTimelinePage";
+import LegalManagementPage from "../pages/admin/LegalManagementPage";
+import CustomerInvitesPage from "../pages/admin/CustomerInvitesPage";
+import NewOrderInquiriesPage from "../pages/admin/NewOrderInquiriesPage";
+import SalesManagementPage from "../pages/admin/SalesManagementPage";
+import ProductLibrary from "../pages/ProductLibrary";
+
+export function AppWithSpinner() {
+  const { isAnyMutationPending } = useMutationTracker();
+
+  return (
+    <>
+      <Router>
+        <NavigationManager />
+        <Routes>
+          {/* Redirect from root to login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/setup-password" element={<SetupPassword />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-cancel" element={<PaymentCancel />} />
+
+          {/* Main dashboard route that redirects to role-specific dashboard */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
+                <MainDashboardRouter />
+              </RequireAuth>
+            } 
+          />
+
+          {/* Protected routes with layout */}
+          <Route element={<AppLayout />}>
+            {/* Admin routes */}
+            <Route 
+              path="/dashboard/admin" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <FeatureErrorBoundary featureName="Admin Dashboard">
+                    <AdminDashboard />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            {/* Salesperson routes */}
+            <Route 
+              path="/dashboard/salesperson" 
+              element={
+                <RequireAuth allowedRoles={['salesperson']}>
+                  <SalespersonDashboard />
+                </RequireAuth>
+              } 
+            />
+
+            {/* Designer routes */}
+            <Route 
+              path="/dashboard/designer" 
+              element={
+                <RequireAuth allowedRoles={['designer']}>
+                  <DesignerDashboard />
+                </RequireAuth>
+              } 
+            />
+
+            {/* Manufacturer routes */}
+            <Route 
+              path="/dashboard/manufacturer" 
+              element={
+                <RequireAuth allowedRoles={['manufacturer']}>
+                  <ManufacturerDashboard />
+                </RequireAuth>
+              } 
+            />
+
+            {/* Customer routes */}
+            <Route 
+              path="/dashboard/customer" 
+              element={
+                <RequireAuth allowedRoles={['customer']}>
+                  <CustomerDashboard />
+                </RequireAuth>
+              } 
+            />
+
+            {/* Catalog Manager route */}
+             <Route 
+              path="/dashboard/catalog_manager" 
+              element={
+                <RequireAuth allowedRoles={['catalog_manager']}>
+                 <Navigate to="/admin/catalog" replace />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/customer/orders" 
+              element={
+                <RequireAuth allowedRoles={['customer']}>
+                  <CustomerOrdersPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/customer/messages" 
+              element={
+                <RequireAuth allowedRoles={['customer']}>
+                  <CustomerMessagesPage />
+                </RequireAuth>
+              } 
+            />
+
+            {/* Shared routes with role-based access */}
+            <Route 
+              path="/orders" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
+                  <OrdersHub />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/orders/create" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                  <FeatureErrorBoundary featureName="Order Creation">
+                    <OrderCreatePage />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/orders/enhanced" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                  <FeatureErrorBoundary featureName="Enhanced Order Management">
+                    <EnhancedOrderManagement />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/orders/enhanced-cards" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                  <FeatureErrorBoundary featureName="Enhanced Order Management with Cards">
+                    <EnhancedOrderManagementWithCards />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/orders/:id" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
+                  <OrderDetail />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/orders/edit/:id" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                  <FeatureErrorBoundary featureName="Order Editing">
+                    <OrderEditPage />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/orders/timeline/:orderId" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer']}>
+                  <FeatureErrorBoundary featureName="Production Timeline">
+                    <ProductionTimelinePage />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/orders/editor/:id" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                  <OrderEditor />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/messages" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer', 'customer']}>
+                  <Messages />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/design-tasks" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'designer']}>
+                  <FeatureErrorBoundary featureName="Design Tasks">
+                    <DesignTasks />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/production" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'manufacturer']}>
+                  <FeatureErrorBoundary featureName="Production Management">
+                    <Production />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/payments" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson', 'customer']}>
+                  <Payments />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/product-library" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                  <ProductLibrary />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/manufacturer-assignment" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <FeatureErrorBoundary featureName="Manufacturer Assignment">
+                    <AdminManufacturerAssignment />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin-manufacturer-assignment" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <AdminManufacturerAssignment />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/catalog" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'catalog_manager']}>
+                  <FeatureErrorBoundary featureName="Catalog Management">
+                    <CatalogPage />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/catalog/:itemId/edit" 
+              element={
+                <RequireAuth allowedRoles={['admin', 'catalog_manager']}>
+                  <FeatureErrorBoundary featureName="Catalog Item Edit">
+                    <CatalogItemEditPage />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/customers" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <FeatureErrorBoundary featureName="Customer Management">
+                    <CustomerListPage />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/customers/:customerId" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <CustomerDetailsPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/customers/:customerId/edit" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <CustomerEditPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/manufacturers/:id/edit" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <FeatureErrorBoundary featureName="Manufacturer Edit">
+                    <ManufacturerEditPage />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/settings" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <SettingsPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/user-permissions" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <UserPermissionsPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/custom-permissions" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <CustomPermissionsBuilder />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/user-management" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <FeatureErrorBoundary featureName="User Management">
+                    <UserManagementPage />
+                  </FeatureErrorBoundary>
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/security" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <SecurityManagementPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/analytics" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <AnalyticsPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/legal" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <LegalManagementPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/customer-invites" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <CustomerInvitesPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/new-order-inquiries" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <NewOrderInquiriesPage />
+                </RequireAuth>
+              } 
+            />
+
+            <Route 
+              path="/admin/sales-management" 
+              element={
+                <RequireAuth allowedRoles={['admin']}>
+                  <SalesManagementPage />
+                </RequireAuth>
+              } 
+            />
+
+            {/* 404 catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </Router>
+      
+      {/* Global spinner overlay */}
+      <GlobalSpinner 
+        show={isAnyMutationPending} 
+        message="Processing your request..."
+      />
+    </>
+  );
+}
