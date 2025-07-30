@@ -245,6 +245,7 @@ export class CatalogService {
       console.log(`🔧 Updating catalog item ${id} with processed data...`);
       
       const processedData = CatalogItemProcessor.processItemData(itemData);
+      processedData.updated_at = new Date().toISOString();
 
       const { data: updatedItem, error } = await supabase
         .from('catalog_items')

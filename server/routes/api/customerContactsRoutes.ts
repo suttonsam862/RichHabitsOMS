@@ -65,7 +65,10 @@ async function createCustomerContact(req: Request, res: Response) {
     if (contactData.isPrimary) {
       await supabaseAdmin
         .from('customer_contacts')
-        .update({ is_primary: false })
+        .update({ 
+          is_primary: false,
+          updated_at: new Date().toISOString()
+        })
         .eq('customer_id', contactData.customerId)
         .eq('is_primary', true);
     }
@@ -135,7 +138,10 @@ async function updateCustomerContact(req: Request, res: Response) {
       if (existingContact) {
         await supabaseAdmin
           .from('customer_contacts')
-          .update({ is_primary: false })
+          .update({ 
+            is_primary: false,
+            updated_at: new Date().toISOString()
+          })
           .eq('customer_id', existingContact.customer_id)
           .eq('is_primary', true)
           .neq('id', id);

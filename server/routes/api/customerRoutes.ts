@@ -183,7 +183,10 @@ export async function verifyInvitation(req: Request, res: Response) {
       // Mark as expired
       await supabaseAdmin
         .from('user_invitations')
-        .update({ status: 'expired' })
+        .update({ 
+          status: 'expired',
+          updated_at: new Date().toISOString()
+        })
         .eq('invitation_token', token);
 
       return res.status(400).json({
@@ -564,6 +567,9 @@ async function updateCustomer(req: Request, res: Response) {
       name: `${existingCustomer.first_name} ${existingCustomer.last_name}`
     });
 
+    // Add updated timestamp
+    updateData.updated_at = new Date().toISOString();
+
     // Update customer in database
     console.log(`🔄 [${requestTimestamp}] Executing Supabase update query...`);
     const { data: updatedProfile, error: profileError } = await supabaseAdmin
@@ -726,7 +732,10 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
     console.log('🔄 Attempting to update customer record with profile_image_url...');
     const { error: updateError } = await supabaseAdmin
       .from('customers')
-      .update({ profile_image_url: photoUrl })
+      .update({ 
+        profile_image_url: photoUrl,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', id);
 
     if (updateError) {
