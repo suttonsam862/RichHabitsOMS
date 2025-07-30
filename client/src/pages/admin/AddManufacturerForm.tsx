@@ -27,7 +27,8 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     address: '',
@@ -35,6 +36,7 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
     state: '',
     zip: '',
     country: '',
+    company: '',
     specialties: '',
     capacity: ''
   });
@@ -68,8 +70,12 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     
-    if (!formData.name.trim()) {
-      errors.name = 'Manufacturer name is required';
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required';
+    }
+    
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required';
     }
     
     if (!formData.email.trim()) {
@@ -165,7 +171,8 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
 
   const resetForm = () => {
     setFormData({
-      name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       phone: '',
       address: '',
@@ -173,6 +180,7 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
       state: '',
       zip: '',
       country: '',
+      company: '',
       specialties: '',
       capacity: ''
     });
@@ -200,19 +208,51 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
               </div>
             )}
             
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  placeholder="John"
+                  required
+                  className={formErrors.firstName ? 'border-destructive' : ''}
+                />
+                {formErrors.firstName && (
+                  <p className="text-sm text-destructive">{formErrors.firstName}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  placeholder="Smith"
+                  required
+                  className={formErrors.lastName ? 'border-destructive' : ''}
+                />
+                {formErrors.lastName && (
+                  <p className="text-sm text-destructive">{formErrors.lastName}</p>
+                )}
+              </div>
+            </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="name">Manufacturer Name *</Label>
+              <Label htmlFor="company">Company Name</Label>
               <Input
-                id="name"
-                name="name"
-                value={formData.name}
+                id="company"
+                name="company"
+                value={formData.company}
                 onChange={handleInputChange}
                 placeholder="ABC Manufacturing Co."
-                required
-                className={formErrors.name ? 'border-destructive' : ''}
+                className={formErrors.company ? 'border-destructive' : ''}
               />
-              {formErrors.name && (
-                <p className="text-sm text-destructive">{formErrors.name}</p>
+              {formErrors.company && (
+                <p className="text-sm text-destructive">{formErrors.company}</p>
               )}
             </div>
             
