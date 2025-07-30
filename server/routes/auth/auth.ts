@@ -167,8 +167,29 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       }
     }
 
-    // Validate token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // Validate token with Supabase with better error handling
+    let user, error;
+    try {
+      const result = await supabase.auth.getUser(token);
+      user = result.data?.user;
+      error = result.error;
+    } catch (parseError: any) {
+      console.log('JWT parsing error:', parseError.message);
+      // Handle malformed JWT tokens gracefully
+      if (parseError.message?.includes('malformed') || parseError.message?.includes('invalid number of segments')) {
+        console.log('Malformed JWT token detected, clearing session');
+        if (req.session) {
+          req.session.destroy((err) => {
+            if (err) console.error('Session destroy error:', err);
+          });
+        }
+        return res.status(401).json({
+          success: false,
+          message: 'Malformed authentication token'
+        });
+      }
+      throw parseError; // Re-throw other errors
+    }
 
     if (error || !user) {
       console.log('Token validation failed:', error?.message);

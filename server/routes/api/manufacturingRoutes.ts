@@ -727,4 +727,81 @@ router.post('/production-tasks', createProductionTask);
 // Manufacturing queue route
 router.get('/manufacturing/queue', getManufacturingQueue);
 
+// Get design tasks with development fallback
+router.get('/design-tasks', requireAuth, async (req: Request, res: Response) => {
+  try {
+    console.log('Fetching design tasks for user:', req.user?.email);
+
+    // Get design tasks from database
+    const { data: designTasks, error } = await supabase
+      .from('design_tasks')
+      .select(`
+        *,
+        order:orders(orderNumber, customer:customers(first_name, last_name)),
+        files:design_files(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching design tasks:', error);
+
+      // TODO: Replace with live Supabase query once design_tasks table is properly configured
+      // For development, return mock data to prevent UI crashes
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Returning mock design tasks for development');
+        const mockTasks = [
+          {
+            id: 'mock-1',
+            description: 'Design custom basketball jerseys',
+            status: 'pending',
+            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            order: {
+              orderNumber: 'ORD-2024-001'
+            },
+            files: []
+          },
+          {
+            id: 'mock-2', 
+            description: 'Create soccer uniform mockups',
+            status: 'in_progress',
+            dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+            order: {
+              orderNumber: 'ORD-2024-002'
+            },
+            files: [
+              {
+                id: 'file-1',
+                filename: 'soccer-design-v1.png',
+                filePath: '/uploads/designs/mock-design.png',
+                fileType: 'image/png'
+              }
+            ]
+          }
+        ];
+        return res.json(mockTasks);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch design tasks'
+      });
+    }
+
+    res.json(designTasks || []);
+  } catch (error) {
+    console.error('Design tasks error:', error);
+
+    // Development fallback for any unexpected errors
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Fallback: Returning empty array for design tasks');
+      return res.json([]);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 export default router;

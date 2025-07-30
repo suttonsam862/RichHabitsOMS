@@ -6,6 +6,13 @@
 
 async function testCustomerUpdate() {
   const baseUrl = 'http://localhost:5000';
+  const devToken = 'dev-test-token-admin';
+  
+  // Helper function to create request headers
+  const getHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${devToken}`
+  });
   
   try {
     console.log('🧪 Testing Customer Update Endpoints');
@@ -28,10 +35,7 @@ async function testCustomerUpdate() {
     console.log('\n2. Testing invalid customer ID format...');
     const invalidIdResponse = await fetch(`${baseUrl}/api/customers/invalid-id`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token-with-sufficient-length'
-      },
+      headers: getHeaders(),
       body: JSON.stringify({
         firstName: 'Test',
         lastName: 'Update'
@@ -52,10 +56,7 @@ async function testCustomerUpdate() {
     console.log('\n3. Testing non-existent customer ID...');
     const notFoundResponse = await fetch(`${baseUrl}/api/customers/00000000-0000-0000-0000-000000000000`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token-with-sufficient-length'
-      },
+      headers: getHeaders(),
       body: JSON.stringify({
         firstName: 'Test',
         lastName: 'Update'
@@ -83,10 +84,7 @@ async function testCustomerUpdate() {
     
     const patchResponse = await fetch(`${baseUrl}/api/customers/${testCustomer.id}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token-with-sufficient-length'
-      },
+      headers: getHeaders(),
       body: JSON.stringify(updateData)
     });
     
@@ -119,10 +117,7 @@ async function testCustomerUpdate() {
     
     const putResponse = await fetch(`${baseUrl}/api/customers/${testCustomer.id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token-with-sufficient-length'
-      },
+      headers: getHeaders(),
       body: JSON.stringify(putData)
     });
     
@@ -146,10 +141,7 @@ async function testCustomerUpdate() {
     
     const mappingResponse = await fetch(`${baseUrl}/api/customers/${testCustomer.id}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-admin-token-with-sufficient-length'
-      },
+      headers: getHeaders(),
       body: JSON.stringify(fieldMappingData)
     });
     

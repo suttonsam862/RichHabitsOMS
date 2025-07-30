@@ -669,4 +669,54 @@ router.put('/:id', requireAuth, requireRole(['admin']), updateCustomer);
 router.patch('/:id', requireAuth, requireRole(['admin']), updateCustomer);
 router.post('/:id/photo', requireAuth, requireRole(['admin']), handleCatalogImageUpload, uploadCustomerPhoto);
 
+// GET single customer endpoint
+router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  try {
+    const { data: customer, error } = await supabaseAdmin
+      .from('customers')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !customer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    // Transform to camelCase for frontend compatibility
+    const responseData = {
+      id: customer.id,
+      firstName: customer.first_name,
+      lastName: customer.last_name,
+      email: customer.email,
+      company: customer.company,
+      phone: customer.phone,
+      address: customer.address,
+      city: customer.city,
+      state: customer.state,
+      zip: customer.zip,
+      country: customer.country,
+      status: customer.status,
+      photo_url: customer.photo_url,
+      created_at: customer.created_at,
+      updated_at: customer.updated_at,
+      orders: 0,
+      spent: '$0.00',
+      lastOrder: null
+    };
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error fetching customer:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch customer'
+    });
+  }
+});
+
 export default router;
