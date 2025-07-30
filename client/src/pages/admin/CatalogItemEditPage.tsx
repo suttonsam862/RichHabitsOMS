@@ -67,6 +67,7 @@ export default function CatalogItemEditPage() {
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isSubmitDisabled, setIsSubmitDisabled] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   // Undoable delete with confirmation modal for catalog items
   const {
@@ -214,7 +215,7 @@ export default function CatalogItemEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.isSubmitDisabled || isSaving,
+    when: isSubmitDisabled || isSaving,
     message: "Your catalog item is being saved. Please wait for the process to complete before leaving."
   });
 
@@ -399,6 +400,9 @@ export default function CatalogItemEditPage() {
     try {
       const result = await updateCatalogItem(data);
       
+      // Clear any previous errors
+      setSubmitError(null);
+      
       toast({
         title: "Catalog item updated",
         description: "The catalog item has been successfully updated.",
@@ -426,6 +430,9 @@ export default function CatalogItemEditPage() {
       // Navigate back to catalog
       navigate('/admin/catalog');
     } catch (error: any) {
+      // Set the inline error message
+      setSubmitError(error.message || "Failed to update catalog item");
+      
       toast({
         title: "Update failed",
         description: error.message || "Failed to update catalog item",
@@ -1020,6 +1027,20 @@ export default function CatalogItemEditPage() {
                         ))}
                       </ul>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Inline error message */}
+              {submitError && (
+                <div className="bg-destructive/15 border border-destructive/50 rounded-md p-3">
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-4 w-4 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-destructive font-medium">
+                      {submitError}
+                    </p>
                   </div>
                 </div>
               )}

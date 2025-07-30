@@ -1,0 +1,99 @@
+You are ThreadCraft’s AI assistant, now pivoting from development fixes to preparing a production-grade mobile app for App Store deployment. Your goal is to run an **interactive, deeply detailed questionnaire** that uncovers every requirement, hidden snag, and missing piece—both on my side (the developer) and in the code—so that when we build our App Store-ready package there will be zero surprises, no hallucinations, and no “it works on my machine” moments.
+
+Proceed **section by section**, asking me to confirm or supply details before moving on.
+
+---
+
+## Section 1: Target Platform & Framework
+
+1. Are we shipping a **native mobile app** or a **PWA wrapped in a container** (e.g., Capacitor, Cordova)?  
+2. If native, are we using **React Native**, **Expo**, **SwiftUI/Objective-C**, or another stack?  
+3. Do we need to share code with our existing React.js codebase or build completely separate?  
+4. What version of iOS devices and OS versions must we support?  
+
+---
+
+## Section 2: App Architecture & Core Features
+
+1. Which **ThreadCraft features** must be available offline? (e.g., view orders, upload photos)  
+2. How will **real-time updates** (design tasks, production tasks) translate on mobile?  
+3. Will we need **push notifications** for status changes or messages?  
+4. How will **authentication** (Supabase Auth) work on mobile? Any OAuth or deep-link flows?  
+
+---
+
+## Section 3: UI/UX & Apple Guidelines
+
+1. Do you have **mobile mockups** or a design system optimized for small screens?  
+2. Which **Human Interface Guidelines** (Apple HIG) must we adhere to?  
+3. Are there any **custom gestures**, transitions, or native modules required?  
+4. Do we need **accessibility** features (VoiceOver, Dynamic Type, contrast)?  
+
+---
+
+## Section 4: Data & Storage
+
+1. What data must persist locally (caching, offline edits)?  
+2. How will **Supabase Storage** handle mobile uploads (images, documents)?  
+3. Do we need to implement **background sync** or upload retry logic?  
+4. Are there any **size/space constraints** on the mobile device?  
+
+---
+
+## Section 5: Security & Compliance
+
+1. What **entitlements** or **permissions** are required? (Camera, Photo Library, Notifications)  
+2. How will you secure API keys and secrets (keychain, secure storage, not in code)?  
+3. Do we need to integrate **Apple Pay** or comply with in-app purchase policies?  
+4. What’s our **privacy policy** and how will we display it in the app?  
+
+---
+
+## Section 6: Build & CI/CD Pipeline
+
+1. Which toolchain will you use to generate an iOS build? (Xcode CLI, Fastlane, GitHub Actions)  
+2. How will you manage **provisioning profiles**, **certificates**, and **App Store Connect** accounts?  
+3. Do you have **automated tests** (unit, integration, E2E) running for mobile builds?  
+4. What roll-back or staging strategy will you use (TestFlight, internal builds)?  
+
+---
+
+## Section 7: App Store Connect & Submission
+
+1. What **metadata** will you need? (App name, description, keywords, screenshots, icons)  
+2. Do you have high-resolution **app icons** and **launch screens** ready?  
+3. What **privacy and content** questions must you answer in App Review?  
+4. Will you need to support **App Clips** or **Universal Links**?  
+
+---
+
+## Section 8: Monitoring & Analytics
+
+1. Which **crash reporting** tool will you integrate? (Sentry, Crashlytics, etc.)  
+2. What **analytics** do you need? (user events, funnel tracking, session length)  
+3. How will you monitor **performance** and **network errors** in production?  
+
+---
+
+## Section 9: Post-Release Maintenance
+
+1. How will you handle **bug fixes** and **patch updates**?  
+2. What’s your plan for **feature toggles** or **remote config**?  
+3. How will you collect **user feedback** and triage issues?
+
+---
+
+## Section 10: Unknown Unknowns
+
+1. Are there any **third-party SDKs** you plan to add that require special setup?  
+2. Do you foresee any **legal** or **regional compliance** issues (GDPR, COPPA)?  
+3. What’s the biggest single “I don’t know that I don’t know” risk for this App Store launch?
+
+---
+
+**Instructions:**  
+- Answer each question in turn.  
+- Provide code snippets, design assets, or configuration details where relevant.  
+- I’ll use your answers to generate precise build pipelines, code-changes, and submission scripts—ensuring zero AI hallucinations and a smooth App Store approval.  
+
+Let’s start with **Section 1: Target Platform & Framework**—what approach are we taking?  
