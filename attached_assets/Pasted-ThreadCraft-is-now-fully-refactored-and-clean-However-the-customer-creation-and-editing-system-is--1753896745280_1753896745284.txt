@@ -1,0 +1,50 @@
+ThreadCraft is now fully refactored and clean. However, the customer creation and editing system is still unreliable — sometimes failing silently, sometimes failing completely.
+
+Please now conduct a **full diagnostic sweep** of the customer system and identify **every error or inconsistency** that prevents adding or editing a customer successfully.
+
+You must walk through the entire flow:
+
+---
+
+1. ✅ Customer Creation (AddCustomerForm.tsx)
+- Is the form submitting a POST request?
+- What is the exact path (`/api/customers`)?
+- Are all required fields present in the request body?
+- Are field names snake_case to match the Supabase schema?
+- Does the backend route exist and properly call Supabase?
+- Does the backend return success/failure in the correct format?
+- What happens on a 400 or 500 error?
+
+2. ✅ Customer Editing (CustomerEditPage.tsx)
+- Is the correct customer ID being passed in the URL or state?
+- Does the form use PATCH or PUT? To which endpoint?
+- Does the backend properly update the customer?
+- Is the response parsed and used to refresh UI?
+- Does the photo upload work as part of this flow?
+
+3. ✅ Shared Schema Consistency
+- Do the form fields (`first_name`, `last_name`, `email`, etc.) match the DB schema?
+- Is there any mismatch between camelCase and snake_case?
+- Are fields like `profile_image_url` missing from DB or code?
+- Are any fields required in DB but optional in the form?
+
+4. ✅ Error and Response Handling
+- Are errors caught and displayed in the form UI?
+- Are success toasts triggered only when update is successful?
+- Are API errors (422, 500) swallowed or logged?
+
+---
+
+Please return your findings in the following format:
+
+✅ Fully Working  
+⚠️ Partially Working (explain what’s broken)  
+❌ Not Working (explain cause and file/line if known)
+
+📋 For each, provide:
+- What works
+- What’s broken
+- What needs to be fixed
+- Any exact code line or file involved
+
+This will be used to generate a micro-prompt patch plan to permanently fix customer creation and editing.
