@@ -187,7 +187,7 @@ export default function CustomerEditPage() {
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('image', file); // Changed from 'file' to 'image' to match middleware
 
       const response = await fetch(`/api/customers/${customerId}/photo`, {
         method: 'POST',

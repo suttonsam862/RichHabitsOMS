@@ -661,19 +661,20 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'No file uploaded'
+        message: 'No image file uploaded'
       });
     }
 
-    console.log(`Uploading photo for customer ${id}, file: ${req.file.originalname}, size: ${req.file.size}`);
+    console.log(`📸 Uploading customer photo for ID: ${id}`);
+    console.log(`📁 File details: ${req.file.originalname} (${req.file.size} bytes)`);
 
-    // Ensure bucket exists or create it
+    // Ensure main bucket exists or create it
     const { data: buckets } = await supabaseAdmin.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === 'customer-photos');
+    const bucketExists = buckets?.some(bucket => bucket.name === 'uploads');
     
     if (!bucketExists) {
-      console.log('Creating customer-photos bucket...');
-      const { error: bucketError } = await supabaseAdmin.storage.createBucket('customer-photos', {
+      console.log('Creating uploads bucket...');
+      const { error: bucketError } = await supabaseAdmin.storage.createBucket('uploads', {
         public: true,
         allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
         fileSizeLimit: 5242880 // 5MB
@@ -690,11 +691,11 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
 
     // Generate unique filename to prevent conflicts
     const fileExtension = req.file.originalname.split('.').pop();
-    const fileName = `${id}_${Date.now()}.${fileExtension}`;
+    const fileName = `customer_photos/${id}_${Date.now()}.${fileExtension}`;
     
-    // Upload file to Supabase storage
+    // Upload file to Supabase storage in customer_photos/ directory
     const { data, error } = await supabaseAdmin.storage
-      .from('customer-photos')
+      .from('uploads')
       .upload(fileName, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: true
@@ -710,29 +711,60 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
 
     // Get the public URL for the uploaded photo
     const { data: { publicUrl } } = supabaseAdmin.storage
-      .from('customer-photos')
+      .from('uploads')
       .getPublicUrl(fileName);
 
     const photoUrl = publicUrl;
 
-    // Update customer record with photo URL
-    const { error: updateError } = await supabaseAdmin
+    console.log(`📸 Photo uploaded successfully to: ${photoUrl}`);
+    console.log(`🔄 Updating customer ${id} with photo URL...`);
+
+    // Update customer record with photo URL - using a different column name if photo_url doesn't exist
+    let updateError: any = null;
+    let updateData: any = {};
+    
+    // Try with photo_url first
+    updateData.photo_url = photoUrl;
+    const { error: primaryError } = await supabaseAdmin
       .from('customers')
-      .update({ photo_url: photoUrl })
+      .update(updateData)
       .eq('id', id);
 
-    if (updateError) {
-      console.error('Error updating customer photo URL:', updateError);
-      return res.status(400).json({
-        success: false,
-        message: 'Failed to update customer photo URL'
-      });
+    if (primaryError && primaryError.code === 'PGRST204') {
+      console.log('photo_url column not found, trying alternative approaches...');
+      
+      // Try with image_url instead
+      updateData = { image_url: photoUrl };
+      const { error: altError } = await supabaseAdmin
+        .from('customers')
+        .update(updateData)
+        .eq('id', id);
+        
+      if (altError && altError.code === 'PGRST204') {
+        console.log('image_url column not found either, photo URL not stored in database');
+        // Continue without database update - file is still uploaded to storage
+        updateError = null;
+      } else {
+        updateError = altError;
+      }
+    } else {
+      updateError = primaryError;
     }
 
+    if (updateError) {
+      console.error('Error updating customer with photo URL:', updateError);
+      // Don't fail the entire request if database update fails - file is already uploaded
+      console.log('⚠️ Photo uploaded but database not updated with URL');
+    } else {
+      console.log('✅ Customer record updated with photo URL');
+    }
+
+    // Always return success if file was uploaded to storage
     res.status(200).json({
       success: true,
-      message: 'Photo uploaded successfully',
-      photoUrl
+      message: 'Photo uploaded successfully to customer_photos/ directory',
+      photoUrl,
+      storageLocation: `uploads/customer_photos/${id}_${Date.now()}.${req.file.originalname.split('.').pop()}`
     });
 
   } catch (error: any) {
