@@ -233,8 +233,13 @@ export default function CustomerEditPage() {
     uploadPhotoMutation.mutate(selectedFile);
   };
 
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
   const updateCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
+      // Clear any previous errors
+      setSubmitError(null);
+      
       // Ensure we have a valid customer ID
       if (!customerId) {
         throw new Error('Customer ID is required');
@@ -257,41 +262,99 @@ export default function CustomerEditPage() {
 
       console.log(`Updating customer with ID: ${customerId}`, requestData);
 
-      const response = await fetch(`/api/customers/${customerId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify(requestData)
-      });
+      try {
+        const response = await fetch(`/api/customers/${customerId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify(requestData)
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: Failed to update customer`;
-        throw new Error(errorMessage);
+        // Handle different types of failures
+        if (!response.ok) {
+          let errorMessage = `Failed to update customer (${response.status})`;
+          
+          try {
+            const errorData = await response.json();
+            if (errorData.message) {
+              errorMessage = errorData.message;
+            } else if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (jsonError) {
+            // If we can't parse JSON, use the status-based message
+            if (response.status === 400) {
+              errorMessage = 'Invalid customer data provided';
+            } else if (response.status === 401) {
+              errorMessage = 'Authentication required. Please log in again.';
+            } else if (response.status === 403) {
+              errorMessage = 'You do not have permission to update this customer';
+            } else if (response.status === 404) {
+              errorMessage = 'Customer not found';
+            } else if (response.status >= 500) {
+              errorMessage = 'Server error. Please try again later.';
+            }
+          }
+          
+          const error = new Error(errorMessage);
+          error.name = `HTTPError${response.status}`;
+          throw error;
+        }
+
+        const result = await response.json();
+        
+        // Validate the response structure
+        if (!result.success || !result.updatedCustomer) {
+          throw new Error('Invalid response format from server');
+        }
+        
+        return result;
+      } catch (networkError: any) {
+        // Handle network errors (no internet, server down, etc.)
+        if (networkError.name === 'TypeError' || networkError.message.includes('fetch')) {
+          throw new Error('Network error. Please check your connection and try again.');
+        }
+        throw networkError;
       }
-
-      return response.json();
     },
     onSuccess: (data) => {
       console.log('Customer updated successfully:', data);
+      
+      // Clear any previous errors
+      setSubmitError(null);
+      
       toast({
         title: "Customer updated",
         description: "Customer information has been successfully updated.",
       });
+      
       // Invalidate both the specific customer and customers list
       queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      
+      // Navigate back to customer detail page
       navigate(`/admin/customers/${customerId}`);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Customer update failed:', error);
+      
+      // Set the inline error message
+      setSubmitError(error.message);
+      
+      // Also show toast for immediate feedback
       toast({
         title: "Update failed",
         description: error.message || "Failed to update customer information.",
         variant: "destructive",
       });
+      
+      // If it's an auth error, redirect to login
+      if (error.name === 'HTTPError401') {
+        localStorage.removeItem('authToken');
+        navigate('/login');
+      }
     }
   });
 
@@ -609,6 +672,20 @@ export default function CustomerEditPage() {
                   )}
                 />
               </div>
+
+              {/* Inline error message */}
+              {submitError && (
+                <div className="bg-destructive/15 border border-destructive/50 rounded-md p-3">
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-4 w-4 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-destructive font-medium">
+                      {submitError}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-end space-x-2">
                 <Button 
