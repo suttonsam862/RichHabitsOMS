@@ -114,14 +114,14 @@ class FetchCircuitBreaker {
     }
   }
 
-  private shouldBlockRequest(url: string): boolean {
+  shouldBlockRequest(url: string): boolean {
     // Disable circuit breaker in development
     if (import.meta.env.DEV) {
       return false;
     }
 
-    const state = this.circuits.get(url);
-    return state?.state === 'OPEN';
+    // Use the existing canMakeRequest logic
+    return !this.canMakeRequest(url);
   }
 }
 
@@ -132,7 +132,7 @@ export const circuitBreaker = new FetchCircuitBreaker();
 export async function safeFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const endpoint = url.split('?')[0]; // Remove query params for circuit breaker key
 
-  if (this.shouldBlockRequest(endpoint)) {
+  if (circuitBreaker.shouldBlockRequest(endpoint)) {
     const error = new Error(`Circuit breaker is OPEN for ${endpoint}`);
     (error as any).circuitBreakerBlocked = true;
     throw error;
