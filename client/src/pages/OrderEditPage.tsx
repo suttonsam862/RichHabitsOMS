@@ -51,6 +51,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import ManufacturerCard from '@/components/ManufacturerCard';
 import { ProductionImageUploader } from '@/components/ProductionImageUploader';
+import { ProductionImageTimeline } from '@/components/ProductionImageTimeline';
 import {
   Loader2,
   Plus,
@@ -1028,7 +1029,7 @@ export default function OrderEditPage() {
                 </CardContent>
               </Card>
 
-              {/* Production Images */}
+              {/* Production Images Upload */}
               {order && (
                 <ProductionImageUploader
                   orderId={order.id}
@@ -1040,6 +1041,13 @@ export default function OrderEditPage() {
                       description: `Successfully uploaded ${images.length} production images`
                     });
                   }}
+                />
+              )}
+
+              {/* Production Timeline */}
+              {order && (
+                <ProductionImageTimeline
+                  orderId={order.id}
                 />
               )}
             </div>
@@ -1054,6 +1062,17 @@ export default function OrderEditPage() {
             >
               Cancel
             </Button>
+            {order && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate(`/orders/timeline/${order.id}`)}
+                className="bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                View Timeline
+              </Button>
+            )}
             <Button
               type="submit"
               disabled={saveMutation.isPending}

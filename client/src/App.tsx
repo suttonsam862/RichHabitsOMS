@@ -58,6 +58,7 @@ import CatalogPage from './pages/admin/CatalogPage';
 import CatalogItemEditPage from './pages/admin/CatalogItemEditPage';
 import ManufacturerEditPage from './pages/admin/ManufacturerEditPage';
 import AnalyticsPage from "./pages/admin/AnalyticsPage";
+import ProductionTimelinePage from "./pages/ProductionTimelinePage";
 import LegalManagementPage from "./pages/admin/LegalManagementPage";
 import CustomerInvitesPage from "./pages/admin/CustomerInvitesPage";
 import NewOrderInquiriesPage from "./pages/admin/NewOrderInquiriesPage";
@@ -246,6 +247,17 @@ function App() {
                     <RequireAuth allowedRoles={['admin', 'salesperson']}>
                       <FeatureErrorBoundary featureName="Order Editing">
                         <OrderEditPage />
+                      </FeatureErrorBoundary>
+                    </RequireAuth>
+                  } 
+                />
+
+                <Route 
+                  path="/orders/timeline/:orderId" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson', 'designer', 'manufacturer']}>
+                      <FeatureErrorBoundary featureName="Production Timeline">
+                        <ProductionTimelinePage />
                       </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
