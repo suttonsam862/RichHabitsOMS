@@ -39,51 +39,129 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
     capacity: ''
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    
+    // Clear field error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      });
+    }
+    
+    // Clear general error when user makes changes
+    if (generalError) {
+      setGeneralError('');
+    }
   };
 
-  const addManufacturerMutation = useMutation({
-    mutationFn: async (manufacturerData: typeof formData) => {
-      console.log('Submitting manufacturer data:', manufacturerData);
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Manufacturer name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Clear any previous errors
+    setGeneralError('');
+    setFormErrors({});
+    
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      console.log('Submitting manufacturer data:', formData);
       
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('Authentication required. Please log in again.');
       }
 
-      const response = await axios.post('/api/manufacturing/manufacturers', manufacturerData, {
+      const response = await axios.post('/api/manufacturing/manufacturers', formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      console.log('Manufacturer created successfully:', data);
+      
+      console.log('Manufacturer created successfully:', response.data);
+      
+      // Success handling
       queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/manufacturers'] });
+      
       toast({
         title: "Success!",
         description: "Manufacturer was added successfully",
       });
+      
       resetForm();
       if (onSuccess) onSuccess();
       if (onClose) onClose();
-    },
-    onError: (error: any) => {
+      
+    } catch (error: any) {
       console.error('Error adding manufacturer:', error);
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const statusCode = error.response.status;
+        const errorMessage = error.response.data?.message || error.response.data?.error || 'Unknown server error';
+        
+        if (statusCode === 400) {
+          setGeneralError(`Validation Error: ${errorMessage}`);
+        } else if (statusCode === 401) {
+          setGeneralError('Authentication failed. Please log in again.');
+        } else if (statusCode === 403) {
+          setGeneralError('You do not have permission to add manufacturers.');
+        } else if (statusCode === 409) {
+          setGeneralError('A manufacturer with this email already exists.');
+        } else {
+          setGeneralError(`Server Error (${statusCode}): ${errorMessage}`);
+        }
+      } else if (error.request) {
+        // Network error
+        setGeneralError('Network error. Please check your connection and try again.');
+      } else {
+        // Other error
+        setGeneralError(error.message || 'An unexpected error occurred. Please try again.');
+      }
+      
       toast({
         title: "Failed to add manufacturer",
-        description: error?.response?.data?.message || "There was an error creating the manufacturer. Please try again.",
+        description: error?.response?.data?.message || error.message || "There was an error creating the manufacturer.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
-  });
+  };
 
   const resetForm = () => {
     setFormData({
@@ -98,12 +176,8 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
       specialties: '',
       capacity: ''
     });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Submitting manufacturer form with data:', formData);
-    addManufacturerMutation.mutate(formData);
+    setFormErrors({});
+    setGeneralError('');
   };
 
   return (
@@ -119,6 +193,13 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* General Error Display */}
+            {generalError && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive font-medium">{generalError}</p>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="name">Manufacturer Name *</Label>
               <Input
@@ -128,7 +209,11 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
                 onChange={handleInputChange}
                 placeholder="ABC Manufacturing Co."
                 required
+                className={formErrors.name ? 'border-destructive' : ''}
               />
+              {formErrors.name && (
+                <p className="text-sm text-destructive">{formErrors.name}</p>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -142,7 +227,11 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
                   onChange={handleInputChange}
                   placeholder="contact@manufacturer.com"
                   required
+                  className={formErrors.email ? 'border-destructive' : ''}
                 />
+                {formErrors.email && (
+                  <p className="text-sm text-destructive">{formErrors.email}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
@@ -246,12 +335,12 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
             </Button>
             <Button 
               type="submit"
-              disabled={addManufacturerMutation.isPending}
+              disabled={isSubmitting}
             >
-              {addManufacturerMutation.isPending ? (
+              {isSubmitting ? (
                 <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
               ) : null}
-              Add Manufacturer
+              {isSubmitting ? 'Adding Manufacturer...' : 'Add Manufacturer'}
             </Button>
           </DialogFooter>
         </form>

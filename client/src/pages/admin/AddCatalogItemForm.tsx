@@ -37,17 +37,68 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     size_options: ''
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    
+    // Clear field error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      });
+    }
+    
+    // Clear general error when user makes changes
+    if (generalError) {
+      setGeneralError('');
+    }
   };
 
-  const addCatalogItemMutation = useMutation({
-    mutationFn: async (itemData: typeof formData) => {
-      console.log('Submitting catalog item data:', itemData);
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Item name is required';
+    }
+    
+    if (!formData.base_price.trim()) {
+      errors.base_price = 'Base price is required';
+    } else {
+      const price = parseFloat(formData.base_price);
+      if (isNaN(price) || price < 0) {
+        errors.base_price = 'Please enter a valid price (0 or greater)';
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Clear any previous errors
+    setGeneralError('');
+    setFormErrors({});
+    
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      console.log('Submitting catalog item data:', formData);
       
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -55,36 +106,66 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       }
 
       const response = await axios.post('/api/catalog-items', {
-        ...itemData,
-        base_price: parseFloat(itemData.base_price) || 0
+        ...formData,
+        base_price: parseFloat(formData.base_price) || 0
       }, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      console.log('Catalog item created successfully:', data);
+      
+      console.log('Catalog item created successfully:', response.data);
+      
+      // Success handling
       queryClient.invalidateQueries({ queryKey: ['/api/catalog-items'] });
+      
       toast({
         title: "Success!",
         description: "Catalog item was added successfully",
       });
+      
       resetForm();
       if (onSuccess) onSuccess();
       if (onClose) onClose();
-    },
-    onError: (error: any) => {
+      
+    } catch (error: any) {
       console.error('Error adding catalog item:', error);
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const statusCode = error.response.status;
+        const errorMessage = error.response.data?.message || error.response.data?.error || 'Unknown server error';
+        
+        if (statusCode === 400) {
+          setGeneralError(`Validation Error: ${errorMessage}`);
+        } else if (statusCode === 401) {
+          setGeneralError('Authentication failed. Please log in again.');
+        } else if (statusCode === 403) {
+          setGeneralError('You do not have permission to add catalog items.');
+        } else if (statusCode === 409) {
+          setGeneralError('A catalog item with this name already exists.');
+        } else {
+          setGeneralError(`Server Error (${statusCode}): ${errorMessage}`);
+        }
+      } else if (error.request) {
+        // Network error
+        setGeneralError('Network error. Please check your connection and try again.');
+      } else {
+        // Other error
+        setGeneralError(error.message || 'An unexpected error occurred. Please try again.');
+      }
+      
       toast({
         title: "Failed to add catalog item",
-        description: error?.response?.data?.message || "There was an error creating the catalog item. Please try again.",
+        description: error?.response?.data?.message || error.message || "There was an error creating the catalog item.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
-  });
+  };
 
   const resetForm = () => {
     setFormData({
@@ -97,12 +178,8 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       color_options: '',
       size_options: ''
     });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Submitting catalog item form with data:', formData);
-    addCatalogItemMutation.mutate(formData);
+    setFormErrors({});
+    setGeneralError('');
   };
 
   return (
@@ -118,6 +195,13 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* General Error Display */}
+            {generalError && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive font-medium">{generalError}</p>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="name">Item Name *</Label>
               <Input
@@ -127,7 +211,11 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
                 onChange={handleInputChange}
                 placeholder="Custom Jersey"
                 required
+                className={formErrors.name ? 'border-destructive' : ''}
               />
+              {formErrors.name && (
+                <p className="text-sm text-destructive">{formErrors.name}</p>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -150,11 +238,16 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
                   name="base_price"
                   type="number"
                   step="0.01"
+                  min="0"
                   value={formData.base_price}
                   onChange={handleInputChange}
                   placeholder="99.99"
                   required
+                  className={formErrors.base_price ? 'border-destructive' : ''}
                 />
+                {formErrors.base_price && (
+                  <p className="text-sm text-destructive">{formErrors.base_price}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
@@ -223,12 +316,12 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
             </Button>
             <Button 
               type="submit"
-              disabled={addCatalogItemMutation.isPending}
+              disabled={isSubmitting}
             >
-              {addCatalogItemMutation.isPending ? (
+              {isSubmitting ? (
                 <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
               ) : null}
-              Add Catalog Item
+              {isSubmitting ? 'Adding Item...' : 'Add Catalog Item'}
             </Button>
           </DialogFooter>
         </form>

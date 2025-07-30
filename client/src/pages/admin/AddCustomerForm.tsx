@@ -38,17 +38,69 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
     sendInvite: true
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    
+    // Clear field error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      });
+    }
+    
+    // Clear general error when user makes changes
+    if (generalError) {
+      setGeneralError('');
+    }
   };
 
-  const addCustomerMutation = useMutation({
-    mutationFn: async (customerData: typeof formData) => {
-      console.log('Submitting customer data:', customerData);
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.first_name.trim()) {
+      errors.first_name = 'First name is required';
+    }
+    
+    if (!formData.last_name.trim()) {
+      errors.last_name = 'Last name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Clear any previous errors
+    setGeneralError('');
+    setFormErrors({});
+    
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      console.log('Submitting customer data:', formData);
       
       // Get auth token from localStorage
       const token = localStorage.getItem('authToken');
@@ -56,35 +108,65 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
         throw new Error('Authentication required. Please log in again.');
       }
 
-      const response = await axios.post('/api/customers', customerData, {
+      const response = await axios.post('/api/customers', formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      console.log('Customer created successfully:', data);
+      
+      console.log('Customer created successfully:', response.data);
+      
+      // Success handling
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+      
       toast({
         title: "Success!",
         description: "Customer was added successfully",
       });
+      
       resetForm();
       if (onSuccess) onSuccess();
       if (onClose) onClose();
-    },
-    onError: (error: any) => {
+      
+    } catch (error: any) {
       console.error('Error adding customer:', error);
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const statusCode = error.response.status;
+        const errorMessage = error.response.data?.message || error.response.data?.error || 'Unknown server error';
+        
+        if (statusCode === 400) {
+          setGeneralError(`Validation Error: ${errorMessage}`);
+        } else if (statusCode === 401) {
+          setGeneralError('Authentication failed. Please log in again.');
+        } else if (statusCode === 403) {
+          setGeneralError('You do not have permission to add customers.');
+        } else if (statusCode === 409) {
+          setGeneralError('A customer with this email already exists.');
+        } else {
+          setGeneralError(`Server Error (${statusCode}): ${errorMessage}`);
+        }
+      } else if (error.request) {
+        // Network error
+        setGeneralError('Network error. Please check your connection and try again.');
+      } else {
+        // Other error
+        setGeneralError(error.message || 'An unexpected error occurred. Please try again.');
+      }
+      
       toast({
         title: "Failed to add customer",
-        description: error?.response?.data?.message || "There was an error creating the customer. Please try again.",
+        description: error?.response?.data?.message || error.message || "There was an error creating the customer.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
-  });
+  };
 
   const resetForm = () => {
     setFormData({
@@ -100,12 +182,8 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
       country: '',
       sendInvite: true
     });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Submitting form with data:', formData);
-    addCustomerMutation.mutate(formData);
+    setFormErrors({});
+    setGeneralError('');
   };
 
   return (
@@ -121,6 +199,13 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            {/* General Error Display */}
+            {generalError && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive font-medium">{generalError}</p>
+              </div>
+            )}
+            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="first_name">First Name *</Label>
@@ -131,7 +216,11 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                   onChange={handleInputChange}
                   placeholder="John"
                   required
+                  className={formErrors.first_name ? 'border-destructive' : ''}
                 />
+                {formErrors.first_name && (
+                  <p className="text-sm text-destructive">{formErrors.first_name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="last_name">Last Name *</Label>
@@ -142,7 +231,11 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                   onChange={handleInputChange}
                   placeholder="Doe"
                   required
+                  className={formErrors.last_name ? 'border-destructive' : ''}
                 />
+                {formErrors.last_name && (
+                  <p className="text-sm text-destructive">{formErrors.last_name}</p>
+                )}
               </div>
             </div>
             
@@ -156,7 +249,11 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 onChange={handleInputChange}
                 placeholder="john.doe@example.com"
                 required
+                className={formErrors.email ? 'border-destructive' : ''}
               />
+              {formErrors.email && (
+                <p className="text-sm text-destructive">{formErrors.email}</p>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -249,12 +346,12 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
             </Button>
             <Button 
               type="submit"
-              disabled={addCustomerMutation.isPending}
+              disabled={isSubmitting}
             >
-              {addCustomerMutation.isPending ? (
+              {isSubmitting ? (
                 <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
               ) : null}
-              Add Customer
+              {isSubmitting ? 'Adding Customer...' : 'Add Customer'}
             </Button>
           </DialogFooter>
         </form>
