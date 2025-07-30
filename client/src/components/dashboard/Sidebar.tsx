@@ -30,12 +30,13 @@ import {
 const navigationItems = {
   admin: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Orders", href: "/orders", icon: ShoppingBag },
-    { name: "Product Library", href: "/product-library", icon: Package },
+    { name: "Order Management", href: "/orders", icon: ShoppingBag },
+    { name: "Catalog", href: "/catalog", icon: Package },
+    { name: "Customers", href: "/customers", icon: Users },
+    { name: "Manufacturing", href: "/manufacturing", icon: Factory },
     { name: "Sales Management", href: "/admin/sales-management", icon: TrendingUp },
     { name: "Customer Invites", href: "/admin/invites", icon: Mail },
     { name: "Order Inquiries", href: "/admin/inquiries", icon: FileText },
-    { name: "Users", href: "/users", icon: Users },
     { name: "User Permissions", href: "/admin/user-permissions", icon: Shield },
     { name: "Custom Permissions", href: "/admin/custom-permissions", icon: Settings },
     { name: "Task Assignment", href: "/tasks", icon: Brush },
@@ -45,8 +46,8 @@ const navigationItems = {
   ],
   salesperson: [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Orders", href: "/orders", icon: ShoppingBag },
-    { name: "Product Library", href: "/product-library", icon: Package },
+    { name: "Order Management", href: "/orders", icon: ShoppingBag },
+    { name: "Catalog", href: "/catalog", icon: Package },
     { name: "Customer Invites", href: "/admin/invites", icon: Mail },
     { name: "Order Inquiries", href: "/admin/inquiries", icon: FileText },
     { name: "Customers", href: "/customers", icon: Users },

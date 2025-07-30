@@ -75,10 +75,18 @@ export default function OrdersHub() {
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Orders Hub</h1>
+          <h1 className="text-3xl font-bold">Order Management Hub</h1>
           <p className="text-muted-foreground">
-            Manage existing orders or create new custom clothing orders
+            Comprehensive order management system with creation, tracking, and workflow coordination
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/orders/enhanced">
+            <Button variant="outline" size="sm">
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Enhanced Orders
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -86,15 +94,15 @@ export default function OrdersHub() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Overview
+            Dashboard Overview
           </TabsTrigger>
           <TabsTrigger value="manage" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
-            Manage Orders
+            Order Management
           </TabsTrigger>
           <TabsTrigger value="create" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            Create New Order
+            Create Order
           </TabsTrigger>
         </TabsList>
 
@@ -165,7 +173,7 @@ export default function OrdersHub() {
                   <div>
                     <CardTitle>Create New Order</CardTitle>
                     <CardDescription>
-                      Start a new custom clothing order for a customer
+                      Start a new custom clothing order with integrated workflow
                     </CardDescription>
                   </div>
                 </div>
@@ -173,7 +181,7 @@ export default function OrdersHub() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Add products, set pricing, and manage workflow
+                    Select products, set pricing, assign team members
                   </div>
                   <Button size="sm">
                     Get Started
@@ -188,9 +196,9 @@ export default function OrdersHub() {
                 <div className="flex items-center space-x-2">
                   <ClipboardList className="h-6 w-6 text-primary" />
                   <div>
-                    <CardTitle>Manage Existing Orders</CardTitle>
+                    <CardTitle>Order Management</CardTitle>
                     <CardDescription>
-                      View, edit, and track your current orders
+                      View, edit, and track orders through production workflow
                     </CardDescription>
                   </div>
                 </div>
@@ -198,7 +206,7 @@ export default function OrdersHub() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Update status, edit items, and communicate with customers
+                    Update status, manage items, coordinate with teams
                   </div>
                   <Button size="sm" variant="outline">
                     View Orders
@@ -213,15 +221,15 @@ export default function OrdersHub() {
             <CardHeader>
               <CardTitle>Quick Access</CardTitle>
               <CardDescription>
-                Jump to frequently used features
+                Jump to frequently used features and related systems
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Link href="/product-library">
+                <Link href="/catalog">
                   <Button variant="outline" className="w-full justify-start">
                     <Package className="mr-2 h-4 w-4" />
-                    Product Library
+                    Catalog
                   </Button>
                 </Link>
                 <Link href="/customers">
@@ -230,16 +238,16 @@ export default function OrdersHub() {
                     Customers
                   </Button>
                 </Link>
-                <Link href="/design-tasks">
+                <Link href="/orders/enhanced">
                   <Button variant="outline" className="w-full justify-start">
-                    <Package className="mr-2 h-4 w-4" />
-                    Design Tasks
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    Enhanced Orders
                   </Button>
                 </Link>
-                <Link href="/production">
+                <Link href="/manufacturing">
                   <Button variant="outline" className="w-full justify-start">
                     <Package className="mr-2 h-4 w-4" />
-                    Production
+                    Manufacturing
                   </Button>
                 </Link>
               </div>
