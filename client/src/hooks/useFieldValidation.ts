@@ -2,15 +2,11 @@ import { useState, useCallback } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 import { 
-  emailValidator, 
-  phoneValidator, 
-  zipValidator, 
-  priceValidator,
-  nameValidator,
-  validateAndFormatEmail,
-  formatPhoneNumber,
-  formatZipCode,
-  formatPrice
+  validateEmail, 
+  validatePhone,
+  validatePrice,
+  validateRequired,
+  validateTextLength
 } from '../lib/validators';
 
 interface FieldValidationState {
@@ -37,41 +33,46 @@ export function useFieldValidation({
 }: UseFieldValidationOptions) {
   const [fieldStates, setFieldStates] = useState<FieldValidationState>({});
 
-  // Default validators for common fields
-  const defaultValidators = {
-    email: emailValidator,
-    phone: phoneValidator,
-    zip: zipValidator,
-    zipCode: zipValidator,
-    postalCode: zipValidator,
-    basePrice: priceValidator,
-    base_price: priceValidator,
-    unitPrice: priceValidator,
-    unit_price: priceValidator,
-    totalPrice: priceValidator,
-    total_price: priceValidator,
-    price: priceValidator,
-    firstName: nameValidator,
-    first_name: nameValidator,
-    lastName: nameValidator,
-    last_name: nameValidator,
-    name: nameValidator
+  // Default validators for common fields using simple validation functions
+  const defaultValidators: Record<string, (value: any) => { isValid: boolean; error?: string }> = {
+    email: (value: string) => {
+      const error = validateEmail(value);
+      return { isValid: !error, error: error || undefined };
+    },
+    phone: (value: string) => {
+      const error = validatePhone(value);
+      return { isValid: !error, error: error || undefined };
+    },
+    firstName: (value: string) => {
+      const error = validateRequired(value, 'First name') || validateTextLength(value, 'First name', 2, 50);
+      return { isValid: !error, error: error || undefined };
+    },
+    lastName: (value: string) => {
+      const error = validateRequired(value, 'Last name') || validateTextLength(value, 'Last name', 2, 50);
+      return { isValid: !error, error: error || undefined };
+    },
+    basePrice: (value: string) => {
+      const error = validatePrice(value);
+      return { isValid: !error, error: error || undefined };
+    },
+    price: (value: string) => {
+      const error = validatePrice(value);
+      return { isValid: !error, error: error || undefined };
+    }
   };
 
   // Default formatters for common fields
-  const defaultFormatters = {
+  const defaultFormatters: Record<string, (value: string) => string> = {
     email: (value: string) => value.toLowerCase().trim(),
-    phone: formatPhoneNumber,
-    zip: formatZipCode,
-    zipCode: formatZipCode,
-    postalCode: formatZipCode,
-    basePrice: (value: string) => formatPrice(value, ''),
-    base_price: (value: string) => formatPrice(value, ''),
-    unitPrice: (value: string) => formatPrice(value, ''),
-    unit_price: (value: string) => formatPrice(value, ''),
-    totalPrice: (value: string) => formatPrice(value, ''),
-    total_price: (value: string) => formatPrice(value, ''),
-    price: (value: string) => formatPrice(value, '')
+    phone: (value: string) => value.replace(/\D/g, ''), // Simple phone formatting
+    basePrice: (value: string) => {
+      const num = parseFloat(value);
+      return isNaN(num) ? value : num.toFixed(2);
+    },
+    price: (value: string) => {
+      const num = parseFloat(value);
+      return isNaN(num) ? value : num.toFixed(2);
+    }
   };
 
   // Merge custom validators with defaults
@@ -80,14 +81,22 @@ export function useFieldValidation({
 
   // Validate a single field
   const validateField = useCallback(async (fieldName: string, value: any): Promise<{ isValid: boolean; error?: string }> => {
-    const validator = allValidators[fieldName];
+    const validator = allValidators[fieldName as keyof typeof allValidators];
     
     if (!validator) {
       return { isValid: true };
     }
 
     try {
-      await validator.parseAsync(value);
+      // Check if validator is a function (our custom validators) or a Zod schema
+      if (typeof validator === 'function' && !('parse' in validator)) {
+        return validator(value);
+      }
+      // Handle Zod schemas
+      if (validator && typeof validator === 'object' && 'parseAsync' in validator) {
+        await (validator as z.ZodSchema).parseAsync(value);
+        return { isValid: true };
+      }
       return { isValid: true };
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -121,8 +130,9 @@ export function useFieldValidation({
     const validation = await validateField(fieldName, currentValue);
     
     // Apply formatting if available and validation passed
-    if (validation.isValid && allFormatters[fieldName] && currentValue) {
-      const formatted = allFormatters[fieldName](currentValue.toString());
+    const formatter = allFormatters[fieldName as keyof typeof allFormatters];
+    if (validation.isValid && formatter && currentValue) {
+      const formatted = formatter(currentValue.toString());
       if (formatted !== currentValue) {
         form.setValue(fieldName, formatted, { shouldDirty: true });
       }
@@ -202,28 +212,30 @@ export function useFieldValidation({
     }));
 
     if (email) {
-      const validation = validateAndFormatEmail(email);
+      const error = validateEmail(email);
+      const isValid = !error;
       
       // Format the email
-      if (validation.isValid && validation.formatted !== email) {
-        form.setValue(fieldName, validation.formatted, { shouldDirty: true });
+      const formatted = email.toLowerCase().trim();
+      if (formatted !== email) {
+        form.setValue(fieldName, formatted, { shouldDirty: true });
       }
 
       setFieldStates(prev => ({
         ...prev,
         [fieldName]: {
           ...prev[fieldName],
-          isValid: validation.isValid,
-          error: validation.error,
+          isValid,
+          error: error || undefined,
           isValidating: false,
           hasBlurred: true
         }
       }));
 
-      if (!validation.isValid) {
+      if (!isValid) {
         form.setError(fieldName, {
           type: 'manual',
-          message: validation.error || 'Invalid email format'
+          message: error || 'Invalid email format'
         });
       } else {
         form.clearErrors(fieldName);
