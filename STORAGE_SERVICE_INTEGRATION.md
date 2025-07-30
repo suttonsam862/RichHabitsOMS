@@ -50,22 +50,22 @@ const BUCKETS = {
 
 ### Customer Photos
 ```
-uploads/customer_photos/{customerId}_{timestamp}.{ext}
+uploads/customer_photos/{uuid}_{original_name_sanitized}.{ext}
 ```
 
 ### Catalog Images
 ```
-catalog_items/{itemId}/images/image_{timestamp}_{variant}.{ext}
+catalog_items/{itemId}/images/{uuid}_{original_name_sanitized}_{variant}.{ext}
 ```
 
 ### Production Images
 ```
-orders/{orderId}/production/{stage}_{timestamp}.{ext}
+orders/{orderId}/production/{uuid}_{stage}_{original_name_sanitized}.{ext}
 ```
 
 ### Design Files
 ```
-orders/{orderId}/designs/design_{timestamp}.{ext}
+orders/{orderId}/designs/{uuid}_design_{original_name_sanitized}.{ext}
 ```
 
 ## 🔧 Integration Examples
@@ -182,9 +182,10 @@ if (result.success) {
 1. **Unified Error Handling** - Consistent error responses across all operations
 2. **Automatic Optimization** - Built-in image processing with Sharp
 3. **Path Management** - Standardized file organization patterns
-4. **Type Safety** - Full TypeScript support with proper interfaces
-5. **Batch Operations** - Efficient multi-file operations
-6. **Caching Support** - Configurable cache control headers
+4. **Collision Prevention** - UUID + original filename prevents file collisions
+5. **Type Safety** - Full TypeScript support with proper interfaces
+6. **Batch Operations** - Efficient multi-file operations
+7. **Caching Support** - Configurable cache control headers
 
 ## 🔒 Security Features
 

@@ -44,9 +44,10 @@ router.post('/:itemId/images', requireAuth, requireRole(['admin', 'catalog_manag
     console.log(`🖼️ Processing image for catalog item: ${itemId}`);
     console.log(`📁 Original file: ${req.file.originalname} (${req.file.size} bytes)`);
 
-    // Generate unique filename
+    // Generate unique filename with UUID + original name
     const fileExtension = req.file.originalname.split('.').pop() || 'jpg';
-    const filename = `${uuidv4()}.${fileExtension}`;
+    const originalNameClean = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
+    const filename = `${uuidv4()}_${originalNameClean}.${fileExtension}`;
     const storagePath = `catalog_items/${itemId}/images/${filename}`;
 
     // Process image with Sharp for optimization

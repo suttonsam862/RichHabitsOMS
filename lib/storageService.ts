@@ -202,9 +202,10 @@ export class StorageService {
     file: Buffer | Uint8Array,
     metadata: FileMetadata
   ): Promise<UploadResult> {
-    const timestamp = Date.now();
+    const uuid = require('crypto').randomUUID();
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${customerId}_${timestamp}.${extension}`;
+    const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const fileName = `${uuid}_${originalNameClean}`;
     const path = `customer_photos/${fileName}`;
 
     return this.uploadFile(this.BUCKETS.UPLOADS, path, file, {
@@ -222,10 +223,11 @@ export class StorageService {
     metadata: FileMetadata,
     variant?: string
   ): Promise<UploadResult> {
-    const timestamp = Date.now();
+    const uuid = require('crypto').randomUUID();
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
     const variantSuffix = variant ? `_${variant}` : '';
-    const fileName = `image_${timestamp}${variantSuffix}.${extension}`;
+    const fileName = `${uuid}_${originalNameClean}${variantSuffix}.${extension}`;
     const path = `catalog_items/${itemId}/images/${fileName}`;
 
     return this.uploadFile(this.BUCKETS.CATALOG_ITEMS, path, file, {
@@ -243,10 +245,11 @@ export class StorageService {
     metadata: FileMetadata,
     stage?: string
   ): Promise<UploadResult> {
-    const timestamp = Date.now();
+    const uuid = require('crypto').randomUUID();
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
     const stagePrefix = stage ? `${stage}_` : '';
-    const fileName = `${stagePrefix}${timestamp}.${extension}`;
+    const fileName = `${uuid}_${stagePrefix}${originalNameClean}.${extension}`;
     const path = `orders/${orderId}/production/${fileName}`;
 
     return this.uploadFile(this.BUCKETS.ORDERS, path, file, {
@@ -263,9 +266,10 @@ export class StorageService {
     file: Buffer | Uint8Array,
     metadata: FileMetadata
   ): Promise<UploadResult> {
-    const timestamp = Date.now();
+    const uuid = require('crypto').randomUUID();
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'pdf';
-    const fileName = `design_${timestamp}.${extension}`;
+    const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
+    const fileName = `${uuid}_design_${originalNameClean}.${extension}`;
     const path = `orders/${orderId}/designs/${fileName}`;
 
     return this.uploadFile(this.BUCKETS.ORDERS, path, file, {

@@ -166,7 +166,7 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Image Processing**: Built-in Sharp integration for automatic image optimization and variant generation
 - **Storage Statistics**: Usage monitoring and file listing capabilities with pagination support
 - **Bucket Organization**: Structured storage with dedicated buckets for different file types
-- **Path Standardization**: Consistent file organization patterns across all storage operations
+- **Path Standardization**: Consistent file organization patterns using UUID + original filename to prevent collisions
 - **Error Handling**: Unified error responses and comprehensive logging throughout
 - **Type Safety**: Full TypeScript support with proper interfaces and return types
 - **Integration Ready**: Successfully integrated into catalog image routes with ready patterns for other routes
