@@ -80,7 +80,7 @@ async function createCatalogItem(req: Request, res: Response) {
 
     console.log('Catalog item created successfully:', insertedItem);
 
-    res.status(200).json({
+    res.status(201).json({
       success: true,
       message: 'Catalog item created successfully',
       item: insertedItem

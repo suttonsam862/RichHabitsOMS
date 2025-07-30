@@ -120,7 +120,7 @@ export async function sendUserInvitation(req: Request, res: Response) {
     console.log(`✅ Invitation created for ${email}`);
     console.log(`📧 Invitation URL: ${inviteUrl}`);
 
-    return res.status(200).json({
+    return res.status(201).json({
       success: true,
       message: `Invitation sent successfully to ${email}`,
       invitation: {
@@ -302,7 +302,7 @@ export async function createCustomer(req: Request, res: Response) {
     console.log('Customer profile created successfully:', insertedProfile);
 
     // Success response with customer data
-    res.status(200).json({
+    res.status(201).json({
       success: true,
       message: 'Customer created successfully',
       customer: {

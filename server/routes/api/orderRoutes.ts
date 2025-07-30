@@ -189,7 +189,7 @@ async function createOrder(req: Request, res: Response) {
     console.log('✅ Order items created successfully:', createdItems.length);
 
     // Return simplified structure with order and items
-    res.status(200).json({
+    res.status(201).json({
       success: true,
       order: createdOrder,
       items: createdItems
