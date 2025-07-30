@@ -1,0 +1,44 @@
+Conduct a **high-stakes, no-compromise, zero-tolerance** audit of the entire ThreadCraft codebase and development environment.
+
+This is a critical production-grade system — nothing short of full, airtight, fully-operational implementation will be accepted. Grade every feature and integration as if a failed component could sink the business.
+
+Your task:
+
+🧠 Perform a complete forensic inspection of the codebase, configuration, and system wiring for ThreadCraft.
+
+💣 Treat any missing, untested, misconfigured, or fragile functionality as a **critical failure**.
+
+🔬 Every system must be verified not only for presence but for correct, production-safe integration — no stubs, no TODOs, no partial attempts.
+
+---
+
+### 🔍 Audit Categories (Judge Ruthlessly)
+
+#### ⚙️ Core System & Stack Setup
+- [ ] Is React + TypeScript present and strictly typed across the codebase?
+- [ ] Is Tailwind CSS correctly installed and used consistently?
+- [ ] Is shadcn/ui properly integrated and functioning?
+- [ ] Is Vite configured correctly for both local dev and Replit environment (host, port, proxy)?
+- [ ] Is the Express server fully wired and listening on port 5000?
+- [ ] Is Supabase connected and functional (auth, DB, storage)?
+- [ ] Are Supabase secrets securely stored (e.g., no hardcoded keys)?
+- [ ] Is Stripe integrated with actual test mode keys and functional webhook handling?
+
+#### 🧪 Feature Implementation (All or Nothing)
+- [ ] Add Customer form: creates valid records, triggers proper refreshes, enforces field validation, handles Supabase errors
+- [ ] Add Item (Catalog): inserts item, links variants and images, supports optional fields, enforces type safety
+- [ ] Add Manufacturer: inserts data into correct table, persists without failure, links to production orders
+- [ ] Create New Order: inserts to `orders` and `order_items`, enforces foreign key references, handles totals and status defaults
+
+#### 🧩 Data Consistency & Reusability
+- [ ] Data created in one view is **immediately** reflected in others (customers, orders, manufacturers, etc.)
+- [ ] Shared components use consistent data fetch strategy (SWR, Zustand, context, or equivalent)
+- [ ] There is **no stale data**, broken links, or missing references in any connected view
+
+#### 🛠️ File & Media Handling
+- [ ] Supabase Storage is functional with proper bucket setup and upload permissions
+- [ ] Files are reliably uploaded, named uniquely, and linked to entities (designs, catalog items)
+- [ ] Upload progress and errors are handled cleanly in the UI
+
+#### 🔐 Access Control & Permissions
+- [ ] Supa
