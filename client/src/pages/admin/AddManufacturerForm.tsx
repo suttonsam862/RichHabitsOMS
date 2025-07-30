@@ -134,34 +134,80 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
     } catch (error: any) {
       console.error('Error adding manufacturer:', error);
       
-      // Handle different types of errors
+      let userFriendlyMessage = '';
+      let detailedMessage = '';
+      
+      // Handle different types of errors with better message extraction
       if (error.response) {
         // Server responded with error status
         const statusCode = error.response.status;
-        const errorMessage = error.response.data?.message || error.response.data?.error || 'Unknown server error';
+        const responseData = error.response.data;
         
-        if (statusCode === 400) {
-          setGeneralError(`Validation Error: ${errorMessage}`);
-        } else if (statusCode === 401) {
-          setGeneralError('Authentication failed. Please log in again.');
-        } else if (statusCode === 403) {
-          setGeneralError('You do not have permission to add manufacturers.');
-        } else if (statusCode === 409) {
-          setGeneralError('A manufacturer with this email already exists.');
-        } else {
-          setGeneralError(`Server Error (${statusCode}): ${errorMessage}`);
+        // Extract error message with priority: message > error > statusText
+        const serverMessage = responseData?.message || 
+                            responseData?.error || 
+                            responseData?.details || 
+                            error.response.statusText || 
+                            'Unknown server error';
+        
+        // Create user-friendly messages based on status code
+        switch (statusCode) {
+          case 400:
+            userFriendlyMessage = `Invalid data: ${serverMessage}`;
+            detailedMessage = 'Please check your input and try again.';
+            break;
+          case 401:
+            userFriendlyMessage = 'Authentication failed. Please log in again.';
+            detailedMessage = 'Your session may have expired.';
+            break;
+          case 403:
+            userFriendlyMessage = 'Access denied. You do not have permission to add manufacturers.';
+            detailedMessage = 'Contact your administrator if you believe this is an error.';
+            break;
+          case 409:
+            userFriendlyMessage = 'A manufacturer with this email already exists.';
+            detailedMessage = 'Please use a different email address.';
+            break;
+          case 422:
+            userFriendlyMessage = `Validation failed: ${serverMessage}`;
+            detailedMessage = 'Please correct the highlighted fields and try again.';
+            break;
+          case 500:
+            userFriendlyMessage = `Server error: ${serverMessage}`;
+            detailedMessage = 'This appears to be a system issue. Please try again later.';
+            break;
+          default:
+            userFriendlyMessage = `Error (${statusCode}): ${serverMessage}`;
+            detailedMessage = 'Please try again or contact support if the problem persists.';
         }
+        
+        // Log detailed error for debugging
+        console.error('API Error Details:', {
+          status: statusCode,
+          data: responseData,
+          message: serverMessage
+        });
+        
       } else if (error.request) {
-        // Network error
-        setGeneralError('Network error. Please check your connection and try again.');
+        // Network error - no response received
+        userFriendlyMessage = 'Network connection failed';
+        detailedMessage = 'Please check your internet connection and try again.';
+        console.error('Network Error:', error.request);
+        
       } else {
-        // Other error
-        setGeneralError(error.message || 'An unexpected error occurred. Please try again.');
+        // Request setup error or other error
+        userFriendlyMessage = error.message || 'An unexpected error occurred';
+        detailedMessage = 'Please refresh the page and try again.';
+        console.error('Request Error:', error.message);
       }
       
+      // Set the main error message
+      setGeneralError(userFriendlyMessage);
+      
+      // Show toast with both main message and details
       toast({
         title: "Failed to add manufacturer",
-        description: error?.response?.data?.message || error.message || "There was an error creating the manufacturer.",
+        description: `${userFriendlyMessage}${detailedMessage ? ` ${detailedMessage}` : ''}`,
         variant: "destructive",
       });
     } finally {
@@ -203,8 +249,18 @@ export default function AddManufacturerForm({ isOpen = false, onClose, onSuccess
           <div className="grid gap-4 py-4">
             {/* General Error Display */}
             {generalError && (
-              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
-                <p className="text-sm text-destructive font-medium">{generalError}</p>
+              <div className="p-4 rounded-lg bg-destructive/15 border-2 border-destructive/30 shadow-sm">
+                <div className="flex items-start space-x-2">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-destructive mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-destructive mb-1">Error</h4>
+                    <p className="text-sm text-destructive/90 leading-relaxed">{generalError}</p>
+                  </div>
+                </div>
               </div>
             )}
             
