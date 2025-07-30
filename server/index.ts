@@ -230,6 +230,7 @@ import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
 import organizationRoutes from './routes/api/organizationRoutes';
 import optimizedImageRoutes from './routes/api/optimizedImageRoutes.js';
+import comprehensiveImageRoutes from './routes/api/comprehensiveImageRoutes';
 import invitationRoutes from './routes/api/invitationRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
 import securityRoutes from './routes/api/securityRoutes';
@@ -336,6 +337,7 @@ import healthRoutes from './routes/health';
     app.use('/api/orders', orderRoutes);
     app.use('/api/organizations', organizationRoutes);
     app.use('/api/images', optimizedImageRoutes);
+    app.use('/api/images-v2', comprehensiveImageRoutes); // NEW: Comprehensive image system
     app.use('/api', imageVariantsRoutes); // Image variants routes
     app.use('/api', enhancedOrderRoutes); // Enhanced order management routes
     app.use('/api/invitations', invitationRoutes);

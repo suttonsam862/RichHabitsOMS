@@ -24,6 +24,7 @@ import {
   checkSkuExists
 } from './routes/api/catalogRoutes';
 import imageRoutes from './routes/api/imageRoutes';
+import comprehensiveImageRoutes from './routes/api/comprehensiveImageRoutes';
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
