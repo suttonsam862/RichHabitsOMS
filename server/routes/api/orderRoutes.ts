@@ -413,10 +413,10 @@ async function patchOrder(req: Request, res: Response) {
 
     console.log('✅ Order updated successfully:', updatedOrder.id);
 
-    // Handle items update if provided
+    // Handle comprehensive items update if provided (add, remove, update)
     let updatedItems = null;
     if (validatedData.items && Array.isArray(validatedData.items)) {
-      console.log('🔄 Processing items update...');
+      console.log('🔄 Processing comprehensive items update (add/remove/update)...');
       
       try {
         // First, get existing items
@@ -425,13 +425,25 @@ async function patchOrder(req: Request, res: Response) {
           .select('*')
           .eq('order_id', orderId);
 
+        const existingItemIds = new Set(existingItems?.map(item => item.id) || []);
+        const newItemIds = new Set(validatedData.items.filter(item => item.id).map(item => item.id));
+        
         const itemsToUpdate = [];
         const itemsToInsert = [];
-        const existingItemIds = new Set(existingItems?.map(item => item.id) || []);
+        const itemsToDelete = [];
 
-        // Process each item in the update
+        console.log(`📊 Items analysis: ${existingItemIds.size} existing, ${validatedData.items.length} in request`);
+
+        // Identify items to delete (existing items not in the new list)
+        for (const existingItem of existingItems || []) {
+          if (!newItemIds.has(existingItem.id)) {
+            itemsToDelete.push(existingItem.id);
+          }
+        }
+
+        // Process each item in the update request
         for (const item of validatedData.items) {
-          // Transform item data to snake_case
+          // Transform item data to snake_case with comprehensive field mapping
           const dbItemData: any = {
             order_id: orderId,
             product_name: item.productName || item.product_name || '',
@@ -445,65 +457,116 @@ async function patchOrder(req: Request, res: Response) {
             customization: item.customization || '',
             status: item.status || 'pending',
             production_notes: item.productionNotes || item.production_notes || '',
-            estimated_completion_date: item.estimatedCompletionDate || item.estimated_completion_date || null
+            estimated_completion_date: item.estimatedCompletionDate || item.estimated_completion_date || null,
+            updated_at: new Date().toISOString()
           };
 
           if (item.id && existingItemIds.has(item.id)) {
             // Update existing item
             itemsToUpdate.push({ id: item.id, ...dbItemData });
-          } else if (!item.id) {
-            // Insert new item
-            itemsToInsert.push(dbItemData);
+            console.log(`🔄 Updating item: ${item.id} - ${dbItemData.product_name}`);
+          } else if (!item.id || !existingItemIds.has(item.id)) {
+            // Insert new item (remove id if it doesn't exist in database)
+            const { id, ...insertData } = dbItemData;
+            insertData.created_at = new Date().toISOString();
+            itemsToInsert.push(insertData);
+            console.log(`➕ Adding new item: ${dbItemData.product_name}`);
           }
+        }
+
+        // Perform deletions first
+        if (itemsToDelete.length > 0) {
+          console.log(`🗑️ Deleting ${itemsToDelete.length} items:`, itemsToDelete);
+          const { error: deleteError } = await supabaseAdmin
+            .from('order_items')
+            .delete()
+            .in('id', itemsToDelete);
+
+          if (deleteError) {
+            console.error('❌ Item deletion failed:', deleteError.message);
+            throw new Error(`Failed to delete items: ${deleteError.message}`);
+          }
+          console.log('✅ Items deleted successfully');
         }
 
         // Perform updates
         if (itemsToUpdate.length > 0) {
+          console.log(`🔄 Updating ${itemsToUpdate.length} items`);
           for (const item of itemsToUpdate) {
             const { id, ...updateFields } = item;
-            await supabaseAdmin
+            const { error: updateError } = await supabaseAdmin
               .from('order_items')
               .update(updateFields)
               .eq('id', id);
+
+            if (updateError) {
+              console.error(`❌ Failed to update item ${id}:`, updateError.message);
+              throw new Error(`Failed to update item: ${updateError.message}`);
+            }
           }
+          console.log('✅ Items updated successfully');
         }
 
-        // Perform inserts
+        // Perform insertions
         if (itemsToInsert.length > 0) {
-          await supabaseAdmin
+          console.log(`➕ Inserting ${itemsToInsert.length} new items`);
+          const { error: insertError } = await supabaseAdmin
             .from('order_items')
             .insert(itemsToInsert);
+
+          if (insertError) {
+            console.error('❌ Item insertion failed:', insertError.message);
+            throw new Error(`Failed to insert items: ${insertError.message}`);
+          }
+          console.log('✅ Items inserted successfully');
         }
 
-        // Fetch updated items
-        const { data: allUpdatedItems } = await supabaseAdmin
+        // Fetch all current items for the order
+        const { data: allUpdatedItems, error: fetchError } = await supabaseAdmin
           .from('order_items')
           .select('*')
           .eq('order_id', orderId)
           .order('created_at', { ascending: true });
 
-        updatedItems = allUpdatedItems;
-        console.log('✅ Items updated successfully:', allUpdatedItems?.length);
-
-        // Recalculate total amount if items were updated
-        if (allUpdatedItems && allUpdatedItems.length > 0) {
-          const newTotalAmount = allUpdatedItems.reduce((total, item) => {
-            return total + (parseFloat(item.total_price) || 0);
-          }, 0);
-
-          // Update order with new total
-          await supabaseAdmin
-            .from('orders')
-            .update({ total_amount: newTotalAmount })
-            .eq('id', orderId);
-
-          updatedOrder.total_amount = newTotalAmount;
+        if (fetchError) {
+          console.error('❌ Failed to fetch updated items:', fetchError.message);
+          throw new Error(`Failed to fetch updated items: ${fetchError.message}`);
         }
 
+        updatedItems = allUpdatedItems;
+        console.log(`✅ Final items count: ${allUpdatedItems?.length || 0}`);
+
+        // Recalculate total amount based on current items
+        const newTotalAmount = (allUpdatedItems || []).reduce((total, item) => {
+          return total + (parseFloat(item.total_price) || 0);
+        }, 0);
+
+        console.log(`💰 Recalculated total: $${newTotalAmount}`);
+
+        // Update order with new total
+        const { error: totalUpdateError } = await supabaseAdmin
+          .from('orders')
+          .update({ total_amount: newTotalAmount, updated_at: new Date().toISOString() })
+          .eq('id', orderId);
+
+        if (totalUpdateError) {
+          console.error('❌ Failed to update order total:', totalUpdateError.message);
+          // Don't throw error for total update failure
+        } else {
+          updatedOrder.total_amount = newTotalAmount;
+          console.log('✅ Order total updated successfully');
+        }
+
+        console.log(`🎉 Items operation completed: ${itemsToDelete.length} deleted, ${itemsToUpdate.length} updated, ${itemsToInsert.length} added`);
+
       } catch (itemsError: any) {
-        console.error('❌ Items update failed:', itemsError.message);
-        // Don't fail the entire request if items update fails
-        console.log('⚠️ Order updated but items update failed');
+        console.error('💥 Items update failed:', itemsError.message);
+        return res.status(400).json({
+          success: false,
+          message: 'Order updated but items update failed',
+          error: itemsError.message,
+          order: updatedOrder
+        });
       }
     }
 
