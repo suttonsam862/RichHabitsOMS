@@ -96,18 +96,6 @@ async function createCatalogItem(req: Request, res: Response) {
   }
 }
 
-// Create Supabase admin client
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
-
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -203,95 +191,7 @@ async function getAllCatalogItems(req: Request, res: Response) {
   }
 }
 
-/**
- * Create a new catalog item
- */
-async function createCatalogItem(req: Request, res: Response) {
-  try {
-    console.log('Creating new catalog item:', req.body);
-
-    const {
-      name,
-      category,
-      sport,
-      basePrice,
-      unitCost,
-      sku,
-      etaDays,
-      status,
-      description,
-      buildInstructions,
-      fabric,
-      sizes,
-      colors,
-      customizationOptions,
-      minQuantity,
-      maxQuantity
-    } = req.body;
-
-    // Handle file upload
-    let imageUrl = null;
-    if (req.file) {
-      imageUrl = `/uploads/catalog/${req.file.filename}`;
-    }
-
-    // Parse arrays if they come as strings
-    const parseSizes = typeof sizes === 'string' ? JSON.parse(sizes) : (sizes || []);
-    const parseColors = typeof colors === 'string' ? JSON.parse(colors) : (colors || []);
-    const parseCustomizations = typeof customizationOptions === 'string' ? JSON.parse(customizationOptions) : (customizationOptions || []);
-
-    const { data: newItem, error } = await supabaseAdmin
-      .from('catalog_items')
-      .insert({
-        name: name || '',
-        category: category || '',
-        sport: sport || '',
-        base_price: parseFloat(basePrice) || 0,
-        unit_cost: parseFloat(unitCost) || 0,
-        sku: sku || '',
-        eta_days: etaDays || '7-10 business days',
-        status: status || 'active',
-        image_url: imageUrl,
-        description: description || '',
-        build_instructions: buildInstructions || '',
-        fabric: fabric || '',
-        sizes: JSON.stringify(parseSizes),
-        colors: JSON.stringify(parseColors),
-        customization_options: JSON.stringify(parseCustomizations),
-        min_quantity: parseInt(minQuantity) || 1,
-        max_quantity: parseInt(maxQuantity) || 1000,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating catalog item:', error);
-      return res.status(400).json({
-        success: false,
-        message: 'Failed to create catalog item',
-        error: error.message
-      });
-    }
-
-    console.log('Catalog item created successfully:', newItem.id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Catalog item created successfully',
-      data: newItem
-    });
-
-  } catch (error: any) {
-    console.error('Error in createCatalogItem:', error);
-    console.error(error.message);
-    res.status(400).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-}
+// Duplicate createCatalogItem function removed - using the first implementation above
 
 /**
  * Update a catalog item - BULLETPROOF VERSION

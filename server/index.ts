@@ -224,7 +224,7 @@ app.use((req, res, next) => {
 // Import API routes
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
-import catalogRoutes from './routes/api/catalogRoutes-bulletproof';
+import catalogRoutes from './routes/api/catalogRoutes';
 import customerRoutes from './routes/api/customerRoutes';
 import dashboardRoutes from './routes/api/dashboardRoutes';
 import orderRoutes from './routes/api/orderRoutes';
@@ -239,7 +239,7 @@ import imageVariantsRoutes from './routes/api/imageVariantsRoutes';
 import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
 import messageRoutes from './routes/api/messageRoutes';
 import healthRoutes from './routes/health';
-import { 
+import manufacturingRoutes, { 
   getManufacturingStats, 
   getDesignTasks, 
   getProductionTasks, 
@@ -358,8 +358,9 @@ app.use('/api/security', securityRoutes);
     app.use('/api/user-roles', userRolesRoutes);
 app.use('/api/users', userManagementRoutes);
     app.use('/api/messages', messageRoutes);
+    app.use('/api/manufacturing', manufacturingRoutes);
 
-    // Manufacturing Management API endpoints
+    // Manufacturing Management API endpoints (individual handlers for compatibility)
     app.get('/api/manufacturing/stats', getManufacturingStats);
     app.get('/api/manufacturing/manufacturers', getManufacturers);
     app.post('/api/manufacturing/manufacturers', createManufacturer);
@@ -485,76 +486,3 @@ app.use('/api/users', userManagementRoutes);
     process.exit(1);
   }
 })();
-// Database connection import removed - using testSupabaseConnection from db.ts instead
-import { createAdminIfNotExists } from "./create-admin-user.js";
-// Temporarily remove SystemConfigurationManager import to fix server crash
-// import { SystemConfigurationManager } from '../system_config/config-loader.js';
-
-async function initializeDatabase() {
-  // Initialize system configuration
-  console.log('🔧 Initializing system configuration...');
-  // Temporarily remove SystemConfigurationManager initialization to fix server crash
-  // const configManager = SystemConfigurationManager.getInstance();
-  // configManager.initialize();
-
-  // if (!configManager.validateConfiguration()) {
-  //   console.error('❌ System configuration validation failed');
-  //   process.exit(1);
-  // }
-
-  try {
-    // Test database connection
-  // Database connection test handled in main startup routine
-    await createAdminIfNotExists();
-  } catch (error) {
-    console.error("Database initialization failed:", error);
-    process.exit(1);
-  }
-}
-
-import dataAccessRoutes from './routes/api/dataAccessRoutes.js';
-import workflowRoutes from './routes/api/workflowRoutes.js';
-import monitoringRoutes from './routes/api/monitoringRoutes.js';
-import aiRoutes from './routes/api/aiRoutes.js';
-
-// Import routes
-app.use('/api/auth', authRoutes);
-app.use('/api/catalog', catalogRoutes);
-app.use('/api/catalog-options', catalogOptionsRoutes);
-app.use('/api/fabric-options', fabricOptionsRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/health', healthRoutes);
-app.use('/api/images-unified', unifiedImageRoutes);
-app.use('/api/invitations', invitationRoutes);
-app.use('/api/user-management', userManagementRoutes);
-app.use('/api/security', securityRoutes);
-app.use('/api/data-access', dataAccessRoutes);
-app.use('/api/user-roles', userRolesRoutes);
-app.use('/api/workflow', workflowRoutes);
-
-// AI routes
-app.use('/api/ai', aiRoutes);
-
-// Monitoring routes
-app.use('/api/monitoring', monitoringRoutes);
-
-//invitation routes
-app.use('/api/invitations', invitationRoutes);
-
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/organizations', organizationRoutes);
-app.use('/api/catalog', catalogRoutes);
-app.use('/api/catalog-options', catalogOptionsRoutes);
-app.use('/api/user-management', userManagementRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-
-// Import and use sales management routes
-import salesManagementRoutes from './routes/api/salesManagementRoutes';
-app.use('/api/sales-management', salesManagementRoutes);
-
-// Import and use customer contacts routes
-import customerContactsRoutes from './routes/api/customerContactsRoutes';
-app.use('/api/customer-contacts', customerContactsRoutes);
