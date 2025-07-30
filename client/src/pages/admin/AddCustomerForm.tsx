@@ -49,7 +49,19 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
   const addCustomerMutation = useMutation({
     mutationFn: async (customerData: typeof formData) => {
       console.log('Submitting customer data:', customerData);
-      const response = await axios.post('/api/customers', customerData);
+      
+      // Get auth token from localStorage
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      const response = await axios.post('/api/customers', customerData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       return response.data;
     },
     onSuccess: (data) => {

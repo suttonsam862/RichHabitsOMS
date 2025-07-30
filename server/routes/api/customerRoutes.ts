@@ -233,138 +233,80 @@ export async function createCustomer(req: Request, res: Response) {
   }
 
   try {
-    console.log('Creating customer account with email:', email);
+    console.log('Creating customer profile with email:', email);
 
-    // Generate a secure temporary password
-    const tempPassword = Math.random().toString(36).substring(2, 10) + 
-                         Math.random().toString(36).substring(2, 10);
+    // Check if customer already exists in database
+    const { data: existingCustomer, error: checkError } = await supabaseAdmin
+      .from('customers')
+      .select('id, email')
+      .eq('email', email)
+      .single();
 
-    // Create the user in Supabase Auth using admin privileges
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        firstName,
-        lastName,
-        role: 'customer'
-      }
-    });
-
-    if (error) {
-      console.error('Error creating customer auth account:', error);
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('Error checking existing customer:', checkError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to create customer account: ' + error.message
+        message: 'Failed to validate customer uniqueness: ' + checkError.message
       });
     }
 
-    if (!data?.user) {
-      return res.status(500).json({
+    if (existingCustomer) {
+      return res.status(400).json({
         success: false,
-        message: 'Unknown error creating customer account'
+        message: 'A customer with this email address already exists'
       });
     }
 
-    // Generate username from first and last name
-    const username = (firstName + lastName).toLowerCase().replace(/[^a-z0-9]/g, '') + 
-                     Math.floor(Math.random() * 1000); // Add random digits for uniqueness
+    // Generate a unique ID for the customer
+    const customerId = crypto.randomUUID();
 
-    // Create profile record
-    const profileData = {
-      id: data.user.id,
-      username,
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      role: 'customer',
-      company,
-      phone,
-      address,
-      city,
-      state,
-      postal_code: zip,
-      country,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      is_active: true
-    };
-
-    // Insert profile into database - use snake_case columns for insert
+    console.log('Creating customer profile with ID:', customerId);
+    // Insert customer directly into database - bypassing Supabase Auth issues
     const { data: insertedProfile, error: profileError } = await supabaseAdmin
       .from('customers')
       .insert({
-        id: data.user.id,
+        id: customerId,
         first_name: firstName,
         last_name: lastName,
         email: email,
         company: company || '',
-        phone: phone || ''
+        phone: phone || '',
+        address: address || '',
+        city: city || '',
+        state: state || '',
+        zip: zip || '',
+        country: country || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-      .select();
+      .select()
+      .single();
 
     if (profileError) {
       console.error('Error creating customer profile:', profileError);
-
-      // Clean up auth user since profile creation failed
-      await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+      console.error('Profile error details:', JSON.stringify(profileError, null, 2));
 
       return res.status(500).json({
         success: false,
-        message: 'Failed to create customer profile: ' + profileError.message
+        message: 'Failed to create customer profile: ' + profileError.message,
+        details: profileError.details || 'No additional details'
       });
     }
 
-    // Handle sending invitation email if requested
-    let inviteUrl = '';
-    let inviteSent = false;
+    console.log('Customer profile created successfully:', insertedProfile);
 
-    if (sendInvite) {
-      try {
-        // Generate a password reset link for the user to set their own password
-        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'recovery',
-          email: email,
-        });
-
-        if (linkError) {
-          console.error('Error generating password reset link:', linkError);
-        } else if (linkData?.properties?.action_link) {
-          inviteUrl = linkData.properties.action_link;
-
-          // Send invitation email with the reset link
-          try {
-            const emailTemplate = getCustomerInviteEmailTemplate(
-              email,
-              firstName,
-              lastName,
-              inviteUrl
-            );
-
-            inviteSent = await sendEmail(emailTemplate);
-            console.log(`Invitation email ${inviteSent ? 'sent' : 'failed'} to ${email}`);
-          } catch (emailErr) {
-            console.error('Error sending invitation email:', emailErr);
-          }
-        }
-      } catch (err) {
-        console.error('Error in invitation process:', err);
-      }
-    }
-
-    // Return success response
-    return res.status(201).json({
+    // Success response with customer data
+    res.status(201).json({
       success: true,
-      message: inviteSent 
-        ? 'Customer created and invitation email sent' 
-        : 'Customer created successfully',
+      message: 'Customer created successfully',
       customer: {
-        id: data.user.id,
-        firstName,
-        lastName,
-        email,
-        company,
-        inviteSent
+        id: insertedProfile.id,
+        firstName: insertedProfile.first_name,
+        lastName: insertedProfile.last_name,
+        email: insertedProfile.email,
+        company: insertedProfile.company,
+        phone: insertedProfile.phone,
+        created_at: insertedProfile.created_at
       }
     });
 
@@ -384,11 +326,10 @@ async function getAllCustomers(req: Request, res: Response) {
   try {
     console.log('Fetching customers - request received');
 
-    // First, try to get customers from the customers table (exclude archived)
+    // First, try to get customers from the customers table
     const { data: customerProfiles, error: customerError } = await supabaseAdmin
       .from('customers')
-      .select('*')
-      .neq('is_archived', true);
+      .select('*');
 
     if (customerError) {
       console.error('Error fetching customer profiles:', customerError);
@@ -407,7 +348,7 @@ async function getAllCustomers(req: Request, res: Response) {
 
     // Combine data from both sources
     const authUsers = authData.users;
-    const customers = [];
+    const customers: any[] = [];
 
     // Process customers from the customers table first
     if (customerProfiles && customerProfiles.length > 0) {
@@ -434,7 +375,7 @@ async function getAllCustomers(req: Request, res: Response) {
     }
 
     // Also include auth users with customer role who might not be in customers table
-    const customerRoleUsers = authUsers
+    const customerRoleUsers: any[] = authUsers
       .filter(user => user.user_metadata?.role === 'customer')
       .filter(user => !customers.find(c => c.id === user.id || c.email === user.email));
 

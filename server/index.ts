@@ -463,7 +463,7 @@ app.use('/api/users', userManagementRoutes);
     process.exit(1);
   }
 })();
-import { testDatabaseConnection } from "./supabase.js";
+// Database connection import removed - using testSupabaseConnection from db.ts instead
 import { createAdminIfNotExists } from "./create-admin-user.js";
 // Temporarily remove SystemConfigurationManager import to fix server crash
 // import { SystemConfigurationManager } from '../system_config/config-loader.js';
@@ -482,7 +482,7 @@ async function initializeDatabase() {
 
   try {
     // Test database connection
-  // await testDatabaseConnection();
+  // Database connection test handled in main startup routine
     await createAdminIfNotExists();
   } catch (error) {
     console.error("Database initialization failed:", error);

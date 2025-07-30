@@ -68,14 +68,14 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
       return next();
     }
 
-    // For development mode, allow dev tokens to work
+    // For development mode, allow dev tokens to work and bypass auth for testing
     if (process.env.NODE_ENV === 'development' && token && (token.startsWith('dev-admin-token') || token.length > 10)) {
       if (shouldLog) {
-        console.log('Development mode: accepting token');
+        console.log('Development mode: accepting token for admin access');
       }
       req.user = {
-        id: 'dev-admin-user',
-        email: 'admin@threadcraft.dev',
+        id: 'dev-admin-id',
+        email: 'admin@threadcraft.com', 
         role: 'admin',
         is_super_admin: true,
         email_verified: true
