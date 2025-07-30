@@ -405,6 +405,48 @@ export default function OrderEditPage() {
         description: `Order ${form.getValues('orderNumber')} has been ${isEditing ? 'updated' : 'created'} successfully.`,
       });
       
+      // Update form with new values from response for editing mode
+      if (isEditing) {
+        const updatedOrder = result.data || result;
+        if (updatedOrder) {
+          const formData: OrderEditFormValues = {
+            id: updatedOrder.id,
+            orderNumber: updatedOrder.orderNumber || '',
+            customerId: updatedOrder.customerId || '',
+            status: updatedOrder.status || 'draft',
+            priority: updatedOrder.priority || 'medium',
+            assignedDesignerId: updatedOrder.assignedDesignerId || '',
+            assignedManufacturerId: updatedOrder.assignedManufacturerId || '',
+            notes: updatedOrder.notes || '',
+            internalNotes: updatedOrder.internalNotes || '',
+            customerRequirements: updatedOrder.customerRequirements || '',
+            deliveryAddress: updatedOrder.deliveryAddress || '',
+            deliveryInstructions: updatedOrder.deliveryInstructions || '',
+            rushOrder: updatedOrder.rushOrder || false,
+            estimatedDeliveryDate: updatedOrder.estimatedDeliveryDate || '',
+            items: updatedOrder.items?.map((item: any) => ({
+              id: item.id,
+              catalogItemId: item.catalogItemId || item.catalog_item_id || '',
+              productName: item.productName || item.product_name || '',
+              description: item.description || '',
+              size: item.size || '',
+              color: item.color || '',
+              fabric: item.fabric || '',
+              customization: item.customization || '',
+              quantity: item.quantity || 1,
+              unitPrice: parseFloat(item.unitPrice || item.unit_price || '0'),
+              totalPrice: parseFloat(item.totalPrice || item.total_price || '0'),
+              status: item.status || 'pending',
+              productionNotes: item.productionNotes || item.production_notes || '',
+              estimatedCompletionDate: item.estimatedCompletionDate || item.estimated_completion_date || '',
+            })) || []
+          };
+          
+          form.reset(formData);
+          setInitialData(formData);
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       if (isEditing) {
         queryClient.invalidateQueries({ queryKey: [`/api/orders/${id}`] });

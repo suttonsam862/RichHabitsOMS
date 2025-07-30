@@ -182,8 +182,26 @@ export default function CatalogItemEditPage() {
         description: "The catalog item has been successfully updated.",
       });
       
+      // Update form with new values from response
+      const updatedItem = data.data || data;
+      if (updatedItem) {
+        const formData = {
+          name: updatedItem.name || '',
+          base_price: parseFloat(updatedItem.basePrice || updatedItem.base_price) || 0,
+          sport: updatedItem.sport || '',
+          fabric: updatedItem.fabric || '',
+          status: updatedItem.status || 'active',
+          sizes: Array.isArray(updatedItem.sizes) ? updatedItem.sizes : [],
+          colors: Array.isArray(updatedItem.colors) ? updatedItem.colors : [],
+          images: Array.isArray(updatedItem.images) ? updatedItem.images : []
+        };
+        
+        form.reset(formData);
+        setInitialData(formData);
+      }
+      
       // Update React Query cache
-      queryClient.setQueryData(['/api/catalog', itemId], data.data || data);
+      queryClient.setQueryData(['/api/catalog', itemId], updatedItem);
       queryClient.invalidateQueries({ queryKey: ['/api/catalog'] });
       
       // Navigate back to catalog

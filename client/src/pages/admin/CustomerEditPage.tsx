@@ -383,6 +383,35 @@ export default function CustomerEditPage() {
           });
         }
         
+        // Update form with new values from response
+        const updatedCustomer = result.data || result;
+        if (updatedCustomer) {
+          form.reset({
+            firstName: updatedCustomer.firstName || updatedCustomer.first_name || '',
+            lastName: updatedCustomer.lastName || updatedCustomer.last_name || '',
+            email: updatedCustomer.email || '',
+            phone: updatedCustomer.phone || '',
+            address: updatedCustomer.address || '',
+            city: updatedCustomer.city || '',
+            state: updatedCustomer.state || '',
+            zipCode: updatedCustomer.zipCode || updatedCustomer.zip_code || '',
+            status: updatedCustomer.status || 'active'
+          });
+          
+          // Update initial data for validation
+          setInitialData({
+            firstName: updatedCustomer.firstName || updatedCustomer.first_name || '',
+            lastName: updatedCustomer.lastName || updatedCustomer.last_name || '',
+            email: updatedCustomer.email || '',
+            phone: updatedCustomer.phone || '',
+            address: updatedCustomer.address || '',
+            city: updatedCustomer.city || '',
+            state: updatedCustomer.state || '',
+            zipCode: updatedCustomer.zipCode || updatedCustomer.zip_code || '',
+            status: updatedCustomer.status || 'active'
+          });
+        }
+        
         // Also invalidate queries to ensure fresh data on next fetch
         queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
         queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
