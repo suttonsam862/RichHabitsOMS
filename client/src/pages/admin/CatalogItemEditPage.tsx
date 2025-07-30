@@ -221,13 +221,25 @@ export default function CatalogItemEditPage() {
 
   // Simple update function with async/await
   const updateCatalogItem = async (data: CatalogItemFormData) => {
+    // Map snake_case form fields to camelCase for backend API
+    const apiData = {
+      name: data.name,
+      basePrice: data.base_price, // Convert base_price to basePrice for backend
+      sport: data.sport,
+      fabric: data.fabric,
+      status: data.status,
+      sizes: data.sizes,
+      colors: data.colors,
+      images: data.images
+    };
+
     const response = await fetch(`/api/catalog/${itemId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('authToken')}`
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(apiData)
     });
 
     if (!response.ok) {
