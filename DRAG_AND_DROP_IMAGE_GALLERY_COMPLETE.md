@@ -5,6 +5,16 @@ Comprehensive drag-and-drop image gallery system implemented using @dnd-kit libr
 
 ## 🚀 Implementation Status: 100% Complete
 
+### Enhanced Image Deletion System (Latest Update)
+- **Complete Storage Cleanup**: Images are now deleted from both Supabase Storage and database metadata records
+- **DELETE API Endpoints**: Added comprehensive DELETE routes for catalog/:id/images/:imageId, orders/:id/images/:imageId, and design-tasks/:id/images/:imageId
+- **Storage Path Extraction**: Intelligent URL parsing to extract correct storage paths for Supabase Storage deletion
+- **Metadata Synchronization**: Automatic removal from JSONB fields (imageVariants.gallery, production_images, design_files)
+- **Error Resilience**: Continues with metadata removal even if storage deletion fails, with proper logging
+- **User Confirmation**: Built-in confirmation dialog to prevent accidental deletions
+- **Complete Cleanup**: Ensures no orphaned files remain in either storage location
+- **Real-time Updates**: Immediate UI feedback with cache invalidation and toast notifications
+
 ### Core Components
 
 #### 1. DraggableImageGallery Component (`client/src/components/ui/DraggableImageGallery.tsx`)

@@ -325,12 +325,59 @@ export function DraggableImageGallery({
     });
   };
 
-  // Handle image deletion
-  const handleDelete = async (imageId: string) => {
-    if (onDelete) {
-      await onDelete(imageId);
-      // Remove from local state
+  // Delete image mutation - removes from both storage and metadata
+  const deleteImageMutation = useMutation({
+    mutationFn: async (imageId: string) => {
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) throw new Error('Not authenticated');
+
+      const endpoint = getDeleteEndpoint(entityType, entityId, imageId);
+      
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete image');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data, imageId) => {
+      // Remove image from local state
       setImages(prev => prev.filter(img => img.id !== imageId));
+      
+      toast({
+        title: "Image Deleted",
+        description: "Image has been permanently deleted from storage and metadata.",
+      });
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ 
+        queryKey: [getQueryKey(entityType), entityId] 
+      });
+      
+      if (onDelete) {
+        onDelete(imageId);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Deletion Failed",
+        description: error.message || "Failed to delete image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handle image deletion with confirmation
+  const handleDelete = async (imageId: string) => {
+    if (confirm('Are you sure you want to permanently delete this image? This action cannot be undone.')) {
+      deleteImageMutation.mutate(imageId);
     }
   };
 
@@ -451,6 +498,19 @@ function getQueryKey(entityType: string): string {
       return '/api/design-tasks';
     default:
       return '/api/entities';
+  }
+}
+
+function getDeleteEndpoint(entityType: string, entityId: string, imageId: string): string {
+  switch (entityType) {
+    case 'catalog_item':
+      return `/api/catalog/${entityId}/images/${imageId}`;
+    case 'order':
+      return `/api/orders/${entityId}/images/${imageId}`;
+    case 'design_task':
+      return `/api/design-tasks/${entityId}/images/${imageId}`;
+    default:
+      throw new Error(`Unsupported entity type: ${entityType}`);
   }
 }
 
