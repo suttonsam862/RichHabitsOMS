@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import ImageAssetService from '../server/services/imageAssetService.js';
+import { ImageAssetUtils, ImageAssetType } from '../server/models/imageAsset.js';
 
 // Initialize Supabase client for storage operations
 const supabase = createClient(
@@ -206,13 +208,14 @@ export class StorageService {
   }
 
   /**
-   * Upload customer photo
+   * Upload customer photo and create asset record
    */
   static async uploadCustomerPhoto(
     customerId: string,
     file: Buffer | Uint8Array,
-    metadata: FileMetadata
-  ): Promise<UploadResult> {
+    metadata: FileMetadata,
+    ownerId?: string
+  ): Promise<UploadResult & { assetId?: string }> {
     const uuid = require('crypto').randomUUID();
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'jpg';
     const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -221,22 +224,47 @@ export class StorageService {
     const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.UPLOADS;
     const path = `customer_photos/${fileName}`;
 
-    return this.uploadFile(bucket, path, file, {
+    const uploadResult = await this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
       upsert: true,
       visibility
     });
+
+    // Create image asset record if upload successful and ownerId provided
+    if (uploadResult.success && ownerId && uploadResult.publicUrl) {
+      const imageMetadata = ImageAssetUtils.createMetadataFromUpload(
+        { originalname: metadata.name, size: metadata.size, mimetype: metadata.type },
+        { path: uploadResult.path, publicUrl: uploadResult.publicUrl },
+        { userId: ownerId }
+      );
+
+      const assetData = ImageAssetUtils.createInsertData(
+        ownerId,
+        'customer_photo',
+        uploadResult.publicUrl,
+        imageMetadata,
+        { relatedId: customerId, visibility: visibility }
+      );
+
+      const assetResult = await ImageAssetService.create(assetData);
+      if (assetResult.success && assetResult.data) {
+        return { ...uploadResult, assetId: assetResult.data.id };
+      }
+    }
+
+    return uploadResult;
   }
 
   /**
-   * Upload catalog item image
+   * Upload catalog item image and create asset record
    */
   static async uploadCatalogImage(
     itemId: string,
     file: Buffer | Uint8Array,
     metadata: FileMetadata,
-    variant?: string
-  ): Promise<UploadResult> {
+    variant?: string,
+    ownerId?: string
+  ): Promise<UploadResult & { assetId?: string }> {
     const uuid = require('crypto').randomUUID();
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'jpg';
     const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
@@ -246,22 +274,48 @@ export class StorageService {
     const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.CATALOG_ITEMS;
     const path = `catalog_items/${itemId}/images/${fileName}`;
 
-    return this.uploadFile(bucket, path, file, {
+    const uploadResult = await this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
       upsert: false,
       visibility
     });
+
+    // Create image asset record if upload successful and ownerId provided
+    if (uploadResult.success && ownerId && uploadResult.publicUrl) {
+      const imageType: ImageAssetType = variant ? 'variant' : 'catalog_image';
+      const imageMetadata = ImageAssetUtils.createMetadataFromUpload(
+        { originalname: metadata.name, size: metadata.size, mimetype: metadata.type },
+        { path: uploadResult.path, publicUrl: uploadResult.publicUrl },
+        { userId: ownerId, variant }
+      );
+
+      const assetData = ImageAssetUtils.createInsertData(
+        ownerId,
+        imageType,
+        uploadResult.publicUrl,
+        imageMetadata,
+        { relatedId: itemId, visibility: visibility }
+      );
+
+      const assetResult = await ImageAssetService.create(assetData);
+      if (assetResult.success && assetResult.data) {
+        return { ...uploadResult, assetId: assetResult.data.id };
+      }
+    }
+
+    return uploadResult;
   }
 
   /**
-   * Upload production image for order
+   * Upload production image for order and create asset record
    */
   static async uploadProductionImage(
     orderId: string,
     file: Buffer | Uint8Array,
     metadata: FileMetadata,
-    stage?: string
-  ): Promise<UploadResult> {
+    stage?: string,
+    ownerId?: string
+  ): Promise<UploadResult & { assetId?: string }> {
     const uuid = require('crypto').randomUUID();
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'jpg';
     const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
@@ -271,11 +325,36 @@ export class StorageService {
     const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.ORDERS;
     const path = `orders/${orderId}/production/${fileName}`;
 
-    return this.uploadFile(bucket, path, file, {
+    const uploadResult = await this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
       upsert: false,
       visibility
     });
+
+    // Create image asset record if upload successful and ownerId provided
+    if (uploadResult.success && ownerId && (uploadResult.publicUrl || visibility === 'private')) {
+      const imageMetadata = ImageAssetUtils.createMetadataFromUpload(
+        { originalname: metadata.name, size: metadata.size, mimetype: metadata.type },
+        { path: uploadResult.path, publicUrl: uploadResult.publicUrl },
+        { userId: ownerId, stage }
+      );
+
+      const finalUrl = uploadResult.publicUrl || uploadResult.path || uploadResult.url || '';
+      const assetData = ImageAssetUtils.createInsertData(
+        ownerId,
+        'production_image',
+        finalUrl,
+        imageMetadata,
+        { relatedId: orderId, visibility: visibility }
+      );
+
+      const assetResult = await ImageAssetService.create(assetData);
+      if (assetResult.success && assetResult.data) {
+        return { ...uploadResult, assetId: assetResult.data.id };
+      }
+    }
+
+    return uploadResult;
   }
 
   /**

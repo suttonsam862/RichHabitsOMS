@@ -280,13 +280,59 @@ The StorageService requires these environment variables:
 - `SUPABASE_URL` - Supabase project URL
 - `SUPABASE_SERVICE_KEY` - Service role key for admin operations
 
+## 🗄️ Image Assets Table Integration
+
+The storage service now automatically creates metadata records in the `image_assets` table for centralized tracking:
+
+### Table Schema
+```sql
+CREATE TABLE image_assets (
+  id UUID PRIMARY KEY,
+  owner_id UUID NOT NULL,
+  type VARCHAR(50) NOT NULL, -- customer_photo, catalog_image, production_image, etc.
+  related_id UUID,           -- customer_id, catalog_item_id, order_id, etc.
+  url TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  visibility VARCHAR(10) DEFAULT 'public',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  deleted_at TIMESTAMP WITH TIME ZONE NULL
+);
+```
+
+### Automatic Asset Creation
+```typescript
+// Upload with automatic asset record creation
+const result = await StorageService.uploadCatalogImage(
+  itemId,
+  imageBuffer,
+  { name: 'product.jpg', size: buffer.length, type: 'image/jpeg', visibility: 'public' },
+  'thumbnail', // variant
+  userId      // owner for asset record
+);
+
+if (result.success && result.assetId) {
+  console.log('Image uploaded and asset created:', result.assetId);
+}
+```
+
+### Benefits of Centralized Metadata
+- **Audit Trail**: Complete history of all image operations
+- **Role-Based Access**: RLS policies enforce proper access controls
+- **Search & Discovery**: Query images by type, owner, or related entity
+- **Soft Delete Support**: Mark images as deleted without losing storage
+- **Metadata Enrichment**: Store dimensions, alt text, captions, processing status
+- **Statistics**: Track storage usage and image distribution
+
 ## ✨ Benefits Summary
 
 - **Consistency** - Unified API across all file operations
 - **Maintainability** - Single point of change for storage logic
 - **Error Handling** - Standardized error responses and logging
 - **Performance** - Built-in optimization and caching
-- **Security** - Proper authentication and validation
+- **Security** - Proper authentication and validation with RLS policies
 - **Scalability** - Easy to extend with new file types and operations
+- **Audit Trail** - Complete metadata tracking in centralized image_assets table
+- **Access Control** - Role-based permissions enforced at database level
 
-The StorageService is now production-ready and provides a comprehensive abstraction layer for all Supabase Storage operations in ThreadCraft.
+The StorageService is now production-ready and provides a comprehensive abstraction layer for all Supabase Storage operations with centralized metadata management in ThreadCraft.
