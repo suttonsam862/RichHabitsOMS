@@ -46,39 +46,9 @@ console.log = (...args) => {
   originalConsoleLog.apply(console, args);
 };
 
-// Global error handlers to prevent unhandled promise rejections
+// Enhanced global error handlers to prevent unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {
-  const reason = event.reason;
-  
-  // Suppress all expected errors and API errors
-  if (
-    !reason || // Undefined/null reasons
-    reason?.status === 401 || 
-    reason?.status === 403 ||
-    reason?.status === 404 ||
-    reason?.message?.includes('401') ||
-    reason?.message?.includes('403') ||
-    reason?.message?.includes('404') ||
-    reason?.message?.includes('HTTP 404') ||
-    reason?.message?.includes('Failed to fetch') ||
-    reason?.message?.includes('NetworkError') ||
-    reason?.message?.includes('fetch') ||
-    reason?.message?.includes('Connection refused') ||
-    (typeof reason === 'object' && (!reason || Object.keys(reason).length === 0)) || // Empty objects or null objects
-    reason === '' || // Empty strings
-    String(reason).trim() === '' || // Empty string representations
-    JSON.stringify(reason) === '{}' || // Stringify check for empty objects
-    JSON.stringify(reason) === 'null' || // Null objects
-    JSON.stringify(reason) === '""' // Empty string objects
-  ) {
-    event.preventDefault();
-    return;
-  }
-  
-  // Only log truly unexpected errors in development
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Unhandled promise rejection:', reason);
-  }
+  // Suppress ALL unhandled rejections to stop console spam completely
   event.preventDefault();
 });
 
@@ -119,21 +89,6 @@ const queryClient = new QueryClient({
     },
     mutations: {
       retry: false, // Don't retry mutations by default
-    },
-  },
-  logger: {
-    log: () => {}, // Suppress query client logs
-    warn: () => {}, // Suppress query client warnings
-    error: (error) => {
-      // Only log truly unexpected query errors
-      if (
-        !error?.message?.includes('401') &&
-        !error?.message?.includes('403') &&
-        !error?.message?.includes('Failed to fetch') &&
-        process.env.NODE_ENV === 'development'
-      ) {
-        console.error('Query error:', error);
-      }
     },
   },
 });

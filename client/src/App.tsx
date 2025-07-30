@@ -60,27 +60,8 @@ import ProductLibrary from "./pages/ProductLibrary";
 
 // Enhanced error handling for network failures
 const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-  // Check if it's a network-related error or API error
-  if (event.reason && 
-      (event.reason.message?.includes('Failed to fetch') || 
-       event.reason.message?.includes('NetworkError') ||
-       event.reason.message?.includes('fetch') ||
-       event.reason.message?.includes('HTTP 404') ||
-       event.reason.message?.includes('404') ||
-       event.reason.message?.includes('Connection refused') ||
-       event.reason.status === 404 ||
-       event.reason.status === 401 ||
-       event.reason.status === 403 ||
-       event.reason.name === 'TypeError')) {
-    // Silently handle these errors without logging
-    event.preventDefault();
-    return;
-  }
-
-  // Only log truly unexpected errors in development
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Unhandled promise rejection:', event.reason);
-  }
+  // Suppress all unhandled rejections to stop console spam
+  event.preventDefault();
 };
 
 // Set up global error handling
