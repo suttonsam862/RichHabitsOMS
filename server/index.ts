@@ -235,6 +235,8 @@ import userManagementRoutes from './routes/api/userManagementRoutes';
 import securityRoutes from './routes/api/securityRoutes';
 import userRolesRoutes from './routes/api/userRolesRoutes';
 import authRoutes from './routes/api/authRoutes';
+import imageVariantsRoutes from './routes/api/imageVariantsRoutes';
+import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
 import healthRoutes from './routes/health';
 
 (async () => {
@@ -323,6 +325,7 @@ import healthRoutes from './routes/health';
     app.use('/api/invitations', authenticateRequest);
     app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
+    app.use('/api/catalog/:catalogItemId/images', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
@@ -333,6 +336,8 @@ import healthRoutes from './routes/health';
     app.use('/api/orders', orderRoutes);
     app.use('/api/organizations', organizationRoutes);
     app.use('/api/images', optimizedImageRoutes);
+    app.use('/api', imageVariantsRoutes); // Image variants routes
+    app.use('/api', enhancedOrderRoutes); // Enhanced order management routes
     app.use('/api/invitations', invitationRoutes);
     app.use('/api/user-management', userManagementRoutes);
 app.use('/api/security', securityRoutes);

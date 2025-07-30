@@ -51,6 +51,8 @@ import {
 import OptimizedImage from "@/components/OptimizedImage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Separator } from "@/components/ui/separator";
 
 interface CatalogItem {
   id: string;
@@ -63,6 +65,13 @@ interface CatalogItem {
   etaDays: string;
   status: 'active' | 'inactive';
   imageUrl?: string;
+  imageVariants?: {
+    thumbnail?: string;
+    medium?: string;
+    large?: string;
+    original?: string;
+    gallery?: string[];
+  };
   description?: string;
   buildInstructions?: string;
   fabric?: string;
@@ -138,6 +147,7 @@ interface CategorizedCatalogViewProps {
 function CategorizedCatalogView({ items, onEditItem, onDeleteItem, isDeleting }: CategorizedCatalogViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'gallery' | 'compact'>('gallery');
+  const [viewingItem, setViewingItem] = useState<CatalogItem | null>(null);
 
   // Group items by category and sort aesthetically
   const categorizedItems = useMemo(() => {
@@ -237,6 +247,7 @@ function CategorizedCatalogView({ items, onEditItem, onDeleteItem, isDeleting }:
               viewMode={viewMode}
               onEditItem={onEditItem}
               onDeleteItem={onDeleteItem}
+              onViewItem={setViewingItem}
               isDeleting={isDeleting}
             />
           ))}
@@ -248,9 +259,30 @@ function CategorizedCatalogView({ items, onEditItem, onDeleteItem, isDeleting }:
           viewMode={viewMode}
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
+          onViewItem={setViewingItem}
           isDeleting={isDeleting}
         />
       )}
+
+      {/* Detailed Item View Modal */}
+      <CatalogItemDetailModal
+        item={viewingItem}
+        isOpen={!!viewingItem}
+        onClose={() => setViewingItem(null)}
+        onEdit={() => {
+          if (viewingItem) {
+            onEditItem(viewingItem);
+            setViewingItem(null);
+          }
+        }}
+        onDelete={() => {
+          if (viewingItem) {
+            onDeleteItem(viewingItem.id);
+            setViewingItem(null);
+          }
+        }}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }
@@ -262,10 +294,11 @@ interface CategorySectionProps {
   viewMode: 'grid' | 'gallery' | 'compact';
   onEditItem: (item: CatalogItem) => void;
   onDeleteItem: (itemId: string) => void;
+  onViewItem: (item: CatalogItem) => void;
   isDeleting: boolean;
 }
 
-function CategorySection({ category, items, viewMode, onEditItem, onDeleteItem, isDeleting }: CategorySectionProps) {
+function CategorySection({ category, items, viewMode, onEditItem, onDeleteItem, onViewItem, isDeleting }: CategorySectionProps) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
@@ -279,6 +312,7 @@ function CategorySection({ category, items, viewMode, onEditItem, onDeleteItem, 
         viewMode={viewMode}
         onEditItem={onEditItem}
         onDeleteItem={onDeleteItem}
+        onViewItem={onViewItem}
         isDeleting={isDeleting}
       />
     </div>
@@ -291,10 +325,11 @@ interface ItemsGridProps {
   viewMode: 'grid' | 'gallery' | 'compact';
   onEditItem: (item: CatalogItem) => void;
   onDeleteItem: (itemId: string) => void;
+  onViewItem: (item: CatalogItem) => void;
   isDeleting: boolean;
 }
 
-function ItemsGrid({ items, viewMode, onEditItem, onDeleteItem, isDeleting }: ItemsGridProps) {
+function ItemsGrid({ items, viewMode, onEditItem, onDeleteItem, onViewItem, isDeleting }: ItemsGridProps) {
   const getGridClasses = () => {
     switch (viewMode) {
       case 'gallery':
@@ -329,6 +364,7 @@ function ItemsGrid({ items, viewMode, onEditItem, onDeleteItem, isDeleting }: It
           viewMode={viewMode}
           onEdit={() => onEditItem(item)}
           onDelete={() => onDeleteItem(item.id)}
+          onView={() => onViewItem(item)}
           isDeleting={isDeleting}
         />
       ))}
@@ -342,10 +378,11 @@ interface CatalogItemCardProps {
   viewMode: 'grid' | 'gallery' | 'compact';
   onEdit: () => void;
   onDelete: () => void;
+  onView: () => void;
   isDeleting: boolean;
 }
 
-function CatalogItemCard({ item, viewMode, onEdit, onDelete, isDeleting }: CatalogItemCardProps) {
+function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting }: CatalogItemCardProps) {
   const getCardClasses = () => {
     const base = 'rich-card relative group hover:shadow-xl transition-all duration-300 hover:scale-[1.02]';
     switch (viewMode) {
@@ -374,7 +411,10 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, isDeleting }: Catal
     }
 
     return (
-      <div className={`${viewMode === 'compact' ? 'w-24 h-24 flex-shrink-0' : 'w-full h-48'} relative overflow-hidden rounded-md group`}>
+      <div 
+        className={`${viewMode === 'compact' ? 'w-24 h-24 flex-shrink-0' : 'w-full h-48'} relative overflow-hidden rounded-md group cursor-pointer`}
+        onClick={onView}
+      >
         <OptimizedImage
           src={item.imageUrl}
           alt={item.name}
@@ -383,7 +423,11 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, isDeleting }: Catal
           placeholder="blur"
           sizes="(max-width: 768px) 100vw, 400px"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-rich-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-rich-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div className="bg-neon-blue/20 backdrop-blur-sm rounded-full p-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+            <Search className="w-6 h-6 text-white" />
+          </div>
+        </div>
       </div>
     );
   };
@@ -404,6 +448,9 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, isDeleting }: Catal
             <div className="flex items-center justify-between">
               <span className="font-bold text-lg text-neon-blue">${(item.basePrice || 0).toFixed(2)}</span>
               <div className="flex gap-1">
+                <Button size="sm" variant="outline" onClick={onView} className="h-8 w-8 p-0">
+                  <Search className="w-3 h-3" />
+                </Button>
                 <Button size="sm" variant="outline" onClick={onEdit} className="h-8 w-8 p-0">
                   <Edit className="w-3 h-3" />
                 </Button>
@@ -470,6 +517,9 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, isDeleting }: Catal
           </div>
           
           <div className="flex justify-end gap-2 mt-4">
+            <Button size="sm" variant="outline" onClick={onView} className="glass-button">
+              <Search className="w-4 h-4" />
+            </Button>
             <Button size="sm" variant="outline" onClick={onEdit} className="glass-button">
               <Edit className="w-4 h-4" />
             </Button>
@@ -489,13 +539,310 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, isDeleting }: Catal
   );
 }
 
+// Detailed Item View Modal Component
+interface CatalogItemDetailModalProps {
+  item: CatalogItem | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}
+
+function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDeleting }: CatalogItemDetailModalProps) {
+  const [selectedImageVariant, setSelectedImageVariant] = useState<string>('medium');
+  const [showImageUpload, setShowImageUpload] = useState(false);
+
+  if (!item) return null;
+
+  const imageVariants = item.imageVariants || {};
+  const availableVariants = Object.entries(imageVariants).filter(([_, url]) => url);
+  const currentImageUrl = imageVariants[selectedImageVariant as keyof typeof imageVariants] || item.imageUrl;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-rich-black/95 backdrop-blur-xl border border-glass-border max-w-6xl max-h-[95vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl text-neon-blue flex items-center gap-3">
+            <Package className="w-6 h-6" />
+            {item.name}
+            <Badge variant={item.status === 'active' ? 'default' : 'secondary'} className="ml-auto">
+              {item.status}
+            </Badge>
+          </DialogTitle>
+          <DialogDescription className="text-neon-green">
+            {item.category} • {item.sport} • SKU: {item.sku}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+          {/* Image Section with Multiple Variants */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">Product Images</h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowImageUpload(true)}
+                className="glass-button"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Add Images
+              </Button>
+            </div>
+
+            {/* Main Image Display */}
+            <Card className="rich-card overflow-hidden">
+              <AspectRatio ratio={4/3}>
+                {currentImageUrl ? (
+                  <div className="relative group">
+                    <OptimizedImage
+                      src={currentImageUrl}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      sizes="(max-width: 768px) 100vw, 600px"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-rich-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-rich-black/20 to-glass-border/20 flex items-center justify-center">
+                    <ImageIcon className="w-16 h-16 text-muted-foreground" />
+                  </div>
+                )}
+              </AspectRatio>
+            </Card>
+
+            {/* Image Variant Selector */}
+            {availableVariants.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Image Variants</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {availableVariants.map(([variant, url]) => (
+                    <Card 
+                      key={variant}
+                      className={`rich-card cursor-pointer transition-all duration-200 ${
+                        selectedImageVariant === variant ? 'ring-2 ring-neon-blue' : ''
+                      }`}
+                      onClick={() => setSelectedImageVariant(variant)}
+                    >
+                      <div className="aspect-square p-2">
+                        <OptimizedImage
+                          src={url}
+                          alt={`${item.name} - ${variant}`}
+                          className="w-full h-full object-cover rounded-sm"
+                          sizes="150px"
+                        />
+                      </div>
+                      <div className="p-2 text-center">
+                        <span className="text-xs capitalize text-muted-foreground">{variant}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Additional Images Gallery */}
+            {imageVariants.gallery && imageVariants.gallery.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Gallery ({imageVariants.gallery.length} images)</Label>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {imageVariants.gallery.map((imageUrl, index) => (
+                    <Card key={index} className="rich-card overflow-hidden">
+                      <div className="aspect-square">
+                        <OptimizedImage
+                          src={imageUrl}
+                          alt={`${item.name} gallery ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          sizes="120px"
+                        />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Product Details Section */}
+          <div className="space-y-6">
+            {/* Pricing Information */}
+            <Card className="rich-card">
+              <CardHeader>
+                <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Pricing Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Base Price:</span>
+                  <span className="text-2xl font-bold text-neon-blue">${(item.basePrice || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Unit Cost:</span>
+                  <span className="font-semibold">${(item.unitCost || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Profit Margin:</span>
+                  <span className="font-semibold text-neon-green">
+                    ${((item.basePrice || 0) - (item.unitCost || 0)).toFixed(2)}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">ETA:</span>
+                  <span className="font-medium">{item.etaDays}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Product Specifications */}
+            <Card className="rich-card">
+              <CardHeader>
+                <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Specifications
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {item.fabric && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Fabric</Label>
+                    <p className="text-foreground">{item.fabric}</p>
+                  </div>
+                )}
+                
+                {item.sizes && item.sizes.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Available Sizes</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {item.sizes.map((size, index) => (
+                        <Badge key={index} variant="outline" className="glass-surface">
+                          {size}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {item.colors && item.colors.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Available Colors</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {item.colors.map((color, index) => (
+                        <Badge key={index} variant="outline" className="glass-surface">
+                          {color}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {item.customizationOptions && item.customizationOptions.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Customization Options</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {item.customizationOptions.map((option, index) => (
+                        <Badge key={index} variant="outline" className="glass-surface">
+                          {option}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Min Quantity</Label>
+                    <p className="text-foreground">{item.minQuantity || 1}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Max Quantity</Label>
+                    <p className="text-foreground">{item.maxQuantity || 1000}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Description & Instructions */}
+            {(item.description || item.buildInstructions) && (
+              <Card className="rich-card">
+                <CardHeader>
+                  <CardTitle className="text-lg text-foreground">Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {item.description && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                      <p className="text-foreground mt-1">{item.description}</p>
+                    </div>
+                  )}
+                  {item.buildInstructions && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Build Instructions</Label>
+                      <p className="text-foreground mt-1 whitespace-pre-wrap">{item.buildInstructions}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center pt-6 border-t border-glass-border mt-8">
+          <div className="text-sm text-muted-foreground">
+            Created: {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Unknown'}
+            {item.updated_at && ` • Updated: ${new Date(item.updated_at).toLocaleDateString()}`}
+          </div>
+          
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="glass-button"
+            >
+              Close
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onEdit}
+              className="glass-button"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Item
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onDelete}
+              disabled={isDeleting}
+              className="glass-button hover:bg-red-500/10"
+            >
+              {isDeleting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Delete Item
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function CatalogPage() {
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
+  const [uploadTargetItemId, setUploadTargetItemId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CatalogFormData>({
     name: '',
     category: '',
@@ -715,6 +1062,57 @@ export default function CatalogPage() {
       });
     }
   });
+
+  // Upload image variants mutation
+  const uploadImageVariantsMutation = useMutation({
+    mutationFn: async ({ catalogItemId, files }: { catalogItemId: string; files: File[] }) => {
+      const formData = new FormData();
+      
+      files.forEach((file) => {
+        formData.append('images', file);
+      });
+
+      const response = await fetch(`/api/catalog/${catalogItemId}/images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || 'dev-admin-token-12345'}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to upload images');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Images Uploaded",
+        description: `Successfully processed ${data.data?.statistics?.filesProcessed || 0} images with multiple variants.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      setShowImageUploadModal(false);
+      setSelectedFiles([]);
+      setUploadTargetItemId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Upload Failed",
+        description: `Failed to upload images: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handle multiple file selection for image variants
+  const handleMultipleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      setSelectedFiles(files);
+    }
+  };
 
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {

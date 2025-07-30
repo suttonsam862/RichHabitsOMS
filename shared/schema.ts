@@ -75,13 +75,26 @@ export const orders = pgTable('orders', {
   orderNumber: text('order_number').notNull().unique(),
   customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
   salespersonId: uuid('salesperson_id').references(() => userProfiles.id),
+  assignedDesignerId: uuid('assigned_designer_id').references(() => userProfiles.id),
+  assignedManufacturerId: uuid('assigned_manufacturer_id').references(() => userProfiles.id),
   status: orderStatusEnum('status').notNull().default('draft'),
+  priority: text('priority').notNull().default('medium'), // high, medium, low
   totalAmount: decimal('total_amount').notNull().default('0'),
   tax: decimal('tax').notNull().default('0'),
+  discount: decimal('discount').notNull().default('0'),
   notes: text('notes'),
+  internalNotes: text('internal_notes'), // Staff-only notes
+  customerRequirements: text('customer_requirements'),
+  deliveryAddress: text('delivery_address'),
+  deliveryInstructions: text('delivery_instructions'),
+  rushOrder: boolean('rush_order').notNull().default(false),
+  estimatedDeliveryDate: timestamp('estimated_delivery_date'),
+  actualDeliveryDate: timestamp('actual_delivery_date'),
   isPaid: boolean('is_paid').notNull().default(false),
   stripeSessionId: text('stripe_session_id'),
   paymentDate: timestamp('payment_date'),
+  logoUrl: text('logo_url'), // Customer logo for branding
+  companyName: text('company_name'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -95,10 +108,18 @@ export const orderItems = pgTable('order_items', {
   description: text('description'),
   size: text('size'),
   color: text('color'),
+  fabric: text('fabric'),
+  customization: text('customization'), // Specific customization details
+  specifications: jsonb('specifications').default({}), // Detailed specifications
   quantity: decimal('quantity').notNull().default('1'),
   unitPrice: decimal('unit_price').notNull(),
   totalPrice: decimal('total_price').notNull(),
   customImageUrl: text('custom_image_url'), // Custom image for this specific order item
+  designFileUrl: text('design_file_url'), // Design file for this item
+  productionNotes: text('production_notes'), // Manufacturing instructions
+  status: text('status').notNull().default('pending'), // pending, designing, approved, in_production, completed
+  estimatedCompletionDate: timestamp('estimated_completion_date'),
+  actualCompletionDate: timestamp('actual_completion_date'),
 });
 
 // Catalog items table
@@ -111,13 +132,22 @@ export const catalogItems = pgTable('catalog_items', {
   unitCost: decimal('unit_cost').notNull().default('0'),
   sku: text('sku').notNull().unique(),
   status: text('status').notNull().default('active'), // active, inactive, discontinued
-  baseImageUrl: text('base_image_url'), // Base product image
+  baseImageUrl: text('base_image_url'), // Base product image (legacy)
+  imageUrl: text('image_url'), // Main image URL (for backward compatibility)
+  imageVariants: jsonb('image_variants').default({}), // Multiple image sizes: { thumbnail, medium, large, original, gallery: [] }
   measurementChartUrl: text('measurement_chart_url'), // Measurement chart/template image
   hasMeasurements: boolean('has_measurements').default(false),
   measurementInstructions: text('measurement_instructions'), // Text instructions for measurements
   etaDays: text('eta_days').notNull().default('7'), // Expected production time in days
   preferredManufacturerId: uuid('preferred_manufacturer_id').references(() => userProfiles.id),
   fabricId: uuid('fabric_id').references(() => catalogFabrics.id, { onDelete: 'set null' }),
+  fabric: text('fabric'), // Fabric name for backward compatibility
+  description: text('description'),
+  sizes: jsonb('sizes').default([]), // Available sizes array
+  colors: jsonb('colors').default([]), // Available colors array
+  customizationOptions: jsonb('customization_options').default([]), // Available customization options
+  minQuantity: decimal('min_quantity').default('1'),
+  maxQuantity: decimal('max_quantity').default('1000'),
   tags: jsonb('tags').default([]),
   specifications: jsonb('specifications').default({}),
   buildInstructions: text('build_instructions'),

@@ -31,6 +31,7 @@ import OrderDetail from "./pages/OrderDetail";
 import OrderEditor from "./pages/OrderEditor";
 import OrderCreatePage from "./pages/orders/OrderCreatePage";
 import OrderManagePage from "./pages/orders/OrderManagePage";
+import EnhancedOrderManagement from "./pages/orders/EnhancedOrderManagement";
 import OrdersHub from "./pages/OrdersHub";
 import DesignTasks from "./pages/DesignTasks";
 import Messages from "./pages/Messages";
@@ -205,6 +206,15 @@ function App() {
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson']}>
                       <OrderCreatePage />
+                    </RequireAuth>
+                  } 
+                />
+
+                <Route 
+                  path="/orders/enhanced" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                      <EnhancedOrderManagement />
                     </RequireAuth>
                   } 
                 />
