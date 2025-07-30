@@ -230,10 +230,37 @@ export default function OrderCreatePage() {
     onSuccess: async (data) => {
       console.log('Order created successfully:', data);
       await onOrderSuccess(); // Use centralized cache invalidation
+      
+      // Show success toast
       toast({
         title: 'Success!',
-        description: 'Order created successfully',
+        description: `Order ${data.order?.order_number || 'created'} has been successfully created`,
       });
+      
+      // Reset form fields
+      form.reset({
+        orderNumber: '',
+        customerId: '',
+        status: 'draft',
+        notes: '',
+        items: [
+          {
+            productName: '',
+            description: '',
+            size: '',
+            color: '',
+            quantity: 1,
+            unitPrice: 0,
+            totalPrice: 0,
+            catalogItemId: '',
+          },
+        ],
+      });
+      
+      // Generate new order number for next order
+      const randomOrderNum = 'ORD' + Math.floor(100000 + Math.random() * 900000);
+      form.setValue('orderNumber', randomOrderNum);
+      
       navigate('/orders');
     },
     onError: (error: any) => {

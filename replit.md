@@ -90,6 +90,7 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Error Handling**: Comprehensive error handling with rollback capabilities and detailed logging for debugging
 - **Clean Response Format**: Returns simplified `{ order, items }` structure with 201 status code as per API specification
 - **Enhanced Form Validation**: Added comprehensive validation in all order creation forms (OrderCreatePage.tsx, OrderEditor.tsx, EnhancedOrderManagement.tsx) to ensure at least 1 valid item is present before submission with proper error messages and user guidance
+- **Success Toast and Form Reset**: All order creation forms now show success toasts with order numbers and automatically reset form fields after successful submission, generating new order numbers for subsequent orders
 
 ### AddCatalogItemForm Form Submission Fix (July 30, 2025)
 - **Status**: 100% Complete - Form now submits to correct endpoint with SKU generation

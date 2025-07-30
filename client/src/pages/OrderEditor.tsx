@@ -152,12 +152,38 @@ export default function OrderEditor() {
 
       return apiRequest('POST', '/api/orders/create', orderData);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      
+      // Show success toast with order number
       toast({
         title: 'Success',
-        description: 'Order created successfully',
+        description: `Order ${data.order?.order_number || 'created'} successfully`,
       });
+      
+      // Reset form fields for new order creation
+      if (!isEditing) {
+        form.reset({
+          orderNumber: '',
+          customerId: '',
+          status: 'draft',
+          notes: '',
+          items: [{
+            productName: '',
+            description: '',
+            size: '',
+            color: '',
+            quantity: 1,
+            unitPrice: 0,
+            totalPrice: 0,
+          }],
+        });
+        
+        // Generate new order number
+        const randomOrderNum = 'ORD' + Math.floor(100000 + Math.random() * 900000);
+        form.setValue('orderNumber', randomOrderNum);
+      }
+      
       navigate('/orders');
     },
     onError: (error) => {
