@@ -77,6 +77,20 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 
 ## Recent Changes
 
+### Comprehensive Order Editing System with Manufacturer Card Integration (July 30, 2025)
+- **Status**: 100% Complete - Full-featured order editing interface with manufacturer selection using detailed cards
+- **OrderEditPage.tsx Implementation**: Created comprehensive order editing interface with status management, notes editing, manufacturer assignment, and line item management
+- **Manufacturer Card Integration**: Integrated ManufacturerCard component into order editing workflow with scrollable selection dialogs showing capabilities, logos, and workload
+- **Enhanced Form Management**: Implemented react-hook-form with Zod validation for comprehensive order data management including items, team assignment, and delivery information
+- **Line Item Management**: Complete CRUD operations for order items with detailed specifications (product name, size, color, fabric, customization, production notes, status tracking)
+- **Team Assignment Interface**: Designer and manufacturer assignment with auto-assignment options and visual selection confirmation
+- **Status and Priority Management**: Complete order status lifecycle management (draft → production → completion) with priority levels and rush order flags
+- **Notes and Requirements System**: Separate fields for customer notes, internal notes, customer requirements, and delivery instructions
+- **Delivery Management**: Comprehensive delivery address and instruction management with estimated delivery dates
+- **Real-time Calculations**: Automatic total price calculations for line items based on quantity and unit price changes
+- **Navigation Integration**: Added routes for /orders/edit/:id with proper authentication and error boundary protection
+- **Data Synchronization**: Integration with existing order APIs for create/update operations with proper cache invalidation
+
 ### Complete Multi-Image Catalog Management System (July 30, 2025)
 - **Status**: 100% Complete - Multi-image catalog system with size/color variants and comprehensive storage integration
 - **Backend Image API**: Created catalogImageRoutes.ts with POST, GET, DELETE endpoints for complete image lifecycle management

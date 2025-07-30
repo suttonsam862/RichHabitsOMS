@@ -31,6 +31,7 @@ import SetupPassword from "./pages/SetupPassword";
 import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import OrderEditor from "./pages/OrderEditor";
+import OrderEditPage from "./pages/OrderEditPage";
 import OrderCreatePage from "./pages/orders/OrderCreatePage";
 import OrderManagePage from "./pages/orders/OrderManagePage";
 import EnhancedOrderManagement from "./pages/orders/EnhancedOrderManagement";
@@ -241,6 +242,17 @@ function App() {
 
                 <Route 
                   path="/orders/edit/:id" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                      <FeatureErrorBoundary featureName="Order Editing">
+                        <OrderEditPage />
+                      </FeatureErrorBoundary>
+                    </RequireAuth>
+                  } 
+                />
+
+                <Route 
+                  path="/orders/editor/:id" 
                   element={
                     <RequireAuth allowedRoles={['admin', 'salesperson']}>
                       <OrderEditor />
