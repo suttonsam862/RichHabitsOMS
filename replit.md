@@ -92,6 +92,14 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Enhanced Form Validation**: Added comprehensive validation in all order creation forms (OrderCreatePage.tsx, OrderEditor.tsx, EnhancedOrderManagement.tsx) to ensure at least 1 valid item is present before submission with proper error messages and user guidance
 - **Success Toast and Form Reset**: All order creation forms now show success toasts with order numbers and automatically reset form fields after successful submission, generating new order numbers for subsequent orders
 
+### Customer API Single Record Endpoint (July 30, 2025)
+- **Status**: Already implemented - GET /api/customers/:id route exists with comprehensive functionality
+- **Authentication**: Proper role-based access control requiring admin privileges
+- **Data Transformation**: Converts database snake_case fields to frontend-friendly camelCase format
+- **Error Handling**: Returns 404 for missing customers, 500 for server errors with descriptive messages
+- **Complete Response**: Includes all customer fields plus computed values (orders count, total spent, last order date)
+- **Database Integration**: Uses Supabase admin client for secure data access with proper query structure
+
 ### AddCatalogItemForm Form Submission Fix (July 30, 2025)
 - **Status**: 100% Complete - Form now submits to correct endpoint with SKU generation
 - **Endpoint Update**: Changed form submission from `/api/catalog/create` to `/api/catalog` to match server routes
