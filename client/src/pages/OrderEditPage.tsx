@@ -51,6 +51,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import ManufacturerCard from '@/components/ManufacturerCard';
 import { ProductionImageUploader } from '@/components/ProductionImageUploader';
+import OrderAuditHistory from '@/components/OrderAuditHistory';
 import { ProductionImageTimeline } from '@/components/ProductionImageTimeline';
 import {
   Loader2,
@@ -1115,6 +1116,16 @@ export default function OrderEditPage() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Order Audit History - Shows after order is saved */}
+      {isEditing && (
+        <div className="mt-6 bg-white rounded-lg">
+          <OrderAuditHistory 
+            orderId={orderId}
+            className="border-0 shadow-sm"
+          />
+        </div>
+      )}
     </div>
   );
 }

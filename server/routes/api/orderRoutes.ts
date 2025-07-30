@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireRole } from '../auth/auth';
 import orderController from '../../controllers/orderController';
+import { OrderAuditLogger } from '../../services/auditLogger.js';
+import { AUDIT_ACTIONS } from '../../models/orderAuditLog.js';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 

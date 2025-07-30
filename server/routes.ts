@@ -56,6 +56,9 @@ import manufacturingRoutes from './routes/api/manufacturingRoutes';
 // Stats routes for dashboard KPIs
 import statsRoutes from './routes/api/statsRoutes';
 
+// Audit routes for order change tracking
+import auditRoutes from './routes/api/auditRoutes';
+
 // Create Supabase admin client with service key for admin operations
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co',
@@ -1373,6 +1376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import and use authentication routes
   const authRoutes = await import('./routes/api/authRoutes');
   app.use('/api/auth', authRoutes.default);
+  
+  // Register audit routes for order change tracking
+  app.use('/api/audit', auditRoutes);
 
   // Customer API endpoint to fetch real customer data
   app.get('/api/customers', async (req, res) => {
