@@ -34,6 +34,7 @@ import OrderEditor from "./pages/OrderEditor";
 import OrderCreatePage from "./pages/orders/OrderCreatePage";
 import OrderManagePage from "./pages/orders/OrderManagePage";
 import EnhancedOrderManagement from "./pages/orders/EnhancedOrderManagement";
+import EnhancedOrderManagementWithCards from "./pages/orders/EnhancedOrderManagementWithCards";
 import OrdersHub from "./pages/OrdersHub";
 import DesignTasks from "./pages/DesignTasks";
 import Messages from "./pages/Messages";
@@ -213,6 +214,17 @@ function App() {
                     <RequireAuth allowedRoles={['admin', 'salesperson']}>
                       <FeatureErrorBoundary featureName="Enhanced Order Management">
                         <EnhancedOrderManagement />
+                      </FeatureErrorBoundary>
+                    </RequireAuth>
+                  } 
+                />
+
+                <Route 
+                  path="/orders/enhanced-cards" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'salesperson']}>
+                      <FeatureErrorBoundary featureName="Enhanced Order Management with Cards">
+                        <EnhancedOrderManagementWithCards />
                       </FeatureErrorBoundary>
                     </RequireAuth>
                   } 

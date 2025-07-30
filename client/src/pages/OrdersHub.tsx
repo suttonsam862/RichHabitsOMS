@@ -71,6 +71,12 @@ export default function OrdersHub() {
               Enhanced Orders
             </Button>
           </Link>
+          <Link href="/orders/enhanced-cards">
+            <Button variant="outline" size="sm">
+              <Users className="mr-2 h-4 w-4" />
+              Orders with Cards
+            </Button>
+          </Link>
         </div>
       </div>
 

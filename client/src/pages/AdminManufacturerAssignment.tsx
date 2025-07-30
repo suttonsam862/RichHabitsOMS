@@ -46,9 +46,11 @@ import {
   Timer,
   Target,
   TrendingUp,
-  Factory
+  Factory,
+  Check
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import ManufacturerCard from '@/components/ManufacturerCard';
 import { formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useGlobalDataSync, CACHE_KEYS, DATA_SYNC_EVENTS, createMutationSuccessHandler } from '@/hooks/useGlobalDataSync';
@@ -94,7 +96,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Enhanced data types for Manufacturing Management
 interface OrderWithDetails {
@@ -1454,7 +1455,7 @@ export default function ManufacturingManagement() {
 
         {/* Assign Manufacturer Dialog */}
         <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
               <DialogTitle>Assign Manufacturer</DialogTitle>
               <DialogDescription>
@@ -1463,21 +1464,43 @@ export default function ManufacturingManagement() {
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="manufacturer">Manufacturer</Label>
-                <Select value={selectedManufacturerId} onValueChange={setSelectedManufacturerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a manufacturer" />
-                  </SelectTrigger>
-                  <SelectContent>
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Manufacturer</Label>
+                <div className="text-sm text-muted-foreground mb-4">
+                  Choose a manufacturer based on their capabilities and current workload:
+                </div>
+                
+                <ScrollArea className="h-80">
+                  <div className="space-y-3 pr-4">
                     {(Array.isArray(manufacturers) ? manufacturers : []).map((manufacturer) => (
-                      <SelectItem key={manufacturer?.id || ''} value={manufacturer?.id || ''}>
-                        {manufacturer?.firstName} {manufacturer?.lastName}
-                        {manufacturer?.company && ` (${manufacturer.company})`}
-                      </SelectItem>
+                      <ManufacturerCard
+                        key={manufacturer?.id || ''}
+                        manufacturer={manufacturer}
+                        onAssign={(m) => setSelectedManufacturerId(m.id)}
+                        showAssignButton={true}
+                        className={`transition-all ${
+                          selectedManufacturerId === manufacturer?.id 
+                            ? 'ring-2 ring-blue-500 shadow-lg' 
+                            : 'hover:shadow-md'
+                        }`}
+                      />
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </ScrollArea>
+                
+                {selectedManufacturerId && (
+                  <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-700">
+                    <div className="flex items-center text-green-700 dark:text-green-300">
+                      <Check className="w-4 h-4 mr-2" />
+                      <span className="text-sm font-medium">
+                        Manufacturer selected: {
+                          manufacturers.find(m => m?.id === selectedManufacturerId)?.company ||
+                          `${manufacturers.find(m => m?.id === selectedManufacturerId)?.firstName} ${manufacturers.find(m => m?.id === selectedManufacturerId)?.lastName}`
+                        }
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1503,7 +1526,7 @@ export default function ManufacturingManagement() {
 
         {/* Bulk Assign Dialog */}
         <Dialog open={showBulkAssignDialog} onOpenChange={setShowBulkAssignDialog}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
               <DialogTitle>Bulk Assign Manufacturer</DialogTitle>
               <DialogDescription>
@@ -1512,21 +1535,43 @@ export default function ManufacturingManagement() {
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="bulk-manufacturer">Manufacturer</Label>
-                <Select value={selectedManufacturerId} onValueChange={setSelectedManufacturerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a manufacturer" />
-                  </SelectTrigger>
-                  <SelectContent>
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Manufacturer for Bulk Assignment</Label>
+                <div className="text-sm text-muted-foreground mb-4">
+                  This manufacturer will be assigned to all {selectedOrders.length} selected orders:
+                </div>
+                
+                <ScrollArea className="h-80">
+                  <div className="space-y-3 pr-4">
                     {(Array.isArray(manufacturers) ? manufacturers : []).map((manufacturer) => (
-                      <SelectItem key={manufacturer?.id || ''} value={manufacturer?.id || ''}>
-                        {manufacturer?.firstName} {manufacturer?.lastName}
-                        {manufacturer?.company && ` (${manufacturer.company})`}
-                      </SelectItem>
+                      <ManufacturerCard
+                        key={manufacturer?.id || ''}
+                        manufacturer={manufacturer}
+                        onAssign={(m) => setSelectedManufacturerId(m.id)}
+                        showAssignButton={true}
+                        className={`transition-all ${
+                          selectedManufacturerId === manufacturer?.id 
+                            ? 'ring-2 ring-blue-500 shadow-lg' 
+                            : 'hover:shadow-md'
+                        }`}
+                      />
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </ScrollArea>
+                
+                {selectedManufacturerId && (
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-700">
+                    <div className="flex items-center text-blue-700 dark:text-blue-300">
+                      <Users className="w-4 h-4 mr-2" />
+                      <span className="text-sm font-medium">
+                        Will assign {selectedOrders.length} orders to: {
+                          manufacturers.find(m => m?.id === selectedManufacturerId)?.company ||
+                          `${manufacturers.find(m => m?.id === selectedManufacturerId)?.firstName} ${manufacturers.find(m => m?.id === selectedManufacturerId)?.lastName}`
+                        }
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
