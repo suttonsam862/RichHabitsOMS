@@ -43,23 +43,17 @@ export class CatalogItemProcessor {
   static processItemData(inputData: any): any {
     const processedData: any = {};
 
-    // String fields (direct mapping)
-    const stringFields = ['name', 'category', 'sport', 'sku', 'status', 'description', 'fabric'];
+    // String fields (direct mapping) - only fields confirmed to exist in database
+    const stringFields = ['name', 'category', 'sport', 'sku', 'status'];
     stringFields.forEach(field => {
       if (inputData[field] !== undefined) {
         processedData[field] = String(inputData[field] || '').trim();
       }
     });
 
-    // Special string field mappings
-    if (inputData.buildInstructions !== undefined) {
-      processedData.build_instructions = String(inputData.buildInstructions || '').trim();
-    }
-    if (inputData.etaDays !== undefined) {
-      processedData.eta_days = String(inputData.etaDays || '7').trim();
-    }
+    // Special fields handled in specifications JSON below
 
-    // Numeric fields with validation
+    // Numeric fields with validation - only map to existing database columns
     if (inputData.basePrice !== undefined) {
       const price = parseFloat(inputData.basePrice);
       processedData.base_price = isNaN(price) ? 0 : Math.max(0, price);
@@ -68,32 +62,21 @@ export class CatalogItemProcessor {
       const cost = parseFloat(inputData.unitCost);
       processedData.unit_cost = isNaN(cost) ? 0 : Math.max(0, cost);
     }
-    if (inputData.minQuantity !== undefined) {
-      const min = parseInt(inputData.minQuantity);
-      processedData.min_quantity = isNaN(min) ? 1 : Math.max(1, min);
-    }
-    if (inputData.maxQuantity !== undefined) {
-      const max = parseInt(inputData.maxQuantity);
-      processedData.max_quantity = isNaN(max) ? 1000 : Math.max(1, max);
-    }
+    // Note: min_quantity and max_quantity don't exist in schema - store in specifications
 
-    // Handle array fields - store everything in specifications JSON since 
-    // sizes, colors, customizationOptions don't exist as direct columns
-    const arrayFields = ['sizes', 'colors', 'customizationOptions'];
-    const specifications: any = processedData.specifications || {};
+    // Handle all extra fields that don't exist as database columns - store in specifications JSON
+    const currentSpecs: any = {};
     
-    // Parse existing specifications if it's a string
-    let currentSpecs = {};
-    if (typeof specifications === 'string') {
-      try {
-        currentSpecs = JSON.parse(specifications);
-      } catch (e) {
-        currentSpecs = {};
+    // Store fields that don't have direct database columns
+    const extraFields = ['fabric', 'description', 'minQuantity', 'maxQuantity', 'buildInstructions', 'etaDays'];
+    extraFields.forEach(field => {
+      if (inputData[field] !== undefined) {
+        currentSpecs[field] = inputData[field];
       }
-    } else if (typeof specifications === 'object') {
-      currentSpecs = { ...specifications };
-    }
+    });
     
+    // Handle array fields
+    const arrayFields = ['sizes', 'colors', 'customizationOptions'];
     arrayFields.forEach(field => {
       if (inputData[field] !== undefined) {
         let arrayData = [];
@@ -119,6 +102,7 @@ export class CatalogItemProcessor {
       }
     });
     
+    // Always stringify specifications, even if empty
     processedData.specifications = JSON.stringify(currentSpecs);
 
     // Image handling
@@ -155,10 +139,16 @@ export class CatalogItemProcessor {
         const specs = typeof transformed.specifications === 'string' ? 
           JSON.parse(transformed.specifications) : transformed.specifications;
         
-        // Extract arrays from specifications
+        // Extract arrays and other fields from specifications
         transformed.sizes = specs.sizes || [];
         transformed.colors = specs.colors || [];
         transformed.customizationOptions = specs.customizationOptions || [];
+        transformed.fabric = specs.fabric || '';
+        transformed.description = specs.description || '';
+        transformed.minQuantity = specs.minQuantity || 1;
+        transformed.maxQuantity = specs.maxQuantity || 1000;
+        transformed.buildInstructions = specs.buildInstructions || '';
+        transformed.etaDays = specs.etaDays || '7-10 business days';
       } catch (e) {
         console.warn('Failed to parse specifications:', transformed.specifications);
         transformed.sizes = [];
