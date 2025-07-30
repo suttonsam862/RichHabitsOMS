@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -256,29 +257,57 @@ export default function CatalogItemEditPage() {
     form.setValue('images', updatedImages);
   };
 
-  // Remove image
+  // Remove image with proper error handling and user feedback
   const removeImage = async (index: number) => {
     const currentImages = form.getValues('images');
     const imageToRemove = currentImages[index];
     
-    // Call API to delete from storage
+    if (!imageToRemove.id) {
+      toast({
+        title: "Error",
+        description: "Cannot delete image: missing image ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      await fetch(`/api/catalog/${itemId}/images/${imageToRemove.id}`, {
+      // Show loading state could be added here if needed
+      
+      const response = await fetch(`/api/catalog/${itemId}/images/${imageToRemove.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
         }
       });
-    } catch (error) {
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete image');
+      }
+      
+      // Remove from form array
+      imagesFieldArray.remove(index);
+      
+      // If removed image was primary, set first remaining as primary
+      const remainingImages = form.getValues('images');
+      if (imageToRemove.isPrimary && remainingImages.length > 0) {
+        setPrimaryImage(0);
+      }
+      
+      toast({
+        title: "Image deleted",
+        description: "Image has been successfully removed from storage and catalog",
+      });
+      
+    } catch (error: any) {
       console.error('Failed to delete image from storage:', error);
-    }
-    
-    imagesFieldArray.remove(index);
-    
-    // If removed image was primary, set first remaining as primary
-    const remainingImages = form.getValues('images');
-    if (imageToRemove.isPrimary && remainingImages.length > 0) {
-      setPrimaryImage(0);
+      toast({
+        title: "Delete failed",
+        description: error.message || "Failed to delete image. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -696,16 +725,36 @@ export default function CatalogItemEditPage() {
                                     Set Primary
                                   </Button>
                                 )}
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => removeImage(index)}
-                                  className="text-xs shadow-sm"
-                                  title="Delete image"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="destructive"
+                                      className="text-xs shadow-sm"
+                                      title="Delete image"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Image</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this image? This will permanently remove it from both storage and the catalog item. This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        onClick={() => removeImage(index)}
+                                        className="bg-red-600 hover:bg-red-700"
+                                      >
+                                        Delete Image
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </div>
                             
