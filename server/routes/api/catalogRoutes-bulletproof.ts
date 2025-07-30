@@ -107,9 +107,23 @@ async function createCatalogItem(req: Request, res: Response) {
     const result = await CatalogService.createItem(req.body);
 
     if (!result.success) {
-      return res.status(500).json({
+      // Determine if it's a client error (validation) or server error
+      const errorString = result.error || '';
+      const isClientError = errorString.includes('violates not-null constraint') ||
+                           errorString.includes('duplicate key value') ||
+                           errorString.includes('invalid input') ||
+                           errorString.includes('validation') ||
+                           errorString.includes('check constraint') ||
+                           errorString.includes('foreign key constraint');
+      
+      const statusCode = isClientError ? 400 : 500;
+      const message = isClientError ? 'Invalid request data' : 'Failed to create catalog item';
+      
+      console.log(`🚨 Service Error - Status: ${statusCode}, Client Error: ${isClientError}, Error: ${errorString}`);
+      
+      return res.status(statusCode).json({
         success: false,
-        message: 'Failed to create catalog item',
+        message,
         error: result.error
       });
     }
@@ -122,9 +136,20 @@ async function createCatalogItem(req: Request, res: Response) {
 
   } catch (error: any) {
     console.error('💥 Error in createCatalogItem:', error);
-    res.status(500).json({
+    
+    // Determine if it's a client error or server error
+    const isClientError = error.message?.includes('validation') ||
+                         error.message?.includes('required') ||
+                         error.message?.includes('invalid') ||
+                         error.code === '23502' || // not-null constraint
+                         error.code === '23505';   // unique constraint
+    
+    const statusCode = isClientError ? 400 : 500;
+    const message = isClientError ? 'Invalid request data' : 'Internal server error';
+    
+    res.status(statusCode).json({
       success: false,
-      message: 'Internal server error',
+      message,
       error: error.message
     });
   }
