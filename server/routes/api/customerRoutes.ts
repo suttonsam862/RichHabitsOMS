@@ -52,7 +52,19 @@ export async function sendUserInvitation(req: Request, res: Response) {
     console.log(`Creating invitation for ${email} with role: ${role}`);
 
     // Check if user already exists by searching all users
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    let existingUsers;
+    try {
+      const result = await supabaseAdmin.auth.admin.listUsers();
+      existingUsers = result.data;
+      console.log(`✅ Successfully retrieved user list for email check: ${email}`);
+    } catch (error) {
+      console.error('❌ Error fetching existing users:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to check existing users'
+      });
+    }
+    
     const userExists = existingUsers?.users?.some(user => user.email === email);
 
     if (userExists) {
@@ -79,27 +91,36 @@ export async function sendUserInvitation(req: Request, res: Response) {
     };
 
     // Store invitation in Supabase with explicit defaults
-    const { error: inviteError } = await supabaseAdmin
-      .from('user_invitations')
-      .insert({
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        role,
-        invitation_token: invitationToken,
-        expires_at: expiresAt.toISOString(),
-        created_at: 'NOW()',
-        updated_at: 'NOW()',
-        status: 'pending',
-        sent_count: 0,
-        last_sent_at: new Date().toISOString()
-      });
+    try {
+      const { error: inviteError } = await supabaseAdmin
+        .from('user_invitations')
+        .insert({
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          role,
+          invitation_token: invitationToken,
+          expires_at: expiresAt.toISOString(),
+          created_at: 'NOW()',
+          updated_at: 'NOW()',
+          status: 'pending',
+          sent_count: 0,
+          last_sent_at: new Date().toISOString()
+        });
 
-    if (inviteError) {
-      console.error('Error storing invitation:', inviteError);
+      if (inviteError) {
+        console.error('❌ Error storing invitation:', inviteError);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to create invitation'
+        });
+      }
+      console.log(`✅ Successfully stored invitation for ${email}`);
+    } catch (error) {
+      console.error('❌ Exception during invitation insert:', error);
       return res.status(400).json({
         success: false,
-        message: 'Failed to create invitation'
+        message: 'Failed to create invitation due to database error'
       });
     }
 
@@ -164,14 +185,34 @@ export async function verifyInvitation(req: Request, res: Response) {
 
   try {
     // Get invitation from database
-    const { data: invitation, error } = await supabaseAdmin
-      .from('user_invitations')
-      .select('*')
-      .eq('invitation_token', token)
-      .eq('status', 'pending')
-      .single();
+    let invitation;
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('user_invitations')
+        .select('*')
+        .eq('invitation_token', token)
+        .eq('status', 'pending')
+        .single();
 
-    if (error || !invitation) {
+      if (error) {
+        console.error('❌ Error fetching invitation:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired invitation token'
+        });
+      }
+      
+      invitation = data;
+      console.log(`✅ Successfully retrieved invitation for token: ${token}`);
+    } catch (error) {
+      console.error('❌ Exception during invitation fetch:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Database error while verifying invitation'
+      });
+    }
+
+    if (!invitation) {
       return res.status(400).json({
         success: false,
         message: 'Invalid or expired invitation token'
@@ -184,13 +225,19 @@ export async function verifyInvitation(req: Request, res: Response) {
 
     if (now > expiresAt) {
       // Mark as expired
-      await supabaseAdmin
-        .from('user_invitations')
-        .update({ 
-          status: 'expired',
-          updated_at: 'NOW()'
-        })
-        .eq('invitation_token', token);
+      try {
+        await supabaseAdmin
+          .from('user_invitations')
+          .update({ 
+            status: 'expired',
+            updated_at: 'NOW()'
+          })
+          .eq('invitation_token', token);
+        console.log(`✅ Successfully marked invitation as expired for token: ${token}`);
+      } catch (error) {
+        console.error('❌ Error marking invitation as expired:', error);
+        // Continue anyway since the main check failed
+      }
 
       return res.status(400).json({
         success: false,
@@ -251,17 +298,29 @@ export async function createCustomer(req: Request, res: Response) {
     console.log('Creating customer profile with email:', email);
 
     // Check if customer already exists in database
-    const { data: existingCustomer, error: checkError } = await supabaseAdmin
-      .from('customers')
-      .select('id, email')
-      .eq('email', email)
-      .single();
+    let existingCustomer;
+    try {
+      const { data, error: checkError } = await supabaseAdmin
+        .from('customers')
+        .select('id, email')
+        .eq('email', email)
+        .single();
 
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error('Error checking existing customer:', checkError);
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('❌ Error checking existing customer:', checkError);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to validate customer uniqueness: ' + checkError.message
+        });
+      }
+      
+      existingCustomer = data;
+      console.log(`✅ Successfully checked customer existence for email: ${email}`);
+    } catch (error) {
+      console.error('❌ Exception during customer existence check:', error);
       return res.status(400).json({
         success: false,
-        message: 'Failed to validate customer uniqueness: ' + checkError.message
+        message: 'Database error while checking customer uniqueness'
       });
     }
 
@@ -278,34 +337,46 @@ export async function createCustomer(req: Request, res: Response) {
     console.log('Creating customer profile with ID:', customerId);
 
     // Insert customer directly into database
-    const { data: insertedProfile, error: profileError } = await supabaseAdmin
-      .from('customers')
-      .insert({
-        id: customerId,
-        first_name,
-        last_name,
-        email,
-        company: company || '',
-        phone: phone || '',
-        address: address || '',
-        city: city || '',
-        state: state || '',
-        zip: zip || '',
-        country: country || '',
-        created_at: 'NOW()',
-        updated_at: 'NOW()'
-      })
-      .select()
-      .single();
+    let insertedProfile;
+    try {
+      const { data, error: profileError } = await supabaseAdmin
+        .from('customers')
+        .insert({
+          id: customerId,
+          first_name,
+          last_name,
+          email,
+          company: company || '',
+          phone: phone || '',
+          address: address || '',
+          city: city || '',
+          state: state || '',
+          zip: zip || '',
+          country: country || '',
+          created_at: 'NOW()',
+          updated_at: 'NOW()'
+        })
+        .select()
+        .single();
 
-    if (profileError) {
-      console.error('Error creating customer profile:', profileError);
-      console.error('Profile error details:', JSON.stringify(profileError, null, 2));
+      if (profileError) {
+        console.error('❌ Error creating customer profile:', profileError);
+        console.error('❌ Profile error details:', JSON.stringify(profileError, null, 2));
 
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to create customer profile: ' + profileError.message,
+          details: profileError.details || 'No additional details'
+        });
+      }
+      
+      insertedProfile = data;
+      console.log(`✅ Successfully created customer profile for: ${email}`);
+    } catch (error) {
+      console.error('❌ Exception during customer profile creation:', error);
       return res.status(400).json({
         success: false,
-        message: 'Failed to create customer profile: ' + profileError.message,
-        details: profileError.details || 'No additional details'
+        message: 'Database error while creating customer profile'
       });
     }
 
@@ -343,23 +414,43 @@ async function getAllCustomers(req: Request, res: Response) {
     console.log('Fetching customers - request received');
 
     // First, try to get customers from the customers table (with default limit for safety)
-    const { data: customerProfiles, error: customerError } = await supabaseAdmin
-      .from('customers')
-      .select('*')
-      .limit(100);
+    let customerProfiles;
+    try {
+      const { data, error: customerError } = await supabaseAdmin
+        .from('customers')
+        .select('*')
+        .limit(100);
 
-    if (customerError) {
-      console.error('Error fetching customer profiles:', customerError);
+      if (customerError) {
+        console.error('❌ Error fetching customer profiles:', customerError);
+      } else {
+        customerProfiles = data;
+        console.log(`✅ Successfully fetched ${data?.length || 0} customer profiles`);
+      }
+    } catch (error) {
+      console.error('❌ Exception during customer profiles fetch:', error);
+      customerProfiles = null;
     }
 
     // Also get auth users for additional data
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-
-    if (authError) {
-      console.error('Error fetching auth users:', authError);
+    let authData;
+    try {
+      const result = await supabaseAdmin.auth.admin.listUsers();
+      authData = result.data;
+      console.log(`✅ Successfully fetched ${authData?.users?.length || 0} auth users`);
+    } catch (error) {
+      console.error('❌ Exception fetching auth users:', error);
       return res.status(400).json({
         success: false,
-        message: 'Failed to fetch customers: ' + authError.message
+        message: 'Failed to fetch customers due to authentication service error'
+      });
+    }
+
+    if (!authData) {
+      console.error('❌ Auth data is null after fetch');
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to fetch authentication data'
       });
     }
 
@@ -541,29 +632,41 @@ async function updateCustomer(req: Request, res: Response) {
 
     // First check if customer exists
     console.log(`🔍 [${requestTimestamp}] Checking if customer exists with ID: ${id}`);
-    const { data: existingCustomer, error: checkError } = await supabaseAdmin
-      .from('customers')
-      .select('id, email, first_name, last_name')
-      .eq('id', id)
-      .single();
+    let existingCustomer;
+    try {
+      const { data, error: checkError } = await supabaseAdmin
+        .from('customers')
+        .select('id, email, first_name, last_name')
+        .eq('id', id)
+        .single();
 
-    if (checkError) {
-      console.error(`❌ [${requestTimestamp}] Error checking customer existence:`, {
-        code: checkError.code,
-        message: checkError.message,
-        details: checkError.details,
-        hint: checkError.hint
-      });
-      
-      if (checkError.code === 'PGRST116') {
+      if (checkError) {
+        console.error(`❌ [${requestTimestamp}] Error checking customer existence:`, {
+          code: checkError.code,
+          message: checkError.message,
+          details: checkError.details,
+          hint: checkError.hint
+        });
+        
+        if (checkError.code === 'PGRST116') {
+          return res.status(400).json({
+            success: false,
+            message: `Customer not found with ID: ${id}`
+          });
+        }
         return res.status(400).json({
           success: false,
-          message: `Customer not found with ID: ${id}`
+          message: 'Failed to verify customer: ' + checkError.message
         });
       }
+      
+      existingCustomer = data;
+      console.log(`✅ [${requestTimestamp}] Successfully verified customer exists`);
+    } catch (error) {
+      console.error(`❌ [${requestTimestamp}] Exception during customer existence check:`, error);
       return res.status(400).json({
         success: false,
-        message: 'Failed to verify customer: ' + checkError.message
+        message: 'Database error while verifying customer existence'
       });
     }
 
@@ -578,26 +681,38 @@ async function updateCustomer(req: Request, res: Response) {
 
     // Update customer in database
     console.log(`🔄 [${requestTimestamp}] Executing Supabase update query...`);
-    const { data: updatedProfile, error: profileError } = await supabaseAdmin
-      .from('customers')
-      .update(updateData)
-      .eq('id', id)
-      .select('*')
-      .single();
+    let updatedProfile;
+    try {
+      const { data, error: profileError } = await supabaseAdmin
+        .from('customers')
+        .update(updateData)
+        .eq('id', id)
+        .select('*')
+        .single();
 
-    if (profileError) {
-      console.error(`❌ [${requestTimestamp}] Supabase update error:`, {
-        code: profileError.code,
-        message: profileError.message,
-        details: profileError.details,
-        hint: profileError.hint,
-        updateData: updateData,
-        customerId: id
-      });
+      if (profileError) {
+        console.error(`❌ [${requestTimestamp}] Supabase update error:`, {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          updateData: updateData,
+          customerId: id
+        });
 
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to update customer profile: ' + profileError.message
+        });
+      }
+      
+      updatedProfile = data;
+      console.log(`✅ [${requestTimestamp}] Successfully updated customer profile`);
+    } catch (error) {
+      console.error(`❌ [${requestTimestamp}] Exception during customer update:`, error);
       return res.status(400).json({
         success: false,
-        message: 'Failed to update customer profile: ' + profileError.message
+        message: 'Database error while updating customer profile'
       });
     }
 
@@ -684,22 +799,43 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
     console.log(`📁 File details: ${req.file.originalname} (${req.file.size} bytes)`);
 
     // Ensure main bucket exists or create it
-    const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+    let buckets;
+    try {
+      const { data } = await supabaseAdmin.storage.listBuckets();
+      buckets = data;
+      console.log(`✅ Successfully listed storage buckets`);
+    } catch (error) {
+      console.error('❌ Exception during bucket listing:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to access storage system'
+      });
+    }
+    
     const bucketExists = buckets?.some(bucket => bucket.name === 'uploads');
     
     if (!bucketExists) {
       console.log('Creating uploads bucket...');
-      const { error: bucketError } = await supabaseAdmin.storage.createBucket('uploads', {
-        public: true,
-        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
-        fileSizeLimit: 5242880 // 5MB
-      });
-      
-      if (bucketError) {
-        console.error('Error creating bucket:', bucketError);
+      try {
+        const { error: bucketError } = await supabaseAdmin.storage.createBucket('uploads', {
+          public: true,
+          allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+          fileSizeLimit: 5242880 // 5MB
+        });
+        
+        if (bucketError) {
+          console.error('❌ Error creating bucket:', bucketError);
+          return res.status(400).json({
+            success: false,
+            message: 'Failed to initialize storage bucket: ' + bucketError.message
+          });
+        }
+        console.log(`✅ Successfully created uploads bucket`);
+      } catch (error) {
+        console.error('❌ Exception during bucket creation:', error);
         return res.status(400).json({
           success: false,
-          message: 'Failed to initialize storage bucket: ' + bucketError.message
+          message: 'Failed to create storage bucket due to system error'
         });
       }
     }
@@ -709,58 +845,85 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
     const fileName = `customer_photos/${id}_${Date.now()}.${fileExtension}`;
     
     // Upload file to Supabase storage in customer_photos/ directory
-    const { data, error } = await supabaseAdmin.storage
-      .from('uploads')
-      .upload(fileName, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: true
-      });
+    let uploadData;
+    try {
+      const { data, error } = await supabaseAdmin.storage
+        .from('uploads')
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true
+        });
 
-    if (error) {
-      console.error('Error uploading photo to Supabase:', error);
+      if (error) {
+        console.error('❌ Error uploading photo to Supabase:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to upload photo: ' + error.message
+        });
+      }
+      
+      uploadData = data;
+      console.log('✅ Photo upload successful:', data);
+    } catch (error) {
+      console.error('❌ Exception during photo upload:', error);
       return res.status(400).json({
         success: false,
-        message: 'Failed to upload photo: ' + error.message
+        message: 'Failed to upload photo due to storage system error'
       });
     }
 
     // Get the public URL for the uploaded photo
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from('uploads')
-      .getPublicUrl(fileName);
-
-    const photoUrl = publicUrl;
+    let photoUrl;
+    try {
+      const { data: { publicUrl } } = supabaseAdmin.storage
+        .from('uploads')
+        .getPublicUrl(fileName);
+      photoUrl = publicUrl;
+      console.log(`✅ Successfully generated photo URL: ${photoUrl}`);
+    } catch (error) {
+      console.error('❌ Exception during photo URL generation:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Photo uploaded but failed to generate access URL'
+      });
+    }
 
     console.log(`📸 Photo uploaded successfully to: ${photoUrl}`);
     console.log(`🔄 Updating customer ${id} with photo URL...`);
 
     // Try to update customer record with profile_image_url
     console.log('🔄 Attempting to update customer record with profile_image_url...');
-    const { error: updateError } = await supabaseAdmin
-      .from('customers')
-      .update({ 
-        profile_image_url: photoUrl,
-        updated_at: 'NOW()'
-      })
-      .eq('id', id);
+    try {
+      const { error: updateError } = await supabaseAdmin
+        .from('customers')
+        .update({ 
+          profile_image_url: photoUrl,
+          updated_at: 'NOW()'
+        })
+        .eq('id', id);
 
-    if (updateError) {
-      console.error('Database update error:', updateError);
-      
-      // If column doesn't exist, that's okay - photo is still uploaded
-      if (updateError.code === 'PGRST204') {
-        console.log('⚠️ profile_image_url column not found in customers table');
-        console.log('📸 Photo uploaded successfully, but not linked to customer record');
-        console.log('💡 Column needs to be added: ALTER TABLE customers ADD COLUMN profile_image_url TEXT;');
+      if (updateError) {
+        console.error('❌ Database update error:', updateError);
+        
+        // If column doesn't exist, that's okay - photo is still uploaded
+        if (updateError.code === 'PGRST204') {
+          console.log('⚠️ profile_image_url column not found in customers table');
+          console.log('📸 Photo uploaded successfully, but not linked to customer record');
+          console.log('💡 Column needs to be added: ALTER TABLE customers ADD COLUMN profile_image_url TEXT;');
+        } else {
+          // Other database errors should fail the request
+          return res.status(400).json({
+            success: false,
+            message: 'Photo uploaded but database update failed: ' + updateError.message
+          });
+        }
       } else {
-        // Other database errors should fail the request
-        return res.status(400).json({
-          success: false,
-          message: 'Photo uploaded but database update failed: ' + updateError.message
-        });
+        console.log('✅ Customer record updated with profile_image_url successfully');
       }
-    } else {
-      console.log('✅ Customer record updated with profile_image_url successfully');
+    } catch (error) {
+      console.error('❌ Exception during customer profile update:', error);
+      // Continue anyway since photo was uploaded successfully
+      console.log('⚠️ Photo uploaded successfully but customer record update failed');
     }
 
     // Always return success if file was uploaded to storage
