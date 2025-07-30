@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Loader2, Plus, X } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const catalogItemSchema = z.object({
@@ -26,6 +26,12 @@ const catalogItemSchema = z.object({
     name: z.string().min(1, "Color name is required"),
     hex: z.string().optional(),
     description: z.string().optional()
+  })).optional().default([]),
+  images: z.array(z.object({
+    id: z.string(),
+    url: z.string(),
+    alt: z.string().optional(),
+    isPrimary: z.boolean().default(false)
   })).optional().default([])
 });
 
@@ -44,6 +50,10 @@ export default function CatalogItemEditPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // State for image upload
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   // Fetch catalog item data
   const { data: catalogItem, isLoading } = useQuery({
@@ -74,6 +84,7 @@ export default function CatalogItemEditPage() {
         sku: data.sku || '',
         sizes: Array.isArray(data.sizes) ? data.sizes : [],
         colors: Array.isArray(data.colors) ? data.colors : [],
+        images: Array.isArray(data.images) ? data.images : [],
         created_at: data.created_at,
         updated_at: data.updated_at
       } as CatalogItem;
@@ -90,7 +101,8 @@ export default function CatalogItemEditPage() {
       fabric: '',
       status: 'active',
       sizes: [],
-      colors: []
+      colors: [],
+      images: []
     }
   });
 
@@ -105,6 +117,11 @@ export default function CatalogItemEditPage() {
     name: "colors"
   });
 
+  const imagesFieldArray = useFieldArray({
+    control: form.control,
+    name: "images"
+  });
+
   // Update form when catalog item data loads
   React.useEffect(() => {
     if (catalogItem) {
@@ -115,7 +132,8 @@ export default function CatalogItemEditPage() {
         fabric: catalogItem.fabric || '',
         status: catalogItem.status,
         sizes: catalogItem.sizes || [],
-        colors: catalogItem.colors || []
+        colors: catalogItem.colors || [],
+        images: catalogItem.images || []
       });
     }
   }, [catalogItem, form]);
@@ -160,6 +178,108 @@ export default function CatalogItemEditPage() {
       });
     }
   });
+
+  // Image upload function
+  const uploadImages = async (files: FileList) => {
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      const uploadedImages = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const response = await fetch(`/api/catalog/${itemId}/images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+        
+        const result = await response.json();
+        uploadedImages.push({
+          id: `img_${Date.now()}_${i}`,
+          url: result.data.url,
+          alt: file.name,
+          isPrimary: imagesFieldArray.fields.length === 0 && i === 0
+        });
+        
+        setUploadProgress(((i + 1) / files.length) * 100);
+      }
+      
+      // Add uploaded images to form
+      uploadedImages.forEach(image => {
+        imagesFieldArray.append(image);
+      });
+      
+      toast({
+        title: "Images uploaded",
+        description: `Successfully uploaded ${uploadedImages.length} image(s)`,
+      });
+      
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // Handle file input change
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      uploadImages(files);
+    }
+  };
+
+  // Set primary image
+  const setPrimaryImage = (index: number) => {
+    const currentImages = form.getValues('images');
+    const updatedImages = currentImages.map((img, i) => ({
+      ...img,
+      isPrimary: i === index
+    }));
+    form.setValue('images', updatedImages);
+  };
+
+  // Remove image
+  const removeImage = async (index: number) => {
+    const currentImages = form.getValues('images');
+    const imageToRemove = currentImages[index];
+    
+    // Call API to delete from storage
+    try {
+      await fetch(`/api/catalog/${itemId}/images/${imageToRemove.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+    } catch (error) {
+      console.error('Failed to delete image from storage:', error);
+    }
+    
+    imagesFieldArray.remove(index);
+    
+    // If removed image was primary, set first remaining as primary
+    const remainingImages = form.getValues('images');
+    if (imageToRemove.isPrimary && remainingImages.length > 0) {
+      setPrimaryImage(0);
+    }
+  };
 
   const onSubmit = (data: CatalogItemFormData) => {
     updateMutation.mutate(data);
@@ -421,6 +541,133 @@ export default function CatalogItemEditPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Image Management */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium">Product Images</h3>
+                  <div className="space-x-2">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="image-upload"
+                      disabled={isUploading}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isUploading}
+                      onClick={() => document.getElementById('image-upload')?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {isUploading ? `Uploading... ${uploadProgress.toFixed(0)}%` : 'Upload Images'}
+                    </Button>
+                  </div>
+                </div>
+                
+                {imagesFieldArray.fields.length === 0 && !isUploading && (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-muted-foreground">No images uploaded yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Click "Upload Images" to add product photos
+                    </p>
+                  </div>
+                )}
+                
+                {isUploading && (
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Uploading images... {uploadProgress.toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {imagesFieldArray.fields.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {imagesFieldArray.fields.map((field, index) => {
+                      const image = form.getValues(`images.${index}`);
+                      return (
+                        <div key={field.id} className="relative group border rounded-lg overflow-hidden">
+                          <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                            <img
+                              src={image.url}
+                              alt={image.alt || `Product image ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw1MCA0NUw2NSA2NUgzNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+                              }}
+                            />
+                          </div>
+                          
+                          {image.isPrimary && (
+                            <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center">
+                              <Star className="w-3 h-3 mr-1" />
+                              Primary
+                            </div>
+                          )}
+                          
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="space-x-2">
+                              {!image.isPrimary && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => setPrimaryImage(index)}
+                                  className="text-xs"
+                                >
+                                  <Star className="w-3 h-3 mr-1" />
+                                  Set Primary
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => removeImage(index)}
+                                className="text-xs"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="p-2">
+                            <FormField
+                              control={form.control}
+                              name={`images.${index}.alt`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Alt text (optional)" 
+                                      {...field}
+                                      className="text-xs"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <FormField
