@@ -61,7 +61,28 @@ export default function CustomerEditPage() {
         throw new Error('Failed to fetch customer details');
       }
       
-      return response.json() as Promise<Customer>;
+      const data = await response.json();
+      
+      // Convert snake_case response to camelCase for frontend
+      return {
+        id: data.id,
+        firstName: data.first_name || data.firstName || '',
+        lastName: data.last_name || data.lastName || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        company: data.company || '',
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zip: data.zip || '',
+        country: data.country || '',
+        status: data.status || 'active',
+        orders: data.orders || 0,
+        spent: data.spent || '0',
+        lastOrder: data.lastOrder || data.last_order,
+        created_at: data.created_at,
+        photo_url: data.photo_url
+      } as Customer;
     },
     enabled: !!customerId
   });
@@ -219,7 +240,22 @@ export default function CustomerEditPage() {
         throw new Error('Customer ID is required');
       }
 
-      console.log(`Updating customer with ID: ${customerId}`, data);
+      // Convert camelCase fields to snake_case for the API
+      const requestData = {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        phone: data.phone || '',
+        company: data.company || '',
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zip: data.zip || '',
+        country: data.country || '',
+        status: data.status
+      };
+
+      console.log(`Updating customer with ID: ${customerId}`, requestData);
 
       const response = await fetch(`/api/customers/${customerId}`, {
         method: 'PATCH',
@@ -227,7 +263,7 @@ export default function CustomerEditPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(requestData)
       });
 
       if (!response.ok) {
