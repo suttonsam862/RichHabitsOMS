@@ -8,10 +8,27 @@ import { requireAuth, requireRole } from '../auth/auth';
 import { customerTransformers } from '../../utils/schemaTransformers';
 import { validateRequiredFields, validateCustomerData } from '../../utils/validation';
 import crypto from 'crypto';
+import multer from 'multer';
 
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
+
+// Configure multer for memory storage (files will be uploaded to Supabase Storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // Create Supabase admin client with service role key for admin operations
 const supabaseAdmin = createClient(
@@ -942,8 +959,8 @@ router.get('/verify/:token', verifyInvitation);
 router.post('/', requireAuth, requireRole(['admin']), createCustomer);
 
 router.patch('/:id', requireAuth, requireRole(['admin']), updateCustomer);
-// Customer photo upload removed - using Supabase Storage only
-// router.post('/:id/photo', requireAuth, requireRole(['admin']), uploadCustomerPhoto);
+// Customer photo upload endpoint - uploads to Supabase Storage and updates database
+router.post('/:id/photo', requireAuth, requireRole(['admin']), upload.single('image'), uploadCustomerPhoto);
 
 // GET single customer endpoint
 router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
@@ -972,11 +989,12 @@ router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res
       company: customer.company,
       phone: customer.phone,
       address: customer.address,
-      city: customer.state,
+      city: customer.city,
+      state: customer.state,
       zip: customer.zip,
       country: customer.country,
       status: customer.status,
-      photo_url: customer.photo_url,
+      profileImageUrl: customer.profile_image_url,
       created_at: customer.created_at,
       updated_at: customer.updated_at,
       orders: 0,
