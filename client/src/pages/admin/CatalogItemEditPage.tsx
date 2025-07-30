@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const catalogItemSchema = z.object({
@@ -17,7 +17,16 @@ const catalogItemSchema = z.object({
   base_price: z.number().min(0, "Base price must be positive"),
   sport: z.string().optional(),
   fabric: z.string().optional(),
-  status: z.enum(['active', 'inactive'])
+  status: z.enum(['active', 'inactive']),
+  sizes: z.array(z.object({
+    name: z.string().min(1, "Size name is required"),
+    description: z.string().optional()
+  })).optional().default([]),
+  colors: z.array(z.object({
+    name: z.string().min(1, "Color name is required"),
+    hex: z.string().optional(),
+    description: z.string().optional()
+  })).optional().default([])
 });
 
 type CatalogItemFormData = z.infer<typeof catalogItemSchema>;
@@ -63,6 +72,8 @@ export default function CatalogItemEditPage() {
         status: data.status || 'active',
         category: data.category || '',
         sku: data.sku || '',
+        sizes: Array.isArray(data.sizes) ? data.sizes : [],
+        colors: Array.isArray(data.colors) ? data.colors : [],
         created_at: data.created_at,
         updated_at: data.updated_at
       } as CatalogItem;
@@ -77,8 +88,21 @@ export default function CatalogItemEditPage() {
       base_price: 0,
       sport: '',
       fabric: '',
-      status: 'active'
+      status: 'active',
+      sizes: [],
+      colors: []
     }
+  });
+
+  // Field arrays for managing sizes and colors
+  const sizesFieldArray = useFieldArray({
+    control: form.control,
+    name: "sizes"
+  });
+
+  const colorsFieldArray = useFieldArray({
+    control: form.control,
+    name: "colors"
   });
 
   // Update form when catalog item data loads
@@ -89,7 +113,9 @@ export default function CatalogItemEditPage() {
         base_price: catalogItem.base_price,
         sport: catalogItem.sport || '',
         fabric: catalogItem.fabric || '',
-        status: catalogItem.status
+        status: catalogItem.status,
+        sizes: catalogItem.sizes || [],
+        colors: catalogItem.colors || []
       });
     }
   }, [catalogItem, form]);
@@ -253,6 +279,148 @@ export default function CatalogItemEditPage() {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* Size Variants Management */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium">Size Variants</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => sizesFieldArray.append({ name: '', description: '' })}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Size
+                  </Button>
+                </div>
+                
+                {sizesFieldArray.fields.length === 0 && (
+                  <p className="text-muted-foreground text-sm mb-4">No sizes added yet</p>
+                )}
+                
+                <div className="space-y-3">
+                  {sizesFieldArray.fields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border rounded-lg">
+                      <FormField
+                        control={form.control}
+                        name={`sizes.${index}.name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Size Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g., Small, Medium, XL" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name={`sizes.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description (Optional)</FormLabel>
+                            <div className="flex space-x-2">
+                              <FormControl>
+                                <Input placeholder="e.g., Chest 34-36 inches" {...field} />
+                              </FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => sizesFieldArray.remove(index)}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color Variants Management */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium">Color Variants</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => colorsFieldArray.append({ name: '', hex: '', description: '' })}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Color
+                  </Button>
+                </div>
+                
+                {colorsFieldArray.fields.length === 0 && (
+                  <p className="text-muted-foreground text-sm mb-4">No colors added yet</p>
+                )}
+                
+                <div className="space-y-3">
+                  {colorsFieldArray.fields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 border rounded-lg">
+                      <FormField
+                        control={form.control}
+                        name={`colors.${index}.name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Color Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g., Navy Blue, Red" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name={`colors.${index}.hex`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Hex Code (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g., #FF0000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name={`colors.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description (Optional)</FormLabel>
+                            <div className="flex space-x-2">
+                              <FormControl>
+                                <Input placeholder="e.g., Matte finish" {...field} />
+                              </FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => colorsFieldArray.remove(index)}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <FormField
