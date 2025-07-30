@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
 import { getFieldStyles } from "@/lib/utils";
+import { useUndoableDelete } from "@/hooks/useUndoableDelete";
+import DeleteConfirmationModal from "@/components/ui/DeleteConfirmationModal";
 
 const catalogItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -61,6 +63,33 @@ export default function CatalogItemEditPage() {
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isSubmitDisabled, setIsSubmitDisabled] = React.useState(false);
+
+  // Undoable delete with confirmation modal for catalog items
+  const {
+    softDelete,
+    isDeleting,
+    showConfirmation,
+    confirmationData,
+    handleConfirmDelete,
+    handleCancelConfirmation,
+    confirmationItemType,
+    requiresTyping
+  } = useUndoableDelete({
+    entityName: 'catalog item',
+    deleteEndpoint: '/api/catalog',
+    invalidateQueries: ['/api/catalog'],
+    requiresConfirmation: true,
+    confirmationItemType: 'catalog-item',
+    requiresTyping: true, // Require typing item name for high-risk deletion
+    onDeleteSuccess: () => {
+      toast({
+        title: "Catalog Item Deleted",
+        description: "The catalog item has been successfully deleted.",
+        variant: "default"
+      });
+      navigate('/catalog');
+    }
+  });
 
   // Fetch catalog item data
   const { data: catalogItem, isLoading } = useQuery({
@@ -559,6 +588,19 @@ export default function CatalogItemEditPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              
+              {/* Confirmation Modal */}
+              <DeleteConfirmationModal
+                isOpen={showConfirmation}
+                onClose={handleCancelConfirmation}
+                onConfirm={handleConfirmDelete}
+                title="Delete Catalog Item"
+                description={`Are you sure you want to delete "${confirmationData?.itemDisplayName || 'this catalog item'}"? This is a high-risk operation.`}
+                itemName={confirmationData?.itemDisplayName}
+                itemType={confirmationItemType}
+                requiresTyping={requiresTyping}
+                isDeleting={isDeleting}
+              />
               <FormField
                 control={form.control}
                 name="name"
@@ -1041,40 +1083,54 @@ export default function CatalogItemEditPage() {
                 </div>
               )}
 
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-between items-center space-x-2">
+                <div className="flex space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate('/admin/catalog')}
+                    disabled={updateMutation.isPending || isDeleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={updateMutation.isPending || !validation.canSubmit || isSubmitDisabled || isDeleting}
+                    className={`bg-blue-600 hover:bg-blue-700 ${(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={!validation.canSubmit ? 
+                      (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                      isSubmitDisabled ? "Please wait before submitting again" :
+                      "Save catalog item changes"}
+                  >
+                    {updateMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : isSubmitDisabled ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Update Item
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Delete Button */}
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate('/admin/catalog')}
-                  disabled={updateMutation.isPending}
+                  onClick={() => softDelete(catalogItem.id, catalogItem, catalogItem.name)}
+                  disabled={updateMutation.isPending || isDeleting}
+                  className="text-red-400 hover:bg-red-500/10 hover:text-red-300 border-red-400/30 hover:border-red-400"
                 >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={updateMutation.isPending || !validation.canSubmit || isSubmitDisabled}
-                  className={`bg-blue-600 hover:bg-blue-700 ${(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}`}
-                  title={!validation.canSubmit ? 
-                    (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
-                    isSubmitDisabled ? "Please wait before submitting again" :
-                    "Save catalog item changes"}
-                >
-                  {updateMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Updating...
-                    </>
-                  ) : isSubmitDisabled ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Update Item
-                    </>
-                  )}
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {isDeleting ? 'Deleting...' : 'Delete Item'}
                 </Button>
               </div>
             </form>

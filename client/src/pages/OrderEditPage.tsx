@@ -51,6 +51,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { useFormNavigationBlock } from '@/hooks/useFormNavigationBlock';
+import { useUndoableDelete } from '@/hooks/useUndoableDelete';
+import DeleteConfirmationModal from '@/components/ui/DeleteConfirmationModal';
 import ManufacturerCard from '@/components/ManufacturerCard';
 import { ProductionImageUploader } from '@/components/ProductionImageUploader';
 import OrderAuditHistory from '@/components/OrderAuditHistory';
@@ -70,7 +72,8 @@ import {
   Calendar,
   AlertTriangle,
   Check,
-  X
+  X,
+  Activity
 } from 'lucide-react';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useSmartFetch } from '@/hooks/useSmartFetch';
@@ -160,6 +163,33 @@ export default function OrderEditPage() {
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(false);
 
   const isEditing = id !== 'new';
+
+  // Undoable delete with confirmation modal for orders
+  const {
+    softDelete,
+    isDeleting,
+    showConfirmation,
+    confirmationData,
+    handleConfirmDelete,
+    handleCancelConfirmation,
+    confirmationItemType,
+    requiresTyping
+  } = useUndoableDelete({
+    entityName: 'order',
+    deleteEndpoint: '/api/orders',
+    invalidateQueries: ['/api/orders'],
+    requiresConfirmation: isEditing, // Only require confirmation for existing orders, not drafts
+    confirmationItemType: 'order',
+    requiresTyping: true, // High-risk operation
+    onDeleteSuccess: () => {
+      toast({
+        title: "Order Deleted",
+        description: "The order has been successfully deleted.",
+        variant: "default"
+      });
+      navigate('/orders');
+    }
+  });
 
   // Fetch order data
   const { data: order, isLoading: orderLoading } = useQuery({
@@ -554,6 +584,19 @@ export default function OrderEditPage() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          
+          {/* Delete Confirmation Modal */}
+          <DeleteConfirmationModal
+            isOpen={showConfirmation}
+            onClose={handleCancelConfirmation}
+            onConfirm={handleConfirmDelete}
+            title="Delete Order"
+            description={`Are you sure you want to delete order "${confirmationData?.itemDisplayName || 'this order'}"? This is a high-risk operation that will permanently remove all order data, items, and production history.`}
+            itemName={confirmationData?.itemDisplayName}
+            itemType={confirmationItemType}
+            requiresTyping={requiresTyping}
+            isDeleting={isDeleting}
+          />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Order Details */}
             <div className="lg:col-span-2 space-y-6">
@@ -1154,43 +1197,63 @@ export default function OrderEditPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-4 pt-6 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/orders')}
-            >
-              Cancel
-            </Button>
-            {order && (
+          <div className="flex justify-between items-center pt-6 border-t">
+            <div className="flex space-x-4">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(`/orders/timeline/${order.id}`)}
-                className="bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700"
+                onClick={() => navigate('/orders')}
+                disabled={saveMutation.isPending || isDeleting}
               >
-                <Activity className="w-4 h-4 mr-2" />
-                View Timeline
+                Cancel
               </Button>
-            )}
-            <Button
-              type="submit"
-              disabled={saveMutation.isPending || !validation.canSubmit || isSubmitDisabled}
-              className={`bg-blue-600 hover:bg-blue-700 ${(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}`}
-              title={!validation.canSubmit ? 
-                (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
-                isSubmitDisabled ? "Please wait before submitting again" :
-                "Save order changes"}
-            >
-              {saveMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : isSubmitDisabled ? (
-                <Loader2 className="w-4 h-4 mr-2" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
+              {order && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate(`/orders/timeline/${order.id}`)}
+                  className="bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700"
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  View Timeline
+                </Button>
               )}
-              {saveMutation.isPending ? 'Saving...' : isSubmitDisabled ? 'Processing...' : (isEditing ? 'Update Order' : 'Create Order')}
-            </Button>
+            </div>
+
+            <div className="flex space-x-4">
+              <Button
+                type="submit"
+                disabled={saveMutation.isPending || !validation.canSubmit || isSubmitDisabled || isDeleting}
+                className={`bg-blue-600 hover:bg-blue-700 ${(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}`}
+                title={!validation.canSubmit ? 
+                  (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                  isSubmitDisabled ? "Please wait before submitting again" :
+                  "Save order changes"}
+              >
+                {saveMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : isSubmitDisabled ? (
+                  <Loader2 className="w-4 h-4 mr-2" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                {saveMutation.isPending ? 'Saving...' : isSubmitDisabled ? 'Processing...' : (isEditing ? 'Update Order' : 'Create Order')}
+              </Button>
+
+              {/* Delete Button - Only show for existing orders */}
+              {isEditing && order && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => softDelete(order.id, order, order.orderNumber)}
+                  disabled={saveMutation.isPending || isDeleting}
+                  className="text-red-400 hover:bg-red-500/10 hover:text-red-300 border-red-400/30 hover:border-red-400"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {isDeleting ? 'Deleting...' : 'Delete Order'}
+                </Button>
+              )}
+            </div>
           </div>
         </form>
       </Form>

@@ -10,6 +10,9 @@ interface UndoableDeleteOptions {
   onRestoreSuccess?: () => void;
   invalidateQueries?: string[]; // Query keys to invalidate after delete/restore
   undoTimeoutMs?: number; // How long to show undo option (default 5000ms)
+  requiresConfirmation?: boolean; // Whether to show confirmation modal before delete
+  confirmationItemType?: 'catalog-item' | 'order' | 'customer' | 'organization' | 'generic';
+  requiresTyping?: boolean; // Whether to require typing item name for high-risk deletions
 }
 
 interface PendingDelete {
@@ -26,12 +29,17 @@ export function useUndoableDelete({
   onDeleteSuccess,
   onRestoreSuccess,
   invalidateQueries = [],
-  undoTimeoutMs = 5000
+  undoTimeoutMs = 5000,
+  requiresConfirmation = false,
+  confirmationItemType = 'generic',
+  requiresTyping = false
 }: UndoableDeleteOptions) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pendingDeletes, setPendingDeletes] = useState<Map<string, PendingDelete>>(new Map());
   const toastRef = useRef<{ dismiss: () => void } | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationData, setConfirmationData] = useState<{id: string; itemData: any; itemDisplayName?: string} | null>(null);
 
   // Mutation for actual deletion
   const deleteMutation = useMutation({
@@ -129,8 +137,8 @@ export function useUndoableDelete({
     );
   }, [pendingDeletes, restoreMutation, toast]);
 
-  // Soft delete function with undo prompt
-  const softDelete = useCallback((id: string, itemData: any, itemDisplayName?: string) => {
+  // Execute the actual soft delete (after confirmation if required)
+  const executeSoftDelete = useCallback((id: string, itemData: any, itemDisplayName?: string) => {
     // Create timeout for actual deletion
     const timeoutId = setTimeout(() => {
       // Remove from pending deletes
@@ -194,6 +202,30 @@ export function useUndoableDelete({
 
   }, [deleteMutation, toast, handleUndo, entityName, undoTimeoutMs, invalidateQueries, queryClient]);
 
+  // Soft delete function with optional confirmation modal
+  const softDelete = useCallback((id: string, itemData: any, itemDisplayName?: string) => {
+    if (requiresConfirmation) {
+      setConfirmationData({ id, itemData, itemDisplayName });
+      setShowConfirmation(true);
+    } else {
+      executeSoftDelete(id, itemData, itemDisplayName);
+    }
+  }, [requiresConfirmation, executeSoftDelete]);
+
+  // Handle confirmation modal
+  const handleConfirmDelete = useCallback(() => {
+    if (confirmationData) {
+      setShowConfirmation(false);
+      executeSoftDelete(confirmationData.id, confirmationData.itemData, confirmationData.itemDisplayName);
+      setConfirmationData(null);
+    }
+  }, [confirmationData, executeSoftDelete]);
+
+  const handleCancelConfirmation = useCallback(() => {
+    setShowConfirmation(false);
+    setConfirmationData(null);
+  }, []);
+
   // Cancel all pending deletes (useful for cleanup)
   const cancelAllPendingDeletes = useCallback(() => {
     pendingDeletes.forEach(pendingDelete => {
@@ -214,6 +246,13 @@ export function useUndoableDelete({
     isPendingDelete,
     isDeleting: deleteMutation.isPending,
     isRestoring: restoreMutation.isPending,
-    pendingDeleteCount: pendingDeletes.size
+    pendingDeleteCount: pendingDeletes.size,
+    // Confirmation modal state
+    showConfirmation,
+    confirmationData,
+    handleConfirmDelete,
+    handleCancelConfirmation,
+    confirmationItemType,
+    requiresTyping
   };
 }
