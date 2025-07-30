@@ -1,18 +1,48 @@
 /**
- * This script fixes the WebSocket connection error in Replit environments
- * by patching the WebSocket constructor that Vite uses for HMR.
+ * Enhanced WebSocket connection fix for Replit environments
+ * Addresses Vite HMR connection polling issues and console spam
  */
 export const fixWebSocketConnection = () => {
   if (typeof window !== 'undefined') {
     // Store the original WebSocket constructor
     const OriginalWebSocket = window.WebSocket;
+    let connectionAttempts = 0;
+    const maxConnectionAttempts = 3;
 
     // Create a proxy constructor that intercepts WebSocket creation
     window.WebSocket = function(url: string | URL, protocols?: string | string[]) {
       let urlString = typeof url === 'string' ? url : url.toString();
 
-      // Check if this is a Vite HMR WebSocket with an invalid URL
-      if (urlString.includes('localhost:undefined') || urlString.includes('undefined')) {
+      // Enhanced Vite HMR WebSocket detection and fixing
+      if (urlString.includes('localhost:undefined') || urlString.includes('undefined') || urlString.includes('_vite_ping')) {
+        connectionAttempts++;
+        
+        // Limit connection attempts to prevent spam
+        if (connectionAttempts > maxConnectionAttempts) {
+          // Return a mock WebSocket that prevents further polling
+          return {
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            send: () => {},
+            close: () => {},
+            readyState: WebSocket.CLOSED,
+            onopen: null,
+            onclose: null,
+            onerror: null,
+            onmessage: null,
+            bufferedAmount: 0,
+            extensions: '',
+            protocol: '',
+            url: urlString,
+            binaryType: 'blob',
+            dispatchEvent: () => false,
+            CONNECTING: WebSocket.CONNECTING,
+            OPEN: WebSocket.OPEN,
+            CLOSING: WebSocket.CLOSING,
+            CLOSED: WebSocket.CLOSED
+          } as WebSocket;
+        }
+
         // Get the current host and protocol
         const currentHost = window.location.hostname;
         const currentPort = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
@@ -20,38 +50,66 @@ export const fixWebSocketConnection = () => {
 
         try {
           // Parse URL to get path and query parameters
-          const originalUrl = new URL(urlString.replace('undefined', currentPort));
+          const originalUrl = new URL(urlString.replace('undefined', currentPort).replace('localhost:undefined', `${currentHost}:${currentPort}`));
           const path = originalUrl.pathname;
           const searchParams = originalUrl.search;
 
-          // Construct a proper WebSocket URL with proper port handling
-          // For Replit, we often need to use the current host without explicit port
-          const fixedUrl = currentHost.includes('replit') || currentHost.includes('repl.co') 
-            ? `${protocol}//${currentHost}${path}${searchParams}`
-            : `${protocol}//${currentHost}:${currentPort}${path}${searchParams}`;
-
-          // Only log in development to reduce console noise
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Fixed WebSocket URL:', fixedUrl);
+          // Construct a proper WebSocket URL with enhanced Replit handling
+          let fixedUrl;
+          if (currentHost.includes('replit') || currentHost.includes('repl.co')) {
+            // For Replit, use the secure protocol without explicit port
+            fixedUrl = `wss://${currentHost}${path}${searchParams}`;
+          } else {
+            // For local development
+            fixedUrl = `${protocol}//${currentHost}:${currentPort}${path}${searchParams}`;
           }
 
-          // Create WebSocket with fixed URL and better error handling
+          // Create WebSocket with enhanced error handling
           const ws = new OriginalWebSocket(fixedUrl, protocols);
 
-          // Add error handling to prevent crashes
+          // Suppress error logging for HMR connections to reduce console spam
           ws.addEventListener('error', (event) => {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('WebSocket error (handled):', event);
+            // Silently handle HMR connection errors
+            event.preventDefault();
+            event.stopPropagation();
+          });
+
+          ws.addEventListener('close', (event) => {
+            // Reset connection attempts on successful close
+            if (event.code === 1000) {
+              connectionAttempts = 0;
             }
+          });
+
+          ws.addEventListener('open', () => {
+            // Reset connection attempts on successful connection
+            connectionAttempts = 0;
           });
 
           return ws;
         } catch (e) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('Error fixing WebSocket URL:', e);
-          }
-          // Fallback to original WebSocket if fix fails
-          return new OriginalWebSocket(urlString, protocols);
+          // Silently handle WebSocket creation errors for HMR
+          return {
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            send: () => {},
+            close: () => {},
+            readyState: WebSocket.CLOSED,
+            onopen: null,
+            onclose: null,
+            onerror: null,
+            onmessage: null,
+            bufferedAmount: 0,
+            extensions: '',
+            protocol: '',
+            url: urlString,
+            binaryType: 'blob',
+            dispatchEvent: () => false,
+            CONNECTING: WebSocket.CONNECTING,
+            OPEN: WebSocket.OPEN,
+            CLOSING: WebSocket.CLOSING,
+            CLOSED: WebSocket.CLOSED
+          } as WebSocket;
         }
       }
 
@@ -63,8 +121,6 @@ export const fixWebSocketConnection = () => {
     window.WebSocket.prototype = OriginalWebSocket.prototype;
     Object.defineProperties(window.WebSocket, 
       Object.getOwnPropertyDescriptors(OriginalWebSocket));
-
-    console.log('WebSocket connection fix applied for Replit environment');
   }
 };
 

@@ -81,8 +81,7 @@ async function getAllOrders(req: Request, res: Response) {
           size,
           quantity,
           unit_price,
-          total_price,
-          catalog_item_id
+          total_price
         )
       `)
       .order('created_at', { ascending: false });
@@ -223,9 +222,7 @@ async function createOrder(req: Request, res: Response) {
         status,
         total_amount: totalAmount,
         tax: tax || 0,
-        notes: notes?.trim() || null,
-        logo_url: logoUrl || null,
-        company_name: companyName?.trim() || null
+        notes: notes?.trim() || null
       })
       .select()
       .single();
@@ -272,8 +269,7 @@ async function createOrder(req: Request, res: Response) {
         quantity: parseInt(item.quantity) || 1,
         unit_price: parseFloat(item.unitPrice || item.unit_price) || 0,
         total_price: parseFloat(item.totalPrice || item.total_price) || 
-                     (parseFloat(item.unitPrice || item.unit_price || 0) * parseInt(item.quantity || 1)),
-        catalog_item_id: item.catalogItemId || item.catalog_item_id || null
+                     (parseFloat(item.unitPrice || item.unit_price || 0) * parseInt(item.quantity || 1))
       }));
 
       console.log('Order items to insert:', JSON.stringify(orderItems, null, 2));

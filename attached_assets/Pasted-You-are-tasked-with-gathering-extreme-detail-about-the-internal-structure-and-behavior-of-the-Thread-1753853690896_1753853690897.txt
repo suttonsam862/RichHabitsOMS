@@ -1,0 +1,94 @@
+You are tasked with gathering extreme detail about the internal structure and behavior of the ThreadCraft codebase. Your job is not only to understand "what" is built, but "how", "why", and "what can go wrong".
+
+Please answer the following in full, sourcing directly from the codebase where possible. You are not modifying the system — only observing and documenting it with high technical precision.
+
+---
+
+🔹 1. **Project Topology & Structure**
+- What is the overall folder structure of the project?
+- How are responsibilities split between `client/` and `server/`?
+- Are components modular or deeply coupled?
+- Where is global state managed (e.g., Zustand, Redux, context)?
+- How is routing handled (React Router, file-based routing, etc.)?
+- Are there shared lib or utils folders? If so, what do they contain?
+
+🔹 2. **Database Schema Intelligence**
+- What are the exact table names and columns used in Supabase?
+- What are the relationships (foreign keys, joins) between:
+  - customers ↔ orders
+  - orders ↔ order_items
+  - catalog_items ↔ order_items
+  - manufacturers ↔ orders/manufacturing_tasks
+- Are tables using camelCase or snake_case?
+- Are RLS (Row-Level Security) policies clearly defined and enforced?
+
+🔹 3. **Supabase Integration Patterns**
+- Where are Supabase client instances initialized?
+- Are queries wrapped in custom services or inline?
+- How are errors handled from Supabase (gracefully, not at all)?
+- Are all inserts and updates using type-safe models?
+
+🔹 4. **Role-Based Access Control (RBAC)**
+- How are user roles defined and used?
+- Where is access restricted based on role in both frontend and backend?
+- Are roles stored in JWT claims, Supabase user metadata, or a custom table?
+- Can role-based UI differences be clearly traced in the code?
+
+🔹 5. **Form + Modal Logic**
+- How are modals implemented (component + portal logic)?
+- What form libraries or techniques are used (e.g., React Hook Form)?
+- How is form validation done? (Yup, Zod, custom?)
+- Is form state preserved between pages or isolated per modal?
+
+🔹 6. **API and Backend Route Mapping**
+- What are all the Express API endpoints?
+- Which endpoints are hit by the frontend?
+- Are routes RESTful and consistent?
+- Are there any unused or deprecated routes still in the code?
+
+🔹 7. **WebSocket & Real-Time**
+- Where is the WebSocket client initialized?
+- Which components listen for real-time updates?
+- What message types are sent (e.g., new-message, task-update)?
+- What server route(s) handle socket connections and broadcasts?
+
+🔹 8. **File Upload & Media**
+- Where does image upload logic live (component, service)?
+- Are files stored in Supabase Storage only, or duplicated?
+- Are object URLs properly revoked after use?
+- Are files validated (type/size) before upload?
+
+🔹 9. **Stripe Integration**
+- Where is Stripe initialized (client + server)?
+- Are payment flows working with test keys?
+- Are webhook endpoints defined? If so, where?
+- Does the payment data get linked back to orders and customers?
+
+🔹 10. **Error Boundaries & Fault Tolerance**
+- Are React error boundaries implemented? Where?
+- Is there a global catch for fetch or Supabase errors?
+- Are failed states visible to the user or silently ignored?
+- Are retry strategies used for critical operations?
+
+🔹 11. **Testing & Stability**
+- Are there test files in the repo? (unit, integration, e2e?)
+- What testing libraries are in use?
+- What areas are completely untested?
+- Are there any test plans or coverage reports?
+
+🔹 12. **Known Weak Points**
+- Are there TODOs, FIXMEs, or comments suggesting unfinished features?
+- Are there repetitive bugs or crash-prone features noted in the code?
+- Are any legacy systems or deprecated components still wired in?
+
+---
+
+📦 Final Output
+Provide a hierarchical breakdown of findings grouped by:
+- Strengths (e.g., well-structured modular architecture)
+- Weaknesses (e.g., duplicated state logic, missing schema joins)
+- Risks (e.g., unvalidated user input, no error boundaries)
+
+This intelligence will be used to drive highly targeted assistant prompts and optimizations.
+
+You do not fix any code — you only observe and extract accurate operational insight.
