@@ -29,12 +29,11 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    base_price: '',
+    basePrice: '',
     category: '',
-    type: '',
-    fabric_options: '',
-    color_options: '',
-    size_options: '',
+    sport: '',
+    fabric: '',
+    status: 'active',
     sku: ''
   });
 
@@ -80,12 +79,12 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       errors.name = 'Item name is required';
     }
     
-    if (!formData.base_price.trim()) {
-      errors.base_price = 'Base price is required';
+    if (!formData.basePrice.trim()) {
+      errors.basePrice = 'Base price is required';
     } else {
-      const price = parseFloat(formData.base_price);
+      const price = parseFloat(formData.basePrice);
       if (isNaN(price) || price < 0) {
-        errors.base_price = 'Please enter a valid price (0 or greater)';
+        errors.basePrice = 'Please enter a valid price (0 or greater)';
       }
     }
     
@@ -113,7 +112,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       
       const submissionData = {
         ...formData,
-        base_price: parseFloat(formData.base_price) || 0,
+        basePrice: parseFloat(formData.basePrice) || 0,
         sku: skuToUse
       };
       
