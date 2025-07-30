@@ -7,8 +7,7 @@ import { sendEmail, getCustomerInviteEmailTemplate } from '../../email';
 import { requireAuth, requireRole } from '../auth/auth';
 import { customerTransformers } from '../../utils/schemaTransformers';
 import crypto from 'crypto';
-import multer from 'multer';
-import { handleCatalogImageUpload } from '../../imageUpload.js';
+
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
@@ -953,7 +952,8 @@ router.get('/verify/:token', verifyInvitation);
 router.post('/', requireAuth, requireRole(['admin']), createCustomer);
 
 router.patch('/:id', requireAuth, requireRole(['admin']), updateCustomer);
-router.post('/:id/photo', requireAuth, requireRole(['admin']), handleCatalogImageUpload, uploadCustomerPhoto);
+// Customer photo upload removed - using Supabase Storage only
+// router.post('/:id/photo', requireAuth, requireRole(['admin']), uploadCustomerPhoto);
 
 // GET single customer endpoint
 router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {

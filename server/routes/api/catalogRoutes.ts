@@ -3,9 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
 import crypto from 'crypto';
 import { CatalogService } from '../../services/catalogService';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+
 
 const router = Router();
 
