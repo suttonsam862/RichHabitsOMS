@@ -73,6 +73,7 @@ import { useSmartFetch } from '@/hooks/useSmartFetch';
 // Enhanced schema for order editing
 const orderItemSchema = z.object({
   id: z.string().optional(),
+  catalogItemId: z.string().uuid().optional(),
   productName: z.string().min(1, 'Product name is required'),
   description: z.string().optional(),
   size: z.string().optional(),
@@ -177,6 +178,14 @@ export default function OrderEditPage() {
     staleTime: 600000,
   });
 
+  // Fetch catalog items for item selection
+  const { data: catalogItems = [], isLoading: catalogItemsLoading } = useSmartFetch({
+    endpoint: '/api/catalog',
+    enablePolling: false,
+    maxRetries: 0,
+    staleTime: 600000,
+  });
+
   // Fetch designers
   const { data: designers = [], isLoading: designersLoading } = useSmartFetch({
     endpoint: '/api/team/workload',
@@ -203,6 +212,7 @@ export default function OrderEditPage() {
       rushOrder: false,
       estimatedDeliveryDate: '',
       items: [{
+        catalogItemId: '',
         productName: '',
         description: '',
         size: '',
@@ -244,6 +254,7 @@ export default function OrderEditPage() {
         estimatedDeliveryDate: order.estimatedDeliveryDate || '',
         items: order.items?.map((item: any) => ({
           id: item.id,
+          catalogItemId: item.catalogItemId || item.catalog_item_id || '',
           productName: item.productName || item.product_name || '',
           description: item.description || '',
           size: item.size || '',
@@ -257,6 +268,7 @@ export default function OrderEditPage() {
           productionNotes: item.productionNotes || item.production_notes || '',
           estimatedCompletionDate: item.estimatedCompletionDate || item.estimated_completion_date || '',
         })) || [{
+          catalogItemId: '',
           productName: '',
           description: '',
           size: '',
@@ -294,6 +306,7 @@ export default function OrderEditPage() {
   // Add new item
   const addItem = () => {
     append({
+      catalogItemId: '',
       productName: '',
       description: '',
       size: '',
@@ -345,6 +358,7 @@ export default function OrderEditPage() {
         ...data,
         items: data.items.map(item => ({
           ...item,
+          catalog_item_id: item.catalogItemId,
           product_name: item.productName,
           unit_price: item.unitPrice,
           total_price: item.totalPrice,
@@ -599,6 +613,44 @@ export default function OrderEditPage() {
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.catalogItemId`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Catalog Item</FormLabel>
+                                  <Select 
+                                    onValueChange={(value) => {
+                                      field.onChange(value);
+                                      // Auto-fill product name from catalog item
+                                      const selectedItem = catalogItems.find((item: any) => item.id === value);
+                                      if (selectedItem) {
+                                        form.setValue(`items.${index}.productName`, selectedItem.name);
+                                        form.setValue(`items.${index}.unitPrice`, parseFloat(selectedItem.base_price || selectedItem.basePrice || '0'));
+                                        calculateItemTotal(index);
+                                      }
+                                    }}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select catalog item (optional)" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="">Custom Item (no catalog reference)</SelectItem>
+                                      {catalogItems.map((item: any) => (
+                                        <SelectItem key={item.id} value={item.id}>
+                                          {item.name} - ${parseFloat(item.base_price || item.basePrice || '0').toFixed(2)}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
                             <FormField
                               control={form.control}
                               name={`items.${index}.productName`}

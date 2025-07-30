@@ -20,6 +20,7 @@ const supabaseAdmin = createClient(
 
 // Validation schemas
 const orderItemSchema = z.object({
+  catalog_item_id: z.string().uuid("Catalog item ID must be a valid UUID").optional().nullable(),
   product_name: z.string().min(1, "Product name is required"),
   description: z.string().optional(),
   quantity: z.number().min(1, "Quantity must be at least 1"),
@@ -46,6 +47,8 @@ const createOrderSchema = z.object({
 // Enhanced validation schema for PATCH updates
 const updateOrderItemSchema = z.object({
   id: z.string().uuid().optional(),
+  catalog_item_id: z.string().uuid("Catalog item ID must be a valid UUID").optional(),
+  catalogItemId: z.string().uuid("Catalog item ID must be a valid UUID").optional(),
   product_name: z.string().min(1).optional(),
   productName: z.string().min(1).optional(),
   description: z.string().optional().nullable(),
@@ -443,9 +446,26 @@ async function patchOrder(req: Request, res: Response) {
 
         // Process each item in the update request
         for (const item of validatedData.items) {
+          // Validate catalog_item_id if provided
+          const catalogItemId = item.catalogItemId || item.catalog_item_id;
+          if (catalogItemId) {
+            const { data: catalogItem, error: catalogError } = await supabaseAdmin
+              .from('catalog_items')
+              .select('id, name')
+              .eq('id', catalogItemId)
+              .single();
+
+            if (catalogError || !catalogItem) {
+              console.error(`❌ Invalid catalog_item_id: ${catalogItemId}`);
+              throw new Error(`Invalid catalog_item_id: ${catalogItemId}. Catalog item not found.`);
+            }
+            console.log(`✅ Validated catalog item: ${catalogItem.name} (${catalogItemId})`);
+          }
+
           // Transform item data to snake_case with comprehensive field mapping
           const dbItemData: any = {
             order_id: orderId,
+            catalog_item_id: catalogItemId || null,
             product_name: item.productName || item.product_name || '',
             description: item.description || '',
             quantity: item.quantity || 1,

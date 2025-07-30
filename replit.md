@@ -77,23 +77,27 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 
 ## Recent Changes
 
-### Comprehensive Order Editing System with Advanced Item Management (July 30, 2025)
-- **Status**: 100% Complete - Full-featured order editing interface with comprehensive nested item operations
+### Comprehensive Order Editing System with Advanced Item Management and Catalog Validation (July 30, 2025)
+- **Status**: 100% Complete - Full-featured order editing interface with comprehensive nested item operations and catalog item validation
 - **OrderEditPage.tsx Implementation**: Created comprehensive order editing interface with status management, notes editing, manufacturer assignment, and line item management
 - **Manufacturer Card Integration**: Integrated ManufacturerCard component into order editing workflow with scrollable selection dialogs showing capabilities, logos, and workload
-- **Advanced PATCH API Handler**: Enhanced PATCH /api/orders/:id endpoint with sophisticated nested item operations (add, remove, update)
+- **Advanced PATCH API Handler**: Enhanced PATCH /api/orders/:id endpoint with sophisticated nested item operations (add, remove, update) and catalog item validation
+- **Catalog Item Validation**: Each order_item now validates catalog_item_id against existing catalog items in database for relational accuracy
+- **Database Integrity**: Added comprehensive catalog_item_id validation with proper error handling and detailed logging for invalid references
+- **Auto-fill from Catalog**: Frontend catalog item selection automatically populates product name and unit price from selected catalog item
 - **Nested Item Operations**: Complete support for adding new items, updating existing items, and removing items from orders in a single PATCH request
 - **Smart Item Synchronization**: Intelligent item comparison to identify items to delete (existing but not in request), update (existing and modified), and insert (new items)
 - **Dual Field Name Support**: PATCH handler supports both camelCase (frontend) and snake_case (database) field naming conventions with automatic transformation
-- **Enhanced Validation Schema**: Implemented patchOrderSchema with comprehensive validation for all order fields including items, team assignments, and delivery information
-- **Line Item Management**: Complete CRUD operations for order items with detailed specifications (product name, size, color, fabric, customization, production notes, status tracking)
+- **Enhanced Validation Schema**: Implemented patchOrderSchema with comprehensive validation for all order fields including catalog_item_id, items, team assignments, and delivery information
+- **Line Item Management**: Complete CRUD operations for order items with detailed specifications (catalog reference, product name, size, color, fabric, customization, production notes, status tracking)
+- **Catalog Integration**: Frontend displays catalog items with pricing information and allows optional custom items without catalog references
 - **Team Assignment Interface**: Designer and manufacturer assignment with auto-assignment options and visual selection confirmation
 - **Status and Priority Management**: Complete order status lifecycle management (draft → production → completion) with priority levels and rush order flags
 - **Notes and Requirements System**: Separate fields for customer notes, internal notes, customer requirements, and delivery instructions
 - **Delivery Management**: Comprehensive delivery address and instruction management with estimated delivery dates
 - **Real-time Calculations**: Automatic total price calculations for line items with comprehensive order total recalculation after item operations
 - **Atomic Item Operations**: Sequential item operations (delete → update → insert) with comprehensive error handling and rollback support
-- **Enhanced Logging**: Detailed operation logging for item management including counts of added, updated, and deleted items
+- **Enhanced Logging**: Detailed operation logging for item management including counts of added, updated, and deleted items with catalog validation results
 - **Navigation Integration**: Added routes for /orders/edit/:id with proper authentication and error boundary protection
 - **Data Synchronization**: Integration with advanced PATCH API for seamless nested updates with proper cache invalidation
 
