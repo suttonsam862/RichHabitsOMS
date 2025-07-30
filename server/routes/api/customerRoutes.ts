@@ -542,12 +542,12 @@ async function updateCustomer(req: Request, res: Response) {
       });
       
       if (checkError.code === 'PGRST116') {
-        return res.status(404).json({
+        return res.status(400).json({
           success: false,
           message: `Customer not found with ID: ${id}`
         });
       }
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
         message: 'Failed to verify customer: ' + checkError.message
       });
@@ -578,16 +578,15 @@ async function updateCustomer(req: Request, res: Response) {
         customerId: id
       });
 
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
-        message: 'Failed to update customer profile: ' + profileError.message,
-        details: profileError.details || 'No additional details'
+        message: 'Failed to update customer profile: ' + profileError.message
       });
     }
 
     if (!updatedProfile) {
       console.error(`❌ [${requestTimestamp}] No profile returned after update - customer may not exist`);
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
         message: 'Customer not found after update'
       });
@@ -627,9 +626,7 @@ async function updateCustomer(req: Request, res: Response) {
     
     res.status(200).json({
       success: true,
-      message: 'Customer updated successfully',
-      customer: responseData,
-      data: responseData // For compatibility with different frontend expectations
+      updatedCustomer: responseData
     });
 
   } catch (err: any) {
@@ -644,7 +641,7 @@ async function updateCustomer(req: Request, res: Response) {
       timestamp: requestTimestamp
     });
     
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: 'Unexpected error updating customer: ' + (err.message || 'Unknown error')
     });
