@@ -508,6 +508,12 @@ app.use('/api/users', userManagementRoutes);
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
+      console.log('\n🎉 === THREADCRAFT SERVER READY ===');
+      console.log(`📅 Server Started: ${new Date().toISOString()}`);
+      console.log(`🌐 Listening on: http://0.0.0.0:${port}`);
+      console.log(`🔗 Health Check: http://0.0.0.0:${port}/api/health`);
+      console.log(`✅ All routes registered and ready for requests`);
+      console.log('=== SERVER STARTUP COMPLETE ===\n');
       log(`serving on port ${port}`);
     });
 

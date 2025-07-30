@@ -1,68 +1,61 @@
-import { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/use-auth';
-import Login from '@/pages/Login';
-import { GlobalSpinner } from '@/components/ui/global-spinner';
-
-// Import dashboards
-import AdminDashboard from '@/pages/dashboard/AdminDashboard';
-import CustomerDashboard from '@/pages/dashboard/CustomerDashboard';
-import ManufacturerDashboard from '@/pages/dashboard/ManufacturerDashboard';
-import SalespersonDashboard from '@/pages/dashboard/SalespersonDashboard';
-import DesignerDashboard from '@/pages/dashboard/DesignerDashboard';
+import React from "react";
+import { BrowserRouter } from "react-router-dom";
+import { RequireAuth } from "./auth/RequireAuth";
+import { MainDashboardRouter } from "./auth/MainDashboardRouter";
+import { GlobalSpinner } from "./ui/global-spinner";
+import { useAuth } from "@/hooks/use-auth";
+import { FeatureErrorBoundary } from "./error/FeatureErrorBoundary";
 
 export function AppWithSpinner() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
+  const [initError, setInitError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    // Monitor for initialization errors
+    const handleError = (event: any) => {
+      if (event.type === 'unhandledrejection' || event.type === 'error') {
+        setInitError('Application initialization failed. Please refresh the page.');
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleError);
+    window.addEventListener('error', handleError);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleError);
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
+
+  if (initError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        <div className="flex flex-col items-center space-y-6">
+          <div className="text-red-400 text-xl font-medium">
+            {initError}
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return <GlobalSpinner />;
   }
 
-  if (!user) {
-    return (
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </Router>
-    );
-  }
-
-  // Route user to appropriate dashboard based on role
-  const getDashboardComponent = () => {
-    const role = user.role?.toLowerCase();
-
-    switch (role) {
-      case 'admin':
-      case 'super_admin':
-        return <AdminDashboard />;
-      case 'customer':
-        return <CustomerDashboard />;
-      case 'manufacturer':
-        return <ManufacturerDashboard />;
-      case 'salesperson':
-        return <SalespersonDashboard />;
-      case 'designer':
-        return <DesignerDashboard />;
-      default:
-        return <div className="p-8 text-center">
-          <h1 className="text-2xl font-bold text-red-500">Access Error</h1>
-          <p>Unable to determine your role. Please contact support.</p>
-          <p className="text-sm text-gray-500 mt-2">Role: {user.role}</p>
-        </div>;
-    }
-  };
-
   return (
-    <Router>
-      <Suspense fallback={<GlobalSpinner />}>
-        <Routes>
-          <Route path="/" element={getDashboardComponent()} />
-          <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </Router>
+    <BrowserRouter>
+      <FeatureErrorBoundary featureName="Main Application">
+        <RequireAuth>
+          <MainDashboardRouter />
+        </RequireAuth>
+      </FeatureErrorBoundary>
+    </BrowserRouter>
   );
 }

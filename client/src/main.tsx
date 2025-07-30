@@ -25,6 +25,53 @@ errorHandler;
 // Initialize toast event handler
 toastEventHandler.initialize();
 
+// Comprehensive unhandled rejection handler
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('🚨 Unhandled Promise Rejection:', event.reason);
+  
+  // Prevent default behavior that might cause cascading errors
+  event.preventDefault();
+  
+  // Log structured error information
+  const errorInfo = {
+    type: 'unhandledRejection',
+    reason: event.reason?.message || event.reason,
+    stack: event.reason?.stack,
+    timestamp: new Date().toISOString(),
+    url: window.location.href
+  };
+  
+  console.error('Error details:', errorInfo);
+  
+  // Attempt to handle common authentication errors gracefully
+  if (event.reason?.message?.includes('auth') || 
+      event.reason?.message?.includes('token') ||
+      event.reason?.message?.includes('401')) {
+    console.log('Authentication error detected, clearing invalid session');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+  }
+});
+
+// Handle regular JavaScript errors
+window.addEventListener('error', (event) => {
+  console.error('🚨 JavaScript Error:', event.error);
+  
+  const errorInfo = {
+    type: 'javascriptError',
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+    error: event.error,
+    timestamp: new Date().toISOString(),
+    url: window.location.href
+  };
+  
+  console.error('Error details:', errorInfo);
+});
+
 // Minimal console filtering for development
 const originalConsoleError = console.error;
 console.error = (...args) => {

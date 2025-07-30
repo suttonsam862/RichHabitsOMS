@@ -50,24 +50,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         setLoading(true);
 
-        // Check for stored token in localStorage
-        const storedToken = localStorage.getItem('authToken');
-        const storedRole = localStorage.getItem('userRole');
-        const storedUserId = localStorage.getItem('userId');
+        // Wait for server to be ready before attempting auth
+        let serverReady = false;
+        let attempts = 0;
+        const maxAttempts = 10;
 
-        if (!storedToken) {
-          console.log('No auth token found in localStorage');
+        while (!serverReady && attempts < maxAttempts) {
+          try {
+            const healthCheck = await fetch('/api/health', { 
+              method: 'GET',
+              timeout: 2000 
+            });
+            if (healthCheck.ok) {
+              serverReady = true;
+            } else {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              attempts++;
+            }
+          } catch {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+          }
+        }
+
+        if (!serverReady) {
+          console.log('Server not ready, using development mode');
           // For development, create a default admin token to enable catalog functionality
           if (process.env.NODE_ENV === 'development' || import.meta.env.DEV) {
-            const devToken = 'dev-admin-token-' + Date.now();
-            localStorage.setItem('authToken', devToken);
-            localStorage.setItem('userRole', 'admin');
-            localStorage.setItem('userId', 'dev-admin-123');
-            localStorage.setItem('userEmail', 'admin@threadcraft.dev');
-            localStorage.setItem('userName', 'admin');
-            localStorage.setItem('userFirstName', 'Admin');
-            localStorage.setItem('userLastName', 'User');
-
             const devUser = {
               id: 'dev-admin-123',
               email: 'admin@threadcraft.dev',
@@ -80,10 +89,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(devUser);
             setLoading(false);
             setInitialized(true);
-            console.log('Development mode: Created admin session for catalog functionality');
+            console.log('Development mode: Using offline admin session');
             return;
           }
+        }
 
+        // Check for stored token in localStorage
+        const storedToken = localStorage.getItem('authToken');
+        const storedRole = localStorage.getItem('userRole');
+        const storedUserId = localStorage.getItem('userId');
+
+        if (!storedToken) {
+          console.log('No auth token found in localStorage');
           setUser(null);
           setLoading(false);
           setInitialized(true);
