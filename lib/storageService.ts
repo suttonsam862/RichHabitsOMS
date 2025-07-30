@@ -18,6 +18,7 @@ export interface UploadResult {
   path?: string;
   error?: string;
   publicUrl?: string;
+  visibility?: 'public' | 'private';
 }
 
 export interface FileMetadata {
@@ -25,6 +26,7 @@ export interface FileMetadata {
   size: number;
   type: string;
   lastModified?: number;
+  visibility?: 'public' | 'private';
 }
 
 export class StorageService {
@@ -33,7 +35,8 @@ export class StorageService {
     CATALOG_ITEMS: 'catalog_items',
     ORDERS: 'orders',
     CUSTOMER_PHOTOS: 'customer_photos',
-    PRODUCTION_IMAGES: 'production_images'
+    PRODUCTION_IMAGES: 'production_images',
+    PRIVATE_FILES: 'private_files'
   } as const;
 
   /**
@@ -47,6 +50,7 @@ export class StorageService {
       cacheControl?: string;
       contentType?: string;
       upsert?: boolean;
+      visibility?: 'public' | 'private';
     }
   ): Promise<UploadResult> {
     try {
@@ -66,14 +70,20 @@ export class StorageService {
         };
       }
 
-      // Generate public URL
-      const publicUrl = this.getPublicUrl(bucket, data.path);
+      const visibility = options?.visibility || 'public';
+      
+      // Generate URL based on visibility
+      let publicUrl: string | undefined;
+      if (visibility === 'public') {
+        publicUrl = this.getPublicUrl(bucket, data.path);
+      }
 
       return {
         success: true,
         url: data.path,
         path: data.path,
-        publicUrl
+        publicUrl,
+        visibility
       };
     } catch (error) {
       console.error('Storage service error:', error);
@@ -129,7 +139,7 @@ export class StorageService {
     bucket: string, 
     path: string, 
     expiresIn: number = 3600
-  ): Promise<{ success: boolean; url?: string; error?: string }> {
+  ): Promise<{ success: boolean; url?: string; error?: string; visibility?: 'private' }> {
     try {
       const { data, error } = await supabase.storage
         .from(bucket)
@@ -144,7 +154,8 @@ export class StorageService {
 
       return {
         success: true,
-        url: data.signedUrl
+        url: data.signedUrl,
+        visibility: 'private'
       };
     } catch (error) {
       return {
@@ -206,11 +217,14 @@ export class StorageService {
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'jpg';
     const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const fileName = `${uuid}_${originalNameClean}`;
+    const visibility = metadata.visibility || 'private'; // Customer photos are private by default
+    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.UPLOADS;
     const path = `customer_photos/${fileName}`;
 
-    return this.uploadFile(this.BUCKETS.UPLOADS, path, file, {
+    return this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
-      upsert: true
+      upsert: true,
+      visibility
     });
   }
 
@@ -228,11 +242,14 @@ export class StorageService {
     const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
     const variantSuffix = variant ? `_${variant}` : '';
     const fileName = `${uuid}_${originalNameClean}${variantSuffix}.${extension}`;
+    const visibility = metadata.visibility || 'public'; // Catalog images are public by default
+    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.CATALOG_ITEMS;
     const path = `catalog_items/${itemId}/images/${fileName}`;
 
-    return this.uploadFile(this.BUCKETS.CATALOG_ITEMS, path, file, {
+    return this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
-      upsert: false
+      upsert: false,
+      visibility
     });
   }
 
@@ -250,11 +267,14 @@ export class StorageService {
     const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
     const stagePrefix = stage ? `${stage}_` : '';
     const fileName = `${uuid}_${stagePrefix}${originalNameClean}.${extension}`;
+    const visibility = metadata.visibility || 'private'; // Production images are private by default
+    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.ORDERS;
     const path = `orders/${orderId}/production/${fileName}`;
 
-    return this.uploadFile(this.BUCKETS.ORDERS, path, file, {
+    return this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
-      upsert: false
+      upsert: false,
+      visibility
     });
   }
 
@@ -270,11 +290,14 @@ export class StorageService {
     const extension = metadata.name.split('.').pop()?.toLowerCase() || 'pdf';
     const originalNameClean = metadata.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^/.]+$/, '');
     const fileName = `${uuid}_design_${originalNameClean}.${extension}`;
+    const visibility = metadata.visibility || 'private'; // Design files are private by default
+    const bucket = visibility === 'private' ? this.BUCKETS.PRIVATE_FILES : this.BUCKETS.ORDERS;
     const path = `orders/${orderId}/designs/${fileName}`;
 
-    return this.uploadFile(this.BUCKETS.ORDERS, path, file, {
+    return this.uploadFile(bucket, path, file, {
       contentType: metadata.type,
-      upsert: false
+      upsert: false,
+      visibility
     });
   }
 

@@ -38,13 +38,28 @@ A comprehensive `StorageService` has been implemented to abstract Supabase Stora
 
 ```typescript
 const BUCKETS = {
-  UPLOADS: 'uploads',              // General uploads
-  CATALOG_ITEMS: 'catalog_items',  // Catalog item images
-  ORDERS: 'orders',                // Order-related files
-  CUSTOMER_PHOTOS: 'customer_photos', // Customer profile photos
-  PRODUCTION_IMAGES: 'production_images' // Production progress images
+  UPLOADS: 'uploads',              // General uploads (public)
+  CATALOG_ITEMS: 'catalog_items',  // Catalog item images (public)
+  ORDERS: 'orders',                // Order-related files (private)
+  CUSTOMER_PHOTOS: 'customer_photos', // Customer profile photos (private)
+  PRODUCTION_IMAGES: 'production_images', // Production progress images (private)
+  PRIVATE_FILES: 'private_files'   // Private files with restricted access
 };
 ```
+
+## 🔐 Visibility System
+
+### Public Files (Default for catalog images)
+- Stored in public buckets (`catalog_items`, `uploads`)
+- Publicly accessible URLs
+- No authentication required for viewing
+- Suitable for product catalogs, marketing materials
+
+### Private Files (Default for customer/production data)
+- Stored in private buckets (`private_files`, `orders`)
+- Require signed URLs for access
+- Role-based access control via Supabase RLS
+- Suitable for customer photos, production images, design files
 
 ## 📁 Storage Paths Structure
 
@@ -70,7 +85,7 @@ orders/{orderId}/designs/{uuid}_design_{original_name_sanitized}.{ext}
 
 ## 🔧 Integration Examples
 
-### 1. Customer Photo Upload
+### 1. Customer Photo Upload (Private by default)
 ```typescript
 import StorageService from '../../../lib/storageService.js';
 
@@ -81,24 +96,40 @@ const uploadResult = await StorageService.uploadCustomerPhoto(
   {
     name: req.file.originalname,
     size: req.file.size,
-    type: req.file.mimetype
+    type: req.file.mimetype,
+    visibility: 'private' // Customer photos are private by default
   }
 );
 
 if (uploadResult.success) {
-  console.log('Photo uploaded:', uploadResult.publicUrl);
+  if (uploadResult.visibility === 'private') {
+    // Get signed URL for private files
+    const signedUrl = await StorageService.getSignedUrl(
+      'private_files', 
+      uploadResult.path!, 
+      3600 // 1 hour expiry
+    );
+    console.log('Private photo URL:', signedUrl.url);
+  } else {
+    console.log('Public photo URL:', uploadResult.publicUrl);
+  }
 } else {
   console.error('Upload failed:', uploadResult.error);
 }
 ```
 
-### 2. Catalog Image Upload with Variants
+### 2. Catalog Image Upload with Variants (Public by default)
 ```typescript
-// Upload main image
+// Upload main image (public by default)
 const uploadResult = await StorageService.uploadCatalogImage(
   itemId,
   processedImageBuffer,
-  { name: 'product.jpg', size: buffer.length, type: 'image/jpeg' }
+  { 
+    name: 'product.jpg', 
+    size: buffer.length, 
+    type: 'image/jpeg',
+    visibility: 'public' // Catalog images are public by default
+  }
 );
 
 // Generate and upload variants
@@ -109,7 +140,10 @@ const variants = await StorageService.generateImageVariants(
 
 if (variants.thumbnail) {
   await StorageService.uploadCatalogImage(
-    itemId, variants.thumbnail, metadata, 'thumbnail'
+    itemId, 
+    variants.thumbnail, 
+    { name: 'product.jpg', size: variants.thumbnail.length, type: 'image/jpeg', visibility: 'public' },
+    'thumbnail'
   );
 }
 ```

@@ -59,14 +59,16 @@ router.post('/:itemId/images', requireAuth, requireRole(['admin', 'catalog_manag
       .jpeg({ quality: 90 })
       .toBuffer();
 
-    // Upload using StorageService
+    // Upload using StorageService with visibility
+    const visibility = req.body.visibility || 'public'; // Default to public for catalog images
     const uploadResult = await StorageService.uploadCatalogImage(
       itemId,
       processedImage,
       {
         name: req.file.originalname,
         size: processedImage.length,
-        type: 'image/jpeg'
+        type: 'image/jpeg',
+        visibility: visibility as 'public' | 'private'
       }
     );
 
