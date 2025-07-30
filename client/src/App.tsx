@@ -53,6 +53,7 @@ import CustomPermissionsBuilder from './pages/admin/CustomPermissionsBuilder';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import SecurityManagementPage from './pages/admin/SecurityManagementPage';
 import CatalogPage from './pages/admin/CatalogPage';
+import CatalogItemEditPage from './pages/admin/CatalogItemEditPage';
 import AnalyticsPage from "./pages/admin/AnalyticsPage";
 import LegalManagementPage from "./pages/admin/LegalManagementPage";
 import CustomerInvitesPage from "./pages/admin/CustomerInvitesPage";
@@ -311,6 +312,17 @@ function App() {
                     <RequireAuth allowedRoles={['admin', 'catalog_manager']}>
                       <FeatureErrorBoundary featureName="Catalog Management">
                         <CatalogPage />
+                      </FeatureErrorBoundary>
+                    </RequireAuth>
+                  } 
+                />
+
+                <Route 
+                  path="/admin/catalog/:itemId/edit" 
+                  element={
+                    <RequireAuth allowedRoles={['admin', 'catalog_manager']}>
+                      <FeatureErrorBoundary featureName="Catalog Item Edit">
+                        <CatalogItemEditPage />
                       </FeatureErrorBoundary>
                     </RequireAuth>
                   } 
