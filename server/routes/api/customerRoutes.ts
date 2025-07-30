@@ -454,9 +454,7 @@ async function updateCustomer(req: Request, res: Response) {
     } = req.body;
 
     // Build update object with snake_case field names for database
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    };
+    const updateData: any = {};
 
     // Map camelCase to snake_case and handle both formats
     if (firstName !== undefined || first_name !== undefined) {
@@ -475,7 +473,7 @@ async function updateCustomer(req: Request, res: Response) {
     if (country !== undefined) updateData.country = country || '';
     if (status !== undefined) updateData.status = status;
 
-    console.log('Update data to be sent to database:', updateData);
+    console.log('Update data to be sent to database (updated):', updateData);
 
     // First check if customer exists
     const { data: existingCustomer, error: checkError } = await supabaseAdmin
