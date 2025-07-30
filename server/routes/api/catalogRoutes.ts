@@ -2,6 +2,8 @@ import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
 import crypto from 'crypto';
+import path from 'path';
+import fs from 'fs';
 import { CatalogService } from '../../services/catalogService';
 import { validateRequiredFields, validateCatalogItemData, standardizeApiResponse } from '../../utils/validation';
 
@@ -24,49 +26,68 @@ const supabaseAdmin = createClient(
  * Create a new catalog item
  */
 async function createCatalogItem(req: Request, res: Response) {
-  const {
-    name,
-    description,
-    base_price,
-    category,
-    type,
-    fabric_options,
-    color_options,
-    size_options
-  } = req.body;
-
-  // Validate required fields
-  if (!name || base_price === undefined) {
-    return res.status(400).json({
-      success: false,
-      message: 'Missing required fields: name and base_price are required'
-    });
-  }
-
   try {
+    console.log('Creating catalog item with request body:', req.body);
+
+    // Extract and normalize fields - support both camelCase (frontend) and snake_case formats
+    const name = req.body.name;
+    const description = req.body.description || '';
+    const base_price = req.body.base_price || req.body.basePrice;
+    const unit_cost = req.body.unit_cost || req.body.unitCost;
+    const category = req.body.category || '';
+    const sport = req.body.sport || '';
+    const fabric = req.body.fabric || '';
+    const status = req.body.status || 'active';
+    const sku = req.body.sku || '';
+
+    // Validate required fields
+    if (!name || base_price === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name and base_price are required'
+      });
+    }
+
+    // Validate base_price is a valid number
+    const parsedPrice = parseFloat(base_price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'base_price must be a valid positive number'
+      });
+    }
+
+    // Validate unit_cost if provided
+    let parsedUnitCost = 0;
+    if (unit_cost !== undefined) {
+      parsedUnitCost = parseFloat(unit_cost);
+      if (isNaN(parsedUnitCost) || parsedUnitCost < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'unit_cost must be a valid positive number'
+        });
+      }
+    }
+
     console.log('Creating catalog item:', name);
 
     // Generate a unique ID for the catalog item
     const itemId = crypto.randomUUID();
 
-    // Insert catalog item into database with explicit defaults
+    // Insert catalog item into database with explicit defaults and normalized fields
     const { data: insertedItem, error: itemError } = await supabaseAdmin
       .from('catalog_items')
       .insert({
         id: itemId,
-        name,
-        description: description || '',
-        base_price: parseFloat(base_price) || 0.00,
-        category: category || '',
-        type: type || '',
-        fabric_options: fabric_options || '',
-        color_options: color_options || '',
-        size_options: size_options || '',
-        status: 'active',
-        unit_cost: 0.00,
-        min_quantity: 1,
-        max_quantity: 1000,
-        eta_days: '7-10 business days',
+        name: name.trim(),
+        description: description,
+        base_price: parsedPrice,
+        unit_cost: parsedUnitCost,
+        category: category.trim(),
+        sport: sport.trim(),
+        fabric: fabric.trim(),
+        status: status,
+        sku: sku.trim(),
         created_at: 'NOW()',
         updated_at: 'NOW()'
       })

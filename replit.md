@@ -100,6 +100,18 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Validation**: Preserved comprehensive field validation while simplifying the normalization logic
 - **Production Ready**: Clean, efficient field normalization system ready for immediate use
 
+### Complete Catalog Form Field Mapping and Validation System (July 30, 2025)
+- **Status**: 100% Complete - Both catalog creation and edit forms now properly map camelCase to snake_case fields with comprehensive validation
+- **AddCatalogItemForm.tsx**: Fixed camelCase to snake_case mapping (basePrice → base_price, unitCost → unit_cost) before POST requests to /api/catalog
+- **CatalogItemEditPage.tsx**: Updated PATCH requests to map snake_case form fields (base_price) to camelCase API expectations (basePrice) for backend compatibility
+- **Backend createCatalogItem Handler**: Enhanced with dual field support accepting both camelCase (basePrice, unitCost) and snake_case (base_price, unit_cost) from request bodies
+- **Field Validation**: Added comprehensive numeric validation for base_price and unit_cost with positive number enforcement and NaN protection
+- **Field Normalization Pattern**: Implemented `const base_price = req.body.base_price || req.body.basePrice` fallback pattern for flexible frontend integration
+- **Database Integration**: All normalized fields properly inserted using snake_case format with parseFloat validation and trim() sanitization
+- **TypeScript Fixes**: Resolved LSP errors with proper event handler types and missing import statements (path, fs)
+- **Backend Service Integration**: CatalogService.updateItem() properly handles camelCase to snake_case conversion via CatalogItemProcessor
+- **Production Ready**: Complete field mapping system ensures reliable data flow between camelCase frontend forms and snake_case database schema
+
 ### Complete React Query Elimination from Edit Forms with Enhanced Button States (July 30, 2025)
 - **Status**: 100% Complete - Successfully removed all React Query dependencies from edit forms in favor of simple async/await patterns with comprehensive button state management
 - **CustomerEditPage.tsx**: Converted from useQuery/useMutation to simple fetch with async/await, eliminated all React Query imports
