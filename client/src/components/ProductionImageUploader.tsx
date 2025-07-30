@@ -65,12 +65,12 @@ export function ProductionImageUploader({
     // Validate file types and sizes
     const validFiles = acceptedFiles.filter(file => {
       const isValidType = file.type.startsWith('image/');
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
       
       if (!isValidType) {
         toast({
           title: "Invalid file type",
-          description: `${file.name} is not a valid image file`,
+          description: `${file.name} is not a valid image file. Please select a JPEG, PNG, or WebP image.`,
           variant: "destructive"
         });
         return false;
@@ -79,7 +79,7 @@ export function ProductionImageUploader({
       if (!isValidSize) {
         toast({
           title: "File too large",
-          description: `${file.name} exceeds 10MB limit`,
+          description: `${file.name} exceeds 5MB limit. Please compress the image or choose a smaller file.`,
           variant: "destructive"
         });
         return false;
@@ -263,7 +263,7 @@ export function ProductionImageUploader({
                   Drag & drop production images here, or click to select
                 </p>
                 <p className="text-sm text-gray-500">
-                  Supports JPEG, PNG, WebP • Max 10MB per file • Up to 10 files
+                  Supports JPEG, PNG, WebP • Max 5MB per file • Up to 10 files
                 </p>
               </div>
             )}

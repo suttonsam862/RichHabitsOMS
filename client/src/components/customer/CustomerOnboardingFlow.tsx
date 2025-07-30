@@ -652,9 +652,25 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Validate file size (5MB limit)
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast({
+                              title: "File too large",
+                              description: "Logo file must be smaller than 5MB. Please compress or choose a smaller image.",
+                              variant: "destructive",
+                            });
+                            e.target.value = ''; // Clear the input
+                            return;
+                          }
+                          setLogoFile(file);
+                        }
+                      }}
                       className="w-full glass-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-neon-blue file:text-black hover:file:bg-neon-blue/80"
                     />
+                    <p className="text-xs text-gray-300 mt-1">Maximum file size: 5MB</p>
                   </div>
                 </div>
 

@@ -165,11 +165,11 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
       return;
     }
 
-    // Validate file size
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
       toast({
         title: 'File too large',
-        description: 'File size must be less than 10MB',
+        description: 'File size must be less than 5MB. Please compress your file or choose a smaller one.',
         variant: 'destructive'
       });
       return;
@@ -281,7 +281,7 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
               <p className="text-sm text-gray-500 mb-1">
                 Images (JPG, PNG, WebP, SVG), Documents (PDF, DOC, DOCX, TXT)
               </p>
-              <p className="text-sm text-gray-500">Maximum file size: 10MB</p>
+              <p className="text-sm text-gray-500">Maximum file size: 5MB</p>
             </div>
           </div>
 
