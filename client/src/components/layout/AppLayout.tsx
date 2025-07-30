@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
+import { preloadOnHover } from '@/utils/routePreloader';
 import { 
   Home, 
   ShoppingBag, 
@@ -182,6 +183,7 @@ export function AppLayout() {
                             : 'text-foreground hover:glass-panel hover:text-neon-blue',
                           'group flex items-center px-3 py-2.5 text-sm font-medium transition-all duration-150'
                         )}
+                        onMouseEnter={() => preloadOnHover(item.href)}
                       >
                         <item.icon
                           className={cn(
@@ -279,6 +281,7 @@ export function AppLayout() {
                       'group flex items-center px-3 py-3 text-base font-medium rounded-md transition-colors duration-150'
                     )}
                     onClick={() => setSidebarOpen(false)}
+                    onMouseEnter={() => preloadOnHover(item.href)}
                   >
                     <item.icon
                       className={cn(

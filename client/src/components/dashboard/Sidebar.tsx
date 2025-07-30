@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { preloadOnHover } from "@/utils/routePreloader";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -155,6 +156,7 @@ export function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }: Sideba
                     "flex items-center px-4 py-3 text-foreground hover:bg-glass-panel/50 group transition-all duration-200 mx-2",
                     location === item.href && "glass-panel neon-glow text-neon-blue"
                   )}
+                  onMouseEnter={() => preloadOnHover(item.href)}
                 >
                   <item.icon className={cn(
                     "w-5 h-5 mr-3 transition-colors",
