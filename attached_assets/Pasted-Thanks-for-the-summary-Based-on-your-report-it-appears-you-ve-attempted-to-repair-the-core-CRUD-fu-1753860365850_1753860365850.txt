@@ -1,0 +1,75 @@
+Thanks for the summary. Based on your report, it appears you've attempted to repair the core CRUD functionality and restore essential application features.
+
+Please now verify each of your claims against the actual codebase and provide explicit, code-level proof that the fixes have been applied and are working.
+
+Use the structure below to validate each operation:
+
+---
+
+🔍 1. **Customer Creation (AddCustomerForm.tsx + customerRoutes.ts)**
+
+- Show updated form field mappings (e.g., `first_name`, `last_name`, etc.)
+- Confirm that the Supabase insert logic uses correct field names
+- Prove that the API route properly handles `req.body` and inserts into `customers` table
+- Show the exact database query or Supabase call now used
+
+✅ Only mark this complete if the form works *end-to-end* with no schema mismatches or silent failures
+
+---
+
+🔍 2. **Catalog Item Creation (AddCatalogItemForm.tsx + catalogRoutes.ts)**
+
+- Show the full structure of the newly created form component
+- List all form fields and how they map to the `catalog_items` table
+- Confirm that the backend endpoint `/api/catalog/create` accepts and correctly inserts the catalog item
+- Prove that the endpoint performs validation and returns success/failure properly
+
+✅ Only mark complete if both frontend form and backend route now support working catalog item creation
+
+---
+
+🔍 3. **Manufacturer Creation (AddManufacturerForm.tsx + manufacturingRoutes.ts)**
+
+- Show the form component and its input field structure
+- Confirm manufacturer creation logic on the backend inserts into the correct table
+- Are manufacturers linked to `user_profiles` or another table?
+- Validate that the route is wired to the frontend and not just sitting unused
+
+✅ Only mark complete if a manufacturer can be created and viewed in the system
+
+---
+
+🔍 4. **Order Creation (orderRoutes.ts)**
+
+- Show changes to order creation route logic
+- Confirm it now validates input fields
+- Are nested `order_items` being inserted successfully?
+- What happens on invalid data — is the error handled?
+
+✅ Only mark this fixed if a real order can be created with items and linked to a valid customer
+
+---
+
+🔍 5. **Circuit Breaker (fetchCircuitBreaker.ts)**
+
+- Show the updated code that disables or relaxes the circuit breaker in development
+- Confirm that fetch requests are no longer blocked after 2–3 retries
+- Is it environment-gated properly (e.g., `NODE_ENV !== 'production'`)?
+
+---
+
+### 📊 Final Validation Summary
+
+For each of the above, return:
+
+- ✅ Fully Fixed and Working
+- ⚠️ Partially Fixed (describe what’s missing)
+- ❌ Not Fixed / No Change
+
+### 🧠 Important Clarification
+
+You’ve claimed all CRUD flows are operational now. However, based on prior history, we’ve seen cases where infrastructure was created but **not connected or functional**.
+
+Please be explicit: if a form or endpoint exists but is not currently functional (e.g., not called by UI, has no validation, can’t be submitted), mark it as **⚠️ or ❌.**
+
+This is a trust-but-verify checkpoint. Our build phase depends on this being accurate.
