@@ -70,30 +70,7 @@ window.addEventListener('error', (event) => {
   }
 });
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error: any) => {
-        // Don't retry auth failures or network errors
-        if (
-          error?.status === 401 || 
-          error?.status === 403 ||
-          error?.message?.includes('Failed to fetch') ||
-          error?.message?.includes('NetworkError')
-        ) {
-          return false;
-        }
-        return failureCount < 1; // Reduce retry attempts
-      },
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false, // Prevent unnecessary refetches
-      refetchOnMount: false, // Prevent unnecessary refetches
-    },
-    mutations: {
-      retry: false, // Don't retry mutations by default
-    },
-  },
-});
+import { queryClient } from './lib/queryClient';
 
 const root = ReactDOM.createRoot(document.getElementById("root")!);
 root.render(

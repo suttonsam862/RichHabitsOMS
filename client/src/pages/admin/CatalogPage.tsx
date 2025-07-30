@@ -28,6 +28,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { queryKeys } from '@/lib/queryKeys';
+import { useDataSync } from '@/hooks/useDataSync';
+import { getQueryFn } from '@/lib/queryClient';
 import { 
   Plus, 
   Search, 
@@ -865,64 +868,21 @@ export default function CatalogPage() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { syncCatalog } = useDataSync();
 
-  // Fetch catalog items with comprehensive error handling
+  // Fetch catalog items with standardized patterns
   const { data: catalogItems = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['catalog'],
-    queryFn: async () => {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token missing');
-      }
-
-      console.log("Fetching catalog items...");
-      try {
-        const response = await fetch("/api/catalog", {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: 'Network error' }));
-          throw new Error(errorData.message || `Failed to fetch catalog: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("Catalog data received:", data);
-        
-        // Handle different response structures with validation
-        if (data.success && Array.isArray(data.data)) {
-          return data.data;
-        } else if (Array.isArray(data)) {
-          return data;
-        } else if (data.data && Array.isArray(data.data)) {
-          return data.data;
-        } else {
-          console.warn("Unexpected catalog response structure:", data);
-          return [];
-        }
-      } catch (error) {
-        console.error("Catalog fetch error:", error);
-        throw error;
-      }
-    },
-    retry: (failureCount, error: any) => {
-      if (error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false; // Don't retry auth errors
-      }
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 15000, // Cache for 15 seconds
-    refetchInterval: 60000 // Refresh every minute
+    queryKey: queryKeys.catalog.all,
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    staleTime: 1000 * 60 * 2, // 2 minutes for better sync
+    gcTime: 1000 * 60 * 10, // 10 minutes  
+    retry: 1,
+    retryDelay: 2000
   });
 
   // Fetch categories and sports for dropdowns
   const { data: categories = [] } = useQuery({
-    queryKey: ['catalog-categories'],
+    queryKey: queryKeys.catalog.categories,
     queryFn: async () => {
       const response = await fetch("/api/catalog-options/categories");
       if (response.ok) {
@@ -934,7 +894,7 @@ export default function CatalogPage() {
   });
 
   const { data: sports = [] } = useQuery({
-    queryKey: ['catalog-sports'],
+    queryKey: queryKeys.catalog.sports,
     queryFn: async () => {
       const response = await fetch("/api/catalog-options/sports");
       if (response.ok) {
@@ -1026,14 +986,12 @@ export default function CatalogPage() {
 
       return response.json();
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       toast({
         title: "Item Created Successfully",
         description: response?.message || `${formData.name} has been added to the catalog`,
       });
-      queryClient.invalidateQueries({ queryKey: ['catalog'] });
-      queryClient.invalidateQueries({ queryKey: ['catalog-categories'] });
-      queryClient.invalidateQueries({ queryKey: ['catalog-sports'] });
+      await syncCatalog();
       refetch(); // Immediate refresh
       resetForm();
       setIsAddingItem(false);
@@ -1176,14 +1134,12 @@ export default function CatalogPage() {
 
       return response.json();
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       toast({
         title: "Item Deleted Successfully",
         description: response?.message || "The catalog item has been permanently removed",
       });
-      queryClient.invalidateQueries({ queryKey: ['catalog'] });
-      queryClient.invalidateQueries({ queryKey: ['catalog-categories'] });
-      queryClient.invalidateQueries({ queryKey: ['catalog-sports'] });
+      await syncCatalog();
       refetch(); // Immediate refresh
     },
     onError: (error: Error) => {
@@ -1220,12 +1176,12 @@ export default function CatalogPage() {
 
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast({
         title: "Images Uploaded",
         description: `Successfully processed ${data.data?.statistics?.filesProcessed || 0} images with multiple variants.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      await syncCatalog();
       setShowImageUploadModal(false);
       setSelectedFiles([]);
       setUploadTargetItemId(null);

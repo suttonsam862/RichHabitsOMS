@@ -36,6 +36,9 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { queryKeys } from '@/lib/queryKeys';
+import { useDataSync } from '@/hooks/useDataSync';
+import { getQueryFn } from '@/lib/queryClient';
 import AddCustomerForm from "./AddCustomerForm";
 import CustomerOnboardingFlow from "@/components/customer/CustomerOnboardingFlow";
 import OrganizationDetailModal from "@/components/admin/OrganizationDetailModal";
@@ -127,6 +130,7 @@ export default function CustomerListPage() {
   const [organizationToEdit, setOrganizationToEdit] = useState<OrganizationCard | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { syncCustomers } = useDataSync();
 
   const handleViewCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -138,9 +142,9 @@ export default function CustomerListPage() {
     setIsOrganizationDetailOpen(true);
   };
 
-  const handleOrganizationUpdate = () => {
+  const handleOrganizationUpdate = async () => {
     // Refresh the customer data when organization is updated
-    queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+    await syncCustomers();
   };
 
   const handleEditOrganization = (organization: OrganizationCard) => {
@@ -167,7 +171,7 @@ export default function CustomerListPage() {
           title: "Organization Archived",
           description: `${organization.name} has been archived successfully.`,
         });
-        queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+        await syncCustomers();
       } else {
         throw new Error('Failed to archive organization');
       }
@@ -207,7 +211,7 @@ export default function CustomerListPage() {
           title: "Organization Deleted",
           description: `${organization.name} has been permanently deleted.`,
         });
-        queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+        await syncCustomers();
       } else {
         throw new Error('Failed to delete organization');
       }
@@ -233,35 +237,11 @@ export default function CustomerListPage() {
     }
   };
 
-  // Fetch real customer data from API with proper auth headers
+  // Fetch customer data using standardized patterns
   const { data: customersResponse, isLoading, isError, refetch } = useQuery({
-    queryKey: ['/api/customers'], // Use same key as orders page for consistency
-    queryFn: async () => {
-      console.log("Fetching real customers from API...");
-      try {
-        const response = await fetch("/api/customers", {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-            'Authorization': `Bearer ${localStorage.getItem('authToken') || 'dev-admin-token-12345'}`
-          }
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch customers: ${response.status} ${errorText}`);
-        }
-
-        const data = await response.json();
-        console.log("Received customer data:", data);
-        return data;
-      } catch (error) {
-        console.error("Customer fetch error:", error);
-        throw error;
-      }
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryKey: queryKeys.customers.all, // Use standardized key
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    staleTime: 1000 * 60 * 2, // 2 minutes for better sync
     gcTime: 1000 * 60 * 10, // 10 minutes
     retry: 1, // Only retry once
     retryDelay: 2000 // Wait 2 seconds before retry
@@ -632,9 +612,9 @@ export default function CustomerListPage() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => {
+                onClick={async () => {
                   console.log("Manually refreshing customer data...");
-                  queryClient.removeQueries({ queryKey: ["admin", "customers"] });
+                  await syncCustomers();
                   refetch();
                 }}
                 disabled={isLoading}
@@ -767,9 +747,9 @@ export default function CustomerListPage() {
       <CustomerOnboardingFlow 
         isOpen={isOnboardingFlowOpen}
         onClose={() => setIsOnboardingFlowOpen(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           setIsOnboardingFlowOpen(false);
-          queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
+          await syncCustomers();
         }}
       />
 

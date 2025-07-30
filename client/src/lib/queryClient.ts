@@ -131,16 +131,22 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 2, // 2 minutes - reduced for better sync
       gcTime: 1000 * 60 * 10, // 10 minutes
       retry: (failureCount, error: any) => {
-        // Don't retry auth failures
-        if (error?.status === 401 || error?.status === 403) {
+        // Don't retry auth failures or network errors
+        if (
+          error?.status === 401 || 
+          error?.status === 403 ||
+          error?.message?.includes('Failed to fetch') ||
+          error?.message?.includes('NetworkError')
+        ) {
           return false;
         }
-        return failureCount < 3;
+        return failureCount < 2; // Reduced retry attempts
       },
-      refetchOnWindowFocus: false, // Reduce unnecessary requests
+      refetchOnWindowFocus: false, // Prevent unnecessary refetches
+      refetchOnMount: true, // Enable refetch on mount for better sync
       networkMode: 'online',
     },
     mutations: {

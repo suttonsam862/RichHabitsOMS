@@ -34,6 +34,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Trash, ArrowLeft, Package, Search } from 'lucide-react';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/queryKeys';
+import { useMutationSync } from '@/hooks/useDataSync';
 import { z } from 'zod';
 
 // Schema for order creation
@@ -88,14 +90,15 @@ export default function OrderCreatePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { onCustomerSuccess, onCatalogSuccess, onOrderSuccess } = useMutationSync();
   
   // State for catalog integration
   const [showCatalogPicker, setShowCatalogPicker] = useState(false);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number>(-1);
 
-  // Fetch customers using the existing query client system that handles auth properly
+  // Fetch customers using standardized query keys
   const { data: customersResponse, error: customersError, isLoading: customersLoading } = useQuery({
-    queryKey: ['/api/customers'],
+    queryKey: queryKeys.customers.all,
     queryFn: getQueryFn({ on401: 'returnNull' }),
     retry: 2,
     retryDelay: 1000,
@@ -123,9 +126,9 @@ export default function OrderCreatePage() {
     return [];
   }, [customersResponse]);
 
-  // Fetch catalog items using the existing query client system  
+  // Fetch catalog items using standardized query keys
   const { data: catalogResponse, isLoading: catalogLoading } = useQuery({
-    queryKey: ['/api/catalog'],
+    queryKey: queryKeys.catalog.all,
     queryFn: getQueryFn({ on401: 'returnNull' }),
     retry: 2,
     retryDelay: 1000,
@@ -209,9 +212,9 @@ export default function OrderCreatePage() {
       const response = await apiRequest('POST', '/api/orders', orderData);
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log('Order created successfully:', data);
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      await onOrderSuccess(); // Use centralized cache invalidation
       toast({
         title: 'Success!',
         description: 'Order created successfully',
