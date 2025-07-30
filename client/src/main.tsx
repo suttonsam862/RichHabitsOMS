@@ -10,7 +10,7 @@ import './lib/fixWebSocketError'
 
 // Enhanced unhandled rejection handler with filtering
 let rejectionCount = 0;
-const MAX_REJECTION_LOGS = 3; // Reduced from 10
+const MAX_REJECTION_LOGS = 50; // Temporarily increased for debugging
 const ignoredErrorMessages = [
   'server not ready',
   'rate limited',

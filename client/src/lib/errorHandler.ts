@@ -33,6 +33,19 @@ class ErrorHandler {
   private setupGlobalHandlers() {
     // Handle unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
+      // TEMPORARY: Enhanced logging for debugging
+      console.group('🚨 DETAILED UNHANDLED REJECTION');
+      console.error('Raw event.reason:', event.reason);
+      console.error('Event.reason type:', typeof event.reason);
+      console.error('Event.reason.message:', event.reason?.message);
+      console.error('Event.reason.stack:', event.reason?.stack);
+      console.error('Event.reason.status:', event.reason?.status);
+      console.error('Event.reason.url:', event.reason?.url);
+      console.error('Full event object:', event);
+      console.error('Timestamp:', new Date().toISOString());
+      console.error('Current URL:', window.location.href);
+      console.groupEnd();
+
       const error = this.processError(event.reason, {
         component: 'Global',
         action: 'unhandledRejection',
@@ -41,8 +54,8 @@ class ErrorHandler {
         userAgent: navigator.userAgent
       });
 
-      // Prevent default behavior (console errors)
-      event.preventDefault();
+      // DON'T prevent default behavior temporarily - let errors show
+      // event.preventDefault();
       
       // Log structured error
       this.logError(error);

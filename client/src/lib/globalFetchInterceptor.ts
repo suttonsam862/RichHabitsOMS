@@ -95,6 +95,17 @@ window.fetch = async function(input: RequestInfo | URL, init?: RequestInit): Pro
 
     return response;
   } catch (error) {
+    // TEMPORARY: Enhanced error logging for debugging
+    console.group('🚨 DETAILED FETCH ERROR');
+    console.error('URL:', url);
+    console.error('Method:', init?.method || 'GET');
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('Full error object:', error);
+    console.error('Timestamp:', new Date().toISOString());
+    console.groupEnd();
+
     // Handle network errors gracefully for auth endpoints
     if (url.includes('/api/auth/me')) {
       console.debug('🔒 Auth endpoint network error (expected during startup)');
