@@ -154,35 +154,14 @@ export function fixWebSocketError() {
     window.onunhandledrejection = (event) => {
       const reason = event.reason;
       
-      // Suppress all common network, API, and connection errors
+      // Only suppress WebSocket and HMR-related errors
       if (reason && (
-          // Network errors
-          reason.message?.includes('WebSocket') || 
-          reason.message?.includes('Failed to fetch') ||
-          reason.message?.includes('NetworkError') ||
-          reason.message?.includes('fetch') ||
-          reason.message?.includes('HTTP 404') ||
-          reason.message?.includes('404') ||
-          reason.message?.includes('HTTP 401') ||
-          reason.message?.includes('401') ||
-          reason.message?.includes('HTTP 403') ||
-          reason.message?.includes('403') ||
-          reason.message?.includes('Connection refused') ||
-          reason.message?.includes('Connection failed') ||
-          reason.message?.includes('Network request failed') ||
-          // Status codes
-          reason.status === 404 ||
-          reason.status === 401 ||
-          reason.status === 403 ||
-          reason.status === 500 ||
-          // Error types
-          reason.name === 'NetworkError' ||
-          reason.name === 'TypeError' ||
-          reason.name === 'AbortError' ||
-          // Empty objects or null
-          !reason ||
-          (typeof reason === 'object' && Object.keys(reason).length === 0) ||
-          reason === '' ||
+          reason.message?.includes('WebSocket') ||
+          reason.message?.includes('_vite_ping') ||
+          reason.message?.includes('[vite] server connection lost') ||
+          reason.message?.includes('HMR') ||
+          // Only suppress expected auth failures during startup
+          (reason.status === 401 && reason.message?.includes('Not authenticated') && !window.location.pathname.includes('/login'))
           String(reason).trim() === ''
       )) {
         // Suppress these errors completely
