@@ -3,15 +3,34 @@ import { API_BASE_URL } from "./config";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    // Enhanced error logging with response status and body
+    let responseBody = '';
+    try {
+      responseBody = await res.text();
+    } catch (bodyError) {
+      responseBody = res.statusText || 'Unknown error';
+      console.error('Failed to read response body:', bodyError);
+    }
+
+    // Comprehensive error logging
+    console.error('API Request Failed:', {
+      url: res.url,
+      status: res.status,
+      statusText: res.statusText,
+      headers: Object.fromEntries(res.headers.entries()),
+      body: responseBody,
+      timestamp: new Date().toISOString()
+    });
+
     // Handle authentication errors specifically
     if (res.status === 401) {
       // Clear tokens on auth failures
       localStorage.removeItem('authToken');
       localStorage.removeItem('tokenExpires');
+      console.warn('Authentication token cleared due to 401 response');
     }
 
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    throw new Error(`${res.status}: ${responseBody}`);
   }
 }
 
@@ -33,6 +52,15 @@ export async function apiRequest(
   }
 
   try {
+    // Log request details for debugging
+    console.log('API Request:', {
+      method,
+      url: fullUrl,
+      hasAuth: !!token,
+      hasBody: !!data,
+      timestamp: new Date().toISOString()
+    });
+
     const res = await fetch(fullUrl, {
       method,
       headers,
@@ -41,11 +69,32 @@ export async function apiRequest(
     });
 
     await throwIfResNotOk(res);
+    
+    // Log successful response
+    console.log('API Response Success:', {
+      method,
+      url: fullUrl,
+      status: res.status,
+      statusText: res.statusText,
+      timestamp: new Date().toISOString()
+    });
+    
     return res;
   } catch (error) {
+    // Enhanced error logging with full context
+    console.error('API Request Error:', {
+      method,
+      url: fullUrl,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
+
     // Enhance error handling for network issues
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error(`Network error: Unable to connect to ${fullUrl}`);
+      const networkError = new Error(`Network error: Unable to connect to ${fullUrl}`);
+      console.error('Network connectivity issue:', networkError);
+      throw networkError;
     }
     throw error;
   }
@@ -74,23 +123,53 @@ export const getQueryFn: <T>(options: {
     }
 
     try {
+      // Log query request details
+      console.log('Query Request:', {
+        url: fullUrl,
+        queryKey: queryKey[0],
+        hasAuth: !!token,
+        timestamp: new Date().toISOString()
+      });
+
       const res = await fetch(fullUrl, {
         credentials: "include",
         headers
       });
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        console.warn('Query 401 response - clearing auth tokens:', {
+          url: fullUrl,
+          queryKey: queryKey[0]
+        });
         localStorage.removeItem('authToken');
         localStorage.removeItem('tokenExpires');
         return null;
       }
 
       await throwIfResNotOk(res);
+      
+      // Log successful query response
+      console.log('Query Response Success:', {
+        url: fullUrl,
+        queryKey: queryKey[0],
+        status: res.status,
+        timestamp: new Date().toISOString()
+      });
+      
       return res.json();
     } catch (error: any) {
+      // Enhanced error logging for queries
+      console.error('Query Request Error:', {
+        url: fullUrl,
+        queryKey: queryKey[0],
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
+
       // Enhanced error handling for development
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.warn(`Network error for ${fullUrl}:`, error.message);
+        console.error(`Query network error for ${fullUrl}:`, error.message);
         if (unauthorizedBehavior === "returnNull") {
           return null;
         }

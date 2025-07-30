@@ -5,24 +5,60 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Enhanced fetch wrapper with better error handling
+// Enhanced fetch wrapper with comprehensive error logging
 export async function apiRequest(url: string, options: RequestInit = {}) {
   const defaultHeaders = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
 
+  const requestDetails = {
+    url,
+    method: options.method || 'GET',
+    headers: defaultHeaders,
+    hasBody: !!options.body,
+    timestamp: new Date().toISOString()
+  };
+
   try {
+    // Log request details
+    console.log('Utils API Request:', requestDetails);
+
     const response = await fetch(url, {
       ...options,
       headers: defaultHeaders,
     });
 
-    // Handle network-level failures
+    // Handle network-level failures with comprehensive logging
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Network Error');
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
+      let errorBody = '';
+      try {
+        errorBody = await response.text();
+      } catch (bodyError) {
+        errorBody = 'Failed to read response body';
+        console.error('Response body read error:', bodyError);
+      }
+
+      // Comprehensive error logging
+      console.error('Utils API Request Failed:', {
+        ...requestDetails,
+        responseStatus: response.status,
+        responseStatusText: response.statusText,
+        responseHeaders: Object.fromEntries(response.headers.entries()),
+        responseBody: errorBody,
+        error: `HTTP ${response.status}: ${errorBody}`
+      });
+
+      throw new Error(`HTTP ${response.status}: ${errorBody}`);
     }
+
+    // Log successful response
+    console.log('Utils API Response Success:', {
+      ...requestDetails,
+      responseStatus: response.status,
+      responseStatusText: response.statusText,
+      responseContentType: response.headers.get('content-type')
+    });
 
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
@@ -31,14 +67,24 @@ export async function apiRequest(url: string, options: RequestInit = {}) {
 
     return await response.text();
   } catch (error: any) {
+    // Comprehensive error logging
+    console.error('Utils API Request Error:', {
+      ...requestDetails,
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      }
+    });
+
     // Handle different types of network errors
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      console.warn('Network connection failed:', url);
+      console.error('Network connection failed:', url);
       throw new Error('Network connection failed. Please check your internet connection.');
     }
 
     if (error.message.includes('NetworkError')) {
-      console.warn('Network error occurred:', url);
+      console.error('Network error occurred:', url);
       throw new Error('Network error occurred. Please try again.');
     }
 
