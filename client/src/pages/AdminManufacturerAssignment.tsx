@@ -51,6 +51,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
+import ManufacturerOnboardingFlow from '@/components/manufacturing/ManufacturerOnboardingFlow';
 import {
   Dialog,
   DialogContent,
@@ -212,7 +213,7 @@ export default function ManufacturingManagement() {
 
   // Dialog states
   const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [showAddManufacturerDialog, setShowAddManufacturerDialog] = useState(false);
+  const [showTinderManufacturerDialog, setShowTinderManufacturerDialog] = useState(false);
   const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
   const [showOrderDetailsDialog, setShowOrderDetailsDialog] = useState(false);
   const [showMessageDialog, setShowMessageDialog] = useState(false);
@@ -519,7 +520,7 @@ export default function ManufacturingManagement() {
         title: 'Manufacturer Added',
         description: 'New manufacturer has been created successfully',
       });
-      setShowAddManufacturerDialog(false);
+      setShowTinderManufacturerDialog(false);
       resetManufacturerForm();
     },
     onError: (error: any) => {
@@ -804,7 +805,7 @@ export default function ManufacturingManagement() {
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
             <Button
-              onClick={() => setShowAddManufacturerDialog(true)}
+              onClick={() => setShowTinderManufacturerDialog(true)}
               size="sm"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -1546,118 +1547,18 @@ export default function ManufacturingManagement() {
           </DialogContent>
         </Dialog>
 
-        {/* Add Manufacturer Dialog */}
-        <Dialog open={showAddManufacturerDialog} onOpenChange={setShowAddManufacturerDialog}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Add New Manufacturer</DialogTitle>
-              <DialogDescription>
-                Create a new manufacturer account in the system
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={newManufacturerData.firstName}
-                    onChange={(e) => setNewManufacturerData({ 
-                      ...newManufacturerData, 
-                      firstName: e.target.value 
-                    })}
-                    placeholder="First name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={newManufacturerData.lastName}
-                    onChange={(e) => setNewManufacturerData({ 
-                      ...newManufacturerData, 
-                      lastName: e.target.value 
-                    })}
-                    placeholder="Last name"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newManufacturerData.email}
-                  onChange={(e) => setNewManufacturerData({ 
-                    ...newManufacturerData, 
-                    email: e.target.value 
-                  })}
-                  placeholder="email@example.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  value={newManufacturerData.company}
-                  onChange={(e) => setNewManufacturerData({ 
-                    ...newManufacturerData, 
-                    company: e.target.value 
-                  })}
-                  placeholder="Company name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={newManufacturerData.phone}
-                  onChange={(e) => setNewManufacturerData({ 
-                    ...newManufacturerData, 
-                    phone: e.target.value 
-                  })}
-                  placeholder="Phone number"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="specialties">Specialties</Label>
-                <Textarea
-                  id="specialties"
-                  value={newManufacturerData.specialties}
-                  onChange={(e) => setNewManufacturerData({ 
-                    ...newManufacturerData, 
-                    specialties: e.target.value 
-                  })}
-                  placeholder="Manufacturing specialties..."
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowAddManufacturerDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddManufacturer}
-                disabled={addManufacturerMutation.isPending}
-              >
-                {addManufacturerMutation.isPending && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                Add Manufacturer
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Tinder-Style Manufacturer Onboarding Flow */}
+        <ManufacturerOnboardingFlow
+          isOpen={showTinderManufacturerDialog}
+          onClose={() => setShowTinderManufacturerDialog(false)}
+          onSuccess={() => {
+            fetchAllData(true);
+            toast({
+              title: 'Success!',
+              description: 'Manufacturer has been added successfully',
+            });
+          }}
+        />
       </div>
     </TooltipProvider>
   );
