@@ -332,7 +332,39 @@ export default function CustomerEditPage() {
           description: "Customer information has been successfully updated.",
         });
         
-        // Invalidate both the specific customer and customers list
+        // Optimistically update React Query cache with fresh data
+        if (data.updatedCustomer) {
+          // Update the specific customer cache
+          queryClient.setQueryData(['/api/customers', customerId], data.updatedCustomer);
+          
+          // Update the customer in the customers list cache
+          queryClient.setQueryData(['/api/customers'], (oldData: any) => {
+            if (oldData?.data) {
+              const updatedList = oldData.data.map((customer: any) => 
+                customer.id === customerId ? data.updatedCustomer : customer
+              );
+              return { ...oldData, data: updatedList };
+            }
+            return oldData;
+          });
+          
+          // Update form values to reflect server response (in case server modified data)
+          form.reset({
+            firstName: data.updatedCustomer.firstName || '',
+            lastName: data.updatedCustomer.lastName || '',
+            email: data.updatedCustomer.email || '',
+            company: data.updatedCustomer.company || '',
+            phone: data.updatedCustomer.phone || '',
+            address: data.updatedCustomer.address || '',
+            city: data.updatedCustomer.city || '',
+            state: data.updatedCustomer.state || '',
+            zip: data.updatedCustomer.zip || '',
+            country: data.updatedCustomer.country || '',
+            status: data.updatedCustomer.status || 'active'
+          });
+        }
+        
+        // Also invalidate queries to ensure fresh data on next fetch
         queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
         queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
         
