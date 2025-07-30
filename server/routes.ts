@@ -59,6 +59,9 @@ import statsRoutes from './routes/api/statsRoutes';
 // Audit routes for order change tracking
 import auditRoutes from './routes/api/auditRoutes';
 
+// Upload test routes
+import uploadTestRoutes from './routes/api/uploadTestRoutes';
+
 // Create Supabase admin client with service key for admin operations
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || 'https://ctznfijidykgjhzpuyej.supabase.co',

@@ -264,6 +264,7 @@ import authRoutes from './routes/api/authRoutes';
 import imageVariantsRoutes from './routes/api/imageVariantsRoutes';
 import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
 import messageRoutes from './routes/api/messageRoutes';
+import uploadTestRoutes from './routes/api/uploadTestRoutes';
 import healthRoutes from './routes/health';
 import manufacturingRoutes, { 
   getManufacturingStats, 
@@ -370,6 +371,7 @@ import { uploadMiddleware, uploadManufacturerMedia, getManufacturerMedia, delete
     app.use('/api/users', authenticateRequest);
     app.use('/api/messages', authenticateRequest);
     app.use('/api/storage-cleanup', authenticateRequest);
+    app.use('/api/upload-test', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
@@ -392,6 +394,7 @@ app.use('/api/security', securityRoutes);
     app.use('/api/user-roles', userRolesRoutes);
 app.use('/api/users', userManagementRoutes);
     app.use('/api/messages', messageRoutes);
+    app.use('/api/upload-test', uploadTestRoutes);
     app.use('/api/manufacturing', manufacturingRoutes);
     app.use('/api/storage-cleanup', storageCleanupRoutes);
 

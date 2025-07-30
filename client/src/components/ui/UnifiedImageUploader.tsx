@@ -9,11 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Upload, X, Image as ImageIcon, CheckCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, CheckCircle, Clock, Zap } from 'lucide-react';
 import { ProductImage } from '@/components/ui/FallbackImage';
 import { cn } from '@/lib/utils';
 import { validateFile } from '@/utils/fileValidation';
 import { compressImage, shouldCompress, getCompressionSettings, formatFileSize, type CompressionResult } from '@/utils/imageCompression';
+import { useUploadProgress } from '@/hooks/useUploadProgress';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface UploadResult {
   success: boolean;
@@ -82,6 +84,18 @@ export function UnifiedImageUploader({
   const [retryCount, setRetryCount] = useState(0);
   const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  
+  // Real-time upload progress tracking
+  const {
+    uploads,
+    startUpload,
+    updateProgress,
+    completeUpload,
+    errorUpload,
+    cancelUpload,
+    clearCompleted,
+    getUpload
+  } = useUploadProgress();
 
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
@@ -164,9 +178,13 @@ export function UnifiedImageUploader({
       return;
     }
 
+    const uploadId = uuidv4();
     setIsUploading(true);
     setUploadProgress(0);
     setUploadError(null);
+
+    // Start tracking upload progress
+    startUpload(uploadId, selectedFile.name, selectedFile.size);
 
     try {
       const formData = new FormData();
@@ -191,6 +209,7 @@ export function UnifiedImageUploader({
           if (event.lengthComputable) {
             const progress = Math.round((event.loaded / event.total) * 100);
             setUploadProgress(progress);
+            updateProgress(uploadId, event.loaded);
             onUploadProgress?.(progress);
           }
         });
@@ -200,26 +219,41 @@ export function UnifiedImageUploader({
             try {
               const result = JSON.parse(xhr.responseText);
               setUploadSuccess(true);
+              completeUpload(uploadId);
               onUploadComplete({
                 success: true,
                 data: result.data
               });
               resolve();
             } catch (parseError) {
-              reject(new Error('Invalid response format'));
+              const errorMessage = 'Invalid response format';
+              errorUpload(uploadId, errorMessage);
+              reject(new Error(errorMessage));
             }
           } else {
             try {
               const errorResult = JSON.parse(xhr.responseText);
-              reject(new Error(errorResult.message || 'Upload failed'));
+              const errorMessage = errorResult.message || 'Upload failed';
+              errorUpload(uploadId, errorMessage);
+              reject(new Error(errorMessage));
             } catch {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
+              const errorMessage = `Upload failed with status ${xhr.status}`;
+              errorUpload(uploadId, errorMessage);
+              reject(new Error(errorMessage));
             }
           }
         });
 
         xhr.addEventListener('error', () => {
-          reject(new Error('Network error during upload'));
+          const errorMessage = 'Network error during upload';
+          errorUpload(uploadId, errorMessage);
+          reject(new Error(errorMessage));
+        });
+
+        xhr.addEventListener('abort', () => {
+          const errorMessage = 'Upload cancelled';
+          errorUpload(uploadId, errorMessage);
+          reject(new Error(errorMessage));
         });
 
         xhr.open('POST', endpoint);
@@ -237,7 +271,7 @@ export function UnifiedImageUploader({
     } finally {
       setIsUploading(false);
     }
-  }, [selectedFile, entityId, uploadType, onUploadComplete, onUploadProgress]);
+  }, [selectedFile, entityId, uploadType, onUploadComplete, onUploadProgress, startUpload, updateProgress, completeUpload, errorUpload]);
 
   const retryUpload = useCallback(() => {
     setUploadError(null);
@@ -350,14 +384,66 @@ export function UnifiedImageUploader({
         </div>
       )}
 
-      {/* Progress Bar */}
-      {isUploading && (
+      {/* Progress Bar with Real-time Details */}
+      {isUploading && selectedFile && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Uploading...</span>
             <span>{uploadProgress}%</span>
           </div>
           <Progress value={uploadProgress} className="w-full" />
+          
+          {/* Real-time upload details */}
+          {uploads.length > 0 && uploads.find(u => u.filename === selectedFile.name && u.status === 'uploading') && (() => {
+            const currentUpload = uploads.find(u => u.filename === selectedFile.name && u.status === 'uploading');
+            if (!currentUpload) return null;
+            
+            const formatFileSize = (bytes: number) => {
+              if (bytes === 0) return '0 Bytes';
+              const k = 1024;
+              const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+            
+            const formatSpeed = (bytesPerSecond: number) => {
+              return formatFileSize(bytesPerSecond) + '/s';
+            };
+            
+            const formatTime = (seconds: number) => {
+              if (seconds < 60) {
+                return `${Math.round(seconds)}s`;
+              } else if (seconds < 3600) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.round(seconds % 60);
+                return `${minutes}m ${remainingSeconds}s`;
+              } else {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                return `${hours}h ${minutes}m`;
+              }
+            };
+            
+            return (
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <div className="flex items-center gap-1">
+                  <span>{formatFileSize(currentUpload.uploadedBytes)} / {formatFileSize(currentUpload.totalBytes)}</span>
+                </div>
+                {currentUpload.speed > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Zap className="h-3 w-3" />
+                    <span>{formatSpeed(currentUpload.speed)}</span>
+                  </div>
+                )}
+                {currentUpload.remainingTime > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>{formatTime(currentUpload.remainingTime)} remaining</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

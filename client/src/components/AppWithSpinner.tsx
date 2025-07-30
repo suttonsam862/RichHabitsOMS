@@ -62,6 +62,7 @@ import CustomerInvitesPage from "../pages/admin/CustomerInvitesPage";
 import NewOrderInquiriesPage from "../pages/admin/NewOrderInquiriesPage";
 import SalesManagementPage from "../pages/admin/SalesManagementPage";
 import ProductLibrary from "../pages/ProductLibrary";
+import { UploadTestPage } from "../pages/UploadTestPage";
 
 // Component that wraps the app content with route preloading
 function AppContent() {
@@ -336,6 +337,18 @@ function AppContent() {
           element={
             <RequireAuth allowedRoles={['admin', 'salesperson', 'customer']}>
               <Payments />
+            </RequireAuth>
+          } 
+        />
+
+        {/* Upload Test Page */}
+        <Route 
+          path="/upload-test" 
+          element={
+            <RequireAuth allowedRoles={['admin']}>
+              <FeatureErrorBoundary featureName="Upload Test">
+                <UploadTestPage />
+              </FeatureErrorBoundary>
             </RequireAuth>
           } 
         />
