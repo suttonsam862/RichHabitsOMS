@@ -1,6 +1,5 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -58,7 +57,11 @@ export default function CatalogItemEditPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+
+  // Local state management
+  const [catalogItem, setCatalogItem] = React.useState<CatalogItem | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   // State for image upload
   const [isUploading, setIsUploading] = React.useState(false);
@@ -190,74 +193,28 @@ export default function CatalogItemEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.isSubmitDisabled || updateMutation.isPending,
+    when: validation.isSubmitDisabled || isSaving,
     message: "Your catalog item is being saved. Please wait for the process to complete before leaving."
   });
 
-  // Update mutation (supports both PATCH and PUT)
-  const updateMutation = useMutation({
-    mutationFn: async (data: CatalogItemFormData) => {
-      const response = await fetch(`/api/catalog/${itemId}`, {
-        method: 'PATCH', // Using PATCH for partial updates (PUT also available)
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify(data)
-      });
+  // Simple update function with async/await
+  const updateCatalogItem = async (data: CatalogItemFormData) => {
+    const response = await fetch(`/api/catalog/${itemId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      },
+      body: JSON.stringify(data)
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update catalog item');
-      }
-
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Catalog item updated",
-        description: "The catalog item has been successfully updated.",
-      });
-      
-      // Update form with new values from response
-      const updatedItem = data.data || data;
-      if (updatedItem) {
-        const formData = {
-          name: updatedItem.name || '',
-          base_price: parseFloat(updatedItem.basePrice || updatedItem.base_price) || 0,
-          sport: updatedItem.sport || '',
-          fabric: updatedItem.fabric || '',
-          status: updatedItem.status || 'active',
-          sizes: Array.isArray(updatedItem.sizes) ? updatedItem.sizes : [],
-          colors: Array.isArray(updatedItem.colors) ? updatedItem.colors : [],
-          images: Array.isArray(updatedItem.images) ? updatedItem.images : []
-        };
-        
-        form.reset(formData);
-        setInitialData(formData);
-      }
-      
-      // Update React Query cache
-      queryClient.setQueryData(['/api/catalog', itemId], updatedItem);
-      queryClient.invalidateQueries({ queryKey: ['/api/catalog'] });
-      
-      // Navigate back to catalog
-      navigate('/admin/catalog');
-      
-      // Re-enable submit after 1 second
-      setTimeout(() => setIsSubmitDisabled(false), 1000);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      
-      // Re-enable submit after 1 second on error
-      setTimeout(() => setIsSubmitDisabled(false), 1000);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update catalog item');
     }
-  });
+
+    return response.json();
+  };
 
   // Image upload function
   const uploadImages = async (files: FileList) => {

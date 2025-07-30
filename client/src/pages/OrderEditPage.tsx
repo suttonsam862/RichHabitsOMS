@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
@@ -157,7 +156,12 @@ export default function OrderEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  
+  // Local state management
+  const [order, setOrder] = React.useState<any>(null);
+  const [orderLoading, setOrderLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
+  
   const [showManufacturerDialog, setShowManufacturerDialog] = useState(false);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<string>('');
   const [isSubmitDisabled, setIsSubmitDisabled] = useState(false);
@@ -344,7 +348,7 @@ export default function OrderEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.isSubmitDisabled || (isEditing ? updateOrderMutation.isPending : createOrderMutation.isPending),
+    when: validation.isSubmitDisabled || isSaving,
     message: "Your order is being saved. Please wait for the process to complete before leaving."
   });
 
