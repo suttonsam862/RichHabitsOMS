@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CompanyLogo, UserAvatar } from '@/components/ui/FallbackImage';
 import { 
   Building2, 
   Phone, 
@@ -120,13 +121,11 @@ export default function ManufacturerCard({
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              {logo && (
-                <img
-                  src={logo.url}
-                  alt={`${manufacturer.company} logo`}
-                  className="w-10 h-10 object-contain rounded"
-                />
-              )}
+              <CompanyLogo
+                src={logo?.url}
+                name={manufacturer.company}
+                size="sm"
+              />
               <div>
                 <h4 className="font-medium">{manufacturer.company || `${manufacturer.firstName} ${manufacturer.lastName}`}</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -168,13 +167,11 @@ export default function ManufacturerCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
-            {logo && (
-              <img
-                src={logo.url}
-                alt={`${manufacturer.company} logo`}
-                className="w-12 h-12 object-contain rounded"
-              />
-            )}
+            <CompanyLogo
+              src={logo?.url}
+              name={manufacturer.company}
+              size="md"
+            />
             <div>
               <CardTitle className="text-lg">
                 {manufacturer.company || `${manufacturer.firstName} ${manufacturer.lastName}`}

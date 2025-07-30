@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Upload, X, Image as ImageIcon, CheckCircle } from 'lucide-react';
+import { ProductImage } from '@/components/ui/FallbackImage';
 import { cn } from '@/lib/utils';
 import { validateFile } from '@/utils/fileValidation';
 import { compressImage, shouldCompress, getCompressionSettings, formatFileSize, type CompressionResult } from '@/utils/imageCompression';

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
+import { UserAvatar } from '@/components/ui/FallbackImage';
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
@@ -775,28 +776,11 @@ export default function CustomerEditPage() {
                 {/* Current Photo Display */}
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
-                    {(customer.profile_image_url || customer.photo_url) ? (
-                      <img
-                        src={customer.profile_image_url || customer.photo_url}
-                        alt={`${customer.firstName} ${customer.lastName}`}
-                        className="w-20 h-20 rounded-full object-cover border border-gray-200"
-                        onError={(e) => {
-                          // Fallback to default avatar if image fails to load
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : null}
-                    {!(customer.profile_image_url || customer.photo_url) && (
-                      <div className="w-20 h-20 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
-                        <User className="w-8 h-8 text-gray-400" />
-                      </div>
-                    )}
-                    {/* Hidden fallback avatar for image load errors */}
-                    <div className="w-20 h-20 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center hidden">
-                      <User className="w-8 h-8 text-gray-400" />
-                    </div>
+                    <UserAvatar
+                      src={customer.profile_image_url || customer.photo_url}
+                      name={`${customer.firstName} ${customer.lastName}`}
+                      size="lg"
+                    />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground">
