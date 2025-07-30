@@ -195,44 +195,97 @@ export default function OrderEditPage() {
     }
   });
 
+  // State for loading dependencies
+  const [customers, setCustomers] = React.useState<Customer[]>([]);
+  const [manufacturers, setManufacturers] = React.useState<any[]>([]);
+  const [designers, setDesigners] = React.useState<any[]>([]);
+  const [catalogItems, setCatalogItems] = React.useState<any[]>([]);
+  const [loadingDependencies, setLoadingDependencies] = React.useState(true);
+
   // Fetch order data
-  const { data: order, isLoading: orderLoading } = useQuery({
-    queryKey: [`/api/orders/${id}`],
-    queryFn: getQueryFn,
-    enabled: isEditing,
-  });
+  const fetchOrder = async () => {
+    if (!id || !isEditing) {
+      setOrderLoading(false);
+      return;
+    }
+    
+    setOrderLoading(true);
+    try {
+      const response = await fetch(`/api/orders/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('authToken');
+          navigate('/login');
+          return;
+        }
+        throw new Error('Failed to fetch order');
+      }
+      
+      const result = await response.json();
+      const orderData = result.data || result;
+      setOrder(orderData);
+    } catch (error: any) {
+      toast({
+        title: "Error loading order",
+        description: error.message || "Failed to load order details.",
+        variant: "destructive",
+      });
+    } finally {
+      setOrderLoading(false);
+    }
+  };
 
-  // Fetch customers
-  const { data: customers = [], isLoading: customersLoading } = useSmartFetch({
-    endpoint: '/api/customers',
-    enablePolling: false,
-    maxRetries: 0,
-    staleTime: 600000,
-  });
+  // Fetch all dependencies
+  const fetchDependencies = async () => {
+    setLoadingDependencies(true);
+    try {
+      const [customersRes, manufacturersRes, designersRes, catalogRes] = await Promise.all([
+        fetch('/api/customers', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        }),
+        fetch('/api/manufacturing/manufacturers', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        }),
+        fetch('/api/user-management/users?role=designer', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        }),
+        fetch('/api/catalog', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        })
+      ]);
 
-  // Fetch manufacturers
-  const { data: manufacturers = [], isLoading: manufacturersLoading } = useSmartFetch({
-    endpoint: '/api/manufacturing/manufacturers',
-    enablePolling: false,
-    maxRetries: 0,
-    staleTime: 600000,
-  });
+      const [customersData, manufacturersData, designersData, catalogData] = await Promise.all([
+        customersRes.json(),
+        manufacturersRes.json(),
+        designersRes.json(),
+        catalogRes.json()
+      ]);
 
-  // Fetch catalog items for item selection
-  const { data: catalogItems = [], isLoading: catalogItemsLoading } = useSmartFetch({
-    endpoint: '/api/catalog',
-    enablePolling: false,
-    maxRetries: 0,
-    staleTime: 600000,
-  });
+      setCustomers(Array.isArray(customersData.data) ? customersData.data : []);
+      setManufacturers(Array.isArray(manufacturersData.data) ? manufacturersData.data : []);
+      setDesigners(Array.isArray(designersData.data) ? designersData.data : []);
+      setCatalogItems(Array.isArray(catalogData.data) ? catalogData.data : []);
+    } catch (error: any) {
+      toast({
+        title: "Error loading data",
+        description: "Failed to load customers, manufacturers, designers, or catalog items.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingDependencies(false);
+    }
+  };
 
-  // Fetch designers
-  const { data: designers = [], isLoading: designersLoading } = useSmartFetch({
-    endpoint: '/api/team/workload',
-    enablePolling: false,
-    maxRetries: 0,
-    staleTime: 600000,
-  });
+  // Load data on mount
+  React.useEffect(() => {
+    fetchOrder();
+    fetchDependencies();
+  }, [id, isEditing]);
 
   // Form setup
   const form = useForm<OrderEditFormValues>({
@@ -405,42 +458,95 @@ export default function OrderEditPage() {
     });
   };
 
-  // Save mutation
-  const saveMutation = useMutation({
-    mutationFn: async (data: OrderEditFormValues) => {
-      const endpoint = isEditing ? `/api/orders/${id}` : '/api/orders/create';
-      const method = isEditing ? 'PATCH' : 'POST';
 
-      // Transform data for API
-      const transformedData = {
-        ...data,
-        items: data.items.map(item => ({
-          ...item,
-          catalog_item_id: item.catalogItemId,
-          product_name: item.productName,
-          unit_price: item.unitPrice,
-          total_price: item.totalPrice,
-          production_notes: item.productionNotes,
-          estimated_completion_date: item.estimatedCompletionDate,
-        })),
-      };
 
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify(transformedData),
-      });
+  // Order save function with async/await
+  const saveOrder = async (data: OrderEditFormValues) => {
+    const method = isEditing ? 'PATCH' : 'POST';
+    const endpoint = isEditing ? `/api/orders/${id}` : '/api/orders';
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to save order');
+    // Transform data for backend compatibility
+    const transformedData = {
+      orderNumber: data.orderNumber,
+      customerId: data.customerId,
+      status: data.status,
+      priority: data.priority,
+      assignedDesignerId: data.assignedDesignerId || null,
+      assignedManufacturerId: data.assignedManufacturerId || null,
+      notes: data.notes || '',
+      internalNotes: data.internalNotes || '',
+      customerRequirements: data.customerRequirements || '',
+      deliveryAddress: data.deliveryAddress || '',
+      deliveryInstructions: data.deliveryInstructions || '',
+      rushOrder: data.rushOrder || false,
+      estimatedDeliveryDate: data.estimatedDeliveryDate || null,
+      items: data.items.map((item, index) => ({
+        ...(item.id && { id: item.id }),
+        catalog_item_id: item.catalogItemId || null,
+        product_name: item.productName,
+        description: item.description || '',
+        size: item.size || '',
+        color: item.color || '',
+        fabric: item.fabric || '',
+        customization: item.customization || '',
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.totalPrice,
+        status: item.status || 'pending',
+        production_notes: item.productionNotes || '',
+        estimated_completion_date: item.estimatedCompletionDate || null,
+        order_index: index
+      })),
+    };
+
+    const response = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+      body: JSON.stringify(transformedData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to save order');
+    }
+    return response.json();
+  };
+
+  // Form submission handler with async/await
+  const onSubmit = async (data: OrderEditFormValues) => {
+    // Check validation and submit state before submitting
+    if (!validation.canSubmit || isSubmitDisabled) {
+      if (isSubmitDisabled) {
+        toast({
+          title: "Please wait",
+          description: "Form is being processed. Please wait before submitting again.",
+          variant: "destructive",
+        });
+        return;
       }
-      return response.json();
-    },
-    onSuccess: (result) => {
+      
+      toast({
+        title: "Cannot submit form",
+        description: validation.errors.length > 0 
+          ? validation.errors[0] 
+          : validation.hasChanges 
+            ? "Please fix form errors before submitting"
+            : "No changes to save",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Disable submit button immediately
+    setIsSubmitDisabled(true);
+    setIsSaving(true);
+
+    try {
+      const result = await saveOrder(data);
+      
       toast({
         title: 'Order Saved',
         description: `Order ${form.getValues('orderNumber')} has been ${isEditing ? 'updated' : 'created'} successfully.`,
@@ -485,62 +591,26 @@ export default function OrderEditPage() {
           
           form.reset(formData);
           setInitialData(formData);
+          setOrder(updatedOrder);
         }
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-      if (isEditing) {
-        queryClient.invalidateQueries({ queryKey: [`/api/orders/${id}`] });
       }
       
       // Navigate to order list or detail page
       navigate('/orders');
-      
-      // Re-enable submit after 1 second
-      setTimeout(() => setIsSubmitDisabled(false), 1000);
-    },
-    onError: (error: Error) => {
+    } catch (error: any) {
       toast({
         title: 'Save Failed',
-        description: error.message,
+        description: error.message || "Failed to save order",
         variant: 'destructive',
       });
-      
-      // Re-enable submit after 1 second on error
+    } finally {
+      setIsSaving(false);
+      // Re-enable submit after 1 second
       setTimeout(() => setIsSubmitDisabled(false), 1000);
-    },
-  });
-
-  const onSubmit = (data: OrderEditFormValues) => {
-    // Check validation and submit state before submitting
-    if (!validation.canSubmit || isSubmitDisabled) {
-      if (isSubmitDisabled) {
-        toast({
-          title: "Please wait",
-          description: "Form is being processed. Please wait before submitting again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      toast({
-        title: "Cannot submit form",
-        description: validation.errors.length > 0 
-          ? validation.errors[0] 
-          : validation.hasChanges 
-            ? "Please fix form errors before submitting"
-            : "No changes to save",
-        variant: "destructive",
-      });
-      return;
     }
-    
-    // Disable submit button immediately
-    setIsSubmitDisabled(true);
-    saveMutation.mutate(data);
   };
 
-  if (orderLoading || customersLoading || manufacturersLoading || designersLoading) {
+  if (orderLoading || loadingDependencies) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />

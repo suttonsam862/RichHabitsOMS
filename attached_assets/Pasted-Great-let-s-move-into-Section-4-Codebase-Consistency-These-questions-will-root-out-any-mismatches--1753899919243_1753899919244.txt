@@ -1,0 +1,76 @@
+Great—let’s move into Section 4: Codebase Consistency. These questions will root out any mismatches, duplicates, or dead code that’s tripping up both you and the AI.
+
+4. Codebase Consistency
+4.1 Naming & Schema Conventions
+Single Source of Truth
+
+Where do you document your convention for snake_case (DB) vs. camelCase (JS/TS)?
+
+Do you have a lint or pre-commit rule enforcing this?
+
+Current Violations
+
+How many files still mix snake_case and camelCase in field names?
+
+Can you list 2–3 examples of mismatched names (e.g. firstName vs. first_name) in your code?
+
+4.2 Duplicate or Conflicting Logic
+Multiple Implementations
+
+Do you have more than one GlobalFetchInterceptor or image-upload helper in the repo?
+
+Are there two different catalog upload endpoints or route files?
+
+Feature Fragmentation
+
+Have you discovered two versions of the customer form (e.g. AddCustomerForm.tsx vs. CustomerOnboardForm.tsx)?
+
+Which one is actually wired into the router?
+
+Conflict Resolution
+
+When the AI patches one version, does it break the “live” version?
+
+Can you identify any conflicting imports or barrel exports that mask duplicates?
+
+4.3 Dead or Unused Code
+Orphaned Files
+
+Can you run ts-prune or search for unreferenced .tsx/.ts files?
+
+Which components or hooks show 0 imports across the codebase?
+
+Stale Routes
+
+Are there any Express routes defined under server/routes/api/ that no UI calls?
+
+Which ones consistently return 404 in your logs?
+
+Cleanup Strategy
+
+Would you prefer to delete these dead files or archive them in a separate folder?
+
+How do you want to instruct the AI to handle “unused” code—remove or comment out?
+
+🧪 Deliverables for Section 4
+
+A short list (2–3) of naming mismatches with file paths
+
+A list of duplicate-feature files or route fragments
+
+A count or list of truly orphaned files/routes
+
+Once you share those details, we’ll use them to refine our prompts—only targeting the one true code path for each feature and permanently removing dead or conflicting code.
+
+
+
+
+
+
+
+Ask ChatGPT
+
+
+
+
+

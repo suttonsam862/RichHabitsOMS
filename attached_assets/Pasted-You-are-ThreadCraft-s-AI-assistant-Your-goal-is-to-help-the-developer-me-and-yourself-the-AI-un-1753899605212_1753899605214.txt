@@ -1,0 +1,128 @@
+You are ThreadCraft’s AI assistant. Your goal is to help the developer (me) and yourself (the AI) uncover every environmental, tooling, prompt-engineering, and codebase snag that’s causing endless errors, hallucinations, and wasted cycles.  
+
+Please run through the following **10-section questionnaire** — ask me for any missing details, and then use your code-analysis skills to flag inconsistencies or unknowns. After each section, stop and wait for my answer before proceeding.
+
+---
+
+## 1. Environment & Setup  
+1.1. **Replit vs Local**  
+- Are you working exclusively in Replit? If so, what host/port binding quirks have you seen?  
+- Have you tried running this locally to compare errors?  
+
+1.2. **Version Alignment**  
+- What Node, npm/yarn, TypeScript, and Vite versions are in use?  
+- Are your `tsconfig.json` and `vite.config.ts` aligned on aliases, JSX targets, and module resolution?  
+
+1.3. **Env-Var Consistency**  
+- Which `.env` keys are actually defined? Any missing or mismatched prefixes (`VITE_` vs `REPLIT_`)?  
+- Do all AI prompts reference the same variable names you use?  
+
+---
+
+## 2. Prompt Structure & Context  
+2.1. **Scope Clarity**  
+- When you ask the AI to “fix X in file Y,” do you provide the full file or only a snippet?  
+- Could out-of-date snippets be causing the Agent to overwrite correct code?  
+
+2.2. **Reference Memory**  
+- Do you reference prior fixes by commit hash or file/line, ensuring the AI doesn’t lose context?  
+- How often does the AI reintroduce a bug you just fixed?  
+
+2.3. **Explicitness**  
+- Do your prompts always specify HTTP verbs, field-naming conventions, and the exact library in use (e.g. React Hook Form vs custom)?  
+
+---
+
+## 3. AI Response & Hallucination  
+3.1. **Spotting Hallucinations**  
+- Can you identify any code the AI added that never existed?  
+- Which prompts most frequently trigger “magic” (made-up) functions or files?  
+
+3.2. **Over-Engineering Signals**  
+- Are you seeing layers of new abstractions (hooks, services) you didn’t ask for?  
+- Could simpler, targeted patches avoid that bloat?  
+
+---
+
+## 4. Codebase Consistency  
+4.1. **Naming & Schema**  
+- Do you have a single source of truth for snake_case vs camelCase?  
+- How many files still mix those conventions?  
+
+4.2. **Duplicate Logic**  
+- Are there multiple implementations of the same feature (e.g. two image-upload systems)?  
+- Could the AI be patching the wrong one?  
+
+4.3. **Dead Code**  
+- How many files are never imported or executed?  
+- Can you run a dead-code detector (`ts-prune` or similar)?  
+
+---
+
+## 5. Workflow & Version Control  
+5.1. **Commit Discipline**  
+- Do you commit _after_ each AI patch?  
+- Can you roll back broken fixes without losing everything?  
+
+5.2. **Branch Strategy**  
+- Do you isolate AI runs to a feature branch?  
+- Is there a “safe” branch that never touches the Agent?  
+
+---
+
+## 6. Testing & CI  
+6.1. **Unit Tests**  
+- Which core flows (customers, catalog, orders) have unit or integration tests?  
+- Are tests failing or skipped after AI patches?  
+
+6.2. **E2E Scripts**  
+- Do you have a Playwright or Postman suite that clicks through critical CRUD paths?  
+- Could adding one guard against regressions?  
+
+---
+
+## 7. Logging & Monitoring  
+7.1. **Structured Logging**  
+- Are your backend routes logging consistently so you can search for errors?  
+- Does your global fetch interceptor log requests/responses in dev?  
+
+7.2. **Error Capture**  
+- Are you using Sentry, LogRocket, or similar to catch uncaught exceptions?  
+- Can you replay a bug in isolation with its full stack trace?  
+
+---
+
+## 8. Agent Limits & Guardrails  
+8.1. **Context Window**  
+- Does the Agent lose track of earlier steps when you queue a long prompt map?  
+- How often do you restart vs continue the same session?  
+
+8.2. **Role Tags & Templates**  
+- Are you wrapping your prompts in `<System>`, `<User>`, `<Assistant>` tags?  
+- Are there APE or ICIO templates you follow consistently?  
+
+---
+
+## 9. Hallucination Prevention  
+9.1. **Few-Shot Examples**  
+- Do you provide before/after snippets when requesting code changes?  
+- Would a 2-line example reduce “made-up” code?  
+
+9.2. **Schema-Driven Input**  
+- When patching API routes, do you paste your actual TS interfaces or SQL schema?  
+- Could embedding your `shared/types.ts` or table DDL stop naming errors?  
+
+---
+
+## 10. Next Steps & Action Items  
+10.1. **Your Answers**  
+- Which questions can _you_ answer right now?  
+- Which require me (the Assistant) to inspect code or logs?  
+
+10.2. **AI Prompts**  
+- For each open question, I’ll craft a micro-prompt to either you or the Agent  
+- We’ll fix ambiguity, eliminate hallucinations, and lock down reliability  
+
+---
+
+**Please answer section 1 (1.1–1.3) now, then I’ll guide you through the next sections.**  

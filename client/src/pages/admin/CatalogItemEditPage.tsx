@@ -96,9 +96,11 @@ export default function CatalogItemEditPage() {
   });
 
   // Fetch catalog item data
-  const { data: catalogItem, isLoading } = useQuery({
-    queryKey: ['/api/catalog', itemId],
-    queryFn: async () => {
+  const fetchCatalogItem = async () => {
+    if (!itemId) return;
+    
+    setIsLoading(true);
+    try {
       const response = await fetch(`/api/catalog/${itemId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -106,6 +108,11 @@ export default function CatalogItemEditPage() {
       });
       
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('authToken');
+          navigate('/login');
+          return;
+        }
         throw new Error('Failed to fetch catalog item');
       }
       
@@ -113,7 +120,7 @@ export default function CatalogItemEditPage() {
       const data = result.data || result;
       
       // Convert response to match our form structure
-      return {
+      const item = {
         id: data.id,
         name: data.name || '',
         base_price: parseFloat(data.basePrice || data.base_price) || 0,
@@ -128,9 +135,23 @@ export default function CatalogItemEditPage() {
         created_at: data.created_at,
         updated_at: data.updated_at
       } as CatalogItem;
-    },
-    enabled: !!itemId
-  });
+      
+      setCatalogItem(item);
+    } catch (error: any) {
+      toast({
+        title: "Error loading catalog item",
+        description: error.message || "Failed to load catalog item details.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load catalog item on mount
+  React.useEffect(() => {
+    fetchCatalogItem();
+  }, [itemId]);
 
   const form = useForm<CatalogItemFormData>({
     resolver: zodResolver(catalogItemSchema),
@@ -346,7 +367,8 @@ export default function CatalogItemEditPage() {
     }
   };
 
-  const onSubmit = (data: CatalogItemFormData) => {
+  // Form submission handler with async/await
+  const onSubmit = async (data: CatalogItemFormData) => {
     // Check validation and submit state before submitting
     if (!validation.canSubmit || isSubmitDisabled) {
       if (isSubmitDisabled) {
@@ -372,7 +394,48 @@ export default function CatalogItemEditPage() {
     
     // Disable submit button immediately
     setIsSubmitDisabled(true);
-    updateMutation.mutate(data);
+    setIsSaving(true);
+
+    try {
+      const result = await updateCatalogItem(data);
+      
+      toast({
+        title: "Catalog item updated",
+        description: "The catalog item has been successfully updated.",
+      });
+      
+      // Update form with new values from response
+      const updatedItem = result.data || result;
+      if (updatedItem) {
+        const formData = {
+          name: updatedItem.name || '',
+          base_price: parseFloat(updatedItem.basePrice || updatedItem.base_price) || 0,
+          sport: updatedItem.sport || '',
+          fabric: updatedItem.fabric || '',
+          status: updatedItem.status || 'active',
+          sizes: Array.isArray(updatedItem.sizes) ? updatedItem.sizes : [],
+          colors: Array.isArray(updatedItem.colors) ? updatedItem.colors : [],
+          images: Array.isArray(updatedItem.images) ? updatedItem.images : []
+        };
+        
+        form.reset(formData);
+        setInitialData(formData);
+        setCatalogItem(updatedItem);
+      }
+      
+      // Navigate back to catalog
+      navigate('/admin/catalog');
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update catalog item",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+      // Re-enable submit after 1 second
+      setTimeout(() => setIsSubmitDisabled(false), 1000);
+    }
   };
 
   if (isLoading) {

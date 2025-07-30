@@ -6,6 +6,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { MutationProvider } from "./context/MutationContext";
 import { AppWithSpinner } from "./components/AppWithSpinner";
 import { GlobalErrorBoundary } from "./components/error/GlobalErrorBoundary";
+import { AppRouter } from "./components/Router";
 
 // Basic error handling - don't suppress all rejections
 const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -24,8 +25,10 @@ function App() {
         <MutationProvider>
           <AuthProvider>
             <TooltipProvider>
-              <AppWithSpinner />
-              <Toaster />
+              <AppWithSpinner>
+                <AppRouter />
+                <Toaster />
+              </AppWithSpinner>
             </TooltipProvider>
           </AuthProvider>
         </MutationProvider>
