@@ -4,7 +4,7 @@
  * Replaces multiple scattered upload implementations
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -80,12 +80,17 @@ export function UnifiedImageUploader({
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
   const resetState = useCallback(() => {
+    // Clean up previous preview URL to prevent memory leaks
+    if (preview && preview.startsWith('blob:')) {
+      URL.revokeObjectURL(preview);
+    }
+    
     setSelectedFile(null);
     setPreview(null);
     setUploadProgress(0);
     setUploadError(null);
     setUploadSuccess(false);
-  }, []);
+  }, [preview]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -104,17 +109,30 @@ export function UnifiedImageUploader({
     }
 
     setUploadError(null);
+    
+    // Clean up previous preview URL to prevent memory leaks
+    if (preview && preview.startsWith('blob:')) {
+      URL.revokeObjectURL(preview);
+    }
+    
     setSelectedFile(file);
 
-    // Generate preview
+    // Generate preview using createObjectURL for better memory management
     if (showPreview) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      const objectUrl = URL.createObjectURL(file);
+      setPreview(objectUrl);
     }
-  }, [maxSizeBytes, maxSizeMB, accept, showPreview]);
+  }, [maxSizeBytes, maxSizeMB, accept, showPreview, preview]);
+
+  // Cleanup effect to prevent memory leaks on component unmount
+  useEffect(() => {
+    return () => {
+      // Clean up preview URL when component unmounts
+      if (preview && preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
 
   const handleUpload = useCallback(async () => {
     if (!selectedFile || !entityId) {
