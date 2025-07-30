@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star, Eye, Trash2, Download, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 const catalogItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -125,10 +126,13 @@ export default function CatalogItemEditPage() {
     name: "images"
   });
 
+  // Store initial data for comparison
+  const [initialData, setInitialData] = React.useState<CatalogItemFormData | undefined>(undefined);
+
   // Update form when catalog item data loads
   React.useEffect(() => {
     if (catalogItem) {
-      form.reset({
+      const formData = {
         name: catalogItem.name,
         base_price: catalogItem.base_price,
         sport: catalogItem.sport || '',
@@ -137,9 +141,19 @@ export default function CatalogItemEditPage() {
         sizes: catalogItem.sizes || [],
         colors: catalogItem.colors || [],
         images: catalogItem.images || []
-      });
+      };
+      form.reset(formData);
+      setInitialData(formData);
     }
   }, [catalogItem, form]);
+
+  // Form validation hook
+  const validation = useFormValidation({
+    form,
+    initialData,
+    requiredFields: ['name', 'base_price'],
+    ignoreFields: ['images'] // Don't require changes to images for form validity
+  });
 
   // Update mutation (supports both PATCH and PUT)
   const updateMutation = useMutation({
@@ -313,6 +327,20 @@ export default function CatalogItemEditPage() {
   };
 
   const onSubmit = (data: CatalogItemFormData) => {
+    // Check validation before submitting
+    if (!validation.canSubmit) {
+      toast({
+        title: "Cannot submit form",
+        description: validation.errors.length > 0 
+          ? validation.errors[0] 
+          : validation.hasChanges 
+            ? "Please fix form errors before submitting"
+            : "No changes to save",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     updateMutation.mutate(data);
   };
 
@@ -927,6 +955,38 @@ export default function CatalogItemEditPage() {
                 )}
               />
 
+              {/* Validation Status */}
+              {!validation.hasChanges && initialData && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-blue-700">
+                      No changes to save
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {validation.errors.length > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-4 w-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm text-yellow-700 font-medium">Please fix the following:</p>
+                      <ul className="text-sm text-yellow-700 ml-4 mt-1 list-disc">
+                        {validation.missingRequiredFields.map(field => (
+                          <li key={field}>{field} is required</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end space-x-2">
                 <Button
                   type="button"
@@ -938,8 +998,11 @@ export default function CatalogItemEditPage() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={updateMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={updateMutation.isPending || !validation.canSubmit}
+                  className={`bg-blue-600 hover:bg-blue-700 ${!validation.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title={!validation.canSubmit ? 
+                    (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                    "Save catalog item changes"}
                 >
                   {updateMutation.isPending ? (
                     <>

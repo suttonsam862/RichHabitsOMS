@@ -49,6 +49,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useFormValidation } from '@/hooks/useFormValidation';
 import ManufacturerCard from '@/components/ManufacturerCard';
 import { ProductionImageUploader } from '@/components/ProductionImageUploader';
 import OrderAuditHistory from '@/components/OrderAuditHistory';
@@ -237,6 +238,9 @@ export default function OrderEditPage() {
     name: 'items',
   });
 
+  // Store initial data for comparison
+  const [initialData, setInitialData] = useState<OrderEditFormValues | undefined>(undefined);
+
   // Update form when order data loads
   useEffect(() => {
     if (order && isEditing) {
@@ -288,6 +292,7 @@ export default function OrderEditPage() {
       };
 
       form.reset(formData);
+      setInitialData(formData);
       setSelectedManufacturerId(order.assignedManufacturerId || '');
     } else if (!isEditing) {
       // Generate order number for new orders
@@ -296,6 +301,14 @@ export default function OrderEditPage() {
       form.setValue('orderNumber', `ORD-${timestamp}-${random}`);
     }
   }, [order, isEditing, form]);
+
+  // Form validation hook
+  const validation = useFormValidation({
+    form,
+    initialData,
+    requiredFields: ['orderNumber', 'customerId'],
+    ignoreFields: ['id'] // Don't require changes to ID for form validity
+  });
 
   // Calculate item total when quantity or unit price changes
   const calculateItemTotal = (index: number) => {
@@ -409,6 +422,20 @@ export default function OrderEditPage() {
   });
 
   const onSubmit = (data: OrderEditFormValues) => {
+    // Check validation before submitting
+    if (!validation.canSubmit) {
+      toast({
+        title: "Cannot submit form",
+        description: validation.errors.length > 0 
+          ? validation.errors[0] 
+          : validation.hasChanges 
+            ? "Please fix form errors before submitting"
+            : "No changes to save",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     saveMutation.mutate(data);
   };
 
@@ -1076,8 +1103,11 @@ export default function OrderEditPage() {
             )}
             <Button
               type="submit"
-              disabled={saveMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
+              disabled={saveMutation.isPending || !validation.canSubmit}
+              className={`bg-blue-600 hover:bg-blue-700 ${!validation.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={!validation.canSubmit ? 
+                (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                "Save order changes"}
             >
               {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               <Save className="w-4 h-4 mr-2" />

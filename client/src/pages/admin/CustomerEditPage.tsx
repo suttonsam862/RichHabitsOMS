@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 const customerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -107,10 +108,13 @@ export default function CustomerEditPage() {
     }
   });
 
+  // Store initial data for comparison
+  const [initialData, setInitialData] = React.useState<CustomerFormData | undefined>(undefined);
+
   // Update form when customer data loads
   React.useEffect(() => {
     if (customer) {
-      form.reset({
+      const formData = {
         firstName: customer.firstName || '',
         lastName: customer.lastName || '',
         email: customer.email || '',
@@ -122,9 +126,19 @@ export default function CustomerEditPage() {
         zip: customer.zip || '',
         country: customer.country || '',
         status: customer.status as 'active' | 'inactive' | 'suspended' || 'active'
-      });
+      };
+      form.reset(formData);
+      setInitialData(formData);
     }
   }, [customer, form]);
+
+  // Form validation hook
+  const validation = useFormValidation({
+    form,
+    initialData,
+    requiredFields: ['firstName', 'lastName', 'email'],
+    ignoreFields: [] // Include all fields in change detection
+  });
 
   // File handling functions
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -406,6 +420,20 @@ export default function CustomerEditPage() {
   });
 
   const onSubmit = (data: CustomerFormData) => {
+    // Check validation before submitting
+    if (!validation.canSubmit) {
+      toast({
+        title: "Cannot submit form",
+        description: validation.errors.length > 0 
+          ? validation.errors[0] 
+          : validation.hasChanges 
+            ? "Please fix form errors before submitting"
+            : "No changes to save",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     updateCustomerMutation.mutate(data);
   };
 
@@ -845,6 +873,38 @@ export default function CustomerEditPage() {
                 </div>
               )}
 
+              {/* Validation Status */}
+              {!validation.hasChanges && initialData && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-blue-700">
+                      No changes to save
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {validation.errors.length > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-4 w-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm text-yellow-700 font-medium">Please fix the following:</p>
+                      <ul className="text-sm text-yellow-700 ml-4 mt-1 list-disc">
+                        {validation.missingRequiredFields.map(field => (
+                          <li key={field}>{field} is required</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end space-x-2">
                 <Button 
                   type="button" 
@@ -855,7 +915,11 @@ export default function CustomerEditPage() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={updateCustomerMutation.isPending}
+                  disabled={updateCustomerMutation.isPending || !validation.canSubmit}
+                  className={!validation.canSubmit ? "opacity-50 cursor-not-allowed" : ""}
+                  title={!validation.canSubmit ? 
+                    (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                    "Save customer changes"}
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {updateCustomerMutation.isPending ? 'Saving...' : 'Save Changes'}
