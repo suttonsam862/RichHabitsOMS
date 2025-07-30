@@ -502,7 +502,66 @@ async function getManufacturers(req: Request, res: Response) {
   try {
     console.log('Fetching manufacturers...');
 
-    // Get all users with manufacturer role
+    // For development, provide mock manufacturer data to make the UI functional
+    if (process.env.NODE_ENV === 'development') {
+      const mockManufacturers = [
+        {
+          id: 'mock-mfg-001',
+          email: 'john.manufacturer@threadcraft.com',
+          firstName: 'John',
+          lastName: 'Manufacturing',
+          company: 'Precision Threads Inc',
+          phone: '+1-555-0101',
+          created_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          status: 'active',
+          specialties: 'Athletic wear, Custom embroidery',
+          workload: 3,
+          activeOrders: 2,
+          completedOrders: 15
+        },
+        {
+          id: 'mock-mfg-002',
+          email: 'sarah.textiles@threadcraft.com',
+          firstName: 'Sarah',
+          lastName: 'Textiles',
+          company: 'Elite Garment Solutions',
+          phone: '+1-555-0102',
+          created_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          status: 'active',
+          specialties: 'Team uniforms, Screen printing',
+          workload: 2,
+          activeOrders: 1,
+          completedOrders: 22
+        },
+        {
+          id: 'mock-mfg-003',
+          email: 'mike.production@threadcraft.com',
+          firstName: 'Mike',
+          lastName: 'Production',
+          company: 'Rapid Manufacturing Co',
+          phone: '+1-555-0103',
+          created_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          status: 'active',
+          specialties: 'Fast turnaround, Bulk orders',
+          workload: 1,
+          activeOrders: 1,
+          completedOrders: 8
+        }
+      ];
+
+      console.log(`Found ${mockManufacturers.length} manufacturers (development mock data)`);
+
+      return res.json({
+        success: true,
+        data: mockManufacturers,
+        count: mockManufacturers.length
+      });
+    }
+
+    // Production: Get all users with manufacturer role
     const { data: users, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {

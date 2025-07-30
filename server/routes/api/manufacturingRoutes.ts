@@ -200,6 +200,100 @@ export async function getProductionTasks(req: Request, res: Response) {
       limit = 20
     } = req.query;
 
+    // For development, provide mock production tasks to make the UI functional
+    if (process.env.NODE_ENV === 'development') {
+      const mockTasks = [
+        {
+          id: 'task-001',
+          order_id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
+          manufacturer_id: 'mock-mfg-001',
+          task_name: 'Material Sourcing',
+          description: 'Source high-quality materials for custom uniform production',
+          status: 'pending',
+          priority: 'high',
+          due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          orders: {
+            id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
+            order_number: 'ORD-ERROR-TEST-FINAL',
+            status: 'in_production',
+            total_amount: 299.99,
+            customer_id: '5784f5cb-8999-4f12-9179-354bd240d38e',
+            customers: {
+              id: '5784f5cb-8999-4f12-9179-354bd240d38e',
+              first_name: 'Test',
+              last_name: 'Customer',
+              company: 'Test Company'
+            }
+          }
+        },
+        {
+          id: 'task-002',
+          order_id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
+          manufacturer_id: 'mock-mfg-002',
+          task_name: 'Pattern Creation',
+          description: 'Create custom patterns for team uniform sizing',
+          status: 'in_progress',
+          priority: 'medium',
+          due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          orders: {
+            id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
+            order_number: 'ORD-ERROR-TEST-FINAL',
+            status: 'in_production',
+            total_amount: 299.99,
+            customer_id: '5784f5cb-8999-4f12-9179-354bd240d38e',
+            customers: {
+              id: '5784f5cb-8999-4f12-9179-354bd240d38e',
+              first_name: 'Test',
+              last_name: 'Customer',
+              company: 'Test Company'
+            }
+          }
+        },
+        {
+          id: 'task-003',
+          order_id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
+          manufacturer_id: 'mock-mfg-003',
+          task_name: 'Quality Control',
+          description: 'Final quality inspection and packaging',
+          status: 'pending',
+          priority: 'low',
+          due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          orders: {
+            id: 'e2683a31-943a-4c3a-928f-5bd07e6d7b9e',
+            order_number: 'ORD-ERROR-TEST-FINAL',
+            status: 'in_production',
+            total_amount: 299.99,
+            customer_id: '5784f5cb-8999-4f12-9179-354bd240d38e',
+            customers: {
+              id: '5784f5cb-8999-4f12-9179-354bd240d38e',
+              first_name: 'Test',
+              last_name: 'Customer',
+              company: 'Test Company'
+            }
+          }
+        }
+      ];
+
+      console.log(`✅ Found ${mockTasks.length} production tasks (development mock data)`);
+
+      return res.json({
+        success: true,
+        data: mockTasks,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: mockTasks.length,
+          pages: Math.ceil(mockTasks.length / Number(limit))
+        }
+      });
+    }
+
     let query = supabase
       .from('production_tasks')
       .select(`
