@@ -512,12 +512,13 @@ export default function ManufacturingManagement() {
       return response.json();
     },
     onSuccess: (response) => {
-      fetchAllData(true); // Refresh all data
       queryClient.invalidateQueries({ queryKey: ['enhanced-orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/manufacturing/stats'] });
 
-      const selectedOrder = orders.find(o => o.id === selectedOrderId);
-      const selectedManufacturer = manufacturers.find(m => m.id === selectedManufacturerId);
+      const safeOrders = Array.isArray(orders) ? orders : [];
+      const safeManufacturers = Array.isArray(manufacturers) ? manufacturers : [];
+      const selectedOrder = safeOrders.find(o => o?.id === selectedOrderId);
+      const selectedManufacturer = safeManufacturers.find(m => m?.id === selectedManufacturerId);
 
       toast({
         title: 'Manufacturer Assigned Successfully',
@@ -584,7 +585,8 @@ export default function ManufacturingManagement() {
       dataTypes: ['orders', 'manufacturers', 'stats'],
       eventType: DATA_SYNC_EVENTS.MANUFACTURER_ASSIGNED,
       customHandler: (result) => {
-        const selectedManufacturer = manufacturers.find(m => m.id === selectedManufacturerId);
+        const safeManufacturers = Array.isArray(manufacturers) ? manufacturers : [];
+        const selectedManufacturer = safeManufacturers.find(m => m?.id === selectedManufacturerId);
         toast({
           title: 'Bulk Assignment Completed',
           description: `Successfully assigned ${selectedManufacturer?.firstName || 'manufacturer'} to ${result.successCount} out of ${result.totalCount} orders`,
@@ -636,7 +638,8 @@ export default function ManufacturingManagement() {
       dataTypes: ['messages'],
       eventType: DATA_SYNC_EVENTS.MESSAGE_SENT,
       customHandler: (response) => {
-        const recipient = manufacturers.find(m => m.id === messageData.receiverId);
+        const safeManufacturers = Array.isArray(manufacturers) ? manufacturers : [];
+        const recipient = safeManufacturers.find(m => m?.id === messageData.receiverId);
         toast({
           title: 'Message Sent Successfully',
           description: response?.message || `Message sent to ${recipient?.firstName || 'recipient'}`,
@@ -689,7 +692,8 @@ export default function ManufacturingManagement() {
       dataTypes: ['productionTasks', 'orders', 'stats'],
       eventType: DATA_SYNC_EVENTS.PRODUCTION_TASK_UPDATED,
       customHandler: (response) => {
-        const order = orders.find(o => o.id === progressData.orderId);
+        const safeOrders = Array.isArray(orders) ? orders : [];
+        const order = safeOrders.find(o => o?.id === progressData.orderId);
         toast({
           title: 'Progress Updated Successfully', 
           description: response?.message || `Progress updated for order ${order?.orderNumber || progressData.orderId}`,
@@ -1082,9 +1086,9 @@ export default function ManufacturingManagement() {
                       <SelectContent>
                         <SelectItem value="all">All Manufacturers</SelectItem>
                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {manufacturers.map((manufacturer) => (
-                          <SelectItem key={manufacturer.id} value={manufacturer.id}>
-                            {manufacturer.firstName} {manufacturer.lastName}
+                        {(Array.isArray(manufacturers) ? manufacturers : []).map((manufacturer) => (
+                          <SelectItem key={manufacturer?.id || ''} value={manufacturer?.id || ''}>
+                            {manufacturer?.firstName} {manufacturer?.lastName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1466,10 +1470,10 @@ export default function ManufacturingManagement() {
                     <SelectValue placeholder="Select a manufacturer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {manufacturers.map((manufacturer) => (
-                      <SelectItem key={manufacturer.id} value={manufacturer.id}>
-                        {manufacturer.firstName} {manufacturer.lastName}
-                        {manufacturer.company && ` (${manufacturer.company})`}
+                    {(Array.isArray(manufacturers) ? manufacturers : []).map((manufacturer) => (
+                      <SelectItem key={manufacturer?.id || ''} value={manufacturer?.id || ''}>
+                        {manufacturer?.firstName} {manufacturer?.lastName}
+                        {manufacturer?.company && ` (${manufacturer.company})`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1515,10 +1519,10 @@ export default function ManufacturingManagement() {
                     <SelectValue placeholder="Select a manufacturer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {manufacturers.map((manufacturer) => (
-                      <SelectItem key={manufacturer.id} value={manufacturer.id}>
-                        {manufacturer.firstName} {manufacturer.lastName}
-                        {manufacturer.company && ` (${manufacturer.company})`}
+                    {(Array.isArray(manufacturers) ? manufacturers : []).map((manufacturer) => (
+                      <SelectItem key={manufacturer?.id || ''} value={manufacturer?.id || ''}>
+                        {manufacturer?.firstName} {manufacturer?.lastName}
+                        {manufacturer?.company && ` (${manufacturer.company})`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1566,10 +1570,10 @@ export default function ManufacturingManagement() {
                     <SelectValue placeholder="Select recipient" />
                   </SelectTrigger>
                   <SelectContent>
-                    {manufacturers.map((manufacturer) => (
-                      <SelectItem key={manufacturer.id} value={manufacturer.id}>
-                        {manufacturer.firstName} {manufacturer.lastName}
-                        {manufacturer.company && ` (${manufacturer.company})`}
+                    {(Array.isArray(manufacturers) ? manufacturers : []).map((manufacturer) => (
+                      <SelectItem key={manufacturer?.id || ''} value={manufacturer?.id || ''}>
+                        {manufacturer?.firstName} {manufacturer?.lastName}
+                        {manufacturer?.company && ` (${manufacturer.company})`}
                       </SelectItem>
                     ))}
                   </SelectContent>
