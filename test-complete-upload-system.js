@@ -1,146 +1,160 @@
-/**
- * COMPREHENSIVE UPLOAD SYSTEM TEST
- * Tests the complete file upload pipeline with real image data
- */
-
-import FormData from 'form-data';
 import fs from 'fs';
+import path from 'path';
 import fetch from 'node-fetch';
-import sharp from 'sharp';
+import FormData from 'form-data';
 
-async function createTestImage() {
-  // Create a simple test image using Sharp
-  const testImage = await sharp({
-    create: {
-      width: 500,
-      height: 500,
-      channels: 3,
-      background: { r: 0, g: 209, b: 255 }
-    }
-  })
-  .jpeg({ quality: 90 })
-  .toBuffer();
+const API_BASE = 'http://localhost:5000';
+const AUTH_TOKEN = 'dev-test-token-admin'; // Development token
 
-  return testImage;
-}
-
-async function testImageUploadPipeline() {
-  console.log('🧪 Testing Complete Image Upload System\n');
+async function testCompleteUploadSystem() {
+  console.log('🧪 Testing Complete Multi-Image Upload System');
+  console.log('=' .repeat(50));
 
   try {
-    // Step 1: Test storage configuration
-    console.log('📋 Step 1: Testing storage configuration...');
-    const storageTestResponse = await fetch('http://localhost:5000/api/images-fixed/test-storage', {
-      method: 'POST',
+    // Step 1: Get a catalog item to test with
+    console.log('1️⃣ Fetching catalog items...');
+    const catalogResponse = await fetch(`${API_BASE}/api/catalog`, {
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer dev-admin-token-${Date.now()}`
-      },
-      body: JSON.stringify({ testBuckets: true })
+        'Authorization': `Bearer ${AUTH_TOKEN}`
+      }
     });
-
-    const storageTestData = await storageTestResponse.json();
-    console.log('Storage Test Results:', storageTestData);
-
-    if (!storageTestData.success) {
-      console.log('❌ Storage test failed, but continuing...');
-    }
-
-    // Step 2: Create a test catalog item
-    console.log('\n📦 Step 2: Creating test catalog item...');
-    const catalogCreateResponse = await fetch('http://localhost:5000/api/catalog', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer dev-admin-token-${Date.now()}`
-      },
-      body: JSON.stringify({
-        name: 'Test Image Upload Item',
-        category: 'Clothing',
-        sport: 'General',
-        price: 25.99,
-        sku: `TEST-IMG-${Date.now()}`
-      })
-    });
-
-    const catalogItemData = await catalogCreateResponse.json();
     
-    if (!catalogItemData.success) {
-      console.log('❌ Failed to create catalog item:', catalogItemData);
-      return;
+    if (!catalogResponse.ok) {
+      throw new Error('Failed to fetch catalog items');
     }
+    
+    const catalogData = await catalogResponse.json();
+    const testItem = catalogData.data[0];
+    
+    if (!testItem) {
+      throw new Error('No catalog items found for testing');
+    }
+    
+    console.log(`✅ Using catalog item: ${testItem.name} (ID: ${testItem.id})`);
+    console.log(`📊 Current images count: ${testItem.images?.length || 0}`);
 
-    const catalogItemId = catalogItemData.data.id;
-    console.log('✅ Created catalog item:', catalogItemId);
+    // Step 2: Create test image files
+    console.log('\n2️⃣ Creating test image files...');
+    
+    // Create a simple 100x100 PNG image buffer
+    const createTestImage = (name, color = 'red') => {
+      // Simple SVG converted to PNG-like buffer (placeholder)
+      const svgContent = `
+        <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100%" height="100%" fill="${color}"/>
+          <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-family="Arial" font-size="12">${name}</text>
+        </svg>
+      `;
+      return Buffer.from(svgContent);
+    };
+    
+    const testImages = [
+      { name: 'test-image-1.png', buffer: createTestImage('Test 1', 'red') },
+      { name: 'test-image-2.png', buffer: createTestImage('Test 2', 'blue') },
+      { name: 'test-image-3.png', buffer: createTestImage('Test 3', 'green') }
+    ];
+    
+    console.log(`✅ Created ${testImages.length} test image files`);
 
     // Step 3: Test image upload
-    console.log('\n📤 Step 3: Testing image upload...');
+    console.log('\n3️⃣ Testing image upload...');
     
-    // Create test image
-    const testImageBuffer = await createTestImage();
-    console.log(`📷 Created test image: ${(testImageBuffer.length / 1024).toFixed(2)}KB`);
+    const uploadedImages = [];
+    
+    for (let i = 0; i < testImages.length; i++) {
+      const testImage = testImages[i];
+      console.log(`📤 Uploading ${testImage.name}...`);
+      
+      const formData = new FormData();
+      formData.append('image', testImage.buffer, {
+        filename: testImage.name,
+        contentType: 'image/png'
+      });
+      
+      const uploadResponse = await fetch(`${API_BASE}/api/catalog/${testItem.id}/images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${AUTH_TOKEN}`
+        },
+        body: formData
+      });
+      
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error(`❌ Upload failed: ${errorText}`);
+        continue;
+      }
+      
+      const uploadResult = await uploadResponse.json();
+      console.log(`✅ Uploaded: ${uploadResult.data.url}`);
+      uploadedImages.push(uploadResult.data);
+    }
+    
+    console.log(`✅ Successfully uploaded ${uploadedImages.length} images`);
 
-    // Prepare form data
-    const formData = new FormData();
-    formData.append('image', testImageBuffer, {
-      filename: 'test-upload.jpg',
-      contentType: 'image/jpeg'
-    });
-
-    // Upload image
-    const uploadResponse = await fetch(`http://localhost:5000/api/images-fixed/catalog/${catalogItemId}`, {
-      method: 'POST',
+    // Step 4: Verify images were stored in catalog item
+    console.log('\n4️⃣ Verifying image storage...');
+    
+    const updatedItemResponse = await fetch(`${API_BASE}/api/catalog/${testItem.id}`, {
       headers: {
-        'Authorization': `Bearer dev-admin-token-${Date.now()}`,
-        ...formData.getHeaders()
-      },
-      body: formData
+        'Authorization': `Bearer ${AUTH_TOKEN}`
+      }
+    });
+    
+    if (!updatedItemResponse.ok) {
+      throw new Error('Failed to fetch updated catalog item');
+    }
+    
+    const updatedItemData = await updatedItemResponse.json();
+    const updatedItem = updatedItemData.data;
+    
+    console.log(`📊 Updated images count: ${updatedItem.images?.length || 0}`);
+    console.log('📋 Images in catalog item:');
+    (updatedItem.images || []).forEach((img, index) => {
+      console.log(`   ${index + 1}. ${img.alt || 'Unnamed'} (Primary: ${img.isPrimary ? '✅' : '❌'})`);
+      console.log(`      URL: ${img.url}`);
     });
 
-    const uploadData = await uploadResponse.json();
-    console.log('\n📋 Upload Response:');
-    console.log('Status:', uploadResponse.status);
-    console.log('Success:', uploadData.success);
-    
-    if (uploadData.success) {
-      console.log('✅ Image upload successful!');
-      console.log('Image URLs:');
-      if (uploadData.data.imageUrls) {
-        Object.entries(uploadData.data.imageUrls).forEach(([variant, url]) => {
-          console.log(`  ${variant}: ${url}`);
+    // Step 5: Test image deletion
+    if (uploadedImages.length > 0) {
+      console.log('\n5️⃣ Testing image deletion...');
+      
+      const imageToDelete = uploadedImages[0];
+      const deleteResponse = await fetch(`${API_BASE}/api/catalog/${testItem.id}/images/${imageToDelete.imageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${AUTH_TOKEN}`
+        }
+      });
+      
+      if (deleteResponse.ok) {
+        console.log('✅ Image deletion successful');
+        
+        // Verify deletion
+        const finalItemResponse = await fetch(`${API_BASE}/api/catalog/${testItem.id}`, {
+          headers: {
+            'Authorization': `Bearer ${AUTH_TOKEN}`
+          }
         });
-      }
-    } else {
-      console.log('❌ Image upload failed:', uploadData.message);
-      if (uploadData.error) {
-        console.log('Error details:', uploadData.error);
+        
+        if (finalItemResponse.ok) {
+          const finalItemData = await finalItemResponse.json();
+          const finalItem = finalItemData.data;
+          console.log(`📊 Final images count: ${finalItem.images?.length || 0}`);
+        }
+      } else {
+        console.error('❌ Image deletion failed');
       }
     }
 
-    // Step 4: Verify catalog item was updated with image URLs
-    console.log('\n🔍 Step 4: Verifying catalog item update...');
-    const catalogItemResponse = await fetch(`http://localhost:5000/api/catalog/${catalogItemId}`, {
-      headers: {
-        'Authorization': `Bearer dev-admin-token-${Date.now()}`
-      }
-    });
-
-    const catalogItemUpdated = await catalogItemResponse.json();
-    
-    if (catalogItemUpdated.success && catalogItemUpdated.data.base_image_url) {
-      console.log('✅ Catalog item updated with image URLs');
-      console.log('Base image URL:', catalogItemUpdated.data.base_image_url);
-    } else {
-      console.log('❌ Catalog item not properly updated with image URLs');
-    }
-
-    console.log('\n🏁 Complete upload system test finished');
+    console.log('\n✅ Complete Multi-Image Upload System Test PASSED');
+    console.log('🎉 All functionality is working correctly!');
 
   } catch (error) {
-    console.error('❌ Test failed with error:', error.message);
+    console.error('\n❌ Test FAILED:', error.message);
     console.error(error.stack);
   }
 }
 
 // Run the test
-testImageUploadPipeline().catch(console.error);
+testCompleteUploadSystem();

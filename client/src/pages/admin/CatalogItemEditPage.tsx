@@ -206,7 +206,7 @@ export default function CatalogItemEditPage() {
         
         const result = await response.json();
         uploadedImages.push({
-          id: `img_${Date.now()}_${i}`,
+          id: result.data.imageId || `img_${Date.now()}_${i}`,
           url: result.data.url,
           alt: file.name,
           isPrimary: imagesFieldArray.fields.length === 0 && i === 0

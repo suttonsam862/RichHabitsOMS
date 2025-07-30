@@ -88,10 +88,10 @@ router.post('/:itemId/images', requireAuth, requireRole(['admin', 'catalog_manag
 
     console.log('✅ Image uploaded successfully:', urlData.publicUrl);
 
-    // Update catalog item with new image (append to existing images)
+    // Update catalog item with new image (append to existing images in imageVariants.gallery)
     const { data: catalogItem, error: fetchError } = await supabase
       .from('catalog_items')
-      .select('images')
+      .select('image_variants')
       .eq('id', itemId)
       .single();
 
@@ -100,8 +100,9 @@ router.post('/:itemId/images', requireAuth, requireRole(['admin', 'catalog_manag
       // Continue anyway, just return the URL
     }
 
-    // Prepare updated images array
-    const existingImages = Array.isArray(catalogItem?.images) ? catalogItem.images : [];
+    // Prepare updated images array using imageVariants.gallery as storage
+    const existingVariants = catalogItem?.image_variants || {};
+    const existingImages = Array.isArray(existingVariants.gallery) ? existingVariants.gallery : [];
     const newImage = {
       id: uuidv4(),
       url: urlData.publicUrl,
@@ -111,12 +112,16 @@ router.post('/:itemId/images', requireAuth, requireRole(['admin', 'catalog_manag
     };
 
     const updatedImages = [...existingImages, newImage];
+    const updatedVariants = {
+      ...existingVariants,
+      gallery: updatedImages
+    };
 
-    // Update catalog item
+    // Update catalog item using imageVariants field
     const { error: updateError } = await supabase
       .from('catalog_items')
       .update({ 
-        images: updatedImages,
+        image_variants: updatedVariants,
         updated_at: new Date().toISOString()
       })
       .eq('id', itemId);
@@ -159,7 +164,7 @@ router.delete('/:itemId/images/:imageId', requireAuth, requireRole(['admin', 'ca
     // Get current catalog item
     const { data: catalogItem, error: fetchError } = await supabase
       .from('catalog_items')
-      .select('images')
+      .select('image_variants')
       .eq('id', itemId)
       .single();
 
@@ -170,7 +175,8 @@ router.delete('/:itemId/images/:imageId', requireAuth, requireRole(['admin', 'ca
       });
     }
 
-    const existingImages = Array.isArray(catalogItem.images) ? catalogItem.images : [];
+    const existingVariants = catalogItem.image_variants || {};
+    const existingImages = Array.isArray(existingVariants.gallery) ? existingVariants.gallery : [];
     const imageToDelete = existingImages.find(img => img.id === imageId);
 
     if (!imageToDelete) {
@@ -202,11 +208,17 @@ router.delete('/:itemId/images/:imageId', requireAuth, requireRole(['admin', 'ca
       updatedImages[0].isPrimary = true;
     }
 
-    // Update catalog item
+    // Update imageVariants with the new gallery
+    const updatedVariants = {
+      ...existingVariants,
+      gallery: updatedImages
+    };
+
+    // Update catalog item using imageVariants field
     const { error: updateError } = await supabase
       .from('catalog_items')
       .update({ 
-        images: updatedImages,
+        image_variants: updatedVariants,
         updated_at: new Date().toISOString()
       })
       .eq('id', itemId);

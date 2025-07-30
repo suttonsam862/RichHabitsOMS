@@ -163,6 +163,7 @@ async function getAllCatalogItems(req: Request, res: Response) {
       status: item.status || 'active',
       imageUrl: item.image_url || item.base_image_url || null,
       imageVariants: item.image_variants || {},
+      images: item.image_variants?.gallery || Array.isArray(item.images) ? item.images : [], // Use imageVariants.gallery for multi-images
       description: item.description || '',
       buildInstructions: item.build_instructions || '',
       fabric: item.fabric || '',
@@ -326,6 +327,7 @@ async function getCatalogItem(req: Request, res: Response) {
       fabric: item.fabric || '',
       sizes: Array.isArray(item.sizes) ? item.sizes : (item.sizes ? JSON.parse(item.sizes) : []),
       colors: Array.isArray(item.colors) ? item.colors : (item.colors ? JSON.parse(item.colors) : []),
+      images: item.image_variants?.gallery || Array.isArray(item.images) ? item.images : [], // Use imageVariants.gallery as fallback for multi-images
       customizationOptions: Array.isArray(item.customization_options) ? item.customization_options : (item.customization_options ? JSON.parse(item.customization_options) : []),
       minQuantity: parseInt(item.min_quantity) || 1,
       maxQuantity: parseInt(item.max_quantity) || 1000,

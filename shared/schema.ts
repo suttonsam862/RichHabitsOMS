@@ -135,6 +135,7 @@ export const catalogItems = pgTable('catalog_items', {
   baseImageUrl: text('base_image_url'), // Base product image (legacy)
   imageUrl: text('image_url'), // Main image URL (for backward compatibility)
   imageVariants: jsonb('image_variants').default({}), // Multiple image sizes: { thumbnail, medium, large, original, gallery: [] }
+  images: jsonb('images').default([]), // Array of image objects: [{ id, url, alt, isPrimary, uploadedAt }]
   measurementChartUrl: text('measurement_chart_url'), // Measurement chart/template image
   hasMeasurements: boolean('has_measurements').default(false),
   measurementInstructions: text('measurement_instructions'), // Text instructions for measurements
