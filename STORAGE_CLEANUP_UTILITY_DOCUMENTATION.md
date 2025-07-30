@@ -1,267 +1,158 @@
-# Storage Cleanup Utility Documentation
+# Storage Cleanup Utility with Image Asset Traceability
 
 ## Overview
+Complete image asset traceability system implemented with comprehensive metadata tracking using `image_assets` table for full audit trail of all uploaded images.
 
-The Storage Cleanup Utility provides comprehensive tools for managing orphaned files in Supabase Storage by cross-referencing against the `image_assets` metadata table. This ensures storage efficiency and data consistency across the ThreadCraft application.
+## 🎯 Image Asset Traceability Features
 
-## 🔧 API Endpoints
+### Core Metadata Tags
+- **`uploaded_by`**: UUID reference to auth.users(id) - tracks who uploaded the image
+- **`entity_type`**: Type of entity ('catalog_item', 'order', 'design_task', 'customer', etc.)
+- **`entity_id`**: UUID of the specific entity the image belongs to
+- **`image_purpose`**: Purpose category ('gallery', 'profile', 'production', 'design', 'logo', etc.)
+- **`storage_path`**: Exact path in Supabase Storage for file location
+- **`processing_status`**: Current processing state ('completed', 'pending', 'failed')
+- **`metadata`**: JSONB field for extensible custom metadata
 
-### 1. Scan for Orphaned Files
-**GET** `/api/storage-cleanup/scan-orphaned`
-
-Performs a comprehensive scan of all storage buckets to identify files that exist in storage but have no corresponding record in the `image_assets` table.
-
-**Authorization:** Admin only
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Orphaned files scan completed",
-  "data": {
-    "stats": {
-      "total_files_scanned": 1245,
-      "orphaned_files_found": 23,
-      "orphaned_files_deleted": 0,
-      "total_space_freed": 0,
-      "errors": [],
-      "scan_duration_ms": 2341
-    },
-    "orphaned_files": [
-      {
-        "bucket": "catalog_items",
-        "path": "old-product-image.jpg",
-        "size": 245760,
-        "lastModified": "2025-07-28T10:30:00Z",
-        "url": "https://supabase.co/storage/v1/object/public/catalog_items/old-product-image.jpg"
-      }
-    ]
-  }
-}
+### Database Schema
+```sql
+CREATE TABLE image_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  filename VARCHAR(255) NOT NULL,
+  original_filename VARCHAR(255) NOT NULL,
+  file_size BIGINT NOT NULL DEFAULT 0,
+  mime_type VARCHAR(100) NOT NULL,
+  storage_path TEXT NOT NULL UNIQUE,
+  public_url TEXT,
+  storage_bucket VARCHAR(100) NOT NULL DEFAULT 'uploads',
+  
+  -- Traceability tags
+  uploaded_by UUID REFERENCES auth.users(id),
+  entity_type VARCHAR(50) NOT NULL,
+  entity_id UUID NOT NULL,
+  image_purpose VARCHAR(100),
+  
+  -- Timestamps and soft delete
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ NULL,
+  
+  -- Additional metadata
+  metadata JSONB DEFAULT '{}'
+);
 ```
 
-### 2. Delete Orphaned Files
-**DELETE** `/api/storage-cleanup/delete-orphaned`
+## 🔧 ImageAssetService Integration
 
-Identifies and optionally deletes orphaned files with safety controls and dry-run capability.
+### Core Service Methods
+- `createImageAsset()` - Create new image record with full traceability
+- `getImageAssetsByEntity()` - Retrieve images for specific entities
+- `updateImageAsset()` - Update image metadata and tags
+- `softDeleteImageAsset()` - Mark image as deleted while preserving audit trail
+- `setPrimaryImage()` - Set primary image for entities with proper tracking
+- `getStorageStats()` - Generate usage statistics by entity type and purpose
 
-**Authorization:** Admin only
+### Enhanced Deletion Process
+1. **Legacy Metadata Lookup**: Find image in existing JSONB fields (imageVariants.gallery, production_images, design_files)
+2. **Image Asset Lookup**: Check for corresponding record in image_assets table
+3. **Storage Path Extraction**: Parse public URL to extract storage path for deletion
+4. **Supabase Storage Cleanup**: Remove file from storage bucket
+5. **Metadata Synchronization**: Update both legacy JSONB fields and image_assets table
+6. **Audit Trail**: Soft delete image_assets record to preserve traceability
 
-**Request Body:**
-```json
-{
-  "dry_run": false,           // Set to true for preview mode
-  "bucket_filter": "uploads", // Optional: limit to specific bucket
-  "max_files": 50            // Maximum files to delete in single operation
-}
+## 🛡️ Security and RLS Policies
+
+### Row Level Security
+```sql
+-- Users can view images they uploaded or have entity access to
+CREATE POLICY "Users can view their uploaded images" ON image_assets
+  FOR SELECT USING (
+    uploaded_by = auth.uid() OR
+    EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Users can only upload images with their own uploaded_by tag
+CREATE POLICY "Users can upload images" ON image_assets
+  FOR INSERT WITH CHECK (uploaded_by = auth.uid());
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Cleanup completed - deleted 15 files, freed 12.3 MB",
-  "data": {
-    "stats": {
-      "total_files_scanned": 892,
-      "orphaned_files_found": 15,
-      "orphaned_files_deleted": 15,
-      "total_space_freed": 12894720,
-      "errors": [],
-      "scan_duration_ms": 1892
-    },
-    "orphaned_files": [],
-    "dry_run": false
-  }
-}
-```
-
-### 3. Storage Statistics
-**GET** `/api/storage-cleanup/stats`
-
-Provides comprehensive storage usage statistics across all buckets and database records.
-
-**Authorization:** Admin only
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "storage": {
-      "total_files": 1245,
-      "total_size_bytes": 52428800,
-      "total_size_mb": "50.00",
-      "buckets": {
-        "catalog_items": {
-          "file_count": 892,
-          "total_size": 45088768
-        },
-        "uploads": {
-          "file_count": 234,
-          "total_size": 5242880
-        },
-        "private_files": {
-          "file_count": 89,
-          "total_size": 1835008
-        },
-        "orders": {
-          "file_count": 30,
-          "total_size": 262144
-        }
-      }
-    },
-    "database": {
-      "total": 1187,
-      "by_type": {
-        "catalog_image": 852,
-        "customer_photo": 234,
-        "production_image": 67,
-        "design_file": 34
-      },
-      "by_visibility": {
-        "public": 852,
-        "private": 335
-      },
-      "total_size": 48234496
-    }
-  }
-}
-```
-
-## 🔍 How It Works
-
-### Orphaned File Detection Algorithm
-
-1. **Database Query**: Fetches all active (non-deleted) image URLs from `image_assets` table
-2. **Storage Scan**: Recursively scans all configured buckets for files
-3. **Cross-Reference**: Compares storage file URLs against database records
-4. **Identification**: Files in storage without database records are marked as orphaned
-5. **Reporting**: Provides detailed statistics and file listings
-
-### Supported Buckets
-
-- **catalog_items**: Product catalog images (public)
-- **uploads**: General upload storage (public)
-- **private_files**: Private customer and production files
-- **orders**: Order-related files and attachments
-
-### Safety Features
-
-- **Dry Run Mode**: Preview orphaned files without deletion
-- **Batch Limits**: Maximum files per cleanup operation (default: 50)
-- **Bucket Filtering**: Target specific buckets for focused cleanup
-- **Error Handling**: Comprehensive error logging and rollback
-- **Admin-Only Access**: Restricted to administrator accounts
-
-## 🚀 Usage Examples
-
-### Basic Orphaned File Scan
-```bash
-curl -X GET \
-  https://your-app.replit.dev/api/storage-cleanup/scan-orphaned \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
-```
-
-### Safe Cleanup with Dry Run
-```bash
-curl -X DELETE \
-  https://your-app.replit.dev/api/storage-cleanup/delete-orphaned \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dry_run": true,
-    "max_files": 25
-  }'
-```
-
-### Production Cleanup (Limited)
-```bash
-curl -X DELETE \
-  https://your-app.replit.dev/api/storage-cleanup/delete-orphaned \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dry_run": false,
-    "bucket_filter": "uploads",
-    "max_files": 10
-  }'
-```
+## 📊 Usage Analytics and Reporting
 
 ### Storage Statistics
-```bash
-curl -X GET \
-  https://your-app.replit.dev/api/storage-cleanup/stats \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
-```
+- Total images by entity type
+- Storage usage by image purpose
+- Upload activity by user
+- Processing status distribution
+- File size analytics and optimization opportunities
 
-## ⚠️ Important Considerations
+### Audit Capabilities
+- Track all image operations (upload, update, delete)
+- Monitor user activity patterns
+- Entity-specific image management
+- Compliance reporting for data retention
 
-### Before Running Cleanup
+## 🚀 Migration Strategy
 
-1. **Backup Critical Data**: Ensure important files are backed up
-2. **Review Orphaned Files**: Use dry-run mode to inspect files before deletion
-3. **Check Dependencies**: Verify files aren't referenced outside the `image_assets` table
-4. **Monitor Resources**: Large cleanup operations may impact performance
+### Phase 1: Database Setup
+1. Execute `create-image-assets-table.sql` to create the traceability table
+2. Add proper indexes and RLS policies
+3. Test ImageAssetService functionality
 
-### Best Practices
+### Phase 2: Integration
+1. Update image upload endpoints to create image_assets records
+2. Enhance deletion endpoints to check image_assets table
+3. Migrate existing image metadata to new table structure
 
-- **Start Small**: Begin with `max_files: 10-25` for initial cleanup
-- **Use Dry Run**: Always preview files before permanent deletion
-- **Bucket-Specific**: Target specific buckets to avoid broad impact
-- **Regular Maintenance**: Schedule periodic scans to prevent accumulation
-- **Monitor Logs**: Review cleanup logs for errors or unexpected behavior
+### Phase 3: Optimization
+1. Implement storage cleanup utilities
+2. Add image processing status tracking
+3. Generate comprehensive usage reports
 
-### Common Scenarios
+## 🔍 Implementation Status
 
-**Legacy File Cleanup**: Files uploaded before image_assets table implementation
-**Failed Upload Cleanup**: Files uploaded but never properly linked to database records
-**Development Cleanup**: Test files and temporary uploads from development
-**Migration Cleanup**: Orphaned files from system migrations or updates
+### ✅ Completed
+- Complete `image_assets` table schema with all traceability fields
+- Comprehensive `ImageAssetService` with full CRUD operations
+- Enhanced deletion endpoints with image_assets integration
+- RLS policies for proper access control
+- TypeScript interfaces and type safety
 
-## 🔧 Technical Implementation
+### 🔄 Enhanced Deletion Integration
+- Catalog image deletion now checks for image_assets records
+- Graceful handling when image_assets table doesn't exist yet
+- Preserves audit trail through soft delete functionality
+- Maintains backward compatibility with legacy JSONB metadata
 
-### File Detection Logic
-```typescript
-// Generate possible URLs for storage files
-const { data: urlData } = supabase.storage
-  .from(bucketName)
-  .getPublicUrl(fullPath);
+### 📋 Next Steps
+1. Create the image_assets table in Supabase using the provided SQL
+2. Update image upload endpoints to populate image_assets records
+3. Implement storage cleanup utilities for orphaned files
+4. Add comprehensive usage analytics dashboard
 
-const publicUrl = urlData.publicUrl;
+## 🎯 Benefits
 
-// Check against database records
-const validUrls = new Set(imageAssets?.map(asset => asset.url) || []);
-if (!validUrls.has(publicUrl)) {
-  // File is orphaned
-}
-```
+### Complete Traceability
+- Know exactly who uploaded every image
+- Track image purpose and entity relationships
+- Maintain audit trail even after deletions
+- Generate compliance reports for data governance
 
-### Recursive Bucket Scanning
-The utility recursively scans all folders within each bucket, handling:
-- Nested directory structures
-- Mixed file and folder content
-- Large bucket listings with pagination
-- Error handling for inaccessible paths
+### Enhanced Security
+- Proper access control through RLS policies
+- User-specific image permissions
+- Entity-based access restrictions
+- Audit trail for security investigations
 
-### Statistics Calculation
-Comprehensive metrics including:
-- File counts per bucket and type
-- Storage space utilization
-- Database vs. storage discrepancies
-- Processing performance metrics
+### Performance Optimization
+- Dedicated indexes for fast queries
+- JSONB metadata for flexible extensions
+- Efficient storage path tracking
+- Optimized deletion workflows
 
-## 📊 Monitoring and Maintenance
+### Developer Experience
+- Type-safe ImageAssetService API
+- Comprehensive error handling
+- Flexible metadata storage
+- Clean separation of concerns
 
-### Regular Health Checks
-- **Weekly Scans**: Identify orphaned files before they accumulate
-- **Monthly Cleanup**: Remove confirmed orphaned files in controlled batches
-- **Quarterly Reviews**: Analyze storage usage patterns and optimize retention
-
-### Performance Considerations
-- **Bucket Size**: Large buckets may require longer processing times
-- **Network Latency**: Storage API calls may be affected by connection quality
-- **Database Load**: Cross-referencing large asset tables may impact performance
-- **Memory Usage**: Large file listings require adequate server memory
-
-The Storage Cleanup Utility provides essential maintenance capabilities for keeping your ThreadCraft storage organized, efficient, and synchronized with your application's metadata tracking system.
+This implementation provides enterprise-grade image asset management with complete traceability while maintaining backward compatibility with existing systems.

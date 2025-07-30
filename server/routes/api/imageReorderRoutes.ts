@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../../middleware/adminAuth';
 import { supabase } from '../../db';
+import { ImageAssetService } from '../../../lib/imageAssetService';
 
 const router = Router();
 
