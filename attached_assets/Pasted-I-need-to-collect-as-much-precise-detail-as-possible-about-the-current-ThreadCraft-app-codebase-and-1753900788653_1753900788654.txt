@@ -1,0 +1,53 @@
+I need to collect as much precise detail as possible about the current ThreadCraft app, codebase and database so we can root-cause the remaining failures. I’ll ask you a series of focused questions—please answer each in turn (feel free to paste code snippets, logs, schema excerpts, etc.). Let’s start:
+
+---
+
+### 1. Frontend Rendering & Routing
+
+1.1. When you load the app in the browser, what URL are you at?
+1.2. Paste the contents of your top-level `App.tsx` (or equivalent entry) and your main router setup.
+1.3. Which component is actually mounting under `<Router>` (e.g. `<RequireAuth>`, `<AppWithSpinner>`, `<Routes>…</Routes>`)?
+
+---
+
+### 2. Authentication Flow
+
+2.1. Show me the full `AuthContext.tsx` (or `useAuth` hook) code that runs on startup.
+2.2. What does your `/api/auth/me` endpoint look like, and how do you handle 401 responses?
+2.3. Are you using React Query, native `fetch`, or another client for auth calls?
+
+---
+
+### 3. API Connectivity
+
+3.1. In your browser network tab, which API requests are failing (method + path + status)?
+3.2. Show the code for your global fetch interceptor (or HTTP client wrapper) and any circuit-breaker logic.
+3.3. How do you delay or gate requests until your `/api/health` returns OK?
+
+---
+
+### 4. Database Schema & Access
+
+4.1. Provide the `CREATE TABLE` definition for your `customers` table and `catalog_items` table.
+4.2. Show any RLS policies you’ve applied for `customers` or `orders`.
+4.3. Are you seeing SQL errors in your server logs (e.g. “column not found”)? Paste examples.
+
+---
+
+### 5. Error Boundaries & Logging
+
+5.1. What does your `FeatureErrorBoundary.tsx` (or global error boundary) component look like?
+5.2. Are you logging errors to the console, to a file, or a service? Show your error-handler middleware.
+5.3. In the browser console, copy one full stack trace from the most recent runtime error.
+
+---
+
+### 6. Form & Data Binding
+
+6.1. Pick one broken form (e.g. AddCustomerForm). Paste the JSX and submission handler.
+6.2. What does the corresponding backend route for that form look like?
+6.3. What request payload is actually sent, and what response/error comes back?
+
+---
+
+Answer **1.1–1.3** first, then I’ll follow up with deeper questions in each area until we’ve mapped every broken link between UI, API, and DB.
