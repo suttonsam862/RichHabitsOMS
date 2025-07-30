@@ -94,11 +94,11 @@ export default function CatalogItemEditPage() {
     }
   }, [catalogItem, form]);
 
-  // Update mutation
+  // Update mutation (supports both PATCH and PUT)
   const updateMutation = useMutation({
     mutationFn: async (data: CatalogItemFormData) => {
       const response = await fetch(`/api/catalog/${itemId}`, {
-        method: 'PATCH',
+        method: 'PATCH', // Using PATCH for partial updates (PUT also available)
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
