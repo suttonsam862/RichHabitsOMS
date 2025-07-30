@@ -115,7 +115,7 @@ router.get('/users', requireAuth, requireRole(['admin']), async (req: Request, r
       });
     }
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
         users: users || [],
@@ -280,16 +280,16 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
 
     console.log('User created successfully:', userProfile.id);
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: sendInvitation 
-        ? `User created successfully. ${emailSent ? 'Invitation email sent.' : 'Email sending failed - please send login details manually.'}`
-        : 'User created successfully',
-      data: { 
+      data: {
         user: userProfile,
-        temporaryPassword: isTemporaryPassword && !sendInvitation ? finalPassword : undefined
-      },
-      emailSent
+        temporaryPassword: isTemporaryPassword && !sendInvitation ? finalPassword : undefined,
+        emailSent,
+        message: sendInvitation 
+          ? `User created successfully. ${emailSent ? 'Invitation email sent.' : 'Email sending failed - please send login details manually.'}`
+          : 'User created successfully'
+      }
     });
 
   } catch (error) {
@@ -380,10 +380,12 @@ router.patch('/users/:id', requireAuth, requireRole(['admin']), async (req: Requ
       success: true
     });
 
-    res.json({
+    res.status(200).json({
       success: true,
-      message: 'User updated successfully',
-      data: { user: updatedUser }
+      data: {
+        user: updatedUser,
+        message: 'User updated successfully'
+      }
     });
 
   } catch (error) {
@@ -461,9 +463,11 @@ router.delete('/users/:id', requireAuth, requireRole(['admin']), async (req: Req
       success: true
     });
 
-    res.json({
+    res.status(200).json({
       success: true,
-      message: hardDelete === 'true' ? 'User deleted successfully' : 'User deactivated successfully'
+      data: {
+        message: hardDelete === 'true' ? 'User deleted successfully' : 'User deactivated successfully'
+      }
     });
 
   } catch (error) {
@@ -589,10 +593,12 @@ async function getManufacturers(req: Request, res: Response) {
 
       console.log(`Found ${mockManufacturers.length} manufacturers (development mock data)`);
 
-      return res.json({
+      return res.status(200).json({
         success: true,
-        data: mockManufacturers,
-        count: mockManufacturers.length
+        data: {
+          manufacturers: mockManufacturers,
+          count: mockManufacturers.length
+        }
       });
     }
 
@@ -624,10 +630,12 @@ async function getManufacturers(req: Request, res: Response) {
 
     console.log(`Found ${manufacturers.length} manufacturers`);
 
-    res.json({
+    res.status(200).json({
       success: true,
-      data: manufacturers,
-      count: manufacturers.length
+      data: {
+        manufacturers: manufacturers,
+        count: manufacturers.length
+      }
     });
 
   } catch (error) {
@@ -684,10 +692,12 @@ async function getUsersByRole(req: Request, res: Response) {
 
     console.log(`Found ${filteredUsers.length} users with role ${role}`);
 
-    res.json({
+    res.status(200).json({
       success: true,
-      data: filteredUsers,
-      count: filteredUsers.length
+      data: {
+        users: filteredUsers,
+        count: filteredUsers.length
+      }
     });
 
   } catch (error) {

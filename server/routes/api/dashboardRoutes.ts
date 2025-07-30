@@ -70,7 +70,7 @@ async function getDashboardStats(req: Request, res: Response) {
 
     console.log('Dashboard stats:', stats);
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: stats
     });
@@ -122,7 +122,7 @@ async function getCustomerDashboard(req: Request, res: Response) {
       totalSpent: orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
     };
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: customerData
     });

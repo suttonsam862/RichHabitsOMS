@@ -282,10 +282,12 @@ async function createOrder(req: Request, res: Response) {
     console.log('✅ Order items created successfully:', createdItems.length);
 
     // Return simplified structure with order and items
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      order: createdOrder,
-      items: createdItems
+      data: {
+        order: createdOrder,
+        items: createdItems
+      }
     });
 
   } catch (error: any) {
@@ -620,7 +622,14 @@ async function patchOrder(req: Request, res: Response) {
       response.items = updatedItems;
     }
 
-    res.status(200).json(response);
+    res.status(200).json({
+      success: true,
+      data: {
+        order: updatedOrder,
+        items: updatedItems,
+        message: 'Order updated successfully'
+      }
+    });
 
   } catch (error: any) {
     console.error('💥 PATCH Order error:', error);

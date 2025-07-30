@@ -85,10 +85,12 @@ async function createCatalogItem(req: Request, res: Response) {
 
     console.log('Catalog item created successfully:', insertedItem);
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: 'Catalog item created successfully',
-      item: insertedItem
+      data: {
+        item: insertedItem,
+        message: 'Catalog item created successfully'
+      }
     });
 
   } catch (err: any) {
@@ -181,10 +183,12 @@ async function getAllCatalogItems(req: Request, res: Response) {
       updated_at: item.updated_at
     }));
 
-    res.json({
+    res.status(200).json({
       success: true,
-      data: processedItems,
-      count: processedItems.length
+      data: {
+        items: processedItems,
+        count: processedItems.length
+      }
     });
 
   } catch (error: any) {
@@ -222,10 +226,12 @@ async function updateCatalogItem(req: Request, res: Response) {
       });
     }
 
-    res.json({
+    res.status(200).json({
       success: true,
-      message: 'Catalog item updated successfully',
-      data: result.data
+      data: {
+        item: result.data,
+        message: 'Catalog item updated successfully'
+      }
     });
 
   } catch (error: any) {
@@ -278,9 +284,11 @@ async function deleteCatalogItem(req: Request, res: Response) {
 
     console.log('Catalog item deleted successfully:', id);
 
-    res.json({
+    res.status(200).json({
       success: true,
-      message: 'Catalog item deleted successfully'
+      data: {
+        message: 'Catalog item deleted successfully'
+      }
     });
 
   } catch (error: any) {
@@ -340,7 +348,7 @@ async function getCatalogItem(req: Request, res: Response) {
       updated_at: item.updated_at
     };
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: processedItem
     });

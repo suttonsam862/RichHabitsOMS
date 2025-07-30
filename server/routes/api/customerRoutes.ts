@@ -123,16 +123,18 @@ export async function sendUserInvitation(req: Request, res: Response) {
     console.log(`✅ Invitation created for ${email}`);
     console.log(`📧 Invitation URL: ${inviteUrl}`);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      message: `Invitation sent successfully to ${email}`,
-      invitation: {
-        email,
-        firstName,
-        lastName,
-        role,
-        inviteUrl: emailSent ? undefined : inviteUrl,
-        expiresAt: expiresAt.toISOString()
+      data: {
+        message: `Invitation sent successfully to ${email}`,
+        invitation: {
+          email,
+          firstName,
+          lastName,
+          role,
+          inviteUrl: emailSent ? undefined : inviteUrl,
+          expiresAt: expiresAt.toISOString()
+        }
       }
     });
 
@@ -197,7 +199,7 @@ export async function verifyInvitation(req: Request, res: Response) {
 
     return res.status(200).json({
       success: true,
-      invitation: {
+      data: {
         email: invitation.email,
         firstName: invitation.first_name,
         lastName: invitation.last_name,
@@ -308,17 +310,17 @@ export async function createCustomer(req: Request, res: Response) {
     console.log('Customer profile created successfully:', insertedProfile);
 
     // Success response with customer data
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: 'Customer created successfully',
-      customer: {
+      data: {
         id: insertedProfile.id,
         firstName: insertedProfile.first_name,
         lastName: insertedProfile.last_name,
         email: insertedProfile.email,
         company: insertedProfile.company,
         phone: insertedProfile.phone,
-        created_at: insertedProfile.created_at
+        created_at: insertedProfile.created_at,
+        message: 'Customer created successfully'
       }
     });
 
@@ -414,8 +416,10 @@ async function getAllCustomers(req: Request, res: Response) {
 
     res.status(200).json({
       success: true,
-      data: customers,
-      count: customers.length
+      data: {
+        customers: customers,
+        count: customers.length
+      }
     });
 
   } catch (error) {

@@ -37,9 +37,11 @@ const DEFAULT_SPORTS = [
  */
 async function getCategories(req: Request, res: Response) {
   try {
-    res.json({
+    res.status(200).json({
       success: true,
-      categories: DEFAULT_CATEGORIES
+      data: {
+        categories: DEFAULT_CATEGORIES
+      }
     });
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -55,9 +57,11 @@ async function getCategories(req: Request, res: Response) {
  */
 async function getSports(req: Request, res: Response) {
   try {
-    res.json({
+    res.status(200).json({
       success: true,
-      sports: DEFAULT_SPORTS
+      data: {
+        sports: DEFAULT_SPORTS
+      }
     });
   } catch (error) {
     console.error('Error fetching sports:', error);

@@ -38,10 +38,12 @@ router.get('/orders/enhanced', requireAuth, async (req, res) => {
 
     console.log(`✅ Fetched ${orders.length} enhanced orders`);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      orders: orders || [],
-      count: orders?.length || 0
+      data: {
+        orders: orders || [],
+        count: orders?.length || 0
+      }
     });
   } catch (error) {
     console.error('💥 Unexpected error in enhanced orders:', error);
@@ -71,10 +73,12 @@ router.get('/team/workload', requireAuth, async (req, res) => {
 
     console.log(`✅ Fetched workload stats for ${teamStats.length} team members`);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      teamMembers: teamStats || [],
-      count: teamStats?.length || 0
+      data: {
+        teamMembers: teamStats || [],
+        count: teamStats?.length || 0
+      }
     });
   } catch (error) {
     console.error('💥 Unexpected error in team workload:', error);
@@ -200,10 +204,12 @@ router.post('/orders', requireAuth, async (req, res) => {
 
     console.log(`✅ Enhanced order created successfully: ${order.order_number}`);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      message: 'Enhanced order created successfully',
-      order: completeOrder || order
+      data: {
+        order: completeOrder || order,
+        message: 'Enhanced order created successfully'
+      }
     });
   } catch (error) {
     console.error('💥 Unexpected error in enhanced order creation:', error);
@@ -321,10 +327,12 @@ router.patch('/orders/:id', requireAuth, async (req, res) => {
 
     console.log(`✅ Enhanced order updated successfully: ${orderId}`);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      message: 'Order updated successfully',
-      order: completeOrder || updatedOrder
+      data: {
+        order: completeOrder || updatedOrder,
+        message: 'Order updated successfully'
+      }
     });
   } catch (error) {
     console.error('💥 Unexpected error in order update:', error);
@@ -358,9 +366,11 @@ router.delete('/orders/:id', requireAuth, async (req, res) => {
 
     console.log(`✅ Order deleted successfully: ${orderId}`);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      message: 'Order deleted successfully'
+      data: {
+        message: 'Order deleted successfully'
+      }
     });
   } catch (error) {
     console.error('💥 Unexpected error in order deletion:', error);
