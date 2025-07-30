@@ -274,7 +274,9 @@ export async function createCustomer(req: Request, res: Response) {
   const {
     id,
     first_name,
-    last_name,
+    firstName,
+    last_name, 
+    lastName,
     email,
     company,
     phone,
@@ -286,11 +288,15 @@ export async function createCustomer(req: Request, res: Response) {
     sendInvite = true
   } = req.body;
 
-  // Validate required fields
-  if (!first_name || !last_name || !email) {
+  // Support both camelCase and snake_case formats
+  const finalFirstName = first_name || firstName;
+  const finalLastName = last_name || lastName;
+
+  // Validate required fields (accept both formats)
+  if (!finalFirstName || !finalLastName || !email) {
     return res.status(400).json({
       success: false,
-      message: 'Missing required fields: first_name, last_name, and email are required'
+      message: 'Missing required fields: firstName/first_name, lastName/last_name, and email are required'
     });
   }
 
@@ -343,8 +349,8 @@ export async function createCustomer(req: Request, res: Response) {
         .from('customers')
         .insert({
           id: customerId,
-          first_name,
-          last_name,
+          first_name: finalFirstName,
+          last_name: finalLastName,
           email,
           company: company || '',
           phone: phone || '',

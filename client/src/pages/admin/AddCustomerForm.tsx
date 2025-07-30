@@ -26,7 +26,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -51,7 +51,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
       ...prev,
       [name]: value
     }));
-    
+
     // Clear field error when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => {
@@ -60,7 +60,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
         return updated;
       });
     }
-    
+
     // Clear general error when user makes changes
     if (generalError) {
       setGeneralError('');
@@ -69,70 +69,84 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    
+
     if (!formData.first_name.trim()) {
       errors.first_name = 'First name is required';
     }
-    
+
     if (!formData.last_name.trim()) {
       errors.last_name = 'Last name is required';
     }
-    
+
     if (!formData.email.trim()) {
       errors.email = 'Email address is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = 'Please enter a valid email address';
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Clear any previous errors
     setGeneralError('');
     setFormErrors({});
-    
+
     // Validate form
     if (!validateForm()) {
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       console.log('Submitting customer data:', formData);
-      
+
       // Get auth token from localStorage
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('Authentication required. Please log in again.');
       }
 
-      const response = await axios.post('/api/customers', formData, {
+      // Transform camelCase to snake_case for backend compatibility
+      const transformedData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        company: formData.company || '',
+        phone: formData.phone || '',
+        address: formData.address || '',
+        city: formData.city || '',
+        state: formData.state || '',
+        zip: formData.zip || '',
+        country: formData.country || '',
+      };
+
+      const response = await axios.post('/api/customers', transformedData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('Customer created successfully:', response.data);
-      
+
       // Success handling
       queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
       queryClient.invalidateQueries({ queryKey: ["admin", "customers"] });
-      
+
       toast({
         title: "Success!",
         description: "Customer was added successfully",
       });
-      
+
       resetForm();
       if (onSuccess) onSuccess();
       if (onClose) onClose();
-      
+
       // Redirect to customer detail/edit page and scroll to top
       handlePostCreationRedirect(
         response.data,
@@ -141,16 +155,16 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
         '/admin/customers',
         '/admin/customers'
       );
-      
+
     } catch (error: any) {
       console.error('Error adding customer:', error);
-      
+
       // Handle different types of errors
       if (error.response) {
         // Server responded with error status
         const statusCode = error.response.status;
         const errorMessage = error.response.data?.message || error.response.data?.error || 'Unknown server error';
-        
+
         if (statusCode === 400) {
           setGeneralError(`Validation Error: ${errorMessage}`);
         } else if (statusCode === 401) {
@@ -169,7 +183,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
         // Other error
         setGeneralError(error.message || 'An unexpected error occurred. Please try again.');
       }
-      
+
       toast({
         title: "Failed to add customer",
         description: error?.response?.data?.message || error.message || "There was an error creating the customer.",
@@ -217,7 +231,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 <p className="text-sm text-destructive font-medium">{generalError}</p>
               </div>
             )}
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="first_name">First Name *</Label>
@@ -250,7 +264,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 )}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email Address *</Label>
               <Input
@@ -267,7 +281,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 <p className="text-sm text-destructive">{formErrors.email}</p>
               )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="company">Company</Label>
@@ -290,7 +304,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="address">Address</Label>
               <Input
@@ -301,7 +315,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 placeholder="123 Main St"
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">City</Label>
@@ -324,7 +338,7 @@ export default function AddCustomerForm({ isOpen = false, onClose, onSuccess }: 
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="zip">Zip/Postal Code</Label>

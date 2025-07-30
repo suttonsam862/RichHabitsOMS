@@ -66,13 +66,13 @@ export default function CustomerEditPage() {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch customer details');
       }
-      
+
       const data = await response.json();
-      
+
       // Convert snake_case response to camelCase for frontend
       return {
         id: data.id,
@@ -149,7 +149,7 @@ export default function CustomerEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.isSubmitDisabled || updateMutation.isPending,
+    when: validation.isSubmitDisabled || updateCustomerMutation.isPending,
     message: "Your form is being saved. Please wait for the process to complete before leaving."
   });
 
@@ -175,16 +175,16 @@ export default function CustomerEditPage() {
       }
 
       let fileToUse = file;
-      
+
       // Compress image if needed
       if (shouldCompress(file, 1024)) {
         try {
           const settings = getCompressionSettings(file.size / 1024);
           const result = await compressImage(file, settings);
           fileToUse = result.file;
-          
+
           console.log(`Customer photo compressed: ${formatFileSize(result.originalSize)} → ${formatFileSize(result.compressedSize)} (${result.compressionRatio}% reduction)`);
-          
+
           toast({
             title: "Image optimized",
             description: `File size reduced by ${result.compressionRatio}% for faster upload`,
@@ -195,7 +195,7 @@ export default function CustomerEditPage() {
       }
 
       setSelectedFile(fileToUse);
-      
+
       // Create preview URL using createObjectURL for better memory management
       const objectUrl = URL.createObjectURL(fileToUse);
       setPreviewUrl(objectUrl);
@@ -279,7 +279,7 @@ export default function CustomerEditPage() {
 
   const handlePhotoUpload = async () => {
     if (!selectedFile) return;
-    
+
     setIsUploading(true);
     uploadPhotoMutation.mutate(selectedFile);
   };
@@ -291,7 +291,7 @@ export default function CustomerEditPage() {
     mutationFn: async (data: CustomerFormData) => {
       // Clear any previous errors
       setSubmitError(null);
-      
+
       // Ensure we have a valid customer ID
       if (!customerId) {
         throw new Error('Customer ID is required');
@@ -327,7 +327,7 @@ export default function CustomerEditPage() {
         // Handle different types of failures
         if (!response.ok) {
           let errorMessage = `Failed to update customer (${response.status})`;
-          
+
           try {
             const errorData = await response.json();
             if (errorData.message) {
@@ -349,19 +349,19 @@ export default function CustomerEditPage() {
               errorMessage = 'Server error. Please try again later.';
             }
           }
-          
+
           const error = new Error(errorMessage);
           error.name = `HTTPError${response.status}`;
           throw error;
         }
 
         const result = await response.json();
-        
+
         // Validate the response structure
         if (!result.success || !result.updatedCustomer) {
           throw new Error('Invalid response format from server');
         }
-        
+
         return result;
       } catch (networkError: any) {
         // Handle network errors (no internet, server down, etc.)
@@ -373,22 +373,22 @@ export default function CustomerEditPage() {
     },
     onSuccess: (data) => {
       console.log('Customer updated successfully:', data);
-      
+
       // Clear any previous errors
       setSubmitError(null);
-      
+
       // Only show success toast if API response indicates success
       if (data && data.success === true) {
         toast({
           title: "Customer updated",
           description: "Customer information has been successfully updated.",
         });
-        
+
         // Optimistically update React Query cache with fresh data
         if (data.updatedCustomer) {
           // Update the specific customer cache
           queryClient.setQueryData(['/api/customers', customerId], data.updatedCustomer);
-          
+
           // Update the customer in the customers list cache
           queryClient.setQueryData(['/api/customers'], (oldData: any) => {
             if (oldData?.data) {
@@ -399,7 +399,7 @@ export default function CustomerEditPage() {
             }
             return oldData;
           });
-          
+
           // Update form values to reflect server response (in case server modified data)
           form.reset({
             firstName: data.updatedCustomer.firstName || '',
@@ -415,7 +415,7 @@ export default function CustomerEditPage() {
             status: data.updatedCustomer.status || 'active'
           });
         }
-        
+
         // Update form with new values from response
         const updatedCustomer = result.data || result;
         if (updatedCustomer) {
@@ -430,7 +430,7 @@ export default function CustomerEditPage() {
             zipCode: updatedCustomer.zipCode || updatedCustomer.zip_code || '',
             status: updatedCustomer.status || 'active'
           });
-          
+
           // Update initial data for validation
           setInitialData({
             firstName: updatedCustomer.firstName || updatedCustomer.first_name || '',
@@ -444,14 +444,14 @@ export default function CustomerEditPage() {
             status: updatedCustomer.status || 'active'
           });
         }
-        
+
         // Also invalidate queries to ensure fresh data on next fetch
         queryClient.invalidateQueries({ queryKey: ['/api/customers', customerId] });
         queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
-        
+
         // Navigate back to customer detail page
         navigate(`/admin/customers/${customerId}`);
-        
+
         // Re-enable submit after 1 second
         setTimeout(() => setIsSubmitDisabled(false), 1000);
       } else {
@@ -467,23 +467,23 @@ export default function CustomerEditPage() {
     },
     onError: (error: Error) => {
       console.error('Customer update failed:', error);
-      
+
       // Set the inline error message
       setSubmitError(error.message);
-      
+
       // Also show toast for immediate feedback
       toast({
         title: "Update failed",
         description: error.message || "Failed to update customer information.",
         variant: "destructive",
       });
-      
+
       // If it's an auth error, redirect to login
       if (error.name === 'HTTPError401') {
         localStorage.removeItem('authToken');
         navigate('/login');
       }
-      
+
       // Re-enable submit after 1 second on error
       setTimeout(() => setIsSubmitDisabled(false), 1000);
     }
@@ -500,7 +500,7 @@ export default function CustomerEditPage() {
         });
         return;
       }
-      
+
       toast({
         title: "Cannot submit form",
         description: validation.errors.length > 0 
@@ -512,9 +512,23 @@ export default function CustomerEditPage() {
       });
       return;
     }
-    
+
     // Disable submit button immediately
     setIsSubmitDisabled(true);
+
+    // Transform to snake_case for backend compatibility
+    const updateData = {
+      first_name: data.firstName,
+      last_name: data.lastName,
+      email: data.email,
+      company: data.company,
+      phone: data.phone,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      zip: data.zip,
+      country: data.country
+    };
     updateCustomerMutation.mutate(data);
   };
 
@@ -527,7 +541,7 @@ export default function CustomerEditPage() {
             Back to Customers
           </Button>
         </div>
-        
+
         {/* Header Skeleton */}
         <div className="mb-6">
           <Skeleton className="h-8 w-64 mb-2" />
@@ -694,7 +708,7 @@ export default function CustomerEditPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="lastName"
@@ -753,7 +767,7 @@ export default function CustomerEditPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="company"
@@ -772,7 +786,7 @@ export default function CustomerEditPage() {
               {/* Photo Upload Section */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Customer Photo</h3>
-                
+
                 {/* Current Photo Display */}
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
@@ -801,7 +815,7 @@ export default function CustomerEditPage() {
                         alt="Preview"
                         className="mx-auto w-32 h-32 rounded-full object-cover border border-gray-200"
                       />
-                      
+
                       {/* Upload Error with Retry */}
                       {uploadPhotoMutation.isError && (
                         <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
@@ -838,7 +852,7 @@ export default function CustomerEditPage() {
                           )}
                         </div>
                       )}
-                      
+
                       {/* Upload Buttons */}
                       {!uploadPhotoMutation.isError && (
                         <div className="flex justify-center space-x-2">
@@ -919,7 +933,7 @@ export default function CustomerEditPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="state"
@@ -933,7 +947,7 @@ export default function CustomerEditPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="zip"
@@ -963,7 +977,7 @@ export default function CustomerEditPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="status"
