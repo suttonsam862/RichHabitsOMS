@@ -2,9 +2,8 @@
  * Manufacturing management routes - Phase 6 of Database Synchronization Checklist
  */
 import { Request, Response, Router } from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth.js';
-import { supabase } from '../../db.js';
+import { supabase } from '../../db';
 import crypto from 'crypto';
 
 const router = Router();
