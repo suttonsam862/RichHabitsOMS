@@ -14,6 +14,7 @@ import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
+import { useFieldValidation } from "@/hooks/useFieldValidation";
 import { getFieldStyles } from "@/lib/utils";
 
 const customerSchema = z.object({
@@ -146,6 +147,12 @@ export default function CustomerEditPage() {
   useFormNavigationBlock({
     when: validation.isSubmitDisabled || updateMutation.isPending,
     message: "Your form is being saved. Please wait for the process to complete before leaving."
+  });
+
+  // Real-time field validation
+  const fieldValidation = useFieldValidation({
+    form,
+    realtimeFields: ['email', 'phone'] // Validate these fields in real-time after blur
   });
 
   // File handling functions
@@ -694,7 +701,8 @@ export default function CustomerEditPage() {
                         type="email" 
                         placeholder="email@example.com" 
                         {...field} 
-                        className={getFieldStyles('email', validation.changedFields, !!form.formState.errors.email)}
+                        onBlur={() => fieldValidation.handleEmailBlur('email')}
+                        className={`${getFieldStyles('email', validation.changedFields, !!form.formState.errors.email)} ${fieldValidation.getFieldClasses('email')}`}
                       />
                     </FormControl>
                     <FormMessage />
@@ -710,7 +718,12 @@ export default function CustomerEditPage() {
                     <FormItem>
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
-                        <Input placeholder="Phone number" {...field} />
+                        <Input 
+                          placeholder="Phone number" 
+                          {...field} 
+                          onBlur={() => fieldValidation.handleFieldBlur('phone')}
+                          className={fieldValidation.getFieldClasses('phone')}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
