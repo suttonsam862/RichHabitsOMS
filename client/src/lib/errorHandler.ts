@@ -36,20 +36,27 @@ class ErrorHandler {
     window.addEventListener('unhandledrejection', (event) => {
       const reason = event.reason;
 
-      // Suppress empty rejections completely
+      // Suppress empty rejections completely - enhanced detection
       if (!reason || 
-          (typeof reason === 'object' && Object.keys(reason).length === 0) ||
+          reason === null ||
+          reason === undefined ||
           reason === '' ||
-          String(reason).trim() === '') {
+          String(reason).trim() === '' ||
+          (typeof reason === 'object' && Object.keys(reason).length === 0) ||
+          (typeof reason === 'object' && JSON.stringify(reason) === '{}') ||
+          (Array.isArray(reason) && reason.length === 0)) {
         event.preventDefault();
         return;
       }
 
       // Suppress auth-related rejections to prevent loops
-      const reasonString = String(reason?.message || reason).toLowerCase();
+      const reasonString = String(reason?.message || reason || '').toLowerCase();
       if (reasonString.includes('not authenticated') ||
+          reasonString.includes('unauthorized') ||
           reasonString.includes('401') ||
-          reasonString.includes('auth') && reasonString.includes('failed')) {
+          reasonString.includes('403') ||
+          (reasonString.includes('auth') && reasonString.includes('failed')) ||
+          reasonString.includes('authentication required')) {
         event.preventDefault();
         return;
       }
