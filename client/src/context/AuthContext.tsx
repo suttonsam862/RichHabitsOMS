@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 interface User {
@@ -32,8 +32,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const authCheckInProgress = useRef(false);
+  const lastAuthCheck = useRef<number>(0);
 
   const checkAuth = useCallback(async () => {
+    const now = Date.now();
+    
+    // Prevent multiple simultaneous auth checks
+    if (authCheckInProgress.current) {
+      console.log('Auth check already in progress, skipping');
+      return;
+    }
+
+    // Rate limit auth checks - minimum 2 seconds between requests
+    if (now - lastAuthCheck.current < 2000) {
+      console.log('Auth check rate limited, skipping');
+      return;
+    }
+
+    authCheckInProgress.current = true;
+    lastAuthCheck.current = now;
+
     try {
       setLoading(true);
       const response = await fetch('/api/auth/me', {
@@ -59,11 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.warn('Auth check error:', error);
+      console.error('Auth check error:', error);
       setUser(null);
+      setError(error instanceof Error ? error.message : 'Authentication failed');
     } finally {
       setLoading(false);
       setInitialized(true);
+      authCheckInProgress.current = false;
     }
   }, []);
 

@@ -69,13 +69,21 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
 
     // Check session first
     if (req.session?.user && req.session?.token) {
-      // Verify session hasn't expired
-      const sessionExpiry = req.session.expires ? new Date(req.session.expires) : null;
-      if (!sessionExpiry || sessionExpiry > new Date()) {
-        user = req.session.user;
-        token = req.session.token;
-      } else {
-        // Session expired, clear it
+      try {
+        // Verify session hasn't expired
+        const sessionExpiry = req.session.expires ? new Date(req.session.expires) : null;
+        if (!sessionExpiry || sessionExpiry > new Date()) {
+          user = req.session.user;
+          token = req.session.token;
+        } else {
+          // Session expired, clear it
+          console.log('Session expired, clearing session');
+          req.session.destroy((err) => {
+            if (err) console.warn('Session destruction error:', err);
+          });
+        }
+      } catch (error) {
+        console.warn('Session validation error:', error);
         req.session.destroy((err) => {
           if (err) console.warn('Session destruction error:', err);
         });
