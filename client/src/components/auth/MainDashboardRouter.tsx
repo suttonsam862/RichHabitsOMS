@@ -9,7 +9,13 @@ import { useAuth } from "@/hooks/use-auth";
 export const MainDashboardRouter = () => {
   const { user, role, loading } = useAuth();
 
-  // Decide which dashboard to show based on user role with improved loading UX
+  useEffect(() => {
+    if (user && role) {
+      console.log("MainDashboardRouter: User authenticated with role:", role);
+    }
+  }, [user, role]);
+
+  // Show loading state while authentication is being checked
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
@@ -26,20 +32,21 @@ export const MainDashboardRouter = () => {
     );
   }
 
+  // If no user is found, redirect to login
+  if (!user) {
+    console.log("MainDashboardRouter: No user found, redirecting to login");
+    return <Navigate to="/login" replace />;
+  }
+
   // If we have a role, redirect to the appropriate dashboard
-  if (role && user) {
-    console.log("Redirecting to dashboard for role:", role);
+  if (role) {
+    console.log("MainDashboardRouter: Redirecting to dashboard for role:", role);
     return <Navigate to={`/dashboard/${role}`} replace />;
   }
 
   // If no role is found but user is authenticated, default to customer dashboard
-  if (user && !loading) {
-    console.warn("User authenticated but no role found, defaulting to customer dashboard");
-    return <Navigate to="/dashboard/customer" replace />;
-  }
-
-  // Fallback to login if no user found
-  return <Navigate to="/login" replace />;
+  console.warn("MainDashboardRouter: User authenticated but no role found, defaulting to customer dashboard");
+  return <Navigate to="/dashboard/customer" replace />;
 };
 
 export default MainDashboardRouter;
