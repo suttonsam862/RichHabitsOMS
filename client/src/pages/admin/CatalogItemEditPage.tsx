@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -24,7 +26,7 @@ const catalogItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
   base_price: z.number().min(0, "Base price must be positive"),
   sport: z.string().optional(),
-  fabric: z.string().optional(),
+  fabric_id: z.string().optional(),
   status: z.enum(['active', 'inactive']),
   sizes: z.array(z.object({
     name: z.string().min(1, "Size name is required"),
@@ -68,6 +70,23 @@ export default function CatalogItemEditPage() {
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isSubmitDisabled, setIsSubmitDisabled] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  // Fetch fabric options
+  const { data: fabricsData, isLoading: fabricsLoading, error: fabricsError } = useQuery({
+    queryKey: ['fabric-options'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get('/api/fabric-options/fabrics', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const fabrics = fabricsData?.data?.fabrics || [];
 
   // Undoable delete with confirmation modal for catalog items
   const {
@@ -126,7 +145,7 @@ export default function CatalogItemEditPage() {
         name: data.name || '',
         base_price: parseFloat(data.basePrice || data.base_price) || 0,
         sport: data.sport || '',
-        fabric: data.fabric || '',
+        fabric_id: data.fabric_id || '',
         status: data.status || 'active',
         category: data.category || '',
         sku: data.sku || '',
@@ -160,7 +179,7 @@ export default function CatalogItemEditPage() {
       name: '',
       base_price: 0,
       sport: '',
-      fabric: '',
+      fabric_id: '',
       status: 'active',
       sizes: [],
       colors: [],
@@ -194,7 +213,7 @@ export default function CatalogItemEditPage() {
         name: catalogItem.name,
         base_price: catalogItem.base_price,
         sport: catalogItem.sport || '',
-        fabric: catalogItem.fabric || '',
+        fabric_id: catalogItem.fabric_id || '',
         status: catalogItem.status,
         sizes: catalogItem.sizes || [],
         colors: catalogItem.colors || [],
@@ -226,7 +245,7 @@ export default function CatalogItemEditPage() {
       name: data.name,
       basePrice: data.base_price, // Convert base_price to basePrice for backend
       sport: data.sport,
-      fabric: data.fabric,
+      fabric_id: data.fabric_id, // Send fabric_id for proper database relationship
       status: data.status,
       sizes: data.sizes,
       colors: data.colors,
@@ -427,7 +446,7 @@ export default function CatalogItemEditPage() {
           name: updatedItem.name || '',
           base_price: parseFloat(updatedItem.basePrice || updatedItem.base_price) || 0,
           sport: updatedItem.sport || '',
-          fabric: updatedItem.fabric || '',
+          fabric_id: updatedItem.fabric_id || '',
           status: updatedItem.status || 'active',
           sizes: Array.isArray(updatedItem.sizes) ? updatedItem.sizes : [],
           colors: Array.isArray(updatedItem.colors) ? updatedItem.colors : [],
@@ -699,13 +718,38 @@ export default function CatalogItemEditPage() {
 
                 <FormField
                   control={form.control}
-                  name="fabric"
+                  name="fabric_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fabric</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Polyester, Cotton" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={fabricsLoading ? "Loading fabrics..." : "Select a fabric"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {fabricsLoading ? (
+                            <SelectItem value="" disabled>Loading fabrics...</SelectItem>
+                          ) : fabricsError ? (
+                            <SelectItem value="" disabled>Error loading fabrics</SelectItem>
+                          ) : (
+                            <>
+                              <SelectItem value="">None selected</SelectItem>
+                              {fabrics.map((fabric: any) => (
+                                <SelectItem key={fabric.id} value={fabric.id}>
+                                  {fabric.name}
+                                  {fabric.description && (
+                                    <span className="text-sm text-muted-foreground ml-2">
+                                      - {fabric.description}
+                                    </span>
+                                  )}
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

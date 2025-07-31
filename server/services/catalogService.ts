@@ -44,7 +44,7 @@ export class CatalogItemProcessor {
     const processedData: any = {};
 
     // String fields (direct mapping) - only fields confirmed to exist in database
-    const stringFields = ['name', 'category', 'sport', 'sku', 'status'];
+    const stringFields = ['name', 'category', 'sport', 'sku', 'status', 'fabric_id'];
     stringFields.forEach(field => {
       if (inputData[field] !== undefined) {
         processedData[field] = String(inputData[field] || '').trim();
