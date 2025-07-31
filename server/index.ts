@@ -264,6 +264,7 @@ import authRoutes from './routes/api/authRoutes';
 // import imageVariantsRoutes from './routes/api/imageVariantsRoutes'; // Removed - using Supabase Storage only
 import enhancedOrderRoutes from './routes/api/enhancedOrderRoutes';
 import messageRoutes from './routes/api/messageRoutes';
+import salesManagementRoutes from './routes/api/salesManagementRoutes';
 
 import healthRoutes from './routes/health';
 import manufacturingRoutes, { 
@@ -370,6 +371,7 @@ import manufacturingRoutes, {
     app.use('/api/user-management', authenticateRequest);
     app.use('/api/users', authenticateRequest);
     app.use('/api/messages', authenticateRequest);
+    app.use('/api/sales-management', authenticateRequest);
     app.use('/api/storage-cleanup', authenticateRequest);
     app.use('/api/upload-test', authenticateRequest);
 
@@ -394,6 +396,7 @@ app.use('/api/security', securityRoutes);
     app.use('/api/user-roles', userRolesRoutes);
 app.use('/api/users', userManagementRoutes);
     app.use('/api/messages', messageRoutes);
+    app.use('/api/sales-management', salesManagementRoutes);
 
     app.use('/api/manufacturing', manufacturingRoutes);
     app.use('/api/storage-cleanup', storageCleanupRoutes);
