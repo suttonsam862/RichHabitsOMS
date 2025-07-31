@@ -1,22 +1,22 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/context/AuthContext";
 import { AuthForm } from "@/components/auth/AuthForm";
 
 /**
  * Rich Habits login page with blackout glassmorphism theme
  */
 export default function Login() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   
   // Redirect if already authenticated - simplified logic
   useEffect(() => {
-    if (isAuthenticated && !loading && user) {
+    if (user && !loading) {
       console.log("Already authenticated as:", user.role);
       navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated, loading, navigate, user]);
+  }, [user, loading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -47,7 +47,7 @@ export default function Login() {
         
         {/* Authentication form with glassmorphism */}
         <div className="rich-card p-8">
-          <AuthForm type="login" />
+          <AuthForm />
         </div>
         
         {/* Rich Habits footer branding */}
