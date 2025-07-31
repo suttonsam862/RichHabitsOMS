@@ -26,10 +26,16 @@ export async function checkServerHealth(): Promise<boolean> {
   }
 }
 
-// Simple error handler - no fetch override (handled by errorHandler.ts)
+// Simple error handler - fetch override now handled by errorHandler.ts
 export function handleFetchError(error: any, url: string) {
-  // Minimal logging for debugging only
-  if (!url.includes('/api/auth/me') && !url.includes('/api/health')) {
-    console.debug('🚨 FETCH ERROR:', { url, error: error.message });
+  // Network errors are now handled globally, just pass through
+  if (error?.isNetworkError) {
+    return; // Let global handler manage this
+  }
+  
+  // Only log non-network errors for debugging
+  if (!url.includes('/api/auth/me') && !url.includes('/api/health') && 
+      !error?.message?.includes('fetch')) {
+    console.debug('🚨 API ERROR:', { url, error: error.message });
   }
 }

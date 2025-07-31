@@ -6,24 +6,30 @@ import './index.css'
 // NUCLEAR ERROR SUPPRESSION - Import first to catch everything
 import './lib/errorHandler.ts'
 
-// Nuclear suppression for immediate effect
+// Targeted error suppression for development
 if (import.meta.env.DEV) {
-  // Override console.error in development to reduce noise
+  // Override console.error to reduce noise but allow important errors
   const originalError = console.error;
   console.error = (...args: any[]) => {
     const message = String(args[0] || '').toLowerCase();
-    // Only log truly critical errors in development
+    
+    // Suppress known development noise
+    if (message.includes('websocket') || 
+        message.includes('hmr') ||
+        message.includes('vite') ||
+        message.includes('failed to fetch') ||
+        message.includes('chunk')) {
+      return; // Suppress these
+    }
+    
+    // Log important errors
     if (message.includes('syntax') || 
         message.includes('reference') || 
-        (message.includes('type') && !message.includes('fetch'))) {
+        message.includes('type') ||
+        message.includes('component')) {
       originalError(...args);
     }
   };
-
-  // Suppress unhandled promise rejections immediately
-  window.addEventListener('unhandledrejection', (e) => {
-    e.preventDefault();
-  });
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
