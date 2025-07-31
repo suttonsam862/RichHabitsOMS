@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -20,24 +21,20 @@ export default function AuthForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim() || isSubmitting) {
       return;
     }
 
     setIsSubmitting(true);
     clearError();
 
-    try {
-      const success = await login(email.trim(), password);
-      if (success) {
-        // Navigation will happen automatically via MainDashboardRouter
-        console.log('Login successful, redirecting...');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-    } finally {
-      setIsSubmitting(false);
+    const success = await login(email.trim(), password);
+    
+    setIsSubmitting(false);
+    
+    // If login successful, navigation will happen via redirect above
+    if (success) {
+      console.log('Login successful');
     }
   };
 
@@ -71,7 +68,6 @@ export default function AuthForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 disabled={isFormDisabled}
-                className="rich-input"
                 required
               />
             </div>
@@ -85,7 +81,6 @@ export default function AuthForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 disabled={isFormDisabled}
-                className="rich-input"
                 required
               />
             </div>
@@ -95,14 +90,7 @@ export default function AuthForm() {
               className="w-full"
               disabled={isFormDisabled || !email.trim() || !password.trim()}
             >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
+              {isSubmitting ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
         </CardContent>

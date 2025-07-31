@@ -1,3 +1,8 @@
-// This file has been removed as it was causing auth interference
-// Auth errors are now handled directly in the AuthContext
-export {};
+
+// This file is intentionally empty to prevent fetch interception issues
+// The auth system now works without complex interceptors
+
+export const initializeFetchInterceptor = () => {
+  // No-op - interceptor disabled to prevent auth issues
+  console.log('✅ Fetch interceptor disabled for stability');
+};
