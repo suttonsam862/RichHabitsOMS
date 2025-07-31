@@ -173,7 +173,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     // Validate JWT format before attempting Supabase validation
     const tokenSegments = token.split('.');
     if (tokenSegments.length !== 3) {
-      console.log('⚠️  Malformed JWT token: invalid number of segments');
+      console.log('🚨 401 REJECTION - Malformed JWT token');
+      console.log(`   Path: ${req.method} ${req.path}`);
+      console.log(`   Reason: Invalid JWT format - token has ${tokenSegments.length} segments instead of 3`);
+      console.log(`   Token preview: ${token.substring(0, 20)}...`);
       
       return res.status(401).json({
         success: false,
@@ -187,7 +190,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       const { data: { user }, error } = await supabase.auth.getUser(token);
 
       if (error || !user) {
-        console.log('Token validation failed:', error?.message || 'No user found');
+        console.log('🚨 401 REJECTION - Supabase token validation failed');
+        console.log(`   Path: ${req.method} ${req.path}`);
+        console.log(`   Reason: ${error?.message || 'No user found for token'}`);
+        console.log(`   Token preview: ${token.substring(0, 20)}...`);
 
         return res.status(401).json({ 
           success: false,
@@ -218,7 +224,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     next();
   } catch (jwtError: any) {
-    console.log('⚠️  JWT token validation error:', jwtError?.message);
+    console.log('🚨 401 REJECTION - JWT token validation error');
+    console.log(`   Path: ${req.method} ${req.path}`);
+    console.log(`   Reason: JWT parsing/validation failed - ${jwtError?.message || 'Unknown JWT error'}`);
+    console.log(`   Token preview: ${token?.substring(0, 20)}...`);
 
     return res.status(401).json({
       success: false,
