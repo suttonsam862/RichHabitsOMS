@@ -1,17 +1,45 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
 
-// Only import the essential components for simple auth flow
+// Auth components
 import Login from '@/pages/Login';
-import Dashboard from '@/pages/Dashboard';
+import Register from '@/pages/Register';
+import SetupPassword from '@/pages/SetupPassword';
 
-// Simple placeholder components for missing pages
-const Register = () => <div>Register page coming soon</div>;
-const SetupPassword = () => <div>Setup password page</div>;
-const PaymentSuccess = () => <div>Payment successful!</div>;
-const PaymentCancel = () => <div>Payment cancelled</div>;
-const NotFound = () => <div>Page not found</div>;
+// Layout components
+import { AppLayout } from '@/components/layout/AppLayout';
+import MainDashboardRouter from '@/components/auth/MainDashboardRouter';
+
+// Dashboard components
+import AdminDashboard from '@/pages/AdminDashboard';
+import SalespersonDashboard from '@/pages/SalespersonDashboard';
+import DesignerDashboard from '@/pages/DesignerDashboard';
+import ManufacturerDashboard from '@/pages/ManufacturerDashboard';
+import CustomerDashboard from '@/pages/CustomerDashboard';
+
+// Admin pages
+import CustomerListPage from '@/pages/admin/CustomerListPage';
+import CustomerEditPage from '@/pages/admin/CustomerEditPage';
+import CatalogPage from '@/pages/admin/CatalogPage';
+import CatalogItemEditPage from '@/pages/admin/CatalogItemEditPage';
+import UserPermissionsPage from '@/pages/admin/UserPermissionsPage';
+import SettingsPage from '@/pages/admin/SettingsPage';
+
+// Order pages
+import Orders from '@/pages/Orders';
+import OrderEditPage from '@/pages/OrderEditPage';
+import OrderCreatePage from '@/pages/orders/OrderCreatePage';
+import EnhancedOrderManagement from '@/pages/orders/EnhancedOrderManagement';
+
+// Other pages
+import DesignTasks from '@/pages/DesignTasks';
+import Production from '@/pages/Production';
+import Messages from '@/pages/Messages';
+import Payments from '@/pages/Payments';
+import PaymentSuccess from '@/pages/PaymentSuccess';
+import PaymentCancel from '@/pages/PaymentCancel';
+import { NotFound } from '@/pages/not-found';
 
 // Component to require authentication
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -38,26 +66,62 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export function AppRouter() {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/setup-password" element={<SetupPassword />} />
-      <Route path="/payment/success" element={<PaymentSuccess />} />
-      <Route path="/payment/cancel" element={<PaymentCancel />} />
-      
-      {/* Simple dashboard route */}
-      <Route path="/dashboard" element={
-        <RequireAuth>
-          <Dashboard />
-        </RequireAuth>
-      } />
-      
-      {/* Redirect root to dashboard */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    <BrowserRouter>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/setup-password" element={<SetupPassword />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
 
-      {/* 404 fallback */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* Protected routes */}
+        <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
+          {/* Dashboard routing */}
+          <Route path="dashboard" element={<MainDashboardRouter />} />
+          <Route path="dashboard/admin" element={<AdminDashboard />} />
+          <Route path="dashboard/salesperson" element={<SalespersonDashboard />} />
+          <Route path="dashboard/designer" element={<DesignerDashboard />} />
+          <Route path="dashboard/manufacturer" element={<ManufacturerDashboard />} />
+          <Route path="dashboard/customer" element={<CustomerDashboard />} />
+
+          {/* Admin routes */}
+          <Route path="admin/customers" element={<CustomerListPage />} />
+          <Route path="admin/customers/:id/edit" element={<CustomerEditPage />} />
+          <Route path="admin/catalog" element={<CatalogPage />} />
+          <Route path="admin/catalog/:id/edit" element={<CatalogItemEditPage />} />
+          <Route path="admin/user-permissions" element={<UserPermissionsPage />} />
+          <Route path="admin/settings" element={<SettingsPage />} />
+
+          {/* Customer management routes */}
+          <Route path="customers" element={<CustomerListPage />} />
+          <Route path="customers/:id/edit" element={<CustomerEditPage />} />
+
+          {/* Catalog management routes */}
+          <Route path="catalog" element={<CatalogPage />} />
+          <Route path="catalog/:id/edit" element={<CatalogItemEditPage />} />
+
+          {/* Order routes */}
+          <Route path="orders" element={<Orders />} />
+          <Route path="orders/create" element={<OrderCreatePage />} />
+          <Route path="orders/edit/:id" element={<OrderEditPage />} />
+          <Route path="orders/enhanced" element={<EnhancedOrderManagement />} />
+
+          {/* Design and production routes */}
+          <Route path="design-tasks" element={<DesignTasks />} />
+          <Route path="production" element={<Production />} />
+
+          {/* Other routes */}
+          <Route path="messages" element={<Messages />} />
+          <Route path="payments" element={<Payments />} />
+
+          {/* Default redirect */}
+          <Route index element={<Navigate to="/dashboard" replace />} />
+        </Route>
+
+        {/* 404 fallback */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

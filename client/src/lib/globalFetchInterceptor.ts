@@ -6,13 +6,3 @@ export const initializeFetchInterceptor = () => {
   // No-op - interceptor disabled to prevent auth issues
   console.log('✅ Fetch interceptor disabled for stability');
 };
-
-export const checkServerHealth = async (): Promise<boolean> => {
-  try {
-    const response = await fetch('/api/health');
-    return response.ok;
-  } catch (error) {
-    console.error('Server health check failed:', error);
-    return false;
-  }
-};
