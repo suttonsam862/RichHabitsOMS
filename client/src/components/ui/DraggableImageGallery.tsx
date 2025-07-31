@@ -266,10 +266,14 @@ export function DraggableImageGallery({
         description: "Image gallery order has been saved successfully.",
       });
       
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ 
-        queryKey: [getQueryKey(entityType), entityId] 
-      });
+      // Invalidate relevant queries with specific entity ID pattern
+      if (entityType === 'catalog_item') {
+        queryClient.invalidateQueries(['catalog', entityId]);
+      } else {
+        queryClient.invalidateQueries({ 
+          queryKey: [getQueryKey(entityType), entityId] 
+        });
+      }
       
       if (onReorder) {
         onReorder(images);

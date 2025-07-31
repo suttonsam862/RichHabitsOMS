@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +60,7 @@ export default function CatalogItemEditPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Local state management
   const [catalogItem, setCatalogItem] = React.useState<CatalogItem | null>(null);
@@ -311,6 +312,9 @@ export default function CatalogItemEditPage() {
         imagesFieldArray.append(image);
       });
       
+      // Invalidate catalog queries after image upload
+      queryClient.invalidateQueries(['catalog', itemId]);
+      
       toast({
         title: "Images uploaded",
         description: `Successfully uploaded ${uploadedImages.length} image(s)`,
@@ -385,6 +389,9 @@ export default function CatalogItemEditPage() {
         setPrimaryImage(0);
       }
       
+      // Invalidate catalog queries after image deletion
+      queryClient.invalidateQueries(['catalog', itemId]);
+      
       toast({
         title: "Image deleted",
         description: "Image has been successfully removed from storage and catalog",
@@ -434,6 +441,9 @@ export default function CatalogItemEditPage() {
       
       // Clear any previous errors
       setSubmitError(null);
+      
+      // Invalidate catalog queries to refresh the cache
+      queryClient.invalidateQueries(['catalog', itemId]);
       
       toast({
         title: "Catalog item updated",
