@@ -246,7 +246,7 @@ app.use((req, res, next) => {
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import catalogRoutes from './routes/api/catalogRoutes';
-// import catalogImageRoutes from './routes/api/catalogImageRoutes'; // Removed - using Supabase Storage only
+import catalogImageUpload from './routes/api/catalogImageUpload';
 import imageReorderRoutes from './routes/api/imageReorderRoutes';
 import imageAccessRoutes from './routes/api/imageAccessRoutes';
 import customerRoutes from './routes/api/customerRoutes';
@@ -377,7 +377,7 @@ import manufacturingRoutes, {
     app.use('/api/catalog-options', catalogOptionsRoutes);
     app.use('/api/fabric-options', fabricOptionsRoutes);
     app.use('/api/catalog', catalogRoutes);
-    // app.use('/api/catalog', catalogImageRoutes); // Removed - using Supabase Storage only
+    app.use('/api/catalog', catalogImageUpload);
     app.use('/api', imageReorderRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/dashboard', dashboardRoutes);

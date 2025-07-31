@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Loader2, Plus, X, Upload, Image as ImageIcon, Star, Eye, Trash2, Download, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DraggableImageGallery, { type GalleryImage } from '@/components/ui/DraggableImageGallery';
+import CatalogImageUploader from '@/components/ui/CatalogImageUploader';
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
 import { getFieldStyles } from "@/lib/utils";
@@ -902,51 +903,34 @@ export default function CatalogItemEditPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-medium">Product Images</h3>
-                  <div className="space-x-2">
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="image-upload"
-                      disabled={isUploading}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isUploading}
-                      onClick={() => document.getElementById('image-upload')?.click()}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      {isUploading ? `Uploading... ${uploadProgress.toFixed(0)}%` : 'Upload Images'}
-                    </Button>
-                  </div>
                 </div>
                 
-                {imagesFieldArray.fields.length === 0 && !isUploading && (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-muted-foreground">No images uploaded yet</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Click "Upload Images" to add product photos
-                    </p>
-                  </div>
+                {/* New Image Uploader */}
+                {itemId && (
+                  <CatalogImageUploader
+                    catalogItemId={itemId}
+                    onUploadSuccess={(imageData) => {
+                      // Add new image to form array
+                      const newImage = {
+                        id: imageData.imageId,
+                        url: imageData.url,
+                        alt: `Catalog item image`,
+                        isPrimary: imageData.isPrimary
+                      };
+                      
+                      // Add to form array
+                      imagesFieldArray.append(newImage);
+                      
+                      // Refresh the catalog item data
+                      fetchCatalogItem();
+                    }}
+                    className="mb-4"
+                  />
                 )}
                 
-                {isUploading && (
-                  <div className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-center space-x-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Uploading images... {uploadProgress.toFixed(0)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
+                {imagesFieldArray.fields.length === 0 && !isUploading && (
+                  <div className="text-center text-muted-foreground py-4">
+                    <p>No images uploaded yet. Use the uploader above to add product photos.</p>
                   </div>
                 )}
                 
