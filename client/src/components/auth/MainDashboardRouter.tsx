@@ -27,23 +27,15 @@ export const MainDashboardRouter = () => {
   }
 
   // If we have a role, redirect to the appropriate dashboard
-  if (role) {
+  if (role && user) {
+    console.log("Redirecting to dashboard for role:", role);
     return <Navigate to={`/dashboard/${role}`} replace />;
   }
 
   // If no role is found but user is authenticated, default to customer dashboard
-  if (user) {
+  if (user && !loading) {
     console.warn("User authenticated but no role found, defaulting to customer dashboard");
     return <Navigate to="/dashboard/customer" replace />;
-  }
-
-  // Handle loading state before redirecting
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
-      </div>
-    );
   }
 
   // Fallback to login if no user found

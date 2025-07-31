@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { Mail, Lock, User, Building, Shield, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 
@@ -62,7 +62,7 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const [_, setLocation] = useLocation();
+  const navigate = useNavigate();
   const { login, register } = useAuth();
 
   // Use appropriate schema based on form type
@@ -100,7 +100,7 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
           description: "Please check your email to verify your account.",
         });
 
-        setLocation("/login");
+        navigate("/login");
       } else {
         const loginData = data as LoginFormData;
 
@@ -112,7 +112,8 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
           description: "Welcome back!",
         });
 
-        setLocation("/dashboard");
+        // Navigate to appropriate dashboard based on user role
+        navigate("/dashboard");
       }
     } catch (err: any) {
       setError(err.message);
@@ -318,7 +319,7 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
               <p className="text-gray-400">
                 {type === "login" ? "Don't have an account? " : "Already have an account? "}
                 <button
-                  onClick={() => setLocation(type === "login" ? "/register" : "/login")}
+                  onClick={() => navigate(type === "login" ? "/register" : "/login")}
                   className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
                   disabled={isLoading}
                 >
