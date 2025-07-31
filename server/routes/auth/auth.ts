@@ -24,6 +24,11 @@ declare global {
 const userCache = new Map<string, { user: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Rate limiting for auth checks to prevent spam
+const authCheckLimiter = new Map<string, { count: number; timestamp: number }>();
+const AUTH_CHECK_LIMIT = 10; // Max 10 checks per minute per IP
+const AUTH_CHECK_WINDOW = 60 * 1000; // 1 minute
+
 export const authenticateRequest = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Skip auth middleware for static assets and non-API routes to prevent loops
@@ -32,6 +37,34 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
         req.path.startsWith('/@') ||
         req.path.includes('.') && !req.path.startsWith('/api/')) {
       return next();
+    }
+
+    // Rate limiting for auth checks to prevent spam
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    const now = Date.now();
+    const authLimitKey = `${clientIP}:${req.path}`;
+    
+    if (req.path === '/api/auth/me') {
+      const limitData = authCheckLimiter.get(authLimitKey);
+      
+      if (limitData) {
+        if (now - limitData.timestamp < AUTH_CHECK_WINDOW) {
+          if (limitData.count >= AUTH_CHECK_LIMIT) {
+            // Too many requests, return cached response
+            return res.status(401).json({
+              success: false,
+              message: 'Not authenticated',
+              cached: true
+            });
+          }
+          limitData.count++;
+        } else {
+          // Reset window
+          authCheckLimiter.set(authLimitKey, { count: 1, timestamp: now });
+        }
+      } else {
+        authCheckLimiter.set(authLimitKey, { count: 1, timestamp: now });
+      }
     }
 
     // Only log for API routes to reduce console spam
