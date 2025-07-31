@@ -77,13 +77,21 @@ export default function CatalogItemEditPage() {
   const { data: fabricsData, isLoading: fabricsLoading, error: fabricsError } = useQuery({
     queryKey: ['fabric-options'],
     queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      const response = await axios.get('/api/fabric-options/fabrics', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await axios.get('/api/fabric-options/fabrics', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        return response.data;
+      } catch (error) {
+        console.error('Failed to fetch fabric options:', error);
+        if (axios.isAxiosError(error)) {
+          throw new Error(error.response?.data?.message || 'Failed to load fabric options');
         }
-      });
-      return response.data;
+        throw error;
+      }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -135,7 +143,8 @@ export default function CatalogItemEditPage() {
           navigate('/login');
           return;
         }
-        throw new Error('Failed to fetch catalog item');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch catalog item (${response.status})`);
       }
       
       const result = await response.json();
@@ -264,8 +273,8 @@ export default function CatalogItemEditPage() {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to update catalog item');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to update catalog item (${response.status})`);
     }
 
     return response.json();
@@ -293,7 +302,8 @@ export default function CatalogItemEditPage() {
         });
         
         if (!response.ok) {
-          throw new Error(`Failed to upload ${file.name}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `Failed to upload ${file.name} (${response.status})`);
         }
         
         const result = await response.json();
@@ -376,8 +386,8 @@ export default function CatalogItemEditPage() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete image');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to delete image (${response.status})`);
       }
       
       // Remove from form array

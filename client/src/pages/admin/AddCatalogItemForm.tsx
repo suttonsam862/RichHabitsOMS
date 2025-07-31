@@ -50,13 +50,21 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
   const { data: fabricsData, isLoading: fabricsLoading, error: fabricsError } = useQuery({
     queryKey: ['fabric-options'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/fabric-options/fabrics', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/fabric-options/fabrics', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        return response.data;
+      } catch (error) {
+        console.error('Failed to fetch fabric options:', error);
+        if (axios.isAxiosError(error)) {
+          throw new Error(error.response?.data?.message || 'Failed to load fabric options');
         }
-      });
-      return response.data;
+        throw error;
+      }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
