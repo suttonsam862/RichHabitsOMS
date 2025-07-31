@@ -33,12 +33,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Centralized auth configuration
 const AUTH_CONFIG = {
   CHECK_INTERVAL: 5 * 60 * 1000, // 5 minutes
-  MAX_RETRIES: 3,
   RETRY_DELAY: 1000,
   SESSION_TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours
 } as const;
 
-// Auth state manager class for better state control
+// Auth state manager for better control
 class AuthStateManager {
   private state: AuthState = {
     user: null,
@@ -52,7 +51,6 @@ class AuthStateManager {
   private lastCheck = 0;
 
   constructor() {
-    // Bind methods to preserve context
     this.setState = this.setState.bind(this);
     this.subscribe = this.subscribe.bind(this);
     this.unsubscribe = this.unsubscribe.bind(this);
@@ -132,7 +130,7 @@ class AuthStateManager {
         user: null,
         loading: false,
         initialized: true,
-        error: error instanceof Error ? error.message : 'Network error',
+        error: null, // Don't show network errors to user
       });
     } finally {
       this.checkInProgress = false;

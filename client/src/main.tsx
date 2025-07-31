@@ -1,58 +1,54 @@
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import App from "./App.tsx";
+import { AuthProvider } from "./context/AuthContext";
+import { initializeErrorHandlers } from "./lib/errorHandler";
+import "./index.css";
 
-import App from './App.tsx';
-import { AuthProvider } from './context/AuthContext';
-import { Toaster } from './components/ui/toaster';
-import { initializeErrorHandling } from './lib/errorHandler';
+// Initialize error handling
+initializeErrorHandlers();
 
-import './index.css';
-
-// Initialize error handling immediately
-initializeErrorHandling();
-
-// Configure React Query with auth-aware settings
+// Create QueryClient with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: (failureCount, error) => {
+      retry: (failureCount, error: any) => {
         // Don't retry auth errors
-        if (error && typeof error === 'object' && 'status' in error) {
-          if ((error as any).status === 401) return false;
+        if (error?.status === 401 || error?.status === 403) {
+          return false;
         }
-        return failureCount < 3;
-      },
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-    mutations: {
-      retry: (failureCount, error) => {
-        // Don't retry auth errors
-        if (error && typeof error === 'object' && 'status' in error) {
-          if ((error as any).status === 401) return false;
+        // Don't retry network errors excessively
+        if (error?.message?.includes('fetch') || error?.message?.includes('NetworkError')) {
+          return failureCount < 1;
         }
+        // Retry other errors up to 2 times
         return failureCount < 2;
       },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: false, // Don't retry mutations by default
     },
   },
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
         <AuthProvider>
           <App />
-          <Toaster />
-          {process.env.NODE_ENV === 'development' && (
-            <ReactQueryDevtools initialIsOpen={false} />
-          )}
         </AuthProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
+      </BrowserRouter>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   </React.StrictMode>
 );

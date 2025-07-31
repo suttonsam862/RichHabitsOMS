@@ -1,123 +1,91 @@
-// Centralized error handling that respects authentication flows
-interface ErrorContext {
-  url?: string;
-  method?: string;
-  status?: number;
-  isAuthRelated?: boolean;
+// Global error handler configuration
+interface ErrorConfig {
+  maxErrorsPerMinute: number;
+  resetInterval: number;
+  logNetworkErrors: boolean;
+  logAuthErrors: boolean;
 }
 
-class ErrorHandler {
-  private errorCount = 0;
-  private readonly MAX_ERRORS_PER_MINUTE = 10;
-  private readonly ERROR_RESET_INTERVAL = 60000; // 1 minute
+const ERROR_CONFIG: ErrorConfig = {
+  maxErrorsPerMinute: 20,
+  resetInterval: 60000, // 1 minute
+  logNetworkErrors: false, // Disable network error logging
+  logAuthErrors: false,   // Disable auth error logging
+};
 
-  constructor() {
-    // Reset error count periodically
-    setInterval(() => {
-      this.errorCount = 0;
-    }, this.ERROR_RESET_INTERVAL);
+// Error tracking
+let errorCount = 0;
+let lastResetTime = Date.now();
 
-    this.setupGlobalErrorHandlers();
+// Reset error count periodically
+const resetErrorCount = () => {
+  const now = Date.now();
+  if (now - lastResetTime >= ERROR_CONFIG.resetInterval) {
+    errorCount = 0;
+    lastResetTime = now;
+  }
+};
+
+export function handleGlobalError(error: any, context: string = 'Unknown') {
+  resetErrorCount();
+
+  // Rate limit error handling
+  if (errorCount >= ERROR_CONFIG.maxErrorsPerMinute) {
+    return;
   }
 
-  private setupGlobalErrorHandlers() {
-    // Handle unhandled promise rejections
-    window.addEventListener('unhandledrejection', (event) => {
-      this.handleError(event.reason, { 
-        isAuthRelated: this.isAuthError(event.reason) 
-      });
-    });
-
-    // Handle global errors
-    window.addEventListener('error', (event) => {
-      this.handleError(event.error, { 
-        isAuthRelated: this.isAuthError(event.error) 
-      });
-    });
+  // Skip network and auth-related errors
+  if (
+    !ERROR_CONFIG.logNetworkErrors && 
+    (error?.message?.includes('fetch') || 
+     error?.message?.includes('NetworkError') ||
+     error?.message?.includes('Failed to fetch'))
+  ) {
+    return;
   }
 
-  private isAuthError(error: any): boolean {
-    if (!error) return false;
-
-    const errorString = error.toString?.() || String(error);
-    const authKeywords = [
-      'auth',
-      'login',
-      'token',
-      'unauthorized',
-      '401',
-      'authentication',
-      'session'
-    ];
-
-    return authKeywords.some(keyword => 
-      errorString.toLowerCase().includes(keyword)
-    );
+  if (
+    !ERROR_CONFIG.logAuthErrors &&
+    (context.includes('Auth') || 
+     context.includes('Login') ||
+     error?.message?.includes('401') ||
+     error?.message?.includes('Unauthorized'))
+  ) {
+    return;
   }
 
-  private isNetworkError(error: any): boolean {
-    if (!error) return false;
+  errorCount++;
 
-    const errorString = error.toString?.() || String(error);
-    const networkKeywords = [
-      'fetch',
-      'NetworkError',
-      'Failed to fetch',
-      'ERR_NETWORK',
-      'ERR_INTERNET_DISCONNECTED'
-    ];
-
-    return networkKeywords.some(keyword => 
-      errorString.toLowerCase().includes(keyword)
-    );
-  }
-
-  handleError(error: any, context: ErrorContext = {}) {
-    // Rate limit error handling
-    if (this.errorCount >= this.MAX_ERRORS_PER_MINUTE) {
-      return;
-    }
-    this.errorCount++;
-
-    // Don't log expected auth-related errors during login flows
-    if (context.isAuthRelated || this.isAuthError(error)) {
-      // Only log unexpected auth errors
-      if (context.status && context.status !== 401) {
-        console.warn('Unexpected auth error:', error, context);
-      }
-      return;
-    }
-
-    // Don't log common network errors that are expected
-    if (this.isNetworkError(error)) {
-      return;
-    }
-
-    // Don't log errors from health checks or monitoring
-    if (context.url?.includes('/api/health') || 
-        context.url?.includes('/api/auth/me')) {
-      return;
-    }
-
-    // Only log truly unexpected errors
-    console.error('🚨 Application Error:', error, context);
-  }
-
-  // Method for components to report errors with context
-  reportError(error: any, context: ErrorContext = {}) {
-    this.handleError(error, context);
-  }
+  // Only log truly unexpected errors
+  console.error(`🚨 Global Error [${context}]:`, {
+    message: error?.message || 'Unknown error',
+    stack: error?.stack,
+    timestamp: new Date().toISOString(),
+    context
+  });
 }
 
-// Global error handler instance
-export const globalErrorHandler = new ErrorHandler();
+// Initialize error handlers
+export const initializeErrorHandlers = () => {
+  // Global error handler
+  window.addEventListener('error', (event) => {
+    handleGlobalError(event.error, 'Global Error Event');
+  });
+
+  // Unhandled promise rejection handler
+  window.addEventListener('unhandledrejection', (event) => {
+    // Prevent default console logging of promise rejections
+    event.preventDefault();
+
+    // Only log if it's not a network/auth error
+    if (!event.reason?.message?.includes('fetch') && 
+        !event.reason?.message?.includes('Failed to fetch')) {
+      handleGlobalError(event.reason, 'Unhandled Promise Rejection');
+    }
+  });
+
+  console.log('✅ Global error handler initialized');
+};
 
 // Export for manual error reporting
-export const reportError = (error: any, context: ErrorContext = {}) => {
-  globalErrorHandler.reportError(error, context);
-};
-
-// Initialize error handling
-export const initializeErrorHandling = () => {
-  console.log('✅ Unified error handler initialized');
-};
+export { ERROR_CONFIG };
