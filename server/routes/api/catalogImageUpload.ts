@@ -226,55 +226,96 @@ async function deleteCatalogImage(req: Request, res: Response) {
       });
     }
 
-    // Remove image from array
-    const updatedImages = currentImages.filter((img: any) => img.id !== imageId);
+    console.log(`Deleting image: ${imageToDelete.id} from catalog item: ${itemId}`);
+    console.log(`Image URL: ${imageToDelete.url}`);
 
-    // If deleted image was primary and there are other images, make the first one primary
-    if (imageToDelete.isPrimary && updatedImages.length > 0) {
-      updatedImages[0].isPrimary = true;
+    // Extract storage path from URL for deletion
+    let storagePath = '';
+    try {
+      if (imageToDelete.url) {
+        // Parse URL to extract the storage path
+        const urlParts = imageToDelete.url.split('/storage/v1/object/public/uploads/');
+        if (urlParts.length > 1) {
+          storagePath = urlParts[1];
+        } else {
+          // Fallback: try to extract from metadata if available
+          if (imageToDelete.metadata?.filename) {
+            storagePath = `catalog_items/${itemId}/images/${imageToDelete.metadata.filename}`;
+          }
+        }
+      }
+    } catch (urlParseError) {
+      console.warn('Could not parse image URL for storage deletion:', urlParseError);
     }
 
-    // Update database
-    const { error: updateError } = await supabaseAdmin
+    // Remove image from Supabase Storage
+    let storageDeleteSuccess = false;
+    if (storagePath) {
+      console.log(`Attempting to delete from storage: ${storagePath}`);
+      try {
+        const { error: storageError } = await supabaseAdmin.storage
+          .from('uploads')
+          .remove([storagePath]);
+
+        if (storageError) {
+          console.warn('Storage deletion warning:', storageError.message);
+          // Continue with database removal even if storage deletion fails
+        } else {
+          console.log('Successfully deleted from Supabase Storage');
+          storageDeleteSuccess = true;
+        }
+      } catch (storageError: any) {
+        console.warn('Storage deletion error:', storageError.message);
+        // Continue with database removal even if storage deletion fails
+      }
+    } else {
+      console.warn('Could not determine storage path for deletion');
+    }
+
+    // Remove image from database images array
+    const updatedImages = currentImages.filter((img: any) => img.id !== imageId);
+    
+    // If deleted image was primary and there are remaining images, make the first one primary
+    if (imageToDelete.isPrimary && updatedImages.length > 0) {
+      updatedImages[0].isPrimary = true;
+      console.log(`Setting new primary image: ${updatedImages[0].id}`);
+    }
+
+    // Update database with new images array
+    const { data: updatedItem, error: updateError } = await supabaseAdmin
       .from('catalog_items')
       .update({
         images: updatedImages,
         updated_at: 'NOW()'
       })
-      .eq('id', itemId);
+      .eq('id', itemId)
+      .select()
+      .single();
 
     if (updateError) {
       console.error('Database update error:', updateError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to update catalog item',
+        message: 'Failed to remove image from catalog item',
         error: updateError.message
       });
     }
 
-    // Extract storage path from URL and delete from Supabase Storage
-    try {
-      const url = new URL(imageToDelete.url);
-      const pathParts = url.pathname.split('/');
-      const storagePathIndex = pathParts.findIndex(part => part === 'uploads') + 1;
-      if (storagePathIndex > 0) {
-        const storagePath = pathParts.slice(storagePathIndex).join('/');
-        await supabaseAdmin.storage
-          .from('uploads')
-          .remove([storagePath]);
-        console.log(`Deleted image from storage: ${storagePath}`);
-      }
-    } catch (storageError) {
-      console.error('Failed to delete from storage:', storageError);
-      // Don't fail the request if storage cleanup fails
-    }
+    console.log(`Image deleted successfully. Remaining images: ${updatedImages.length}`);
 
     res.status(200).json({
       success: true,
       data: {
-        message: 'Image deleted successfully',
+        message: `Image deleted successfully${storageDeleteSuccess ? ' from both storage and database' : ' from database (storage deletion may have failed)'}`,
         deletedImageId: imageId,
-        remainingImages: updatedImages.length
+        storageDeleted: storageDeleteSuccess,
+        remainingImages: updatedImages.length,
+        newPrimaryImage: updatedImages.find((img: any) => img.isPrimary)?.id || null,
+        updatedItem: {
+          id: updatedItem.id,
+          name: updatedItem.name,
+          images: updatedItem.images
+        }
       }
     });
 

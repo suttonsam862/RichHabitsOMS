@@ -74,7 +74,7 @@ export default function CatalogImageUploader({
 
       toast({
         title: "Image uploaded successfully",
-        description: `Image added to catalog item${result.data.isPrimary ? ' as primary image' : ''}`,
+        description: `Image added to catalog item${result.data.isPrimary ? ' as primary image' : ''}. Storage: ${result.data.storageDeleted !== false ? 'Success' : 'Warning'}`,
       });
 
       // Call success callback
