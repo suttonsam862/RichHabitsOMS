@@ -60,7 +60,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "NODE_ENV=development node --loader tsx/esm server/index.ts"
+args = "NODE_ENV=development node --import tsx/esm server/index.ts"
 
 [agent]
 integrations = ["javascript_supabase==1.0.0"]
