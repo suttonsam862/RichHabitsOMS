@@ -53,4 +53,10 @@ if (import.meta.env.DEV) {
   };
 }
 
+// Suppress Vite-related errors aggressively but don't interfere with auth
+    if (viteErrorCount > 10) {
+      console.warn('🚨 Too many Vite errors suppressed, may indicate a real issue');
+      viteErrorCount = 0;
+    }
+
 export {};

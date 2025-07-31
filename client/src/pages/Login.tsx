@@ -10,12 +10,11 @@ export default function Login() {
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   
-  // Redirect if already authenticated
+  // Redirect if already authenticated - simplified logic
   useEffect(() => {
     if (isAuthenticated && !loading && user) {
       console.log("Already authenticated as:", user.role);
-      // Redirect to the appropriate dashboard based on user role
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, loading, navigate, user]);
 

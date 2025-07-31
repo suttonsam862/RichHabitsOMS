@@ -174,20 +174,31 @@ export const fileUploadSecurity = (req: Request, res: Response, next: NextFuncti
 
 // Authentication middleware
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
+  // Check if session exists and is valid
+  if (!req.session || !req.session.user || !req.session.token) {
+    console.log('No valid session found');
     return res.status(401).json({
       success: false,
-      message: 'Access token required'
+      message: 'Not authenticated'
+    });
+  }
+
+  // Check session expiration
+  if (req.session.expires && new Date() > new Date(req.session.expires)) {
+    console.log('Session expired');
+    req.session.destroy((err) => {
+      if (err) console.error('Session destruction error:', err);
+    });
+    return res.status(401).json({
+      success: false,
+      message: 'Session expired'
     });
   }
 
   try {
     // For now, we'll decode the token payload directly
     // In production, you'd want to verify the JWT signature
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    const payload = JSON.parse(Buffer.from(req.session.token.split('.')[1], 'base64').toString());
     (req as any).user = payload;
     next();
   } catch (error) {

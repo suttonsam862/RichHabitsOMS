@@ -27,9 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const checkAuth = useCallback(async () => {
-    // Prevent multiple simultaneous auth checks
-    if (initialized) return;
-
     try {
       const response = await fetch('/api/auth/me', {
         method: 'GET',
@@ -77,6 +74,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = await response.json();
         setUser(userData.user);
         setRole(userData.user?.role || null);
+        setInitialized(false); // Reset to allow fresh auth check
+        
+        // Trigger immediate auth verification after login
+        setTimeout(() => {
+          checkAuth();
+        }, 100);
+        
         return true;
       } else {
         const errorData = await response.json();

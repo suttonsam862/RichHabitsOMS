@@ -1,4 +1,3 @@
-
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { loginSchema, registerSchema } from '../../../shared/schema';
@@ -290,7 +289,13 @@ router.post('/logout', async (req: Request, res: Response) => {
 
 // Get current user
 router.get('/me', async (req: Request, res: Response) => {
+  console.log('🔍 Auth check request received');
+  console.log('Session ID:', req.session?.id);
+  console.log('Session user:', req.session?.user ? 'Present' : 'Missing');
+  console.log('Session token:', req.session?.token ? 'Present' : 'Missing');
+
   if (!req.user) {
+    console.log('❌ No user in session');
     return res.status(401).json({
       success: false,
       message: 'Not authenticated'
@@ -325,6 +330,7 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 
   // Format the user data to match what the frontend expects
+  console.log('✅ Auth check successful for user:', req.user.email);
   return res.json({
     success: true,
     user: {

@@ -37,6 +37,15 @@ export const MainDashboardRouter = () => {
     return <Navigate to="/dashboard/customer" replace />;
   }
 
+  // Handle loading state before redirecting
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-cyan-500"></div>
+      </div>
+    );
+  }
+
   // Fallback to login if no user found
   return <Navigate to="/login" replace />;
 };

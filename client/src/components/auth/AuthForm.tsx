@@ -91,27 +91,27 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
     try {
       if (type === "register") {
         const registerData = data as RegisterFormData;
-        
+
         // Use the register function from useAuth
         const result = await register(registerData);
-        
+
         toast({
           title: "Registration Successful",
           description: "Please check your email to verify your account.",
         });
-        
+
         setLocation("/login");
       } else {
         const loginData = data as LoginFormData;
-        
+
         // Use the login function from useAuth
         const result = await login(loginData.email, loginData.password);
-        
+
         toast({
           title: "Login Successful",
           description: "Welcome back!",
         });
-        
+
         setLocation("/dashboard");
       }
     } catch (err: any) {
@@ -144,7 +144,7 @@ export function AuthForm({ type, invitationData }: AuthFormProps) {
               }
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {error && (
               <Alert className="border-red-500/50 bg-red-500/10">
