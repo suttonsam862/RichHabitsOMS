@@ -105,16 +105,18 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     }
 
-    // Store session in cookie
+    // Store session in cookie - match middleware expectations
     if (req.session) {
-      req.session.auth = {
-        token: data.session.access_token,
-        user: {
-          id: data.user.id,
-          email: data.user.email || '',
-          role: userRole
-        }
+      req.session.user = {
+        id: data.user.id,
+        email: data.user.email || '',
+        username: profileData?.username || email.split('@')[0],
+        firstName: profileData?.first_name || data.user.user_metadata?.firstName,
+        lastName: profileData?.last_name || data.user.user_metadata?.lastName,
+        role: userRole
       };
+      req.session.token = data.session.access_token;
+      req.session.expires = new Date(data.session.expires_at * 1000).toISOString();
     }
 
     // Return user data and session with custom role metadata
@@ -294,8 +296,11 @@ router.get('/me', async (req: Request, res: Response) => {
   console.log('Session user:', req.session?.user ? 'Present' : 'Missing');
   console.log('Session token:', req.session?.token ? 'Present' : 'Missing');
 
-  if (!req.user) {
+  if (!req.session?.user || !req.session?.token) {
     console.log('❌ No user in session');
+    console.log('Session exists:', !!req.session);
+    console.log('Session user:', !!req.session?.user);
+    console.log('Session token:', !!req.session?.token);
     return res.status(401).json({
       success: false,
       message: 'Not authenticated'
@@ -303,15 +308,12 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 
   // Get the latest user data from Supabase Auth to check metadata
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-
   let isSuperAdmin = false;
-  let userRole = req.user.role || 'customer';
+  let userRole = req.session.user.role || 'customer';
 
-  if (token) {
+  if (req.session.token) {
     try {
-      const { data: userData, error } = await supabase.auth.getUser(token);
+      const { data: userData, error } = await supabase.auth.getUser(req.session.token);
 
       if (!error && userData?.user) {
         // Check for super admin flag in metadata
@@ -330,15 +332,15 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 
   // Format the user data to match what the frontend expects
-  console.log('✅ Auth check successful for user:', req.user.email);
+  console.log('✅ Auth check successful for user:', req.session.user.email);
   return res.json({
     success: true,
     user: {
-      id: req.user.id,
-      email: req.user.email,
-      username: req.user.username || req.user.email.split('@')[0], 
-      firstName: req.user.firstName || '',
-      lastName: req.user.lastName || '',
+      id: req.session.user.id,
+      email: req.session.user.email,
+      username: req.session.user.username || req.session.user.email.split('@')[0], 
+      firstName: req.session.user.firstName || '',
+      lastName: req.session.user.lastName || '',
       role: userRole,
       isSuperAdmin: isSuperAdmin
     }
