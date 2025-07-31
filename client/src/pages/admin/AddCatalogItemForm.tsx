@@ -203,7 +203,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       console.log('Catalog item created successfully:', response.data);
       
       // Success handling
-      queryClient.invalidateQueries({ queryKey: ['/api/catalog'] });
+      queryClient.invalidateQueries('catalog');
       
       toast({
         title: "Success!",
