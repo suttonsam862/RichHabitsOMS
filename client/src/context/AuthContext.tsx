@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -5,28 +6,91 @@ interface User {
   id: string;
   email: string;
   role: string;
-  profile_id?: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  isSuperAdmin?: boolean;
+  visiblePages?: string[];
+  customRole?: string;
 }
 
-interface AuthContextType {
+interface AuthState {
   user: User | null;
-  role: string | null;
   loading: boolean;
+  initialized: boolean;
+  error: string | null;
+}
+
+interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
-  const { toast } = useToast();
+// Centralized auth configuration
+const AUTH_CONFIG = {
+  CHECK_INTERVAL: 5 * 60 * 1000, // 5 minutes
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 1000,
+  SESSION_TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours
+} as const;
 
-  const checkAuth = useCallback(async () => {
+// Auth state manager class for better state control
+class AuthStateManager {
+  private state: AuthState = {
+    user: null,
+    loading: true,
+    initialized: false,
+    error: null,
+  };
+
+  private listeners: Set<(state: AuthState) => void> = new Set();
+  private checkInProgress = false;
+  private lastCheck = 0;
+
+  constructor() {
+    // Bind methods to preserve context
+    this.setState = this.setState.bind(this);
+    this.subscribe = this.subscribe.bind(this);
+    this.unsubscribe = this.unsubscribe.bind(this);
+  }
+
+  setState(updates: Partial<AuthState>) {
+    this.state = { ...this.state, ...updates };
+    this.listeners.forEach(listener => listener(this.state));
+  }
+
+  getState() {
+    return this.state;
+  }
+
+  subscribe(listener: (state: AuthState) => void) {
+    this.listeners.add(listener);
+    return () => this.unsubscribe(listener);
+  }
+
+  unsubscribe(listener: (state: AuthState) => void) {
+    this.listeners.delete(listener);
+  }
+
+  async checkAuth(): Promise<void> {
+    // Prevent concurrent checks
+    if (this.checkInProgress) {
+      return;
+    }
+
+    // Rate limiting
+    const now = Date.now();
+    if (now - this.lastCheck < 1000) {
+      return;
+    }
+
+    this.checkInProgress = true;
+    this.lastCheck = now;
+
     try {
       const response = await fetch('/api/auth/me', {
         method: 'GET',
@@ -37,29 +101,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (response.ok) {
-        const userData = await response.json();
-        setUser(userData.user);
-        setRole(userData.user?.role || null);
-      } else if (response.status === 401) {
-        // Expected when not logged in - don't create noise
-        setUser(null);
-        setRole(null);
+        const data = await response.json();
+        if (data.success && data.user) {
+          this.setState({
+            user: data.user,
+            loading: false,
+            initialized: true,
+            error: null,
+          });
+        } else {
+          this.setState({
+            user: null,
+            loading: false,
+            initialized: true,
+            error: null,
+          });
+        }
       } else {
-        // Only log unexpected errors
-        setUser(null);
-        setRole(null);
+        // 401 is expected when not logged in
+        this.setState({
+          user: null,
+          loading: false,
+          initialized: true,
+          error: response.status === 401 ? null : `Auth check failed: ${response.status}`,
+        });
       }
     } catch (error) {
-      // Silently handle auth check failures to prevent noise
-      setUser(null);
-      setRole(null);
+      console.warn('Auth check failed:', error);
+      this.setState({
+        user: null,
+        loading: false,
+        initialized: true,
+        error: error instanceof Error ? error.message : 'Network error',
+      });
     } finally {
-      setLoading(false);
-      setInitialized(true);
+      this.checkInProgress = false;
     }
-  }, [initialized]);
+  }
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+    this.setState({ loading: true, error: null });
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -70,40 +152,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('Login response received:', userData);
-        
-        // Immediately update the user state
-        setUser(userData.user);
-        setRole(userData.user?.role || null);
-        setLoading(false);
-        setInitialized(true);
+      const data = await response.json();
 
-        console.log('Auth state updated - User:', userData.user.email, 'Role:', userData.user.role);
-
-        return true;
-      } else {
-        const errorData = await response.json();
-        toast({
-          title: "Login Failed",
-          description: errorData.message || "Invalid credentials",
-          variant: "destructive",
+      if (response.ok && data.success) {
+        this.setState({
+          user: data.user,
+          loading: false,
+          initialized: true,
+          error: null,
         });
-        return false;
+        return { success: true };
+      } else {
+        this.setState({
+          user: null,
+          loading: false,
+          error: data.message || 'Login failed',
+        });
+        return { success: false, error: data.message || 'Login failed' };
       }
     } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: "Login Error",
-        description: "Unable to connect to server",
-        variant: "destructive",
+      const errorMessage = error instanceof Error ? error.message : 'Network error';
+      this.setState({
+        user: null,
+        loading: false,
+        error: errorMessage,
       });
-      return false;
+      return { success: false, error: errorMessage };
     }
-  }, [toast]);
+  }
 
-  const logout = useCallback(async () => {
+  async logout(): Promise<void> {
+    this.setState({ loading: true });
+
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
@@ -113,19 +193,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('Logout request failed:', error);
     }
 
-    setUser(null);
-    setRole(null);
+    this.setState({
+      user: null,
+      loading: false,
+      initialized: true,
+      error: null,
+    });
+  }
+
+  clearError() {
+    this.setState({ error: null });
+  }
+}
+
+// Global auth state manager instance
+const authStateManager = new AuthStateManager();
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [authState, setAuthState] = useState<AuthState>(authStateManager.getState());
+  const { toast } = useToast();
+
+  // Subscribe to auth state changes
+  useEffect(() => {
+    const unsubscribe = authStateManager.subscribe(setAuthState);
+    return unsubscribe;
   }, []);
 
-  // Single auth check on mount
+  // Initial auth check
   useEffect(() => {
-    if (!initialized) {
-      checkAuth();
+    if (!authState.initialized) {
+      authStateManager.checkAuth();
     }
-  }, [checkAuth, initialized]);
+  }, [authState.initialized]);
+
+  // Periodic auth check for active sessions
+  useEffect(() => {
+    if (!authState.user) return;
+
+    const interval = setInterval(() => {
+      authStateManager.checkAuth();
+    }, AUTH_CONFIG.CHECK_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [authState.user]);
+
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    const result = await authStateManager.login(email, password);
+    
+    if (!result.success) {
+      toast({
+        title: "Login Failed",
+        description: result.error || "Invalid credentials",
+        variant: "destructive",
+      });
+    }
+    
+    return result.success;
+  }, [toast]);
+
+  const logout = useCallback(async () => {
+    await authStateManager.logout();
+  }, []);
+
+  const checkAuth = useCallback(async () => {
+    await authStateManager.checkAuth();
+  }, []);
+
+  const clearError = useCallback(() => {
+    authStateManager.clearError();
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider 
+      value={{
+        ...authState,
+        login,
+        logout,
+        checkAuth,
+        clearError,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

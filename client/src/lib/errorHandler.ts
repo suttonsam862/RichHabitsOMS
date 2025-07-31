@@ -1,211 +1,123 @@
-/**
- * Balanced Error Handler - Handles errors without breaking development tools
- */
+// Centralized error handling that respects authentication flows
+interface ErrorContext {
+  url?: string;
+  method?: string;
+  status?: number;
+  isAuthRelated?: boolean;
+}
 
-// Fetch error tracking
-const fetchErrorCounts = new Map<string, number>();
-const FETCH_ERROR_THRESHOLD = 3;
-const FETCH_ERROR_RESET_TIME = 30000; // 30 seconds
+class ErrorHandler {
+  private errorCount = 0;
+  private readonly MAX_ERRORS_PER_MINUTE = 10;
+  private readonly ERROR_RESET_INTERVAL = 60000; // 1 minute
 
-// Enhanced fetch wrapper to handle network failures
-const originalFetch = window.fetch;
-window.fetch = async function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const url = typeof input === 'string' ? input : input.toString();
-  const endpoint = url.split('?')[0]; // Remove query params
+  constructor() {
+    // Reset error count periodically
+    setInterval(() => {
+      this.errorCount = 0;
+    }, this.ERROR_RESET_INTERVAL);
 
-  try {
-    const response = await originalFetch(input, init);
-
-    // Reset error count on successful request
-    if (response.ok && fetchErrorCounts.has(endpoint)) {
-      fetchErrorCounts.delete(endpoint);
-    }
-
-    return response;
-  } catch (error) {
-    // Handle fetch failures specifically
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      const errorCount = (fetchErrorCounts.get(endpoint) || 0) + 1;
-      fetchErrorCounts.set(endpoint, errorCount);
-
-      // Only log first few errors to avoid spam
-      if (errorCount <= FETCH_ERROR_THRESHOLD) {
-        console.warn(`🌐 Network error for ${endpoint} (${errorCount}/${FETCH_ERROR_THRESHOLD}):`, error.message);
-      }
-
-      // Reset count after timeout
-      setTimeout(() => {
-        fetchErrorCounts.delete(endpoint);
-      }, FETCH_ERROR_RESET_TIME);
-
-      // Create a user-friendly error
-      const networkError = new Error(`Network request failed: ${endpoint}`);
-      (networkError as any).isNetworkError = true;
-      (networkError as any).originalError = error;
-      throw networkError;
-    }
-
-    throw error;
-  }
-};
-
-// Enhanced unhandled rejection handler
-let rejectionCount = 0;
-const MAX_REJECTIONS_PER_MINUTE = 10;
-
-window.addEventListener('unhandledrejection', (event) => {
-  rejectionCount++;
-
-  // Reset count every minute
-  setTimeout(() => {
-    rejectionCount = Math.max(0, rejectionCount - 1);
-  }, 60000);
-
-  const error = event.reason;
-
-  // Handle network errors specifically
-  if (error?.isNetworkError || 
-      (error?.message && error.message.includes('fetch')) ||
-      (error?.message && error.message.includes('Failed to fetch'))) {
-
-    // Only log if under threshold
-    if (rejectionCount <= MAX_REJECTIONS_PER_MINUTE) {
-      console.warn('🚨 Network request failed:', error.message);
-    }
-
-    // Always prevent default to stop console spam
-    event.preventDefault();
-    return;
+    this.setupGlobalErrorHandlers();
   }
 
-  // Handle other common development errors silently
-  if (error?.message && (
-    error.message.includes('ResizeObserver') ||
-    error.message.includes('Non-Error promise rejection') ||
-    error.message.includes('ChunkLoadError') ||
-    error.message.includes('Loading chunk')
-  )) {
-    event.preventDefault();
-    return;
-  }
-
-  // Log other errors but limit spam
-  if (rejectionCount <= MAX_REJECTIONS_PER_MINUTE) {
-    console.error('Unhandled rejection:', error);
-  }
-
-  event.preventDefault();
-});
-
-// Global error handling configuration
-const GLOBAL_ERROR_CONFIG = {
-  enableLogging: true,
-  enableToasts: false, // Disable toasts to prevent spam
-  enableRetry: true,
-  maxRetries: 3,
-  retryDelay: 1000,
-  // Filter out benign errors
-  ignoredErrors: [
-    'ResizeObserver loop limit exceeded',
-    'Non-Error promise rejection captured',
-    'Network request failed',
-    'Load failed',
-    'Script error',
-    'Fetch aborted',
-    'AbortError',
-    'cancelled',
-    'Failed to fetch',
-    'NetworkError',
-    'TypeError: Failed to fetch'
-  ]
-};
-
-// Initialize global error handling
-export const initializeErrorHandling = () => {
-  // Handle uncaught errors
-  window.addEventListener('error', (event) => {
-    const error = event.error || new Error(event.message);
-    handleGlobalError(error, {
-      context: 'uncaught',
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno
+  private setupGlobalErrorHandlers() {
+    // Handle unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      this.handleError(event.reason, { 
+        isAuthRelated: this.isAuthError(event.reason) 
+      });
     });
-  });
 
-  // Handle unhandled promise rejections with better filtering
-  window.addEventListener('unhandledrejection', (event) => {
-    const reason = event.reason;
+    // Handle global errors
+    window.addEventListener('error', (event) => {
+      this.handleError(event.error, { 
+        isAuthRelated: this.isAuthError(event.error) 
+      });
+    });
+  }
 
-    // Prevent the default behavior for handled cases
-    event.preventDefault();
+  private isAuthError(error: any): boolean {
+    if (!error) return false;
 
-    // Filter out common non-critical rejections
-    if (reason && typeof reason === 'object') {
-      // Ignore fetch-related rejections
-      if (reason.name === 'TypeError' && reason.message?.includes('fetch')) {
-        return;
-      }
+    const errorString = error.toString?.() || String(error);
+    const authKeywords = [
+      'auth',
+      'login',
+      'token',
+      'unauthorized',
+      '401',
+      'authentication',
+      'session'
+    ];
 
-      // Ignore network errors
-      if (reason.message?.includes('Failed to fetch') || 
-          reason.message?.includes('NetworkError') ||
-          reason.message?.includes('Load failed')) {
-        return;
-      }
+    return authKeywords.some(keyword => 
+      errorString.toLowerCase().includes(keyword)
+    );
+  }
 
-      // Ignore abort errors
-      if (reason.name === 'AbortError' || reason.message?.includes('aborted')) {
-        return;
-      }
+  private isNetworkError(error: any): boolean {
+    if (!error) return false;
+
+    const errorString = error.toString?.() || String(error);
+    const networkKeywords = [
+      'fetch',
+      'NetworkError',
+      'Failed to fetch',
+      'ERR_NETWORK',
+      'ERR_INTERNET_DISCONNECTED'
+    ];
+
+    return networkKeywords.some(keyword => 
+      errorString.toLowerCase().includes(keyword)
+    );
+  }
+
+  handleError(error: any, context: ErrorContext = {}) {
+    // Rate limit error handling
+    if (this.errorCount >= this.MAX_ERRORS_PER_MINUTE) {
+      return;
     }
+    this.errorCount++;
 
-    // Only log significant errors
-    if (reason && typeof reason === 'string' && GLOBAL_ERROR_CONFIG.ignoredErrors.some(ignored => reason.includes(ignored))) {
+    // Don't log expected auth-related errors during login flows
+    if (context.isAuthRelated || this.isAuthError(error)) {
+      // Only log unexpected auth errors
+      if (context.status && context.status !== 401) {
+        console.warn('Unexpected auth error:', error, context);
+      }
       return;
     }
 
-    console.warn('Significant unhandled promise rejection:', reason);
-
-    // Only handle truly critical errors
-    if (reason && typeof reason === 'object' && reason.stack) {
-      handleGlobalError(reason, {
-        context: 'unhandled_rejection',
-        promise: event.promise
-      });
+    // Don't log common network errors that are expected
+    if (this.isNetworkError(error)) {
+      return;
     }
-  });
 
-  console.log('✅ Global error handler initialized with rejection filtering');
+    // Don't log errors from health checks or monitoring
+    if (context.url?.includes('/api/health') || 
+        context.url?.includes('/api/auth/me')) {
+      return;
+    }
+
+    // Only log truly unexpected errors
+    console.error('🚨 Application Error:', error, context);
+  }
+
+  // Method for components to report errors with context
+  reportError(error: any, context: ErrorContext = {}) {
+    this.handleError(error, context);
+  }
+}
+
+// Global error handler instance
+export const globalErrorHandler = new ErrorHandler();
+
+// Export for manual error reporting
+export const reportError = (error: any, context: ErrorContext = {}) => {
+  globalErrorHandler.reportError(error, context);
 };
 
-// Global error handler - now simplified and focused
-let errorCount = 0;
-const MAX_ERRORS_PER_MINUTE = 10;
-const ERROR_RESET_INTERVAL = 60000; // 1 minute
-
-// Reset error count periodically
-setInterval(() => {
-  errorCount = 0;
-}, ERROR_RESET_INTERVAL);
-
-export function handleGlobalError(error: any, context: string = 'Unknown') {
-  // Rate limit error handling to prevent spam
-  if (errorCount >= MAX_ERRORS_PER_MINUTE) {
-    return;
-  }
-  errorCount++;
-
-  // Don't log expected network errors or auth-related errors during login
-  if (error?.message?.includes('fetch') || 
-      error?.message?.includes('NetworkError') ||
-      error?.message?.includes('Failed to fetch') ||
-      context === 'Auth Check' ||
-      context === 'Health Check' ||
-      context === 'Login Flow') {
-    return;
-  }
-
-  // Only log truly unexpected errors
-  console.error(`🚨 Global Error [${context}]:`, error);
-}
+// Initialize error handling
+export const initializeErrorHandling = () => {
+  console.log('✅ Unified error handler initialized');
+};

@@ -1,19 +1,16 @@
+
 import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/context/AuthContext";
 
-/**
- * Component to route users to their role-specific dashboard
- * This handles the redirection after login when a user lands on /dashboard
- */
 export const MainDashboardRouter = () => {
-  const { user, role, loading } = useAuth();
+  const { user, loading, error } = useAuth();
 
   useEffect(() => {
-    if (user && role) {
-      console.log("MainDashboardRouter: User authenticated with role:", role);
+    if (user) {
+      console.log("MainDashboardRouter: User authenticated with role:", user.role);
     }
-  }, [user, role]);
+  }, [user]);
 
   // Show loading state while authentication is being checked
   if (loading) {
@@ -32,21 +29,22 @@ export const MainDashboardRouter = () => {
     );
   }
 
+  // Show error state if there's an auth error
+  if (error) {
+    console.error("MainDashboardRouter: Auth error:", error);
+    return <Navigate to="/login" replace />;
+  }
+
   // If no user is found, redirect to login
   if (!user) {
     console.log("MainDashboardRouter: No user found, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
-  // If we have a role, redirect to the appropriate dashboard
-  if (role) {
-    console.log("MainDashboardRouter: Redirecting to dashboard for role:", role);
-    return <Navigate to={`/dashboard/${role}`} replace />;
-  }
-
-  // If no role is found but user is authenticated, default to customer dashboard
-  console.warn("MainDashboardRouter: User authenticated but no role found, defaulting to customer dashboard");
-  return <Navigate to="/dashboard/customer" replace />;
+  // Redirect to the appropriate dashboard based on role
+  const dashboardRoute = `/dashboard/${user.role}`;
+  console.log("MainDashboardRouter: Redirecting to dashboard:", dashboardRoute);
+  return <Navigate to={dashboardRoute} replace />;
 };
 
 export default MainDashboardRouter;

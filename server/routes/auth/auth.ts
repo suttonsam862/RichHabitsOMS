@@ -1,302 +1,178 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../../db';
 
-// Custom interface to extend Express Request and Session
+// Enhanced session interface
 declare global {
   namespace Express {
     interface Request {
-      user?: any;
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        firstName?: string;
+        lastName?: string;
+        username?: string;
+        isSuperAdmin?: boolean;
+      };
     }
 
     interface Session {
-      auth?: {
-        token?: string;
-        user?: any;
-      };
+      user?: any;
+      token?: string;
+      expires?: string;
     }
   }
 }
 
-/**
- * Authenticate requests using Supabase Auth
- */
-// Cache for user sessions to reduce DB calls
-const userCache = new Map<string, { user: any; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Rate limiting for auth checks to prevent spam
-const authCheckLimiter = new Map<string, { count: number; timestamp: number }>();
-const AUTH_CHECK_LIMIT = 10; // Max 10 checks per minute per IP
-const AUTH_CHECK_WINDOW = 60 * 1000; // 1 minute
+// Auth state cache to reduce database calls
+const authCache = new Map<string, { user: any; timestamp: number }>();
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const AUTH_RATE_LIMIT = new Map<string, { count: number; timestamp: number }>();
+const MAX_AUTH_CHECKS_PER_MINUTE = 30;
 
 export const authenticateRequest = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Skip auth middleware for static assets and non-API routes to prevent loops
+    // Skip auth for static assets and non-API routes
     if (req.path.startsWith('/assets/') || 
         req.path.startsWith('/static/') ||
         req.path.startsWith('/@') ||
-        req.path.includes('.') && !req.path.startsWith('/api/')) {
+        (req.path.includes('.') && !req.path.startsWith('/api/'))) {
       return next();
     }
 
-    // Rate limiting for auth checks to prevent spam
-    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-    const now = Date.now();
-    const authLimitKey = `${clientIP}:${req.path}`;
-    
+    // Rate limiting for auth endpoints
     if (req.path === '/api/auth/me') {
-      const limitData = authCheckLimiter.get(authLimitKey);
-      
-      if (limitData) {
-        if (now - limitData.timestamp < AUTH_CHECK_WINDOW) {
-          if (limitData.count >= AUTH_CHECK_LIMIT) {
-            // Too many requests, return cached response
-            return res.status(401).json({
+      const clientIP = req.ip || 'unknown';
+      const now = Date.now();
+      const rateLimitKey = `${clientIP}:auth`;
+
+      const rateLimit = AUTH_RATE_LIMIT.get(rateLimitKey);
+      if (rateLimit) {
+        if (now - rateLimit.timestamp < 60000) { // 1 minute window
+          if (rateLimit.count >= MAX_AUTH_CHECKS_PER_MINUTE) {
+            return res.status(429).json({
               success: false,
-              message: 'Not authenticated',
-              cached: true
+              message: 'Too many auth checks, please wait'
             });
           }
-          limitData.count++;
+          rateLimit.count++;
         } else {
-          // Reset window
-          authCheckLimiter.set(authLimitKey, { count: 1, timestamp: now });
+          AUTH_RATE_LIMIT.set(rateLimitKey, { count: 1, timestamp: now });
         }
       } else {
-        authCheckLimiter.set(authLimitKey, { count: 1, timestamp: now });
+        AUTH_RATE_LIMIT.set(rateLimitKey, { count: 1, timestamp: now });
       }
     }
 
-    // Only log for API routes to reduce console spam
-    const shouldLog = req.path.startsWith('/api/');
+    let token: string | null = null;
+    let user: any = null;
 
-    if (shouldLog) {
-      console.log('=== Authentication Debug ===');
-      console.log('Headers:', req.headers.authorization ? 'Present' : 'Missing');
-      console.log('Session:', req.session ? 'Present' : 'Missing');
-    }
-
-    let token = null;
-
-    // First check Authorization header
-    const authHeader = req.headers.authorization;
-    if (authHeader) {
-      const [bearer, headerToken] = authHeader.split(' ');
-      if (bearer === 'Bearer' && headerToken) {
-        token = headerToken;
-        console.log('Using token from Authorization header');
+    // Check session first
+    if (req.session?.user && req.session?.token) {
+      // Verify session hasn't expired
+      const sessionExpiry = req.session.expires ? new Date(req.session.expires) : null;
+      if (!sessionExpiry || sessionExpiry > new Date()) {
+        user = req.session.user;
+        token = req.session.token;
+      } else {
+        // Session expired, clear it
+        req.session.destroy((err) => {
+          if (err) console.warn('Session destruction error:', err);
+        });
       }
     }
 
-    // Fallback to session token
-    if (!token && req.session?.auth?.token) {
-      token = req.session.auth.token;
-      console.log('Using token from session');
-    }
-
-    if (!token) {
-      if (shouldLog) {
-        console.log('No token found, proceeding unauthenticated');
+    // If no valid session, check Authorization header
+    if (!user) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
       }
-      return next();
     }
 
-    // For development mode, allow only specific secure test tokens
-    if (process.env.NODE_ENV === 'development' && token && token.startsWith('dev-test-token-')) {
-      const testRole = token.split('-').pop();
-      if (['admin', 'salesperson', 'designer', 'manufacturer', 'customer'].includes(testRole!)) {
-        if (shouldLog) {
-          console.log('Development mode: Using secure test token for role:', testRole);
+    // If we have a token, validate it
+    if (token && !user) {
+      // Check cache first
+      const cacheKey = `token:${token.substring(0, 20)}`;
+      const cached = authCache.get(cacheKey);
+
+      if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+        user = cached.user;
+      } else {
+        // Validate with Supabase
+        const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
+
+        if (supabaseUser && !error) {
+          user = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            role: supabaseUser.user_metadata?.role || 'customer',
+            firstName: supabaseUser.user_metadata?.firstName,
+            lastName: supabaseUser.user_metadata?.lastName,
+            username: supabaseUser.email?.split('@')[0],
+            isSuperAdmin: supabaseUser.user_metadata?.is_super_admin || false,
+          };
+
+          // Cache the result
+          authCache.set(cacheKey, { user, timestamp: Date.now() });
         }
-        req.user = {
-          id: `dev-test-${testRole}`,
-          email: `test-${testRole}@threadcraft.dev`,
-          role: testRole!,
-          is_super_admin: testRole === 'admin',
-          email_verified: true
-        };
-        return next();
       }
     }
 
-    // Validate token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      if (shouldLog) {
-        console.log('Token validation failed:', error?.message || 'No user found');
-      }
-      return next();
-    }
-
-    if (shouldLog) {
-      console.log('Token validated successfully for user:', user.email);
-    }
-
-    // Store authenticated user in request with fallback data
-    req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.user_metadata?.role || 'customer',
-      is_super_admin: user.user_metadata?.is_super_admin || false,
-      email_verified: user.user_metadata?.email_verified || user.email_confirmed_at != null,
-      // Include raw user data as fallback
-      ...user.user_metadata
-    };
-
-    if (shouldLog) {
-      console.log('User authenticated:', req.user.email, 'Role:', req.user.role);
+    // Set user on request if found
+    if (user) {
+      req.user = user;
     }
 
     next();
-  } catch (err) {
-    console.error('Authentication error:', err);
+  } catch (error) {
+    console.error('Authentication middleware error:', error);
     next();
   }
 };
 
-/**
- * Middleware to require authentication
- */
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    console.log('=== Authentication Debug ===');
-    console.log('Headers:', req.headers.authorization ? 'Present' : 'Missing');
-    console.log('Session:', req.session ? 'Present' : 'Missing');
-
-    let token: string | undefined;
-
-    // Check Authorization header first
-    const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-      console.log('Using token from Authorization header');
-    }
-    // Fallback to session
-    else if (req.session?.token) {
-      token = req.session.token;
-      console.log('Using token from session');
-    }
-
-    if (!token) {
-      console.log('No token found');
+    if (!req.user) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required'
       });
     }
-
-    // SECURITY FIX: Removed dangerous development bypass  
-    // Previous code was a critical vulnerability allowing any token > 10 chars
-
-    // For development, use specific secure test tokens only
-    if (process.env.NODE_ENV === 'development' && token.startsWith('dev-test-token-')) {
-      const testRole = token.split('-').pop();
-      if (['admin', 'salesperson', 'designer', 'manufacturer', 'customer'].includes(testRole!)) {
-        console.log('⚠️  Development mode: Using secure test token for role:', testRole);
-        req.user = {
-          id: `dev-test-${testRole}`,
-          email: `test-${testRole}@threadcraft.dev`,
-          role: testRole!
-        };
-        return next();
-      }
-    }
-
-    // Validate JWT format before attempting Supabase validation
-    const tokenSegments = token.split('.');
-    if (tokenSegments.length !== 3) {
-      console.log('🚨 401 REJECTION - Malformed JWT token');
-      console.log(`   Path: ${req.method} ${req.path}`);
-      console.log(`   Reason: Invalid JWT format - token has ${tokenSegments.length} segments instead of 3`);
-      console.log(`   Token preview: ${token.substring(0, 20)}...`);
-      
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token format',
-        error: 'Token contains an invalid number of segments'
-      });
-    }
-
-    try {
-      // Try to validate the token with Supabase
-      const { data: { user }, error } = await supabase.auth.getUser(token);
-
-      if (error || !user) {
-        console.log('🚨 401 REJECTION - Supabase token validation failed');
-        console.log(`   Path: ${req.method} ${req.path}`);
-        console.log(`   Reason: ${error?.message || 'No user found for token'}`);
-        console.log(`   Token preview: ${token.substring(0, 20)}...`);
-
-        return res.status(401).json({ 
-          success: false,
-          message: 'Invalid or expired token',
-          error: error?.message 
-        });
-      }
-
-    console.log('Token validated successfully for user:', user.email);
-
-    // Get user role from metadata, default to customer
-    const userRole = user.user_metadata?.role || 'customer';
-
-    // Attach user info to request
-    req.user = {
-      id: user.id,
-      email: user.email!,
-      role: userRole
-    };
-
-    console.log('User authenticated:', req.user.email, 'Role:', req.user.role);
-
-    // Update session with fresh token info if using session
-    if (req.session && req.session.token) {
-      req.session.user = req.user;
-      req.session.expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
-    }
-
     next();
-  } catch (jwtError: any) {
-    console.log('🚨 401 REJECTION - JWT token validation error');
-    console.log(`   Path: ${req.method} ${req.path}`);
-    console.log(`   Reason: JWT parsing/validation failed - ${jwtError?.message || 'Unknown JWT error'}`);
-    console.log(`   Token preview: ${token?.substring(0, 20)}...`);
-
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid JWT token format',
-      error: jwtError?.message || 'Token validation failed'
-    });
-  }
   } catch (error) {
-    console.error('Authentication error:', error);
-    return res.status(401).json({
+    console.error('RequireAuth error:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Authentication failed'
+      message: 'Authentication error'
     });
   }
 }
 
-/**
- * Middleware to require specific role
- */
 export const requireRole = (roles: string | string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ success: false, message: 'Authentication required' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required' 
+      });
     }
 
     const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Insufficient permissions',
+        requiredRoles: allowedRoles,
+        userRole: req.user.role
+      });
     }
 
     next();
   };
 };
 
-//login
 export async function loginUser(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
@@ -308,7 +184,7 @@ export async function loginUser(req: Request, res: Response) {
       });
     }
 
-    console.log('Attempting login for user:', email);
+    console.log('Login attempt for:', email);
 
     // Authenticate with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -316,71 +192,43 @@ export async function loginUser(req: Request, res: Response) {
       password
     });
 
-    if (error) {
-      console.error('Login error:', error.message);
+    if (error || !data.user || !data.session) {
+      console.log('Login failed:', error?.message);
       return res.status(401).json({
         success: false,
-        message: error.message
+        message: error?.message || 'Invalid credentials'
       });
     }
 
-    if (!data.user || !data.session) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
+    console.log('Login successful for user:', data.user.id);
 
-    console.log('User authenticated successfully:', data.user.id);
-
-    // Log user metadata for debugging
-    console.log('User metadata from Supabase Auth:', data.user.user_metadata);
-
-    // Get user role from metadata
-    let userRole = data.user.user_metadata?.role || 'customer';
-
-    // Special handling for super admin
-    if (data.user.user_metadata?.is_super_admin) {
-      console.log('User is a super admin, setting role to admin');
-      userRole = 'admin';
-    }
-
-    // Try to get user profile
-    let userProfile = null;
-    try {
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.log('Could not fetch user profile');
-      } else {
-        userProfile = profile;
-      }
-    } catch (profileError) {
-      console.warn('Profile operation failed:', profileError);
-    }
-
+    // Prepare user object
     const user = {
       id: data.user.id,
       email: data.user.email!,
-      role: userRole,
-      firstName: data.user.user_metadata?.firstName || userProfile?.first_name || '',
-      lastName: data.user.user_metadata?.lastName || userProfile?.last_name || '',
-      customRole: data.user.user_metadata?.customRole,
-      visiblePages: data.user.user_metadata?.visiblePages
+      role: data.user.user_metadata?.role || 'customer',
+      firstName: data.user.user_metadata?.firstName || '',
+      lastName: data.user.user_metadata?.lastName || '',
+      username: data.user.email?.split('@')[0] || '',
+      isSuperAdmin: data.user.user_metadata?.is_super_admin || false,
+      visiblePages: data.user.user_metadata?.visiblePages || [],
     };
 
-    // Store in session with proper expiration (extend session time)
-    const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+    // Store in session
+    const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     req.session.user = user;
     req.session.token = data.session.access_token;
     req.session.expires = sessionExpiry.toISOString();
     req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
-    console.log('Login successful, session expires at:', sessionExpiry);
+    // Clear any cached auth data for this user
+    authCache.forEach((value, key) => {
+      if (value.user?.id === user.id) {
+        authCache.delete(key);
+      }
+    });
+
+    console.log('Session created, expires:', sessionExpiry);
 
     return res.json({
       success: true,
@@ -401,9 +249,67 @@ export async function loginUser(req: Request, res: Response) {
   }
 }
 
+export async function logoutUser(req: Request, res: Response) {
+  try {
+    // Clear any cached auth data
+    if (req.user?.id) {
+      authCache.forEach((value, key) => {
+        if (value.user?.id === req.user!.id) {
+          authCache.delete(key);
+        }
+      });
+    }
+
+    // Destroy session
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.warn('Session destruction error:', err);
+        }
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Logout error'
+    });
+  }
+}
+
+export async function getCurrentUser(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
+      });
+    }
+
+    return res.json({
+      success: true,
+      user: req.user
+    });
+  } catch (error) {
+    console.error('Get current user error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching user data'
+    });
+  }
+}
+
 // Default export for backward compatibility
 export default {
   authenticateRequest,
   requireAuth,
-  requireRole
+  requireRole,
+  loginUser,
+  logoutUser,
+  getCurrentUser
 };
