@@ -32,19 +32,41 @@ class ErrorHandler {
   }
 
   private setupGlobalHandlers() {
-    // Handle unhandled promise rejections - simplified to avoid refresh loops
+    // Handle unhandled promise rejections - fix empty rejections and auth loops
     window.addEventListener('unhandledrejection', (event) => {
-      // Basic logging without preventing default behavior
-      console.group('🚨 UNHANDLED REJECTION DETAILS');
-      console.error('Reason:', event.reason);
-      console.error('Type:', typeof event.reason);
-      console.error('Message:', event.reason?.message);
-      console.error('Stack:', event.reason?.stack);
-      console.error('Timestamp:', new Date().toISOString());
-      console.error('URL:', window.location.href);
-      console.groupEnd();
+      const reason = event.reason;
 
-      const error = this.processError(event.reason, {
+      // Suppress empty rejections completely
+      if (!reason || 
+          (typeof reason === 'object' && Object.keys(reason).length === 0) ||
+          reason === '' ||
+          String(reason).trim() === '') {
+        event.preventDefault();
+        return;
+      }
+
+      // Suppress auth-related rejections to prevent loops
+      const reasonString = String(reason?.message || reason).toLowerCase();
+      if (reasonString.includes('not authenticated') ||
+          reasonString.includes('401') ||
+          reasonString.includes('auth') && reasonString.includes('failed')) {
+        event.preventDefault();
+        return;
+      }
+
+      // Only log meaningful errors in development
+      if (this.isDevelopment) {
+        console.group('🚨 UNHANDLED REJECTION DETAILS');
+        console.error('Reason:', reason);
+        console.error('Type:', typeof reason);
+        console.error('Message:', reason?.message);
+        console.error('Stack:', reason?.stack);
+        console.error('Timestamp:', new Date().toISOString());
+        console.error('URL:', window.location.href);
+        console.groupEnd();
+      }
+
+      const error = this.processError(reason, {
         component: 'Global',
         action: 'unhandledRejection',
         timestamp: new Date().toISOString(),
@@ -52,9 +74,7 @@ class ErrorHandler {
         userAgent: navigator.userAgent
       });
 
-      // Don't prevent default - let React handle properly
-      
-      // Log structured error
+      // Log structured error for meaningful errors only
       this.logError(error);
       
       // Show user-friendly notification for critical errors only

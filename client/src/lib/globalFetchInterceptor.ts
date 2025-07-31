@@ -1,7 +1,7 @@
 // Global fetch interceptor for error handling and server health
 let serverHealthy = true;
 let lastHealthCheck = 0;
-const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+const HEALTH_CHECK_INTERVAL = 60000; // 60 seconds - reduced frequency
 
 // Check server health periodically
 export async function checkServerHealth(): Promise<boolean> {
@@ -28,8 +28,11 @@ export async function checkServerHealth(): Promise<boolean> {
 
 // Simple error handler - no fetch override
 export function handleFetchError(error: any, url: string) {
-  // Only log real errors, not development noise
-  if (!url.includes('0.0.0.0') && !url.includes('_vite_ping')) {
+  // Only log real errors, not development noise or auth failures
+  if (!url.includes('0.0.0.0') && 
+      !url.includes('_vite_ping') &&
+      !url.includes('/api/auth/me') &&
+      !url.includes('/api/health')) {
     console.error('🚨 FETCH ERROR:', {
       url,
       error: error.message,

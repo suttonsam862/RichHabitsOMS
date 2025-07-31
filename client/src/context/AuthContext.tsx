@@ -75,12 +75,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData.user);
         setRole(userData.user?.role || null);
         setInitialized(false); // Reset to allow fresh auth check
-        
+
         // Trigger immediate auth verification after login
         setTimeout(() => {
           checkAuth();
         }, 100);
-        
+
         return true;
       } else {
         const errorData = await response.json();

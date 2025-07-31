@@ -6,25 +6,7 @@ const MAX_VITE_ERRORS = 3;
 const errorCache = new Map<string, number>();
 const CACHE_DURATION = 10000; // 10 seconds
 
-// Simple console error suppression for development noise
-const originalConsoleError = console.error;
-console.error = (...args: any[]) => {
-  const message = args.join(' ').toLowerCase();
-
-  if (import.meta.env.DEV) {
-    // Only suppress specific Vite HMR noise
-    if (message.includes('[vite] connecting') || 
-        message.includes('[vite] server connection lost')) {
-      viteErrorCount++;
-      if (viteErrorCount <= MAX_VITE_ERRORS) {
-        console.debug(`🔧 Vite HMR noise suppressed (${viteErrorCount}/${MAX_VITE_ERRORS})`);
-      }
-      return;
-    }
-  }
-
-  originalConsoleError(...args);
-};
+// Remove console.error override to avoid conflicts with error handler
 
 // Fix fetch for Vite HMR only - don't interfere with regular app requests
 if (import.meta.env.DEV) {
