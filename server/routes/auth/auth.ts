@@ -68,19 +68,22 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
       return next();
     }
 
-    // For development mode, allow dev tokens to work and bypass auth for testing
-    if (process.env.NODE_ENV === 'development' && token && (token.startsWith('dev-admin-token') || token.length > 10)) {
-      if (shouldLog) {
-        console.log('Development mode: accepting token for admin access');
+    // For development mode, allow only specific secure test tokens
+    if (process.env.NODE_ENV === 'development' && token && token.startsWith('dev-test-token-')) {
+      const testRole = token.split('-').pop();
+      if (['admin', 'salesperson', 'designer', 'manufacturer', 'customer'].includes(testRole!)) {
+        if (shouldLog) {
+          console.log('Development mode: Using secure test token for role:', testRole);
+        }
+        req.user = {
+          id: `dev-test-${testRole}`,
+          email: `test-${testRole}@threadcraft.dev`,
+          role: testRole!,
+          is_super_admin: testRole === 'admin',
+          email_verified: true
+        };
+        return next();
       }
-      req.user = {
-        id: 'dev-admin-id',
-        email: 'admin@threadcraft.com', 
-        role: 'admin',
-        is_super_admin: true,
-        email_verified: true
-      };
-      return next();
     }
 
     // Validate token with Supabase
@@ -172,17 +175,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     if (tokenSegments.length !== 3) {
       console.log('⚠️  Malformed JWT token: invalid number of segments');
       
-      // Development bypass for malformed tokens
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 Development mode: Using dummy user for malformed token');
-        req.user = {
-          id: 'dev-fallback-user',
-          email: 'fallback@threadcraft.dev',
-          role: 'admin'
-        };
-        return next();
-      }
-      
       return res.status(401).json({
         success: false,
         message: 'Invalid token format',
@@ -197,34 +189,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       if (error || !user) {
         console.log('Token validation failed:', error?.message || 'No user found');
 
-        // Development bypass
-        if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 Development mode: Using fallback auth');
-
-        // Check for dev bypass tokens
-        if (token === 'dev-admin-token-12345' || token?.includes('dev-') || token?.includes('admin')) {
-          req.user = {
-            id: 'dev-admin-user',
-            email: 'admin@threadcraft.dev',
-            role: 'admin'
-          };
-          return next();
-        }
-
-        // Return fallback user for development
-        req.user = {
-          id: 'dev-user-12345',
-          email: 'developer@threadcraft.dev',
-          role: 'admin'
-        };
-        return next();
+        return res.status(401).json({ 
+          success: false,
+          message: 'Invalid or expired token',
+          error: error?.message 
+        });
       }
-
-      return res.status(401).json({ 
-        error: 'Invalid or expired token',
-        details: error?.message 
-      });
-    }
 
     console.log('Token validated successfully for user:', user.email);
 
@@ -249,17 +219,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     next();
   } catch (jwtError: any) {
     console.log('⚠️  JWT token validation error:', jwtError?.message);
-    
-    // Development bypass for JWT parsing errors
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 Development mode: Using dummy user for JWT error');
-      req.user = {
-        id: 'dev-jwt-error-user',
-        email: 'jwt-error@threadcraft.dev',
-        role: 'admin'
-      };
-      return next();
-    }
 
     return res.status(401).json({
       success: false,
