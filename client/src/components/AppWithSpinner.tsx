@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { checkServerHealth } from '@/lib/globalFetchInterceptor';
@@ -13,50 +12,12 @@ export function AppWithSpinner({ children }: AppWithSpinnerProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    let retryCount = 0;
-    const maxRetries = 10;
-    const retryDelay = 2000;
+    // Simple initialization without server health check
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 100);
 
-    const waitForServer = async () => {
-      try {
-        const ready = await checkServerHealth();
-        
-        if (!mounted) return;
-        
-        if (ready) {
-          setServerReady(true);
-          setLoading(false);
-          setError(null);
-        } else {
-          retryCount++;
-          
-          if (retryCount >= maxRetries) {
-            setError('Server is taking longer than expected to start. Please refresh the page.');
-            setLoading(false);
-          } else {
-            console.log(`⏳ Waiting for server... (${retryCount}/${maxRetries})`);
-            setTimeout(waitForServer, retryDelay);
-          }
-        }
-      } catch (err) {
-        if (!mounted) return;
-        
-        retryCount++;
-        if (retryCount >= maxRetries) {
-          setError('Unable to connect to server. Please check your connection and refresh.');
-          setLoading(false);
-        } else {
-          setTimeout(waitForServer, retryDelay);
-        }
-      }
-    };
-
-    waitForServer();
-
-    return () => {
-      mounted = false;
-    };
+    return () => clearTimeout(timer);
   }, []);
 
   if (loading) {

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-export default function AuthForm() {
+export function AuthForm() {
   const { user, loading, error, login, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -98,3 +98,5 @@ export default function AuthForm() {
     </div>
   );
 }
+
+// Named export only - no default export needed
