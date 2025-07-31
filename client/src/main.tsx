@@ -3,39 +3,25 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
-// Import error handling fixes
+// Import fixes
 import './lib/viteHmrFix'
-import './lib/globalFetchInterceptor'
-import './lib/fixWebSocketError'
 
-// Minimal error handling - only suppress known development noise
-const devErrorPatterns = [
-  'vite',
-  'hmr',
-  'websocket',
-  'server connection lost',
-  '0.0.0.0',
-  'polling for restart',
-  'connecting...'
-];
-
-// Simplified unhandled rejection handler
+// Simple error handling for development
 window.addEventListener('unhandledrejection', (event) => {
-  const errorMessage = (event.reason?.message || event.reason?.toString() || '').toLowerCase();
+  const errorMessage = String(event.reason?.message || event.reason || '').toLowerCase();
 
-  // Only suppress known development noise in dev mode
-  if (import.meta.env.DEV) {
-    const isDevNoise = devErrorPatterns.some(pattern => 
-      errorMessage.includes(pattern)
-    );
-
-    if (isDevNoise) {
-      event.preventDefault(); // Prevent console spam
-      return;
-    }
+  // Only suppress known development noise
+  if (import.meta.env.DEV && (
+    errorMessage.includes('vite') ||
+    errorMessage.includes('hmr') ||
+    errorMessage.includes('0.0.0.0') ||
+    errorMessage.includes('websocket')
+  )) {
+    event.preventDefault();
+    return;
   }
 
-  // Let real errors through for proper handling by React
+  // Log real errors
   console.error('🚨 Unhandled Promise Rejection:', event.reason);
 });
 

@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { checkServerHealth } from '@/lib/globalFetchInterceptor';
-import { isHmrReconnecting } from '@/lib/viteHmrFix';
 
 interface User {
   id: string;
@@ -25,51 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authCheckAttempts, setAuthCheckAttempts] = useState(0);
-  const [serverReady, setServerReady] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const { toast } = useToast();
 
-  const MAX_AUTH_ATTEMPTS = 3;
-  const AUTH_RETRY_DELAY = 2000;
-
-  // Wait for server to be ready before checking auth
-  const waitForServer = useCallback(async (): Promise<boolean> => {
-    if (serverReady) return true;
-
-    try {
-      const ready = await checkServerHealth();
-      setServerReady(ready);
-      return ready;
-    } catch (error) {
-      console.warn('Server health check failed:', error);
-      return false;
-    }
-  }, [serverReady]);
-
   const checkAuth = useCallback(async () => {
-    // Don't check auth if we've exceeded attempts
-    if (authCheckAttempts >= MAX_AUTH_ATTEMPTS) {
-      setLoading(false);
-      return;
-    }
-
-    // Don't check auth during HMR reconnection
-    if (import.meta.env.DEV && isHmrReconnecting()) {
-      console.debug('🔄 Skipping auth check during HMR reconnection');
-      setTimeout(checkAuth, 2000);
-      return;
-    }
-
-    // Wait for server to be ready
-    const ready = await waitForServer();
-    if (!ready) {
-      console.log('⏳ Server not ready, delaying auth check...');
-      setTimeout(() => {
-        setAuthCheckAttempts(prev => prev + 1);
-        checkAuth();
-      }, AUTH_RETRY_DELAY);
-      return;
-    }
+    // Prevent multiple simultaneous auth checks
+    if (initialized) return;
 
     try {
       const response = await fetch('/api/auth/me', {
@@ -84,40 +43,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = await response.json();
         setUser(userData.user);
         setRole(userData.user?.role || null);
-        setAuthCheckAttempts(0); // Reset attempts on success
       } else if (response.status === 401) {
-        // Expected when not logged in - clear auth state
+        // Expected when not logged in
         setUser(null);
         setRole(null);
-        setAuthCheckAttempts(0); // Don't count 401 as failure
       } else {
         console.warn('Auth check failed:', response.status);
-        setAuthCheckAttempts(prev => prev + 1);
-      }
-    } catch (error) {
-      // Handle network errors gracefully during startup
-      if (error instanceof Error && error.message.includes('Server not ready')) {
-        console.debug('🔄 Auth check delayed - server starting up');
-        setTimeout(checkAuth, AUTH_RETRY_DELAY);
-        return;
-      }
-
-      console.warn('Auth check error:', error);
-      setAuthCheckAttempts(prev => prev + 1);
-
-      // Only retry if we haven't exceeded attempts
-      if (authCheckAttempts < MAX_AUTH_ATTEMPTS - 1) {
-        setTimeout(checkAuth, AUTH_RETRY_DELAY);
-        return;
-      } else {
-        // Max attempts reached - clear auth state and stop retrying
         setUser(null);
         setRole(null);
       }
+    } catch (error) {
+      console.warn('Auth check error:', error);
+      setUser(null);
+      setRole(null);
+    } finally {
+      setLoading(false);
+      setInitialized(true);
     }
-
-    setLoading(false);
-  }, [authCheckAttempts, waitForServer]);
+  }, [initialized]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
@@ -134,7 +77,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = await response.json();
         setUser(userData.user);
         setRole(userData.user?.role || null);
-        setAuthCheckAttempts(0); // Reset attempts on successful login
         return true;
       } else {
         const errorData = await response.json();
@@ -168,13 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(null);
     setRole(null);
-    setAuthCheckAttempts(0);
   }, []);
 
-  // Initial auth check with server readiness
+  // Single auth check on mount
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (!initialized) {
+      checkAuth();
+    }
+  }, [checkAuth, initialized]);
 
   return (
     <AuthContext.Provider value={{ user, role, loading, login, logout, checkAuth }}>
