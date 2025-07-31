@@ -72,14 +72,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const userData = await response.json();
+        console.log('Login response received:', userData);
+        
+        // Immediately update the user state
         setUser(userData.user);
         setRole(userData.user?.role || null);
-        setInitialized(false); // Reset to allow fresh auth check
+        setLoading(false);
+        setInitialized(true);
 
-        // Trigger immediate auth verification after login
-        setTimeout(() => {
-          checkAuth();
-        }, 100);
+        console.log('Auth state updated - User:', userData.user.email, 'Role:', userData.user.role);
 
         return true;
       } else {

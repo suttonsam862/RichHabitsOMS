@@ -178,3 +178,34 @@ export const initializeErrorHandling = () => {
 
   console.log('✅ Global error handler initialized with rejection filtering');
 };
+
+// Global error handler - now simplified and focused
+let errorCount = 0;
+const MAX_ERRORS_PER_MINUTE = 10;
+const ERROR_RESET_INTERVAL = 60000; // 1 minute
+
+// Reset error count periodically
+setInterval(() => {
+  errorCount = 0;
+}, ERROR_RESET_INTERVAL);
+
+export function handleGlobalError(error: any, context: string = 'Unknown') {
+  // Rate limit error handling to prevent spam
+  if (errorCount >= MAX_ERRORS_PER_MINUTE) {
+    return;
+  }
+  errorCount++;
+
+  // Don't log expected network errors or auth-related errors during login
+  if (error?.message?.includes('fetch') || 
+      error?.message?.includes('NetworkError') ||
+      error?.message?.includes('Failed to fetch') ||
+      context === 'Auth Check' ||
+      context === 'Health Check' ||
+      context === 'Login Flow') {
+    return;
+  }
+
+  // Only log truly unexpected errors
+  console.error(`🚨 Global Error [${context}]:`, error);
+}
