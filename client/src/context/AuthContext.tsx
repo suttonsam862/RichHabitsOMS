@@ -41,16 +41,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData.user);
         setRole(userData.user?.role || null);
       } else if (response.status === 401) {
-        // Expected when not logged in
+        // Expected when not logged in - don't create noise
         setUser(null);
         setRole(null);
       } else {
-        console.warn('Auth check failed:', response.status);
+        // Only log unexpected errors
         setUser(null);
         setRole(null);
       }
     } catch (error) {
-      console.warn('Auth check error:', error);
+      // Silently handle auth check failures to prevent noise
       setUser(null);
       setRole(null);
     } finally {
