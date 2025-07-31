@@ -36,13 +36,11 @@ router.patch('/catalog/:id/reorder-images',
       console.log(`🎯 Reordering images for catalog item ${id}`);
       console.log(`📊 Updating ${validatedData.images.length} images`);
 
-      // Update the catalog item's imageVariants.gallery field with new order
+      // Update the catalog item's images[] database array with new order
       const { data: item, error } = await supabase
         .from('catalog_items')
         .update({
-          image_variants: {
-            gallery: validatedData.images
-          },
+          images: validatedData.images,
           updated_at: 'NOW()'
         })
         .eq('id', id)
@@ -63,7 +61,7 @@ router.patch('/catalog/:id/reorder-images',
         success: true,
         data: {
           id: item.id,
-          imageVariants: item.image_variants,
+          images: item.images,
           updatedAt: item.updated_at
         },
         message: 'Image order updated successfully'
@@ -240,7 +238,7 @@ router.delete('/catalog/:id/images/:imageId',
       // Get current catalog item to find image details
       const { data: catalogItem, error: fetchError } = await supabase
         .from('catalog_items')
-        .select('image_variants')
+        .select('images')
         .eq('id', catalogId)
         .single();
 
@@ -252,7 +250,7 @@ router.delete('/catalog/:id/images/:imageId',
         });
       }
 
-      const currentImages = catalogItem.image_variants?.gallery || [];
+      const currentImages = catalogItem.images || [];
       const imageToDelete = currentImages.find((img: any) => img.id === imageId);
 
       if (!imageToDelete) {
@@ -293,9 +291,7 @@ router.delete('/catalog/:id/images/:imageId',
       const { data: updatedItem, error: updateError } = await supabase
         .from('catalog_items')
         .update({
-          image_variants: {
-            gallery: updatedImages
-          },
+          images: updatedImages,
           updated_at: 'NOW()'
         })
         .eq('id', catalogId)
@@ -318,7 +314,7 @@ router.delete('/catalog/:id/images/:imageId',
           id: updatedItem.id,
           deletedImageId: imageId,
           remainingImages: updatedImages,
-          imageVariants: updatedItem.image_variants
+          images: updatedItem.images
         },
         message: 'Image deleted successfully from both storage and metadata'
       });

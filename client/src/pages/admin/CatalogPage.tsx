@@ -70,6 +70,12 @@ interface CatalogItem {
   etaDays: string;
   status: 'active' | 'inactive';
   imageUrl?: string;
+  images?: Array<{
+    id: string;
+    url: string;
+    alt?: string;
+    isPrimary?: boolean;
+  }>;
   imageVariants?: {
     thumbnail?: string;
     medium?: string;
@@ -403,7 +409,12 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
   };
 
   const renderImage = () => {
-    if (!item.imageUrl) {
+    // Get primary image from images array, or fallback to imageUrl
+    const primaryImage = item.images?.find(img => img.isPrimary);
+    const imageUrl = primaryImage?.url || item.imageUrl;
+    const imageAlt = primaryImage?.alt || item.name;
+
+    if (!imageUrl) {
       return (
         <div className={`
           ${viewMode === 'compact' ? 'w-24 h-24' : 'w-full h-48'} 
@@ -421,8 +432,8 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
         onClick={onView}
       >
         <OptimizedImage
-          src={item.imageUrl}
-          alt={item.name}
+          src={imageUrl}
+          alt={imageAlt}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
           loading="lazy"
           placeholder="blur"
@@ -562,7 +573,12 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
 
   const imageVariants = item.imageVariants || {};
   const availableVariants = Object.entries(imageVariants).filter(([_, url]) => url);
-  const currentImageUrl = imageVariants[selectedImageVariant as keyof typeof imageVariants] || item.imageUrl;
+  
+  // Prioritize primary image from images array, then fallback to variants/imageUrl
+  const primaryImage = item.images?.find(img => img.isPrimary);
+  const currentImageUrl = imageVariants[selectedImageVariant as keyof typeof imageVariants] || 
+                          primaryImage?.url || 
+                          item.imageUrl;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -647,20 +663,25 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
               </div>
             )}
 
-            {/* Additional Images Gallery */}
-            {imageVariants.gallery && imageVariants.gallery.length > 0 && (
+            {/* Product Images Gallery */}
+            {item.images && item.images.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Gallery ({imageVariants.gallery.length} images)</Label>
+                <Label className="text-sm font-medium">Product Gallery ({item.images.length} images)</Label>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {imageVariants.gallery.map((imageUrl, index) => (
-                    <Card key={index} className="rich-card overflow-hidden">
-                      <div className="aspect-square">
+                  {item.images.map((image, index) => (
+                    <Card key={image.id || index} className="rich-card overflow-hidden">
+                      <div className="aspect-square relative">
                         <OptimizedImage
-                          src={imageUrl}
-                          alt={`${item.name} gallery ${index + 1}`}
+                          src={image.url}
+                          alt={image.alt || `${item.name} gallery ${index + 1}`}
                           className="w-full h-full object-cover"
                           sizes="120px"
                         />
+                        {image.isPrimary && (
+                          <div className="absolute top-1 right-1">
+                            <Badge variant="secondary" className="text-xs">Primary</Badge>
+                          </div>
+                        )}
                       </div>
                     </Card>
                   ))}
