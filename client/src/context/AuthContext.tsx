@@ -40,13 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Prevent multiple simultaneous auth checks
     if (authCheckInProgress.current) {
-      console.log('Auth check already in progress, skipping');
       return;
     }
 
-    // Rate limit auth checks - minimum 2 seconds between requests
-    if (now - lastAuthCheck.current < 2000) {
-      console.log('Auth check rate limited, skipping');
+    // Rate limit auth checks - minimum 5 seconds between requests
+    if (now - lastAuthCheck.current < 5000) {
       return;
     }
 
@@ -55,13 +53,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       setLoading(true);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
       const response = await fetch('/api/auth/me', {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -71,16 +76,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setUser(null);
         }
+      } else if (response.status === 401) {
+        // Normal unauthenticated state - don't spam logs
+        setUser(null);
+        setError(null);
       } else {
         setUser(null);
-        if (response.status !== 401) {
-          console.warn('Auth check failed:', response.status);
-        }
+        console.warn('Auth check failed:', response.status);
       }
     } catch (error) {
-      console.error('Auth check error:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('Auth check timeout');
+      } else {
+        console.error('Auth check error:', error);
+      }
       setUser(null);
-      setError(error instanceof Error ? error.message : 'Authentication failed');
+      setError(null); // Don't show auth errors to user
     } finally {
       setLoading(false);
       setInitialized(true);

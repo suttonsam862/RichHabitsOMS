@@ -290,27 +290,72 @@ export async function logoutUser(req: Request, res: Response) {
   }
 }
 
-export async function getCurrentUser(req: Request, res: Response) {
+export const getCurrentUser = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
+    // Check session first
+    if (!req.session || !req.session.token) {
       return res.status(401).json({
         success: false,
         message: 'Not authenticated'
       });
     }
 
-    return res.json({
+    const token = req.session.token;
+
+    // Validate token with Supabase
+    const { data: user, error } = await supabase.auth.getUser(token);
+
+    if (error || !user.user) {
+      // Clear invalid session
+      req.session.destroy((err) => {
+        if (err) console.error('Session destroy error:', err);
+      });
+
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
+
+    // Get user profile with error handling
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Profile fetch error:', profileError);
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found'
+      });
+    }
+
+    // Update session expiry
+    req.session.touch();
+
+    res.json({
       success: true,
-      user: req.user
+      user: {
+        id: profile.id,
+        email: profile.email,
+        role: profile.role,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        username: profile.username,
+        isSuperAdmin: profile.is_super_admin,
+        visiblePages: profile.visible_pages || []
+      }
     });
   } catch (error) {
     console.error('Get current user error:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: 'Error fetching user data'
+      message: 'Internal server error'
     });
   }
-}
+};
 
 // Default export for backward compatibility
 export default {

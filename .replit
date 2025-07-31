@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Simple Dev Server"
+runButton = "Always Running Dev Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -55,6 +55,15 @@ args = "npm run dev"
 
 [[workflows.workflow]]
 name = "Simple Dev Server"
+author = 41090967
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development node --import tsx/esm server/index.ts"
+
+[[workflows.workflow]]
+name = "Always Running Dev Server"
 author = 41090967
 mode = "sequential"
 
