@@ -20,20 +20,26 @@ export const apiLimiter = rateLimit({
   }
 });
 
-// Stricter rate limiting for auth routes
+// Rate limiting for auth routes (more lenient for development)
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: process.env.NODE_ENV === 'development' ? 50 : 10, // More lenient in development
   message: {
     success: false,
-    message: 'Too many authentication attempts, please try again later.'
+    message: 'Too many authentication attempts, please try again later',
+    retryAfter: '15 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    return process.env.NODE_ENV === 'production' 
-      ? req.ip || req.connection.remoteAddress || 'unknown'
-      : `${req.ip || 'dev'}-${req.get('User-Agent')?.substring(0, 50) || 'unknown'}`;
+  // Skip rate limiting for localhost and Replit environments in development
+  skip: (req) => {
+    return process.env.NODE_ENV === 'development' && 
+           (req.ip === '127.0.0.1' || 
+            req.ip === '::1' || 
+            req.ip?.includes('localhost') ||
+            req.ip?.includes('0.0.0.0') ||
+            req.get('host')?.includes('.replit.dev') ||
+            req.get('host')?.includes('.repl.co'));
   }
 });
 

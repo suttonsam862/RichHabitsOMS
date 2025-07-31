@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { checkServerHealth } from '@/lib/globalFetchInterceptor';
@@ -36,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Wait for server to be ready before checking auth
   const waitForServer = useCallback(async (): Promise<boolean> => {
     if (serverReady) return true;
-    
+
     try {
       const ready = await checkServerHealth();
       setServerReady(ready);
@@ -102,10 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTimeout(checkAuth, AUTH_RETRY_DELAY);
         return;
       }
-      
+
       console.warn('Auth check error:', error);
       setAuthCheckAttempts(prev => prev + 1);
-      
+
       // Only retry if we haven't exceeded attempts
       if (authCheckAttempts < MAX_AUTH_ATTEMPTS - 1) {
         setTimeout(checkAuth, AUTH_RETRY_DELAY);

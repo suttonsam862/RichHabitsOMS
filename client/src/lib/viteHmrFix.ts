@@ -3,8 +3,13 @@ let viteErrorCount = 0;
 const MAX_VITE_ERRORS = 1; // Reduced to minimal suppression
 let hmrReconnecting = false;
 
-// Track and suppress duplicate error messages
+// Cache to prevent duplicate error logging and excessive requests
 const errorMessageCache = new Map<string, number>();
+const urlRequestCache = new Map<string, number>();
+const viteErrorCount = { count: 0 };
+const VITE_ERROR_THRESHOLD = 5;
+
+// Track and suppress duplicate error messages
 const ERROR_CACHE_DURATION = 5000; // Reduced to 5 seconds
 
 // Override console.error to filter Vite HMR noise - minimal suppression only
@@ -58,11 +63,24 @@ if (import.meta.env.DEV) {
       const rewrittenUrl = url.replace(/https?:\/\/0\.0\.0\.0:\d+/, window.location.origin);
       console.debug('🔄 Rewriting Vite ping URL:', url, '→', rewrittenUrl);
 
-      try {
-        return await originalFetch(rewrittenUrl, init);
-      } catch (error) {
-        // Suppress Vite HMR ping failures silently
-        throw new Error('Vite HMR ping failed (suppressed)');
+      // Prevent excessive requests that cause page refreshes
+      const urlKey = rewrittenUrl.split('?')[0];
+      const now = Date.now();
+      const lastRequest = urlRequestCache.get(urlKey);
+
+      if (lastRequest && now - lastRequest < 1000) {
+        console.debug('⏳ Throttling Vite request to prevent refresh loop');
+        return Promise.reject(new Error('Request throttled'));
+      }
+
+      urlRequestCache.set(urlKey, now);
+
+      if (typeof input === 'string') {
+        return originalFetch(rewrittenUrl, init);
+      } else if (input instanceof URL) {
+        return originalFetch(rewrittenUrl, init);
+      } else {
+        return originalFetch(rewrittenUrl, init);
       }
     }
 
