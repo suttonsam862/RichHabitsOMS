@@ -36,7 +36,7 @@ async function createCatalogItem(req: Request, res: Response) {
     const unit_cost = req.body.unit_cost || req.body.unitCost;
     const category = req.body.category || '';
     const sport = req.body.sport || '';
-    const fabric = req.body.fabric || '';
+    const fabric_id = req.body.fabric_id || req.body.fabricId || null;
     const status = req.body.status || 'active';
     const sku = req.body.sku || '';
 
@@ -85,7 +85,7 @@ async function createCatalogItem(req: Request, res: Response) {
         unit_cost: parsedUnitCost,
         category: category.trim(),
         sport: sport.trim(),
-        fabric: fabric.trim(),
+        fabric_id: fabric_id,
         status: status,
         sku: sku.trim(),
         created_at: 'NOW()',

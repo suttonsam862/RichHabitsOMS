@@ -46,6 +46,23 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
   const [generalError, setGeneralError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch fabric options
+  const { data: fabricsData, isLoading: fabricsLoading, error: fabricsError } = useQuery({
+    queryKey: ['fabric-options'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/fabric-options/fabrics', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const fabrics = fabricsData?.data?.fabrics || [];
+
   // Generate SKU function
   const generateSKU = (name: string, category: string): string => {
     const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8);
@@ -63,6 +80,27 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
     }));
     
     // Clear field error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      });
+    }
+    
+    // Clear general error when user makes changes
+    if (generalError) {
+      setGeneralError('');
+    }
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear field error when user selects
     if (formErrors[name]) {
       setFormErrors(prev => {
         const updated = { ...prev };
@@ -143,7 +181,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
         unit_cost: parseFloat(formData.unitCost) || 0,
         category: formData.category,
         sport: formData.sport,
-        fabric: formData.fabric,
+        fabric_id: formData.fabric_id,
         status: formData.status,
         sku: skuToUse
       };
@@ -231,7 +269,7 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
       unitCost: '',
       category: '',
       sport: '',
-      fabric: '',
+      fabric_id: '',
       status: 'active',
       sku: ''
     });
@@ -351,13 +389,38 @@ export default function AddCatalogItemForm({ isOpen = false, onClose, onSuccess 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fabric">Fabric</Label>
-                <Input
-                  id="fabric"
-                  name="fabric"
-                  value={formData.fabric}
-                  onChange={handleInputChange}
-                  placeholder="Cotton, Polyester, etc."
-                />
+                <Select
+                  value={formData.fabric_id}
+                  onValueChange={(value) => handleSelectChange('fabric_id', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={fabricsLoading ? "Loading fabrics..." : "Select a fabric"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fabricsLoading ? (
+                      <SelectItem value="" disabled>Loading fabrics...</SelectItem>
+                    ) : fabricsError ? (
+                      <SelectItem value="" disabled>Error loading fabrics</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value="">None selected</SelectItem>
+                        {fabrics.map((fabric: any) => (
+                          <SelectItem key={fabric.id} value={fabric.id}>
+                            {fabric.name}
+                            {fabric.description && (
+                              <span className="text-sm text-muted-foreground ml-2">
+                                - {fabric.description}
+                              </span>
+                            )}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                {formErrors.fabric_id && (
+                  <p className="text-sm text-destructive">{formErrors.fabric_id}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>

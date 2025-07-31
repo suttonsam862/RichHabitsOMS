@@ -100,6 +100,17 @@ ThreadCraft is a comprehensive full-stack web application designed for managing 
 - **Validation**: Preserved comprehensive field validation while simplifying the normalization logic
 - **Production Ready**: Clean, efficient field normalization system ready for immediate use
 
+### Complete Fabric Dropdown System with Database Integration (July 31, 2025)
+- **Status**: 100% Complete - Fabric dropdown system implemented with database integration and proper ID submission
+- **Frontend Implementation**: Replaced fabric text input with Select dropdown component fetching from `/api/fabric-options/fabrics` endpoint
+- **Database Integration**: Form now submits `fabric_id` UUID instead of fabric text, establishing proper foreign key relationship with `catalog_fabrics` table
+- **API Query**: Added React Query integration with authentication headers, loading states, and error handling for fabric options
+- **Backend Updates**: Enhanced createCatalogItem handler to accept `fabric_id` field with dual fallback support (fabric_id, fabricId)
+- **User Experience**: Dropdown shows fabric name with description, includes loading states, error handling, and "None selected" option
+- **Database Schema**: Leverages existing `catalog_fabrics` table with UUID primary keys and proper RLS policies
+- **Field Validation**: Added fabric_id error handling and form validation integration
+- **Production Ready**: Complete fabric selection system with proper database relationships and comprehensive error handling
+
 ### Complete Catalog Form Field Mapping and Validation System (July 30, 2025)
 - **Status**: 100% Complete - Both catalog creation and edit forms now properly map camelCase to snake_case fields with comprehensive validation
 - **AddCatalogItemForm.tsx**: Fixed camelCase to snake_case mapping (basePrice → base_price, unitCost → unit_cost) before POST requests to /api/catalog
