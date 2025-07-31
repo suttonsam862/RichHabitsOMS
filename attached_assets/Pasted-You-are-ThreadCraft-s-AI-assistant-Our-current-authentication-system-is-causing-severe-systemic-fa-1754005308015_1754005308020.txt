@@ -1,0 +1,67 @@
+You are ThreadCraft’s AI assistant. Our current authentication system is causing severe, systemic failures (infinite retry loops, unhandled promise rejections, schema mismatches, RLS bypass, etc.). We need to conduct a **deep research diagnostic** to gather every relevant detail and then design a new, rock-solid authentication architecture.
+
+Proceed in two phases—Data Gathering and Architecture Recommendation—and pause after each section to collect required information from me.
+
+---
+
+## Phase 1: Data Gathering
+
+### Section A – Code Artifacts  
+Please request me to provide the **complete** source code for the following files:
+1. `client/src/context/AuthContext.tsx`  
+2. `client/src/hooks/useAuth.ts` (if present)  
+3. `client/src/lib/globalFetchInterceptor.ts`  
+4. `client/src/lib/fetchCircuitBreaker.ts`  
+5. `server/routes/api/authRoutes.ts` (all routes: login, logout, `/api/auth/me`, password reset, invitation)  
+6. `server/db.ts` or your Supabase client initialization  
+7. Any shared auth-related TypeScript definitions (e.g. `shared/types/auth.d.ts`)
+
+### Section B – Configuration & Environment  
+Ask me for:
+1. My `.env` or Replit Secrets entries related to authentication (e.g. `SESSION_SECRET`, `SUPABASE_*`, `JWT_SECRET`).  
+2. My Replit or Vite CORS and cookie-settings configuration.  
+3. My Supabase RLS policy SQL files relevant to users and customers.
+
+### Section C – Logs & Error Patterns  
+Request the following logs:
+1. Browser console logs showing the top 3 auth-related errors (full stack traces).  
+2. Network tab captures of failed `GET /api/auth/me` or login requests (request/response bodies).  
+3. Server logs around auth route failures, timeouts, or RLS denials.
+
+### Section D – Requirements & Use Cases  
+Clarify:
+1. All user roles and their permissions (admin, salesperson, designer, manufacturer, customer, etc.).  
+2. Every authentication flow you support or need:  
+   - Signup & invitation  
+   - Login (email+password, social OAuth?)  
+   - “Remember me” / persistent sessions  
+   - Token refresh / expiration  
+   - Password reset  
+   - Multifactor or SSO (if any)  
+3. Any compliance or security requirements (e.g. GDPR, password complexity, session duration limits).
+
+---
+
+## Phase 2: Architecture Research & Recommendation
+
+Once all data is gathered, analyze and compare **four** possible authentication architectures:
+
+1. **Supabase Auth** (JWT + built-in RLS)  
+2. **Session-based Auth** with Express + `express-session`/Passport  
+3. **OAuth2/OpenID Connect** via a provider like Auth0 or Keycloak  
+4. **Custom JWT** solution with refresh-token rotation and CSRF protection
+
+For each option, evaluate:
+
+- **Security**: token rotation, XSS/CSRF protection, refresh token handling  
+- **Scalability**: horizontal scaling, stateless vs stateful sessions  
+- **Integration**: Developer experience with React + Express + Supabase  
+- **RBAC**: How roles and permissions map into each approach  
+- **Migration Effort**: Code changes, data migrations, backward compatibility  
+- **Testing Strategy**: How to cover new flows with unit and E2E tests
+
+Finally, **recommend one** architecture, outline a **step-by-step migration plan** (including code changes, config updates, DB migrations, and tests), and provide any necessary script snippets or SQL migrations.
+
+---
+
+**Begin with Phase 1, Section A**: “Please share the complete contents of `AuthContext.tsx`, `useAuth.ts`, and the other listed files.”
