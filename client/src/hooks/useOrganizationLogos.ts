@@ -18,19 +18,20 @@ export function useOrganizationLogos(customerIds: string[]) {
     queryFn: async () => {
       const logoMap = new Map<string, string>();
       
-      // Fetch logos for each customer ID
+      // Fetch customer data to get company_logo_url
       const logoPromises = customerIds.map(async (customerId) => {
         try {
-          const response = await fetch(`/api/organization-files/${customerId}?fileType=logo`, {
+          const response = await fetch(`/api/customers`, {
             credentials: 'include',
           });
           
           if (response.ok) {
             const data = await response.json();
-            if (data.success && data.data && data.data.length > 0) {
-              // Find the primary logo or use the first one
-              const primaryLogo = data.data.find((file: OrganizationFile) => file.isPrimary) || data.data[0];
-              logoMap.set(customerId, primaryLogo.fileUrl);
+            const customers = data.success ? (data.data?.customers || data.data || []) : [];
+            const customer = customers.find((c: any) => c.id === customerId);
+            
+            if (customer && customer.company_logo_url) {
+              logoMap.set(customerId, customer.company_logo_url);
             }
           }
         } catch (error) {
@@ -57,16 +58,17 @@ export function useOrganizationLogo(customerId: string | null) {
       if (!customerId) return null;
       
       try {
-        const response = await fetch(`/api/organization-files/${customerId}?fileType=logo`, {
+        const response = await fetch(`/api/customers`, {
           credentials: 'include',
         });
         
         if (response.ok) {
           const data = await response.json();
-          if (data.success && data.data && data.data.length > 0) {
-            // Find the primary logo or use the first one
-            const primaryLogo = data.data.find((file: OrganizationFile) => file.isPrimary) || data.data[0];
-            return primaryLogo.fileUrl;
+          const customers = data.success ? (data.data?.customers || data.data || []) : [];
+          const customer = customers.find((c: any) => c.id === customerId);
+          
+          if (customer && customer.company_logo_url) {
+            return customer.company_logo_url;
           }
         }
       } catch (error) {

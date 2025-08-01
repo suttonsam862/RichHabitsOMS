@@ -302,13 +302,16 @@ export default function CustomerListPage() {
     return [];
   }, [customersResponse]);
 
-  // Get customer IDs for logo fetching
-  const customerIds = React.useMemo(() => {
-    return customers.map((customer: Customer) => customer.id.toString()).filter(Boolean);
+  // Create a map of customer ID to logo URL from existing customer data
+  const logoMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    customers.forEach((customer: Customer) => {
+      if ((customer as any).company_logo_url) {
+        map.set(customer.id.toString(), (customer as any).company_logo_url);
+      }
+    });
+    return map;
   }, [customers]);
-
-  // Fetch organization logos
-  const { data: logoMap } = useOrganizationLogos(customerIds);
 
   // Group customers by organization and sport
   const organizations = React.useMemo(() => {
