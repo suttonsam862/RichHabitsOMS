@@ -91,7 +91,7 @@ export function AppRouter() {
           <Route path="admin/customers" element={<CustomerListPage />} />
           <Route path="admin/customers/:id/edit" element={<CustomerEditPage />} />
           {/* Salesperson Management route */}
-          <Route path="/admin/salespeople" element={<SalesManagementPage />} />
+          <Route path="admin/salespeople" element={<SalesManagementPage />} />
 
           {/* Customer management routes */}
           <Route path="customers" element={<CustomerListPage />} />

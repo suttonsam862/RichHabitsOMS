@@ -64,7 +64,7 @@ export function AppLayout() {
       page: 'orders',
     },
     {
-      name: 'Customers',
+      name: 'Organizations',
       href: '/admin/customers',
       icon: Users,
       current: location.pathname === '/admin/customers',
@@ -100,10 +100,17 @@ export function AppLayout() {
     },
     {
       name: 'Catalog',
-      href: '/admin/catalog',
+      href: '/catalog',
       icon: Package,
-      current: location.pathname === '/admin/catalog',
+      current: location.pathname === '/catalog',
       page: 'catalog',
+    },
+    {
+      name: 'Sales Management',
+      href: '/admin/salespeople',
+      icon: UserCheck,
+      current: location.pathname === '/admin/salespeople',
+      page: 'sales-management',
     },
     {
       name: 'Analytics',
