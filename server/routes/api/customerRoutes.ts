@@ -755,6 +755,7 @@ async function updateCustomer(req: Request, res: Response) {
       country: updatedProfile.country,
       status: updatedProfile.status,
       photo_url: updatedProfile.photo_url,
+      profile_image_url: updatedProfile.profile_image_url,
       created_at: updatedProfile.created_at,
       updated_at: updatedProfile.updated_at,
       // For compatibility with frontend expectations
@@ -939,9 +940,10 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
     res.status(200).json({
       success: true,
       data: {
-        message: 'Photo uploaded successfully to customer_photos/ directory',
+        message: 'Photo uploaded successfully',
         photoUrl,
-        storageLocation: `customer_photos/${id}_${Date.now()}.jpg`
+        profile_image_url: photoUrl,
+        storageLocation: fileName
       }
     });
 

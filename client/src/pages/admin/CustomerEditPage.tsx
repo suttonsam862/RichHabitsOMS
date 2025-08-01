@@ -9,14 +9,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Save, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
 import { UserAvatar } from '@/components/ui/FallbackImage';
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
 import { useFieldValidation } from "@/hooks/useFieldValidation";
 import { getFieldStyles } from "@/lib/utils";
-import { CustomerPhotoUpload } from '@/components/ui/CustomerPhotoUpload';
+import { validateFile } from '@/utils/fileValidation';
+import { compressImage, shouldCompress, getCompressionSettings, formatFileSize } from '@/utils/imageCompression';
 
 const customerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -55,13 +56,20 @@ export default function CustomerEditPage() {
   const [isSaving, setIsSaving] = React.useState(false);
   const [customerError, setCustomerError] = React.useState<string | null>(null);
 
+  // Photo upload state
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadRetryCount, setUploadRetryCount] = React.useState(0);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+
   // Fetch customer data with simple async/await
   const fetchCustomer = async () => {
     if (!customerId) return;
-    
+
     setIsLoading(true);
     setCustomerError(null);
-    
+
     try {
       const response = await fetch(`/api/customers/${customerId}`, {
         headers: {
@@ -98,7 +106,7 @@ export default function CustomerEditPage() {
         photo_url: data.photo_url,
         profile_image_url: data.profile_image_url
       } as Customer;
-      
+
       setCustomer(customerData);
     } catch (error: any) {
       const errorMessage = error.name === 'TypeError' || error.message.includes('fetch')
@@ -132,7 +140,8 @@ export default function CustomerEditPage() {
     }
   });
 
-  const [initialData, setInitialData] = React.useState<CustomerFormData | null>(null);
+  // Store initial data for comparison
+  const [initialData, setInitialData] = React.useState<CustomerFormData | undefined>(undefined);
 
   // Update form when customer data loads
   React.useEffect(() => {
@@ -165,7 +174,7 @@ export default function CustomerEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.hasChanges || isSaving,
+    when: validation.isSubmitDisabled || isSaving,
     message: "Your form is being saved. Please wait for the process to complete before leaving."
   });
 
@@ -175,7 +184,170 @@ export default function CustomerEditPage() {
     realtimeFields: ['email', 'phone'] // Validate these fields in real-time after blur
   });
 
+  // File handling functions
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Use centralized validation with file size limit
+      const validation = validateFile(file, { maxSizeMB: 10 }); // 10MB limit
+      if (!validation.isValid) {
+        toast({
+          title: validation.errorTitle || "File Upload Error",
+          description: validation.error || 'Please select a valid image file.',
+          variant: "destructive",
+        });
+        // Clear the file input but don't close any dialogs
+        event.target.value = '';
+        return;
+      }
+
+      let fileToUse = file;
+
+      // Compress image if needed
+      if (shouldCompress(file, 1024)) {
+        try {
+          const settings = getCompressionSettings(file.size / 1024);
+          const result = await compressImage(file, settings);
+          fileToUse = result.file;
+
+          console.log(`Customer photo compressed: ${formatFileSize(result.originalSize)} → ${formatFileSize(result.compressedSize)} (${result.compressionRatio}% reduction)`);
+
+          toast({
+            title: "Image optimized",
+            description: `File size reduced by ${result.compressionRatio}% for faster upload`,
+          });
+        } catch (error) {
+          console.warn('Image compression failed, using original:', error);
+        }
+      }
+
+      setSelectedFile(fileToUse);
+
+      // Create preview URL using createObjectURL for better memory management
+      const objectUrl = URL.createObjectURL(fileToUse);
+      setPreviewUrl(objectUrl);
+    }
+  };
+
+  const handleFileRemove = () => {
+    setSelectedFile(null);
+    // Clean up preview URL to prevent memory leaks
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    setUploadRetryCount(0);
+    // Reset file input
+    const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  // Simple photo upload with async/await
+  const uploadPhoto = async (file: File) => {
+    try {
+      // Additional client-side file size check before upload
+      const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSizeBytes) {
+        throw new Error(`File size too large. Maximum size is 10MB, but your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`);
+      }
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch(`/api/customers/${customerId}/photo`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        let errorMessage = 'Failed to upload photo';
+
+        if (errorData?.message) {
+          errorMessage = errorData.message;
+        } else if (response.status === 413) {
+          errorMessage = 'File size too large. Please choose a smaller image (max 10MB).';
+        } else if (response.status === 415) {
+          errorMessage = 'Invalid file format. Please upload a valid image file (JPG, PNG, WebP).';
+        } else if (response.status === 401) {
+          errorMessage = 'Authentication failed. Please refresh the page and try again.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (error.name === 'TypeError' || error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      throw error;
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    setUploadError(null); // Clear any previous upload errors
+
+    try {
+      await uploadPhoto(selectedFile);
+
+      toast({
+        title: "Photo uploaded successfully",
+        description: "Customer photo has been successfully uploaded and optimized.",
+      });
+
+      // Refresh customer data to get the new photo URL
+      await fetchCustomer();
+
+      // Clear the upload state
+      setSelectedFile(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(null);
+      setUploadRetryCount(0);
+    } catch (error: any) {
+      setUploadRetryCount(prev => prev + 1);
+      setUploadError(error.message || "Failed to upload customer photo. Please try again.");
+      // Show error but don't close any open dialogs/popups
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload customer photo. Please try again.",
+        variant: "destructive",
+      });
+      // Don't reset file selection on error so user can try again
+      // This allows user to see the error message without losing their work
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const retryPhotoUpload = () => {
+    if (!selectedFile) return;
+    handlePhotoUpload();
+  };
+
+  // Cleanup preview URL on component unmount
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [isSubmitDisabled, setIsSubmitDisabled] = React.useState(false);
 
   // Simple customer update with async/await
   const updateCustomer = async (data: CustomerFormData) => {
@@ -214,67 +386,159 @@ export default function CustomerEditPage() {
         body: JSON.stringify(requestData)
       });
 
+      // Handle different types of failures
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        let errorMessage = 'Failed to update customer';
-        
-        if (errorData?.message) {
-          errorMessage = errorData.message;
-        } else if (response.status === 404) {
-          errorMessage = 'Customer not found';
-        } else if (response.status === 400) {
-          errorMessage = 'Invalid customer data provided';
-        } else if (response.status === 401) {
-          errorMessage = 'Authentication failed. Please refresh the page and try again.';
-        } else if (response.status >= 500) {
-          errorMessage = 'Server error. Please try again later.';
+        let errorMessage = `Failed to update customer (${response.status})`;
+
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (jsonError) {
+          // If we can't parse JSON, use the status-based message
+          if (response.status === 400) {
+            errorMessage = 'Invalid customer data provided';
+          } else if (response.status === 401) {
+            errorMessage = 'Authentication required. Please log in again.';
+          } else if (response.status === 403) {
+            errorMessage = 'You do not have permission to update this customer';
+          } else if (response.status === 404) {
+            errorMessage = 'Customer not found';
+          } else if (response.status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          }
         }
-        
-        throw new Error(errorMessage);
+
+        const error = new Error(errorMessage);
+        error.name = `HTTPError${response.status}`;
+        throw error;
       }
 
-      return response.json();
-    } catch (error: any) {
-      if (error.name === 'TypeError' || error.message.includes('fetch')) {
+      const result = await response.json();
+
+      // Validate the response structure
+      if (!result.success || !result.updatedCustomer) {
+        throw new Error('Invalid response format from server');
+      }
+
+      return result;
+    } catch (networkError: any) {
+      // Handle network errors (no internet, server down, etc.)
+      if (networkError.name === 'TypeError' || networkError.message.includes('fetch')) {
         throw new Error('Network error. Please check your connection and try again.');
       }
-      throw error;
+      throw networkError;
     }
   };
 
+  // Form submission handler with async/await
   const onSubmit = async (data: CustomerFormData) => {
-    if (isSaving) return;
-    
-    setIsSaving(true);
-    setSubmitError(null);
+    // Check validation and submit state before submitting
+    if (!validation.canSubmit || isSubmitDisabled) {
+      if (isSubmitDisabled) {
+        toast({
+          title: "Please wait",
+          description: "Form is being processed. Please wait before submitting again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    try {
-      await updateCustomer(data);
-      
       toast({
-        title: "Customer updated successfully",
-        description: "Customer information has been saved.",
-      });
-
-      // Refresh customer data to get the latest information
-      await fetchCustomer();
-      
-      // Reset form state
-      setInitialData(data);
-    } catch (error: any) {
-      console.error('Customer update error:', error);
-      setSubmitError(error.message);
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update customer. Please try again.",
+        title: "Cannot submit form",
+        description: validation.errors.length > 0 
+          ? validation.errors[0] 
+          : validation.hasChanges 
+            ? "Please fix form errors before submitting"
+            : "No changes to save",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Disable submit button immediately
+    setIsSubmitDisabled(true);
+    setIsSaving(true);
+
+    try {
+      const result = await updateCustomer(data);
+
+      console.log('Customer updated successfully:', result);
+
+      // Clear any previous errors
+      setSubmitError(null);
+
+      // Only show success toast if API response indicates success
+      if (result && result.success === true) {
+        toast({
+          title: "Customer updated",
+          description: "Customer information has been successfully updated.",
+        });
+
+        // Update form values to reflect server response (in case server modified data)
+        if (result.updatedCustomer) {
+          const updatedCustomer = result.updatedCustomer;
+          const formData = {
+            firstName: updatedCustomer.firstName || updatedCustomer.first_name || '',
+            lastName: updatedCustomer.lastName || updatedCustomer.last_name || '',
+            email: updatedCustomer.email || '',
+            company: updatedCustomer.company || '',
+            phone: updatedCustomer.phone || '',
+            address: updatedCustomer.address || '',
+            city: updatedCustomer.city || '',
+            state: updatedCustomer.state || '',
+            zip: updatedCustomer.zip || '',
+            country: updatedCustomer.country || '',
+            status: updatedCustomer.status || 'active'
+          };
+
+          form.reset(formData);
+          setInitialData(formData);
+
+          // Update the local customer state
+          setCustomer(prev => prev ? { ...prev, ...updatedCustomer } : null);
+        }
+
+        // Navigate back to customer detail page
+        navigate(`/admin/customers/${customerId}`);
+      } else {
+        // If success is not true, treat it as an error
+        const errorMessage = result?.message || 'Update completed but server did not confirm success';
+        setSubmitError(errorMessage);
+        toast({
+          title: "Update uncertain",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Customer update failed:', error);
+
+      // Set the inline error message
+      setSubmitError(error.message);
+
+      // Also show toast for immediate feedback
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update customer information.",
+        variant: "destructive",
+      });
+
+      // If it's an auth error, redirect to login
+      if (error.name === 'HTTPError401') {
+        localStorage.removeItem('authToken');
+        navigate('/login');
+      }
     } finally {
       setIsSaving(false);
+      // Re-enable submit after 1 second
+      setTimeout(() => setIsSubmitDisabled(false), 1000);
     }
   };
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -284,52 +548,107 @@ export default function CustomerEditPage() {
             Back to Customers
           </Button>
         </div>
-        <Card>
-          <CardHeader>
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-4 pt-4">
-              <Skeleton className="h-10 w-32" />
-              <Skeleton className="h-10 w-20" />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Header Skeleton */}
+        <div className="mb-6">
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Profile Photo Section */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-center">
+                <Skeleton className="h-32 w-32 rounded-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-4 w-40 mx-auto" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Customer Details Form */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Personal Information */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+
+              {/* Address Information */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-14" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-20" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -350,7 +669,7 @@ export default function CustomerEditPage() {
               <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Failed to Load Customer</h3>
               <p className="text-muted-foreground mb-4">
-                {customerError || 'Unable to fetch customer details. Please try again.'}
+                {customerError.message || 'Unable to fetch customer details. Please try again.'}
               </p>
               <Button 
                 onClick={() => window.location.reload()} 
@@ -401,9 +720,9 @@ export default function CustomerEditPage() {
         <div>
           <h1 className="text-2xl font-bold">Edit Customer</h1>
           <p className="text-muted-foreground">{customer.firstName} {customer.lastName}</p>
-          {customer?.created_at && (
+          {customer?.updated_at && (
             <p className="text-sm text-muted-foreground">
-              Created: {new Date(customer.created_at).toLocaleString()}
+              Last updated: {new Date(customer.updated_at).toLocaleString()}
             </p>
           )}
         </div>
@@ -462,14 +781,11 @@ export default function CustomerEditPage() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Email address" 
                         type="email" 
+                        placeholder="email@example.com" 
                         {...field} 
-                        className={getFieldStyles('email', validation.changedFields, !!form.formState.errors.email)}
-                        onBlur={(e) => {
-                          field.onBlur();
-                          fieldValidation.validateField('email', e.target.value);
-                        }}
+                        onBlur={() => fieldValidation.handleEmailBlur('email')}
+                        className={`${getFieldStyles('email', validation.changedFields, !!form.formState.errors.email)} ${fieldValidation.getFieldClasses('email')}`}
                       />
                     </FormControl>
                     <FormMessage />
@@ -488,11 +804,8 @@ export default function CustomerEditPage() {
                         <Input 
                           placeholder="Phone number" 
                           {...field} 
-                          className={getFieldStyles('phone', validation.changedFields, !!form.formState.errors.phone)}
-                          onBlur={(e) => {
-                            field.onBlur();
-                            fieldValidation.validateField('phone', e.target.value);
-                          }}
+                          onBlur={() => fieldValidation.handleFieldBlur('phone')}
+                          className={fieldValidation.getFieldClasses('phone')}
                         />
                       </FormControl>
                       <FormMessage />
@@ -515,36 +828,124 @@ export default function CustomerEditPage() {
                 />
               </div>
 
-              {/* Customer Photo Upload */}
-              <div className="col-span-2">
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="flex items-center space-x-4">
+              {/* Photo Upload Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Customer Photo</h3>
+
+                {/* Current Photo Display */}
+                <div className="flex items-center space-x-4">
+                  <div className="flex-shrink-0">
                     <UserAvatar
-                      src={customer?.photo_url || customer?.profile_image_url}
-                      name={`${customer?.firstName} ${customer?.lastName}`}
-                      className="h-16 w-16"
+                      src={customer.profile_image_url || customer.photo_url}
+                      name={`${customer.firstName} ${customer.lastName}`}
+                      size="lg"
                     />
-                    <div>
-                      <h3 className="font-medium text-gray-900">Customer Photo</h3>
-                      <p className="text-sm text-gray-500">
-                        {customer?.photo_url || customer?.profile_image_url 
-                          ? 'Photo uploaded' 
-                          : 'No photo uploaded'
-                        }
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">
+                      {(customer.profile_image_url || customer.photo_url) ? 'Current customer photo' : 'No photo uploaded'}
+                    </p>
+                    {customer.profile_image_url && (
+                      <p className="text-xs text-green-600 mt-1">✓ Stored in Supabase Storage</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Photo Upload Interface */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                  {previewUrl ? (
+                    <div className="text-center space-y-4">
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="mx-auto w-32 h-32 rounded-full object-cover border border-gray-200"
+                      />
+
+                      {/* Upload Error with Retry */}
+                      {uploadError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
+                          <p className="text-sm text-red-600">
+                            {uploadError}
+                          </p>
+                          {uploadRetryCount < 3 && (
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                type="button"
+                                onClick={retryPhotoUpload}
+                                disabled={isUploading}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 border-red-300 hover:bg-red-50"
+                              >
+                                Retry Upload
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleFileRemove}
+                                className="text-gray-600"
+                              >
+                                Reset
+                              </Button>
+                            </div>
+                          )}
+                          {uploadRetryCount >= 3 && (
+                            <p className="text-xs text-red-500">
+                              Maximum retry attempts reached. Please check your connection and try again later.
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Upload Buttons */}
+                      {!uploadError && (
+                        <div className="flex justify-center space-x-2">
+                          <Button
+                            type="button"
+                            onClick={handlePhotoUpload}
+                            disabled={isUploading}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            {isUploading ? 'Uploading...' : 'Upload Photo'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleFileRemove}
+                            disabled={isUploading}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Remove
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                      <div className="flex flex-col items-center">
+                        <label
+                          htmlFor="photo-upload"
+                          className="cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                        >
+                          <span>Upload a photo</span>
+                          <input
+                            id="photo-upload"
+                            name="photo-upload"
+                            type="file"
+                            className="sr-only"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            onChange={handleFileSelect}
+                          />
+                        </label>                        <p className="pl-1 text-gray-500">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        PNG, JPG, WebP up to 5MB
                       </p>
                     </div>
-                  </div>
-                  <CustomerPhotoUpload
-                    customerId={customerId!}
-                    currentPhotoUrl={customer?.photo_url || customer?.profile_image_url}
-                    customerName={`${customer?.firstName} ${customer?.lastName}`}
-                    onUploadSuccess={(photoUrl) => {
-                      // Update the customer data with new photo URL
-                      if (customer) {
-                        setCustomer({ ...customer, photo_url: photoUrl });
-                      }
-                    }}
-                  />
+                  )}
                 </div>
               </div>
 
@@ -606,55 +1007,61 @@ export default function CustomerEditPage() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="country"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Country" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select customer status" />
-                        </SelectTrigger>
+                        <Input placeholder="Country" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Submit Error */}
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Inline error message */}
               {submitError && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <div className="bg-destructive/15 border border-destructive/50 rounded-md p-3">
                   <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                    <p className="text-sm text-red-700">{submitError}</p>
+                    <svg className="h-4 w-4 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-destructive font-medium">
+                      {submitError}
+                    </p>
                   </div>
                 </div>
               )}
 
               {/* Validation Status */}
-              {!validation.canSubmit && validation.hasChanges && (
+              {!validation.hasChanges && initialData && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                   <div className="flex items-center space-x-2">
                     <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -695,14 +1102,15 @@ export default function CustomerEditPage() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={isSaving || !validation.canSubmit}
-                  className={(!validation.canSubmit) ? "opacity-50 cursor-not-allowed" : ""}
+                  disabled={isSaving || !validation.canSubmit || isSubmitDisabled}
+                  className={(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}
                   title={!validation.canSubmit ? 
                     (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
+                    isSubmitDisabled ? "Please wait before submitting again" :
                     "Save customer changes"}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  {isSaving ? 'Saving...' : isSubmitDisabled ? 'Processing...' : 'Save Changes'}
                 </Button>
               </div>
             </form>

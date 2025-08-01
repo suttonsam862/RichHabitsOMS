@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -163,7 +162,7 @@ function CategorizedCatalogView({ items, onEditItem, onDeleteItem, isDeleting }:
   // Group items by category and sort aesthetically
   const categorizedItems = useMemo(() => {
     const categories = new Map<string, CatalogItem[]>();
-    
+
     // Sort items by category, then by price (premium first), then by name
     const sortedItems = [...items].sort((a, b) => {
       // First by category
@@ -491,7 +490,7 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
     <Card className={getCardClasses()}>
       <CardContent className="p-0">
         {renderImage()}
-        
+
         <div className="p-4">
           <div className="flex items-start justify-between mb-2">
             <CardTitle className={`${viewMode === 'grid' ? 'text-sm' : 'text-lg'} text-foreground line-clamp-2`}>
@@ -501,17 +500,17 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
               {item.status}
             </Badge>
           </div>
-          
+
           <p className={`${viewMode === 'grid' ? 'text-xs' : 'text-sm'} text-muted-foreground mb-3`}>
             {item.category} • {item.sport}
           </p>
-          
+
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className={`${viewMode === 'grid' ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Price:</span>
               <span className="font-bold text-neon-blue">${(item.basePrice || 0).toFixed(2)}</span>
             </div>
-            
+
             {viewMode === 'gallery' && (
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
@@ -531,7 +530,7 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
               </div>
             )}
           </div>
-          
+
           <div className="flex justify-end gap-2 mt-4">
             <Button size="sm" variant="outline" onClick={onView} className="glass-button">
               <Search className="w-4 h-4" />
@@ -573,7 +572,7 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
 
   const imageVariants = item.imageVariants || {};
   const availableVariants = Object.entries(imageVariants).filter(([_, url]) => url);
-  
+
   // Prioritize primary image from images array, then fallback to variants/imageUrl
   const primaryImage = item.images?.find(img => img.isPrimary);
   const currentImageUrl = imageVariants[selectedImageVariant as keyof typeof imageVariants] || 
@@ -738,7 +737,7 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
                     <p className="text-foreground">{item.fabric}</p>
                   </div>
                 )}
-                
+
                 {item.sizes && item.sizes.length > 0 && (
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Available Sizes</Label>
@@ -822,7 +821,7 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
             Created: {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Unknown'}
             {item.updated_at && ` • Updated: ${new Date(item.updated_at).toLocaleDateString()}`}
           </div>
-          
+
           <div className="flex gap-3">
             <Button
               variant="outline"
@@ -870,7 +869,8 @@ export default function CatalogPage() {
     sport: '',
     basePrice: 0,
     unitCost: 0,
-    sku: '',
+    ```python
+sku: '',
     etaDays: '7-10 business days',
     status: 'active',
     description: '',
@@ -888,12 +888,12 @@ export default function CatalogPage() {
   const { syncCatalog } = useDataSync();
 
   // Fetch catalog items with bulletproof error handling and caching
-  const { data: catalogItems = [], isLoading, error, refetch } = useQuery({
+  const { data: catalogItems = [], isLoading, error: catalogError, refetch } = useQuery({
     queryKey: ['catalog'],
     queryFn: async () => {
       try {
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-        
+
         if (!token) {
           throw new Error('Authentication required. Please log in again.');
         }
@@ -905,31 +905,31 @@ export default function CatalogPage() {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (response.status === 401) {
           // Clear invalid token and redirect to login
           localStorage.removeItem('authToken');
           localStorage.removeItem('token');
           throw new Error('Session expired. Please log in again.');
         }
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.message || `Failed to fetch catalog (${response.status})`);
         }
-        
+
         const result = await response.json();
-        
+
         if (!result.success) {
           throw new Error(result.message || 'Failed to fetch catalog items');
         }
-        
+
         // Ensure we always return an array
         const items = Array.isArray(result.data) ? result.data : [];
-        
+
         console.log(`✅ Catalog loaded: ${items.length} items`);
         return items;
-        
+
       } catch (error) {
         console.error('❌ Catalog fetch error:', error);
         throw error;
@@ -998,7 +998,7 @@ export default function CatalogPage() {
       }
 
       const formDataToSend = new FormData();
-      
+
       // Clean and validate data before sending
       const cleanedData = {
         ...itemData,
@@ -1087,7 +1087,7 @@ export default function CatalogPage() {
       }
 
       const formDataToSend = new FormData();
-      
+
       // Clean and validate data
       const cleanedData = {
         ...data,
@@ -1207,11 +1207,11 @@ export default function CatalogPage() {
           title: "Image Uploaded Successfully",
           description: result.message || "Catalog item image has been updated with optimized variants.",
         });
-        
+
         // Invalidate and refetch catalog data
         queryClient.invalidateQueries({ queryKey: ['catalog'] });
         await refetch();
-        
+
         // Also sync if available
         if (syncCatalog) {
           await syncCatalog();
@@ -1219,7 +1219,7 @@ export default function CatalogPage() {
       } else {
         const errorMessage = result?.error || result?.message || "Failed to upload image";
         console.error('Image upload failed:', result);
-        
+
         toast({
           title: "Upload Failed",
           description: errorMessage,
@@ -1251,11 +1251,11 @@ export default function CatalogPage() {
     const namePrefix = formData.name.substring(0, 2).toUpperCase().replace(/[^A-Z]/g, '');
     const timestamp = Date.now().toString().slice(-6);
     const random = Math.random().toString(36).substring(2, 4).toUpperCase();
-    
+
     const newSKU = `${categoryPrefix || 'CAT'}-${namePrefix || 'PR'}-${timestamp}-${random}`;
-    
+
     setFormData({ ...formData, sku: newSKU });
-    
+
     toast({
       title: "SKU Generated",
       description: `New SKU: ${newSKU}`,
@@ -1313,7 +1313,7 @@ export default function CatalogPage() {
   // Handle form submission with comprehensive validation
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Comprehensive client-side validation
     if (!formData.name?.trim()) {
       toast({
@@ -1324,7 +1324,7 @@ export default function CatalogPage() {
       setCurrentStep(0); // Go back to basic info step
       return;
     }
-    
+
     if (!formData.category?.trim()) {
       toast({
         title: "Validation Error", 
@@ -1408,7 +1408,7 @@ export default function CatalogPage() {
   // Render onboarding step content
   const renderStepContent = () => {
     const step = ONBOARDING_STEPS[currentStep];
-    
+
     switch (step.id) {
       case 'basic':
         return (
@@ -1424,7 +1424,7 @@ export default function CatalogPage() {
                 required
               />
             </div>
-            
+
             <div>
               <Label htmlFor="category" className="text-foreground">Category</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
@@ -1474,7 +1474,7 @@ export default function CatalogPage() {
                 className="glass-input"
               />
             </div>
-            
+
             <div>
               <Label htmlFor="unitCost" className="text-foreground">Unit Cost ($)</Label>
               <Input
@@ -1655,7 +1655,7 @@ export default function CatalogPage() {
   };
 
   // Handle error states
-  if (error) {
+  if (catalogError) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -1664,13 +1664,13 @@ export default function CatalogPage() {
             <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
           </div>
         </div>
-        
+
         <Card className="rich-card">
           <CardContent className="py-8 text-center">
             <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2 text-foreground">Unable to load catalog</h3>
             <p className="text-muted-foreground mb-4">
-              {error?.message || 'There was an error loading the catalog. Please try again.'}
+              {catalogError?.message || 'There was an error loading the catalog. Please try again.'}
             </p>
             <Button onClick={() => refetch()} className="glass-button">
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -1692,7 +1692,7 @@ export default function CatalogPage() {
             <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
           </div>
         </div>
-        
+
         <Card className="rich-card">
           <CardContent className="py-8 text-center">
             <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -1753,7 +1753,7 @@ export default function CatalogPage() {
                 <AspectRatio ratio={16 / 9} className="mb-4">
                   <div className="w-full h-full bg-glass-border/20 animate-pulse rounded-md"></div>
                 </AspectRatio>
-                
+
                 {/* Content Skeleton */}
                 <div className="space-y-3">
                   <div className="h-5 bg-glass-border/20 animate-pulse rounded w-3/4"></div>
@@ -1825,7 +1825,7 @@ export default function CatalogPage() {
       </Card>
 
       {/* Error State */}
-      {error && (
+      {catalogError && (
         <Card className="rich-card">
           <CardContent className="py-8 text-center">
             <h3 className="text-lg font-medium mb-2 text-foreground">Unable to load catalog</h3>
@@ -1839,7 +1839,7 @@ export default function CatalogPage() {
       )}
 
       {/* Categorized Catalog Display */}
-      {!error && (
+      {!catalogError && (
         <CategorizedCatalogView 
           items={filteredItems} 
           onEditItem={startEditing}
@@ -1849,7 +1849,7 @@ export default function CatalogPage() {
       )}
 
       {/* Empty State */}
-      {!error && filteredItems.length === 0 && !isLoading && (
+      {!catalogError && filteredItems.length === 0 && !isLoading && (
         <Card className="rich-card">
           <CardContent className="py-16 text-center">
             <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -1895,7 +1895,7 @@ export default function CatalogPage() {
               const IconComponent = step.icon;
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
-              
+
               return (
                 <div key={step.id} className="flex items-center">
                   <div className={`
@@ -1932,7 +1932,7 @@ export default function CatalogPage() {
                   {ONBOARDING_STEPS[currentStep].description}
                 </p>
               </div>
-              
+
               {renderStepContent()}
             </div>
 
