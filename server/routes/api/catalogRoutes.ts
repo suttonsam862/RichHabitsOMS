@@ -29,45 +29,78 @@ async function createCatalogItem(req: Request, res: Response) {
   try {
     console.log('Creating catalog item with request body:', req.body);
 
-    // Extract and normalize fields - support both camelCase (frontend) and snake_case formats
-    const name = req.body.name;
-    const description = req.body.description || '';
-    const base_price = req.body.base_price || req.body.basePrice;
-    const unit_cost = req.body.unit_cost || req.body.unitCost;
-    const category = req.body.category || '';
-    const sport = req.body.sport || '';
-    const fabric_id = req.body.fabric_id || req.body.fabricId || null;
-    const status = req.body.status || 'active';
-    const sku = req.body.sku || '';
-
-    // Validate required fields
-    if (!name || base_price === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: name and base_price are required'
-      });
-    }
-
-    // Validate base_price is a valid number
-    const parsedPrice = parseFloat(base_price);
-    if (isNaN(parsedPrice) || parsedPrice < 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'base_price must be a valid positive number'
-      });
-    }
-
-    // Validate unit_cost if provided
-    let parsedUnitCost = 0;
-    if (unit_cost !== undefined) {
-      parsedUnitCost = parseFloat(unit_cost);
-      if (isNaN(parsedUnitCost) || parsedUnitCost < 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'unit_cost must be a valid positive number'
-        });
+    // Comprehensive input validation and sanitization
+    const validateAndSanitize = (data: any) => {
+      const errors: string[] = [];
+      
+      // Required field validation
+      if (!data.name?.trim()) {
+        errors.push('Product name is required and cannot be empty');
       }
+      
+      if (data.basePrice === undefined && data.base_price === undefined) {
+        errors.push('Base price is required');
+      }
+      
+      // Sanitize and validate fields
+      const sanitized = {
+        name: data.name?.trim() || '',
+        description: (data.description || '').trim(),
+        category: (data.category || '').trim(),
+        sport: (data.sport || '').trim(),
+        fabric_id: data.fabric_id || data.fabricId || null,
+        status: ['active', 'inactive'].includes(data.status) ? data.status : 'active',
+        sku: (data.sku || '').trim()
+      };
+      
+      // Price validation
+      const basePrice = parseFloat(data.base_price || data.basePrice);
+      if (isNaN(basePrice)) {
+        errors.push('Base price must be a valid number');
+      } else if (basePrice < 0) {
+        errors.push('Base price cannot be negative');
+      }
+      
+      const unitCost = parseFloat(data.unit_cost || data.unitCost || 0);
+      if (isNaN(unitCost) || unitCost < 0) {
+        errors.push('Unit cost must be a valid positive number or zero');
+      }
+      
+      // Length validations
+      if (sanitized.name.length > 255) {
+        errors.push('Product name cannot exceed 255 characters');
+      }
+      
+      if (sanitized.description.length > 2000) {
+        errors.push('Description cannot exceed 2000 characters');
+      }
+      
+      if (sanitized.sku && sanitized.sku.length > 100) {
+        errors.push('SKU cannot exceed 100 characters');
+      }
+      
+      return {
+        isValid: errors.length === 0,
+        errors,
+        data: {
+          ...sanitized,
+          base_price: basePrice,
+          unit_cost: unitCost
+        }
+      };
+    };
+    
+    const validation = validateAndSanitize(req.body);
+    
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validation.errors
+      });
     }
+    
+    const { name, description, category, sport, fabric_id, status, sku, base_price, unit_cost } = validation.data;
 
     console.log('Creating catalog item:', name);
 
@@ -224,41 +257,58 @@ async function getAllCatalogItems(req: Request, res: Response) {
       });
     }
 
-    // Process the data to ensure proper formatting
+    // Process the data to ensure proper formatting with bulletproof error handling
     const processedItems = (finalCatalogItems || []).map(item => {
-      // Parse specifications JSON if it exists
+      // Parse specifications JSON with comprehensive error handling
       let specs = {};
       try {
         if (item.specifications) {
-          specs = typeof item.specifications === 'string' ? 
-            JSON.parse(item.specifications) : item.specifications;
+          if (typeof item.specifications === 'string') {
+            specs = JSON.parse(item.specifications);
+          } else if (typeof item.specifications === 'object') {
+            specs = item.specifications;
+          }
         }
       } catch (e) {
-        console.warn('Failed to parse specifications for item:', item.id);
+        console.warn(`Failed to parse specifications for item ${item.id}:`, e);
         specs = {};
       }
 
+      // Ensure array fields are always arrays
+      const safeArray = (value: any, fallback: any[] = []) => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string' && value.trim()) {
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : fallback;
+          } catch {
+            return value.split(',').map(s => s.trim()).filter(Boolean);
+          }
+        }
+        return fallback;
+      };
+
       return {
         id: item.id,
-        name: item.name || '',
-        category: item.category || '',
-        sport: item.sport || '',
-        basePrice: parseFloat(item.base_price) || 0,
-        unitCost: parseFloat(item.unit_cost) || 0,
-        sku: item.sku || '',
+        name: item.name?.trim() || '',
+        category: item.category?.trim() || '',
+        sport: item.sport?.trim() || '',
+        basePrice: Math.max(0, parseFloat(item.base_price) || 0),
+        unitCost: Math.max(0, parseFloat(item.unit_cost) || 0),
+        sku: item.sku?.trim() || '',
         etaDays: specs.etaDays || item.eta_days || '7-10 business days',
-        status: item.status || 'active',
+        status: ['active', 'inactive'].includes(item.status) ? item.status : 'active',
         imageUrl: item.base_image_url || item.image_url || null,
-        imageVariants: item.image_variants || {},
-        images: Array.isArray(item.images) ? item.images : [],
-        description: item.description || '',
-        buildInstructions: item.build_instructions || '',
-        fabric: specs.fabric || item.fabric || '',
-        sizes: specs.sizes || (Array.isArray(item.sizes) ? item.sizes : []),
-        colors: specs.colors || (Array.isArray(item.colors) ? item.colors : []),
-        customizationOptions: specs.customizationOptions || [],
-        minQuantity: specs.minQuantity || parseInt(item.min_quantity) || 1,
-        maxQuantity: specs.maxQuantity || parseInt(item.max_quantity) || 1000,
+        imageVariants: typeof item.image_variants === 'object' ? item.image_variants : {},
+        images: safeArray(item.images),
+        description: (item.description || specs.description || '').trim(),
+        buildInstructions: (item.build_instructions || specs.buildInstructions || '').trim(),
+        fabric: (specs.fabric || item.fabric || '').trim(),
+        sizes: safeArray(specs.sizes || item.sizes),
+        colors: safeArray(specs.colors || item.colors),
+        customizationOptions: safeArray(specs.customizationOptions || item.customization_options),
+        minQuantity: Math.max(1, parseInt(specs.minQuantity || item.min_quantity) || 1),
+        maxQuantity: Math.max(1, parseInt(specs.maxQuantity || item.max_quantity) || 1000),
         created_at: item.created_at,
         updated_at: item.updated_at
       };

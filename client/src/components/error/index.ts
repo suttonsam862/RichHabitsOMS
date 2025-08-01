@@ -1,3 +1,4 @@
+import React from 'react';
 // Error Boundary exports for easy importing  
 export { ErrorBoundary } from './ErrorBoundary';
 export { GlobalErrorBoundary } from './GlobalErrorBoundary';
@@ -63,8 +64,8 @@ export const withReactQueryErrorBoundary = <T extends object>(
       <Component {...props} />
     </AsyncErrorBoundary>
   );
-  
+
   WrappedComponent.displayName = `withReactQueryErrorBoundary(${Component.displayName || Component.name})`;
-  
+
   return WrappedComponent;
 };

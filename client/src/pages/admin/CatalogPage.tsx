@@ -887,35 +887,64 @@ export default function CatalogPage() {
   const { toast } = useToast();
   const { syncCatalog } = useDataSync();
 
-  // Fetch catalog items with standardized patterns
+  // Fetch catalog items with bulletproof error handling and caching
   const { data: catalogItems = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['catalog'],  // Simplified query key
+    queryKey: ['catalog'],
     queryFn: async () => {
-      const response = await fetch('/api/catalog', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token')}`
+      try {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        
+        if (!token) {
+          throw new Error('Authentication required. Please log in again.');
         }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log('Catalog API response:', result);
-      
-      if (result.success) {
-        return result.data || [];
-      } else {
-        throw new Error(result.message || 'Failed to fetch catalog items');
+
+        const response = await fetch('/api/catalog', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.status === 401) {
+          // Clear invalid token and redirect to login
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('token');
+          throw new Error('Session expired. Please log in again.');
+        }
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `Failed to fetch catalog (${response.status})`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to fetch catalog items');
+        }
+        
+        // Ensure we always return an array
+        const items = Array.isArray(result.data) ? result.data : [];
+        
+        console.log(`✅ Catalog loaded: ${items.length} items`);
+        return items;
+        
+      } catch (error) {
+        console.error('❌ Catalog fetch error:', error);
+        throw error;
       }
     },
-    staleTime: 1000 * 60 * 2, // 2 minutes for better sync
-    gcTime: 1000 * 60 * 10, // 10 minutes  
-    retry: 1,
-    retryDelay: 2000
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    retry: (failureCount, error) => {
+      // Don't retry on auth errors
+      if (error.message.includes('Authentication') || error.message.includes('Session expired')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
 
   // Fetch categories and sports for dropdowns
@@ -1170,19 +1199,38 @@ export default function CatalogPage() {
     }
   });
 
-  // Handle unified image upload completion
+  // Handle unified image upload completion with comprehensive error handling
   const handleImageUploadComplete = async (result: any) => {
-    if (result.success) {
+    try {
+      if (result?.success) {
+        toast({
+          title: "Image Uploaded Successfully",
+          description: result.message || "Catalog item image has been updated with optimized variants.",
+        });
+        
+        // Invalidate and refetch catalog data
+        queryClient.invalidateQueries({ queryKey: ['catalog'] });
+        await refetch();
+        
+        // Also sync if available
+        if (syncCatalog) {
+          await syncCatalog();
+        }
+      } else {
+        const errorMessage = result?.error || result?.message || "Failed to upload image";
+        console.error('Image upload failed:', result);
+        
+        toast({
+          title: "Upload Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error handling image upload completion:', error);
       toast({
-        title: "Image Uploaded Successfully",
-        description: "Catalog item image has been updated with optimized variants.",
-      });
-      await syncCatalog();
-      refetch(); // Refresh catalog data
-    } else {
-      toast({
-        title: "Upload Failed",
-        description: result.error || "Failed to upload image",
+        title: "Upload Processing Error",
+        description: "An error occurred while processing the upload result",
         variant: "destructive",
       });
     }

@@ -117,57 +117,109 @@ export class CatalogItemProcessor {
   }
 
   /**
-   * Transform database response to API format
+   * Transform database response to API format with bulletproof null safety
    */
   static transformDbResponse(dbItem: any): any {
-    if (!dbItem) return null;
-
-    const transformed: any = { ...dbItem };
-
-    // Map database fields back to API format
-    Object.entries(DB_FIELD_MAP).forEach(([apiField, dbField]) => {
-      if (dbItem[dbField] !== undefined) {
-        transformed[apiField] = dbItem[dbField];
-        // Remove the database field to avoid confusion
-        delete transformed[dbField];
-      }
-    });
-
-    // Extract array fields from specifications JSON
-    if (transformed.specifications) {
-      try {
-        const specs = typeof transformed.specifications === 'string' ? 
-          JSON.parse(transformed.specifications) : transformed.specifications;
-        
-        // Extract arrays and other fields from specifications
-        transformed.sizes = specs.sizes || [];
-        transformed.colors = specs.colors || [];
-        transformed.customizationOptions = specs.customizationOptions || [];
-        transformed.fabric = specs.fabric || '';
-        transformed.description = specs.description || '';
-        transformed.minQuantity = specs.minQuantity || 1;
-        transformed.maxQuantity = specs.maxQuantity || 1000;
-        transformed.buildInstructions = specs.buildInstructions || '';
-        transformed.etaDays = specs.etaDays || '7-10 business days';
-      } catch (e) {
-        console.warn('Failed to parse specifications:', transformed.specifications);
-        transformed.sizes = [];
-        transformed.colors = [];
-        transformed.customizationOptions = [];
-      }
-    } else {
-      transformed.sizes = [];
-      transformed.colors = [];
-      transformed.customizationOptions = [];
+    if (!dbItem || typeof dbItem !== 'object') {
+      console.warn('transformDbResponse received invalid item:', dbItem);
+      return null;
     }
 
-    // Fix field names for frontend
-    if (transformed.customization_options !== undefined) {
-      transformed.customizationOptions = transformed.customization_options;
-      delete transformed.customization_options;
-    }
+    try {
+      const transformed: any = { ...dbItem };
 
-    return transformed;
+      // Map database fields back to API format with null safety
+      Object.entries(DB_FIELD_MAP).forEach(([apiField, dbField]) => {
+        if (dbItem[dbField] !== undefined && dbItem[dbField] !== null) {
+          transformed[apiField] = dbItem[dbField];
+          // Remove the database field to avoid confusion
+          delete transformed[dbField];
+        }
+      });
+
+      // Initialize defaults
+      const defaults = {
+        sizes: [],
+        colors: [],
+        customizationOptions: [],
+        fabric: '',
+        description: '',
+        minQuantity: 1,
+        maxQuantity: 1000,
+        buildInstructions: '',
+        etaDays: '7-10 business days'
+      };
+
+      // Extract array fields from specifications JSON with comprehensive error handling
+      if (transformed.specifications) {
+        try {
+          let specs = {};
+          
+          if (typeof transformed.specifications === 'string') {
+            if (transformed.specifications.trim()) {
+              specs = JSON.parse(transformed.specifications);
+            }
+          } else if (typeof transformed.specifications === 'object') {
+            specs = transformed.specifications;
+          }
+          
+          // Safely extract fields with type checking
+          Object.keys(defaults).forEach(key => {
+            if (specs[key] !== undefined) {
+              if (['sizes', 'colors', 'customizationOptions'].includes(key)) {
+                // Ensure arrays
+                transformed[key] = Array.isArray(specs[key]) ? specs[key] : defaults[key];
+              } else if (['minQuantity', 'maxQuantity'].includes(key)) {
+                // Ensure numbers
+                const num = parseInt(specs[key]);
+                transformed[key] = isNaN(num) ? defaults[key] : Math.max(1, num);
+              } else {
+                // Ensure strings
+                transformed[key] = typeof specs[key] === 'string' ? specs[key] : defaults[key];
+              }
+            } else {
+              transformed[key] = defaults[key];
+            }
+          });
+          
+        } catch (e) {
+          console.warn(`Failed to parse specifications for item ${dbItem.id}:`, e);
+          Object.assign(transformed, defaults);
+        }
+      } else {
+        Object.assign(transformed, defaults);
+      }
+
+      // Handle legacy field names with null safety
+      if (transformed.customization_options !== undefined) {
+        transformed.customizationOptions = Array.isArray(transformed.customization_options) 
+          ? transformed.customization_options 
+          : defaults.customizationOptions;
+        delete transformed.customization_options;
+      }
+
+      // Ensure required string fields are never null/undefined
+      const requiredStringFields = ['name', 'category', 'sport', 'status', 'sku'];
+      requiredStringFields.forEach(field => {
+        if (typeof transformed[field] !== 'string') {
+          transformed[field] = '';
+        }
+      });
+
+      // Ensure numeric fields are valid
+      if (typeof transformed.basePrice !== 'number' || isNaN(transformed.basePrice)) {
+        transformed.basePrice = 0;
+      }
+      if (typeof transformed.unitCost !== 'number' || isNaN(transformed.unitCost)) {
+        transformed.unitCost = 0;
+      }
+
+      return transformed;
+      
+    } catch (error) {
+      console.error('Error transforming database response:', error);
+      return null;
+    }
   }
 }
 

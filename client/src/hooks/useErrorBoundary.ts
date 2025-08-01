@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 
 /**
  * Hook to manually trigger error boundaries
@@ -35,12 +35,12 @@ export function useErrorBoundary() {
         const wrappedError = new Error(
           errorMessage || `Async operation failed: ${error instanceof Error ? error.message : String(error)}`
         );
-        
+
         // Add original error as cause if possible
         if (error instanceof Error) {
           (wrappedError as any).cause = error;
         }
-        
+
         throwError(wrappedError);
         throw wrappedError;
       }
@@ -69,7 +69,7 @@ export function withErrorBoundary<P extends object>(
   );
 
   WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-  
+
   return WrappedComponent;
 }
 
