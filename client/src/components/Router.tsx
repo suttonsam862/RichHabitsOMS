@@ -24,6 +24,7 @@ import CustomerEditPage from '@/pages/admin/CustomerEditPage';
 import CatalogPage from '@/pages/admin/CatalogPage';
 import CatalogItemEditPage from '@/pages/admin/CatalogItemEditPage';
 import UserPermissionsPage from '@/pages/admin/UserPermissionsPage';
+import UserManagementPage from '@/pages/admin/UserManagementPage';
 import SettingsPage from '@/pages/admin/SettingsPage';
 import SalesManagementPage from '@/pages/admin/SalesManagementPage';
 
@@ -92,6 +93,9 @@ export function AppRouter() {
           <Route path="admin/customers/:id/edit" element={<CustomerEditPage />} />
           {/* Salesperson Management route */}
           <Route path="admin/salespeople" element={<SalesManagementPage />} />
+          {/* User Management routes */}
+          <Route path="admin/user-management" element={<UserManagementPage />} />
+          <Route path="admin/settings" element={<SettingsPage />} />
 
           {/* Customer management routes */}
           <Route path="customers" element={<CustomerListPage />} />

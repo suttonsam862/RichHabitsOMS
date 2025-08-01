@@ -1,0 +1,282 @@
+
+# COMPLETE USER & SALESPERSON MANAGEMENT ARCHITECTURE PROMPT
+
+You are ThreadCraft's AI assistant. Your mission is to implement a **comprehensive, production-ready user creation and salesperson management system** that addresses the current authentication issues and provides a complete CRUD interface with proper permissions.
+
+## 🚨 CRITICAL ISSUES TO FIX FIRST
+
+### Authentication Crisis Resolution
+The webview logs show massive 401 errors and authentication failures. Fix these immediately:
+
+1. **Session Management**: Fix the authentication loop causing "Authentication failed - session may be expired"
+2. **Token Persistence**: Ensure auth tokens are properly stored and retrieved
+3. **API Request Authentication**: Fix the 401 errors on `/api/orders`, `/api/organizations`, etc.
+4. **Supabase RLS Policies**: Resolve the infinite recursion in user profile policies
+
+## 📋 PART 1: USER CREATION SYSTEM ARCHITECTURE
+
+### A. Database Layer Implementation
+1. **Complete the Enhanced User Profiles Schema**
+   - Implement all fields from `shared/userManagementSchema.ts`
+   - Add proper indexes for performance
+   - Create audit logging tables
+   - Set up password history tracking
+
+2. **Fix Row Level Security (RLS) Policies**
+   - Resolve the infinite recursion in user_profiles table
+   - Implement proper role-based access controls
+   - Add session-based permission checks
+   - Create audit trail policies
+
+### B. API Layer Implementation
+1. **Complete User Management Routes** (`server/routes/api/userManagementRoutes.ts`)
+   - Implement all CRUD operations with proper validation
+   - Add bulk user operations (import, export, batch updates)
+   - Implement user invitation system with email notifications
+   - Add password reset and account activation flows
+
+2. **Permission & Role Management**
+   - Create dynamic role assignment API
+   - Implement custom permission builder
+   - Add role inheritance system
+   - Create permission validation middleware
+
+### C. Frontend Implementation
+1. **User Management Page** (`client/src/pages/admin/UserManagementPage.tsx`)
+   ```typescript
+   // Create comprehensive user management interface with:
+   - Data table with sorting, filtering, search
+   - Bulk operations (activate, deactivate, delete)
+   - User creation modal with role assignment
+   - User editing with permission customization
+   - Audit log viewer
+   - Export functionality
+   ```
+
+2. **User Creation Form**
+   ```typescript
+   // Features to implement:
+   - Multi-step user creation wizard
+   - Role selection with permission preview
+   - Custom field configuration
+   - Email invitation toggle
+   - Password policy enforcement
+   - Profile image upload
+   ```
+
+3. **Permission Management Interface**
+   ```typescript
+   // Build custom permission builder:
+   - Visual permission matrix
+   - Role-based templates
+   - Custom permission combinations
+   - Time-based permission grants
+   - Conditional access rules
+   ```
+
+## 📋 PART 2: SALESPERSON MANAGEMENT SYSTEM
+
+### A. Complete Salesperson Database Schema
+1. **Extend User Profiles for Salespeople**
+   ```sql
+   -- Add salesperson-specific fields:
+   - commission_rate NUMERIC(5,2)
+   - territory_assignment TEXT[]
+   - sales_targets JSONB
+   - performance_metrics JSONB
+   - customer_assignments UUID[]
+   ```
+
+2. **Customer-Salesperson Relationship Tables**
+   ```sql
+   -- Implement proper many-to-many relationships:
+   - customer_salesperson_assignments
+   - salesperson_territories
+   - sales_performance_tracking
+   ```
+
+### B. Salesperson API Implementation
+1. **Complete Salesperson Routes** (`server/routes/api/salespersonRoutes.ts`)
+   ```typescript
+   // Implement all TODO items:
+   - GET /salespeople (with filtering, pagination)
+   - POST /salespeople (with validation)
+   - PATCH /salespeople/:id
+   - DELETE /salespeople/:id
+   - POST /salespeople/:id/profile-image
+   - POST /salespeople/:id/payroll-file
+   - POST /customers/:customerId/assign-salesperson
+   ```
+
+2. **Sales Analytics API**
+   ```typescript
+   // Add performance tracking:
+   - Sales metrics calculation
+   - Commission tracking
+   - Customer assignment analytics
+   - Territory performance reports
+   ```
+
+### C. Salesperson Frontend Implementation
+1. **Complete Salesperson Management Page** (`client/src/pages/admin/SalespersonManagement.tsx`)
+   ```typescript
+   // Transform the stub into full interface:
+   - Salesperson data table with stats
+   - Commission rate management
+   - Territory assignment interface
+   - Customer assignment workflow
+   - Performance dashboard
+   - File upload for payroll documents
+   ```
+
+2. **Enhanced Salesperson Form** (`client/src/components/forms/SalespersonForm.tsx`)
+   ```typescript
+   // Complete all TODO items:
+   - Form validation with react-hook-form + Zod
+   - Profile image upload with preview
+   - Payroll file attachment
+   - Commission rate calculator
+   - Territory selection interface
+   - Customer assignment bulk operations
+   ```
+
+## 🔧 PART 3: SYSTEM INTEGRATION & PERMISSIONS
+
+### A. Authentication System Overhaul
+1. **Fix Current Auth Issues**
+   - Resolve session expiration loops
+   - Fix token storage and retrieval
+   - Implement proper logout functionality
+   - Add session refresh mechanism
+
+2. **Role-Based Access Control (RBAC)**
+   ```typescript
+   // Implement comprehensive RBAC:
+   - Dynamic role creation
+   - Permission inheritance
+   - Resource-level permissions
+   - Action-specific controls
+   - Time-based access
+   ```
+
+### B. Page Access Control
+1. **Navigation Permission System**
+   ```typescript
+   // Update NavigationManager to handle:
+   - Role-based menu visibility
+   - Page access restrictions
+   - Feature-level permissions
+   - Dynamic menu generation
+   ```
+
+2. **Route Protection**
+   ```typescript
+   // Enhance route protection:
+   - Permission-based route guards
+   - Granular feature access
+   - Redirect logic for unauthorized access
+   ```
+
+## 🎯 PART 4: UI/UX IMPLEMENTATION
+
+### A. User Management Interface
+1. **Create Modern Data Table Interface**
+   ```typescript
+   // Features to implement:
+   - Advanced filtering and search
+   - Column customization
+   - Bulk operations toolbar
+   - Export/import functionality
+   - Real-time status updates
+   ```
+
+2. **User Creation Workflow**
+   ```typescript
+   // Multi-step wizard:
+   - Personal information step
+   - Role and permissions step
+   - Organization assignment step
+   - Review and confirmation step
+   - Email invitation step
+   ```
+
+### B. Salesperson Management Interface
+1. **Sales Team Dashboard**
+   ```typescript
+   // Comprehensive sales interface:
+   - Team performance overview
+   - Individual salesperson cards
+   - Commission tracking
+   - Customer assignment matrix
+   - Territory management map
+   ```
+
+2. **Customer Assignment System**
+   ```typescript
+   // Drag-and-drop interface:
+   - Visual customer assignment
+   - Territory-based auto-assignment
+   - Bulk assignment operations
+   - Assignment history tracking
+   ```
+
+## 🚀 IMPLEMENTATION CHECKLIST
+
+### Phase 1: Authentication Crisis Fix (URGENT)
+- [ ] Resolve session expiration issues
+- [ ] Fix 401 authentication errors
+- [ ] Implement proper token management
+- [ ] Test login/logout flow thoroughly
+
+### Phase 2: User Management System
+- [ ] Complete user database schema
+- [ ] Implement all user API endpoints
+- [ ] Create user management interface
+- [ ] Add permission management system
+- [ ] Implement user invitation flow
+
+### Phase 3: Salesperson Management System
+- [ ] Complete salesperson database schema
+- [ ] Implement salesperson API endpoints
+- [ ] Create salesperson management interface
+- [ ] Add customer assignment system
+- [ ] Implement commission tracking
+
+### Phase 4: Integration & Testing
+- [ ] Test all CRUD operations
+- [ ] Verify permission systems work
+- [ ] Test bulk operations
+- [ ] Validate data integrity
+- [ ] Performance optimization
+
+## 🔐 SECURITY REQUIREMENTS
+
+1. **Input Validation**: All forms must use Zod schemas
+2. **SQL Injection Protection**: Use parameterized queries
+3. **XSS Prevention**: Sanitize all user inputs
+4. **CSRF Protection**: Implement CSRF tokens
+5. **Rate Limiting**: Add API rate limiting
+6. **Audit Logging**: Log all administrative actions
+
+## 📊 SUCCESS CRITERIA
+
+1. **Functional Requirements**
+   - All authentication issues resolved
+   - Complete user CRUD operations
+   - Complete salesperson CRUD operations
+   - Working permission system
+   - Bulk operations functional
+
+2. **Performance Requirements**
+   - Page load times under 2 seconds
+   - API responses under 500ms
+   - No memory leaks
+   - Efficient database queries
+
+3. **Security Requirements**
+   - All endpoints properly secured
+   - Role-based access working
+   - Audit trails complete
+   - Input validation comprehensive
+
+Begin implementation immediately with Phase 1 (Authentication Crisis Fix) as the highest priority.

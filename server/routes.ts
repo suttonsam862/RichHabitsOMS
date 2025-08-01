@@ -1593,6 +1593,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const authRoutes = await import('./routes/api/authRoutes');
   app.use('/api/auth', authRoutes.default);
   
+  // Mount user management routes
+  app.use('/api/user-management', userManagementRoutes);
+  
   // Register audit routes for order change tracking
   app.use('/api/audit', auditRoutes);
 
