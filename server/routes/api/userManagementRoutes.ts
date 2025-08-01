@@ -65,66 +65,98 @@ router.get('/users', requireAuth, requireRole(['admin']), async (req: Request, r
   try {
     const { page = 1, limit = Math.min(Number(req.query.limit) || 50, 100), search, status, role } = req.query;
 
-    let query = supabaseAdmin
-      .from('enhanced_user_profiles')
-      .select(`
-        id,
-        username,
-        email,
-        first_name,
-        last_name,
-        role,
-        phone,
-        company,
-        department,
-        title,
-        status,
-        is_email_verified,
-        last_login,
-        created_at,
-        updated_at,
-        permissions,
-        custom_attributes
-      `)
-      .order('created_at', { ascending: false });
+    // Get users from Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers({
+      page: Number(page),
+      perPage: Number(limit)
+    });
 
-    // Apply filters
-    if (search) {
-      query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+    if (authError) {
+      console.error('Error fetching auth users:', authError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch users from authentication service'
+      });
     }
 
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
+    // Get user profiles to match with auth users
+    const { data: profiles, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('*');
+
+    if (profileError) {
+      console.error('Error fetching user profiles:', profileError);
+    }
+
+    // Combine auth users with profile data
+    const users = authData.users.map(authUser => {
+      const profile = profiles?.find(p => p.id === authUser.id);
+      return {
+        id: authUser.id,
+        email: authUser.email,
+        firstName: profile?.first_name || authUser.user_metadata?.first_name || '',
+        lastName: profile?.last_name || authUser.user_metadata?.last_name || '',
+        role: profile?.role || 'customer',
+        status: authUser.email_confirmed_at ? 'active' : 'pending_activation',
+        lastLogin: authUser.last_sign_in_at,
+        createdAt: authUser.created_at,
+        phone: profile?.phone || authUser.user_metadata?.phone || '',
+        company: profile?.company || '',
+        username: profile?.username || authUser.email?.split('@')[0] || ''
+      };
+    });
+
+    // Apply client-side filtering if needed
+    let filteredUsers = users;
+    
+    if (search) {
+      const searchLower = search.toString().toLowerCase();
+      filteredUsers = users.filter(user => 
+        user.firstName.toLowerCase().includes(searchLower) ||
+        user.lastName.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower)
+      );
     }
 
     if (role && role !== 'all') {
-      query = query.eq('role', role);
+      filteredUsers = filteredUsers.filter(user => user.role === role);
     }
 
-    // Apply pagination
-    const offset = (Number(page) - 1) * Number(limit);
-    query = query.range(offset, offset + Number(limit) - 1);
-
-    const { data: users, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching users:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch users'
-      });
+    if (status && status !== 'all') {
+      filteredUsers = filteredUsers.filter(user => user.status === status);
     }
+
+    // Calculate analytics
+    const analytics = {
+      totalUsers: filteredUsers.length,
+      activeUsers: filteredUsers.filter(u => u.status === 'active').length,
+      pendingUsers: filteredUsers.filter(u => u.status === 'pending_activation').length,
+      suspendedUsers: filteredUsers.filter(u => u.status === 'suspended').length,
+      usersByRole: {
+        admin: filteredUsers.filter(u => u.role === 'admin').length,
+        salesperson: filteredUsers.filter(u => u.role === 'salesperson').length,
+        designer: filteredUsers.filter(u => u.role === 'designer').length,
+        manufacturer: filteredUsers.filter(u => u.role === 'manufacturer').length,
+        customer: filteredUsers.filter(u => u.role === 'customer').length,
+      }
+    };
+
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredUsers.length / Number(limit));
+    const pagination = {
+      currentPage: Number(page),
+      totalPages,
+      totalUsers: filteredUsers.length,
+      hasNextPage: Number(page) < totalPages,
+      hasPreviousPage: Number(page) > 1
+    };
 
     res.status(200).json({
       success: true,
       data: {
-        users: users || [],
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: count || 0,
-          totalPages: Math.ceil((count || 0) / Number(limit))
-        }
+        users: filteredUsers,
+        analytics,
+        pagination
       }
     });
 
@@ -184,13 +216,12 @@ router.post('/users', requireAuth, requireRole(['admin']), async (req: Request, 
       });
     }
 
-    // Create enhanced user profile using admin client with explicit defaults
+    // Create user profile using admin client with explicit defaults
     const { data: userProfile, error: profileError } = await supabaseAdmin
-      .from('enhanced_user_profiles')
+      .from('user_profiles')
       .insert({
         id: authData.user.id,
         username: email.split('@')[0],
-        email,
         first_name: firstName,
         last_name: lastName,
         role,

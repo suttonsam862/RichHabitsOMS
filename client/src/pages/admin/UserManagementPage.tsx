@@ -158,11 +158,6 @@ export default function UserManagementPage() {
   const { data: usersData, isLoading, error, refetch } = useQuery({
     queryKey: ['user-management', 'users', currentPage, searchQuery, statusFilter, roleFilter],
     queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Authentication token missing');
-      }
-
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '50',
@@ -172,8 +167,9 @@ export default function UserManagementPage() {
       });
 
       const response = await fetch(`/api/user-management/users?${params}`, {
+        method: 'GET',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -198,10 +194,6 @@ export default function UserManagementPage() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserData) => {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Authentication token missing');
-      }
 
       // Validate required fields client-side
       if (!userData.email || !userData.firstName || !userData.lastName || !userData.role) {
@@ -222,8 +214,8 @@ export default function UserManagementPage() {
 
       const response = await fetch('/api/user-management/users', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(cleanedData),
@@ -281,11 +273,10 @@ export default function UserManagementPage() {
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateUserData }) => {
-      const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/user-management/users/${id}`, {
-        method: 'PUT',
+        method: 'PATCH',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
