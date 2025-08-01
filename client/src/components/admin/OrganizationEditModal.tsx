@@ -217,12 +217,15 @@ export default function OrganizationEditModal({
         
         try {
           const formData = new FormData();
-          formData.append('file', logoFile);
-          formData.append('organizationId', organization.id);
-          formData.append('fileType', 'logo');
-          formData.append('isPrimary', 'true');
+          formData.append('logo', logoFile); // Changed from 'file' to 'logo' to match endpoint
 
-          const logoResponse = await fetch('/api/organization-files/upload', {
+          // Use the reliable customer logo endpoint instead
+          const primaryCustomer = organization?.customers?.[0];
+          if (!primaryCustomer) {
+            throw new Error('No primary customer found for organization');
+          }
+          
+          const logoResponse = await fetch(`/api/customers/${primaryCustomer.id}/logo`, {
             method: 'POST',
             credentials: 'include',
             body: formData

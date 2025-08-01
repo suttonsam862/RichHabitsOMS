@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { CustomerLogoUpload } from '@/components/ui/CustomerLogoUpload';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -234,7 +235,7 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
         }
       }
 
-      // Upload logo if provided
+      // Upload logo if provided using the reliable customer logo endpoint
       if (logoFile) {
         try {
           console.log('🔄 Starting logo upload for customer:', customerId);
@@ -245,12 +246,21 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
           });
           
           const formData = new FormData();
-          formData.append('file', logoFile);
-          formData.append('customerId', customerId);
-          formData.append('fileType', 'logo');
-          formData.append('isPrimary', 'true');
+          formData.append('logo', logoFile); // Changed from 'file' to 'logo' to match endpoint
 
-          const uploadResponse = await apiRequest('POST', '/api/organization-files/upload', formData);
+          const uploadResponse = await fetch(`/api/customers/${customerId}/logo`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            }
+          });
+        
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json().catch(() => null);
+            throw new Error(errorData?.message || 'Failed to upload logo');
+          }
+        
           const uploadResult = await uploadResponse.json();
           
           console.log('✅ Logo uploaded successfully:', uploadResult);

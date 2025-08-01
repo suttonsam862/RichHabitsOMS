@@ -869,8 +869,7 @@ export default function CatalogPage() {
     sport: '',
     basePrice: 0,
     unitCost: 0,
-    ```python
-sku: '',
+    sku: '',
     etaDays: '7-10 business days',
     status: 'active',
     description: '',

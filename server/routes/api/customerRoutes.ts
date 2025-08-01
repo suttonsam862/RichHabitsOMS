@@ -957,6 +957,122 @@ async function uploadCustomerPhoto(req: Request, res: Response) {
   }
 }
 
+/**
+ * Upload customer company logo - uses same reliable pattern as photo upload
+ */
+async function uploadCustomerLogo(req: Request, res: Response) {
+  const { id } = req.params;
+
+  try {
+    // Check if file exists
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No logo file uploaded'
+      });
+    }
+
+    console.log(`🏢 Uploading company logo for customer ID: ${id}`);
+    console.log(`📁 File details: ${req.file.originalname} (${req.file.size} bytes)`);
+
+    // Generate unique filename for logo
+    const fileExtension = req.file.originalname.split('.').pop();
+    const fileName = `customers/${id}/logo_${Date.now()}.${fileExtension}`;
+
+    // Upload file to Supabase Storage
+    let uploadData;
+    try {
+      const { data, error } = await supabaseAdmin.storage
+        .from('uploads')
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true // Replace existing logo
+        });
+
+      if (error) {
+        console.error('❌ Error uploading logo to Supabase:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to upload logo: ' + error.message
+        });
+      }
+
+      uploadData = data;
+      console.log('✅ Logo upload successful:', data);
+    } catch (error) {
+      console.error('❌ Exception during logo upload:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to upload logo due to storage system error'
+      });
+    }
+
+    // Get the public URL for the uploaded logo
+    let logoUrl;
+    try {
+      const { data: { publicUrl } } = supabaseAdmin.storage
+        .from('uploads')
+        .getPublicUrl(fileName);
+      logoUrl = publicUrl;
+      console.log(`✅ Successfully generated logo URL: ${logoUrl}`);
+    } catch (error) {
+      console.error('❌ Exception during logo URL generation:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Logo uploaded but failed to generate access URL'
+      });
+    }
+
+    console.log(`🏢 Logo uploaded successfully to: ${logoUrl}`);
+    console.log(`🔄 Updating customer ${id} with logo URL...`);
+
+    // Update customer record with company_logo_url
+    try {
+      const { error: updateError } = await supabaseAdmin
+        .from('customers')
+        .update({ 
+          company_logo_url: logoUrl,
+          updated_at: 'NOW()'
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        console.error('❌ Database update error:', updateError);
+        return res.status(400).json({
+          success: false,
+          message: 'Logo uploaded but database update failed: ' + updateError.message
+        });
+      } else {
+        console.log('✅ Customer record updated with company_logo_url successfully');
+      }
+    } catch (error) {
+      console.error('❌ Exception during customer logo update:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'Logo uploaded but customer record update failed'
+      });
+    }
+
+    // Return success with logo URL
+    res.status(200).json({
+      success: true,
+      data: {
+        message: 'Company logo uploaded successfully',
+        logoUrl,
+        company_logo_url: logoUrl,
+        storageLocation: fileName
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error uploading customer logo:', error);
+    res.status(400).json({
+      success: false,
+      message: 'Failed to upload company logo'
+    });
+  }
+}
+
 // Configure routes
 router.get('/', getAllCustomers);
 router.post('/invite', requireAuth, requireRole(['admin']), sendUserInvitation);
@@ -966,6 +1082,9 @@ router.post('/', requireAuth, requireRole(['admin']), createCustomer);
 router.patch('/:id', requireAuth, requireRole(['admin']), updateCustomer);
 // Customer photo upload endpoint - uploads to Supabase Storage and updates database
 router.post('/:id/photo', requireAuth, requireRole(['admin']), upload.single('image'), uploadCustomerPhoto);
+
+// Customer company logo upload endpoint - similar to photo but updates company_logo_url
+router.post('/:id/logo', requireAuth, requireRole(['admin']), upload.single('logo'), uploadCustomerLogo);
 
 // GET single customer endpoint
 router.get('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
