@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Full Stack App"
+runButton = "Full Stack Complete"
 
 [[workflows.workflow]]
 name = "Project"
@@ -105,6 +105,19 @@ args = "npm run dev"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run server"
+
+[[workflows.workflow]]
+name = "Full Stack Complete"
+author = 41090967
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd server && NODE_ENV=development node --import tsx/esm index.ts"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd client && npm run dev -- --host 0.0.0.0 --port 3000"
 
 [agent]
 integrations = ["javascript_supabase==1.0.0"]

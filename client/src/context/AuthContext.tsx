@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     const now = Date.now();
-    
+
     // Prevent multiple simultaneous auth checks
     if (authCheckInProgress.current) {
       return;
@@ -53,10 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       setLoading(true);
-      
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
-      
+
       const response = await fetch('/api/auth/me', {
         method: 'GET',
         credentials: 'include',
