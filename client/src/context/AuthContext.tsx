@@ -22,6 +22,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
+  hasPageAccess: (page: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -182,6 +183,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
   }, []);
 
+  // Page access control function
+  const hasPageAccess = useCallback((page: string): boolean => {
+    if (!user) return false;
+    
+    // Super admin has access to everything
+    if (user.isSuperAdmin) return true;
+    
+    // If user has custom visible pages array, use that
+    if (user.visiblePages && user.visiblePages.length > 0) {
+      return user.visiblePages.includes(page);
+    }
+    
+    // Default role-based access control
+    switch (user.role) {
+      case 'admin':
+        return true; // Admin has access to all pages
+      case 'salesperson':
+        return ['dashboard', 'customers', 'orders', 'catalog'].includes(page);
+      case 'designer':
+        return ['dashboard', 'orders', 'designs'].includes(page);
+      case 'manufacturer':
+        return ['dashboard', 'orders', 'production'].includes(page);
+      case 'customer':
+        return ['dashboard', 'orders'].includes(page);
+      default:
+        return ['dashboard'].includes(page); // Basic access
+    }
+  }, [user]);
+
   // Initial auth check
   useEffect(() => {
     if (!initialized) {
@@ -200,6 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         checkAuth,
         clearError,
+        hasPageAccess,
       }}
     >
       {children}
