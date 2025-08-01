@@ -75,6 +75,42 @@ const supabaseAdmin = createClient(
 );
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configure session middleware on main app (needed for auth routes)
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
+
+  // Quick admin user creation endpoint (for testing) - NO AUTH REQUIRED
+  app.post('/create-admin', async (req, res) => {
+    try {
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: 'samsutton@rich-habits.com',
+        password: 'Arlodog2013!',
+        email_confirm: true,
+        user_metadata: {
+          role: 'admin',
+          firstName: 'Sam',
+          lastName: 'Sutton',
+          is_super_admin: true
+        }
+      });
+
+      if (error) {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+
+      res.json({ success: true, user: data.user });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to create admin user' });
+    }
+  });
+
   // Register admin routes
   app.use('/api/admin', adminRoutes);
 
@@ -2215,16 +2251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use(bodyParser.json({ limit: '10mb' }));
   router.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Configure session
-  router.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-  }));
+  // Session is now configured on main app
 
   // Health check (no auth required)
   router.use('/health', healthRoutesRefactored);
