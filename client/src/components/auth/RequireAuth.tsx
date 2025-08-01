@@ -42,9 +42,9 @@ export const RequireAuth: React.FC<RequireAuthProps> = ({ children, allowedRoles
   }
 
   // If roles are specified and user doesn't have permission
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role as any)) {
+  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role as any)) {
     // Check for custom roles
-    if (user.customRole && allowedRoles.includes(user.customRole as any)) {
+    if (user.customRole && allowedRoles && allowedRoles.includes(user.customRole as any)) {
       // Custom role has access, allow through
       console.log('RequireAuth: Custom role access granted', user.customRole);
       return <>{children}</>;
