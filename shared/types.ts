@@ -123,6 +123,7 @@ export interface Database {
           created_at: string
           status: 'active' | 'inactive'
           profile_image_url: string | null
+          salesperson_id: string | null
         }
         Insert: {
           id?: string
@@ -142,6 +143,7 @@ export interface Database {
           created_at?: string
           status?: 'active' | 'inactive'
           profile_image_url?: string | null
+          salesperson_id?: string | null
         }
         Update: {
           id?: string
@@ -161,6 +163,7 @@ export interface Database {
           created_at?: string
           status?: 'active' | 'inactive'
           profile_image_url?: string | null
+          salesperson_id?: string | null
         }
       }
       orders: {
@@ -737,10 +740,10 @@ export interface Database {
 
 // Row types for easy access
 export type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
-export type Customer = Database['public']['Tables']['customers']['Row'];
-export type Order = Database['public']['Tables']['orders']['Row'];
-export type OrderItem = Database['public']['Tables']['order_items']['Row'];
-export type CatalogItem = Database['public']['Tables']['catalog_items']['Row'];
+export type DbCustomer = Database['public']['Tables']['customers']['Row'];
+export type DbOrder = Database['public']['Tables']['orders']['Row'];
+export type DbOrderItem = Database['public']['Tables']['order_items']['Row'];
+export type DbCatalogItem = Database['public']['Tables']['catalog_items']['Row'];
 export type CatalogCategory = Database['public']['Tables']['catalog_categories']['Row'];
 export type CatalogSport = Database['public']['Tables']['catalog_sports']['Row'];
 export type CatalogFabric = Database['public']['Tables']['catalog_fabrics']['Row'];
@@ -754,10 +757,10 @@ export type OrderAuditLog = Database['public']['Tables']['order_audit_log']['Row
 
 // Insert types for easy access
 export type UserProfileInsert = Database['public']['Tables']['user_profiles']['Insert'];
-export type CustomerInsert = Database['public']['Tables']['customers']['Insert'];
-export type OrderInsert = Database['public']['Tables']['orders']['Insert'];
-export type OrderItemInsert = Database['public']['Tables']['order_items']['Insert'];
-export type CatalogItemInsert = Database['public']['Tables']['catalog_items']['Insert'];
+export type DbCustomerInsert = Database['public']['Tables']['customers']['Insert'];
+export type DbOrderInsert = Database['public']['Tables']['orders']['Insert'];
+export type DbOrderItemInsert = Database['public']['Tables']['order_items']['Insert'];
+export type DbCatalogItemInsert = Database['public']['Tables']['catalog_items']['Insert'];
 export type CatalogCategoryInsert = Database['public']['Tables']['catalog_categories']['Insert'];
 export type CatalogSportInsert = Database['public']['Tables']['catalog_sports']['Insert'];
 export type CatalogFabricInsert = Database['public']['Tables']['catalog_fabrics']['Insert'];
@@ -771,8 +774,8 @@ export type OrderAuditLogInsert = Database['public']['Tables']['order_audit_log'
 
 // Update types for easy access
 export type UserProfileUpdate = Database['public']['Tables']['user_profiles']['Update'];
-export type CustomerUpdate = Database['public']['Tables']['customers']['Update'];
-export type OrderUpdate = Database['public']['Tables']['orders']['Update'];
+export type DbCustomerUpdate = Database['public']['Tables']['customers']['Update'];
+export type DbOrderUpdate = Database['public']['Tables']['orders']['Update'];
 export type OrderItemUpdate = Database['public']['Tables']['order_items']['Update'];
 export type CatalogItemUpdate = Database['public']['Tables']['catalog_items']['Update'];
 export type CatalogCategoryUpdate = Database['public']['Tables']['catalog_categories']['Update'];
@@ -990,6 +993,33 @@ export interface User {
   updatedAt?: string;
 }
 
+// Salesperson Interface
+export interface Salesperson {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  employee_id: string;
+  position_title?: string;
+  hire_date?: string;
+  employment_status: 'active' | 'inactive' | 'terminated' | 'on_leave';
+  base_salary?: number;
+  commission_rate?: number;
+  sales_quota?: number;
+  current_year_sales?: number;
+  customer_count?: number;
+  performance_rating?: number;
+  profile_image_url?: string;
+  payroll_file_url?: string;
+  is_active: boolean;
+  manager_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
+}
+
 // Customer Types
 export interface Customer {
   id: string;
@@ -1006,6 +1036,8 @@ export interface Customer {
   country?: string;
   profileImageUrl?: string;
   companyLogoUrl?: string;
+  salesperson_id?: string;
+  salesperson?: Salesperson;
   createdAt: string;
   updatedAt: string;
 }

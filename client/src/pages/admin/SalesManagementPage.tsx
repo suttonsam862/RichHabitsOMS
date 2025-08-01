@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { useSalespeople, useCreateSalesperson, useUpdateSalesperson, useDeleteSalesperson } from '@/hooks/useSalespeople';
+import { Salesperson } from '@/lib/salespersonApi';
 import { useToast } from '@/hooks/use-toast';
+import SalespersonForm from '@/components/forms/SalespersonForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,25 +38,7 @@ import {
   Camera
 } from 'lucide-react';
 
-interface Salesperson {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  employee_id: string;
-  position_title?: string;
-  hire_date?: string;
-  employment_status: string;
-  base_salary?: number;
-  commission_rate?: number;
-  sales_quota?: number;
-  current_year_sales?: number;
-  customer_count?: number;
-  performance_rating?: number;
-  profile_photo_url?: string;
-  is_active: boolean;
-}
+
 
 export default function SalesManagementPage() {
   const [selectedSalesperson, setSelectedSalesperson] = useState<Salesperson | null>(null);
@@ -64,68 +47,22 @@ export default function SalesManagementPage() {
   const [formData, setFormData] = useState<Partial<Salesperson>>({});
 
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Fetch salespeople
-  const { data: salespeople, isLoading } = useQuery({
-    queryKey: ['salespeople'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/sales-management');
-      const data = await response.json();
-      return data.data;
-    },
-  });
+  // Fetch salespeople using new hook
+  const { data: salespeople, isLoading } = useSalespeople();
 
-  // Create salesperson mutation
-  const createSalespersonMutation = useMutation({
-    mutationFn: async (data: Partial<Salesperson>) => {
-      const response = await apiRequest('POST', '/api/sales-management', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Salesperson Created',
-        description: 'New salesperson has been added successfully.',
-      });
-      queryClient.invalidateQueries({ queryKey: ['salespeople'] });
-      setIsCreateModalOpen(false);
-      setFormData({});
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create salesperson',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Update salesperson mutation
-  const updateSalespersonMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Salesperson> }) => {
-      const response = await apiRequest('PATCH', `/api/sales-management/${id}`, data);
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Salesperson Updated',
-        description: 'Salesperson information has been updated successfully.',
-      });
-      queryClient.invalidateQueries({ queryKey: ['salespeople'] });
-      setIsEditModalOpen(false);
-      setFormData({});
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update salesperson',
-        variant: 'destructive',
-      });
-    },
-  });
+  // Mutations using new hooks
+  const createSalespersonMutation = useCreateSalesperson();
+  const updateSalespersonMutation = useUpdateSalesperson();
+  const deleteSalespersonMutation = useDeleteSalesperson();
 
   const handleCreate = () => {
-    createSalespersonMutation.mutate(formData);
+    createSalespersonMutation.mutate(formData, {
+      onSuccess: () => {
+        setIsCreateModalOpen(false);
+        setFormData({});
+      }
+    });
   };
 
   const handleUpdate = () => {
@@ -133,6 +70,11 @@ export default function SalesManagementPage() {
       updateSalespersonMutation.mutate({
         id: selectedSalesperson.id,
         data: formData
+      }, {
+        onSuccess: () => {
+          setIsEditModalOpen(false);
+          setFormData({});
+        }
       });
     }
   };
@@ -343,192 +285,4 @@ export default function SalesManagementPage() {
   );
 }
 
-// Reusable form component
-interface SalespersonFormProps {
-  formData: Partial<Salesperson>;
-  setFormData: (data: Partial<Salesperson>) => void;
-  onSubmit: () => void;
-  isLoading: boolean;
-  submitLabel: string;
-  isEdit?: boolean;
-}
-
-function SalespersonForm({ formData, setFormData, onSubmit, isLoading, submitLabel, isEdit }: SalespersonFormProps) {
-  return (
-    <Tabs defaultValue="personal" className="w-full">
-      <TabsList className="grid w-full grid-cols-4 glass-panel">
-        <TabsTrigger value="personal" className="text-white data-[state=active]:bg-neon-blue data-[state=active]:text-black">
-          Personal
-        </TabsTrigger>
-        <TabsTrigger value="employment" className="text-white data-[state=active]:bg-neon-blue data-[state=active]:text-black">
-          Employment
-        </TabsTrigger>
-        <TabsTrigger value="payroll" className="text-white data-[state=active]:bg-neon-blue data-[state=active]:text-black">
-          Payroll
-        </TabsTrigger>
-        <TabsTrigger value="performance" className="text-white data-[state=active]:bg-neon-blue data-[state=active]:text-black">
-          Performance
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="personal" className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label className="text-white">First Name *</Label>
-            <Input
-              value={formData.first_name || ''}
-              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-              className="glass-input"
-              placeholder="Enter first name"
-            />
-          </div>
-          <div>
-            <Label className="text-white">Last Name *</Label>
-            <Input
-              value={formData.last_name || ''}
-              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-              className="glass-input"
-              placeholder="Enter last name"
-            />
-          </div>
-          <div>
-            <Label className="text-white">Email *</Label>
-            <Input
-              type="email"
-              value={formData.email || ''}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="glass-input"
-              placeholder="Enter email"
-            />
-          </div>
-          <div>
-            <Label className="text-white">Phone</Label>
-            <Input
-              value={formData.phone || ''}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="glass-input"
-              placeholder="Enter phone number"
-            />
-          </div>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="employment" className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label className="text-white">Employee ID</Label>
-            <Input
-              value={formData.employee_id || ''}
-              onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-              className="glass-input"
-              placeholder="Auto-generated if empty"
-              disabled={isEdit}
-            />
-          </div>
-          <div>
-            <Label className="text-white">Position Title</Label>
-            <Input
-              value={formData.position_title || ''}
-              onChange={(e) => setFormData({ ...formData, position_title: e.target.value })}
-              className="glass-input"
-              placeholder="e.g., Sales Representative"
-            />
-          </div>
-          <div>
-            <Label className="text-white">Hire Date</Label>
-            <Input
-              type="date"
-              value={formData.hire_date || ''}
-              onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
-              className="glass-input"
-            />
-          </div>
-          <div>
-            <Label className="text-white">Employment Status</Label>
-            <Select 
-              value={formData.employment_status || 'active'} 
-              onValueChange={(value) => setFormData({ ...formData, employment_status: value })}
-            >
-              <SelectTrigger className="glass-input">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="glass-panel border-glass-border">
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="terminated">Terminated</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="payroll" className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label className="text-white">Base Salary</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={formData.base_salary || ''}
-              onChange={(e) => setFormData({ ...formData, base_salary: parseFloat(e.target.value) })}
-              className="glass-input"
-              placeholder="Annual base salary"
-            />
-          </div>
-          <div>
-            <Label className="text-white">Commission Rate (%)</Label>
-            <Input
-              type="number"
-              step="0.001"
-              min="0"
-              max="1"
-              value={formData.commission_rate ? formData.commission_rate * 100 : ''}
-              onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) / 100 })}
-              className="glass-input"
-              placeholder="e.g., 5 for 5%"
-            />
-          </div>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="performance" className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label className="text-white">Sales Quota</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={formData.sales_quota || ''}
-              onChange={(e) => setFormData({ ...formData, sales_quota: parseFloat(e.target.value) })}
-              className="glass-input"
-              placeholder="Annual sales quota"
-            />
-          </div>
-          <div>
-            <Label className="text-white">Performance Rating (1-5)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              min="1"
-              max="5"
-              value={formData.performance_rating || ''}
-              onChange={(e) => setFormData({ ...formData, performance_rating: parseFloat(e.target.value) })}
-              className="glass-input"
-              placeholder="1.0 to 5.0"
-            />
-          </div>
-        </div>
-      </TabsContent>
-
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button
-          onClick={onSubmit}
-          disabled={isLoading || !formData.first_name || !formData.last_name || !formData.email}
-          className="bg-gradient-to-r from-neon-blue to-neon-green text-black hover:opacity-90"
-        >
-          {isLoading ? 'Saving...' : submitLabel}
-        </Button>
-      </div>
-    </Tabs>
-  );
-}
+// Duplicate SalespersonForm removed - using imported component from @/components/forms/SalespersonForm
