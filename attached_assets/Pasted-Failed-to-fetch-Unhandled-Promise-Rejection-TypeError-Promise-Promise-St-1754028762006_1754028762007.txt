@@ -1,0 +1,61 @@
+Failed to fetch
+🚨 Unhandled Promise Rejection: 
+TypeError {}
+
+🔍 Promise: 
+Promise {}
+
+📍 Stack trace: TypeError: Failed to fetch
+    at window.fetch (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+    at ping (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:736:13)
+    at waitForSuccessfulPing (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:755:17)
+    at async WebSocket.<anonymous> (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:561:7)
+Failed to fetch
+🚨 Unhandled Promise Rejection: 
+TypeError {}
+
+🔍 Promise: 
+Promise {}
+
+📍 Stack trace: TypeError: Failed to fetch
+    at window.fetch (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+    at ping (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:736:13)
+    at waitForSuccessfulPing (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:755:17)
+    at async WebSocket.<anonymous> (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:561:7)
+Failed to fetch
+🚨 Unhandled Promise Rejection: 
+TypeError {}
+
+🔍 Promise: 
+Promise {}
+
+📍 Stack trace: TypeError: Failed to fetch
+    at window.fetch (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+    at ping (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:736:13)
+    at waitForSuccessfulPing (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:755:17)
+    at async WebSocket.<anonymous> (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:561:7)
+Failed to fetch
+🚨 Unhandled Promise Rejection: 
+TypeError {}
+
+🔍 Promise: 
+Promise {}
+
+📍 Stack trace: TypeError: Failed to fetch
+    at window.fetch (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+    at ping (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:736:13)
+    at waitForSuccessfulPing (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:755:17)
+    at async WebSocket.<anonymous> (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:561:7)
+Failed to fetch
+🚨 Unhandled Promise Rejection: 
+TypeError {}
+
+🔍 Promise: 
+Promise {}
+
+📍 Stack trace: TypeError: Failed to fetch
+    at window.fetch (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+    at ping (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:736:13)
+    at waitForSuccessfulPing (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:755:17)
+    at async WebSocket.<anonymous> (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@vite/client:561:7)
+

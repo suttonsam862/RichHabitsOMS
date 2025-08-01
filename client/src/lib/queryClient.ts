@@ -61,12 +61,19 @@ export async function apiRequest(
       timestamp: new Date().toISOString()
     });
 
+    // Add timeout and abort controller for better error handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     const res = await fetch(fullUrl, {
       method,
       headers,
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     await throwIfResNotOk(res);
 
@@ -96,6 +103,14 @@ export async function apiRequest(
       console.error('Network connectivity issue:', networkError);
       throw networkError;
     }
+    
+    // Handle AbortError gracefully
+    if (error instanceof Error && error.name === 'AbortError') {
+      const timeoutError = new Error(`Request timeout: ${fullUrl} took longer than 10 seconds`);
+      console.error('Request timeout:', timeoutError);
+      throw timeoutError;
+    }
+    
     throw error;
   }
 }
@@ -131,10 +146,17 @@ export const getQueryFn: <T>(options: {
         timestamp: new Date().toISOString()
       });
 
+      // Add timeout for query requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout for queries
+
       const res = await fetch(fullUrl, {
         credentials: "include",
-        headers
+        headers,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         console.warn('Query 401 response - clearing auth tokens:', {
@@ -198,19 +220,15 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false, // NUCLEAR: No retries in development
+      retry: false, // No retries in development
       retryDelay: 0,
       staleTime: import.meta.env.DEV ? 0 : 5 * 60 * 1000,
       gcTime: import.meta.env.DEV ? 0 : 10 * 60 * 1000,
       // Prevent rejections from bubbling up
       throwOnError: false,
-      // Silent errors in development
-      onError: import.meta.env.DEV ? () => {} : undefined,
     },
     mutations: {
       retry: false,
-      // Silent mutation errors in development
-      onError: import.meta.env.DEV ? () => {} : undefined,
       throwOnError: false,
     },
   },

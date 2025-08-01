@@ -154,10 +154,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     try {
       setLoading(true);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
+        signal: controller.signal,
+      }).catch(error => {
+        clearTimeout(timeoutId);
+        // Don't throw - logout should always succeed locally
+        console.warn('Logout request failed:', error);
       });
+      
+      clearTimeout(timeoutId);
     } catch (error) {
       console.warn('Logout request failed:', error);
     } finally {
