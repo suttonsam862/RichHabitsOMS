@@ -424,19 +424,27 @@ export default function CustomerListPage() {
     
     return (
       <div 
-        className={`relative group cursor-pointer min-w-[240px] h-[140px] rounded-lg bg-gradient-to-br ${colorClasses} backdrop-blur-md border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex-shrink-0`}
+        className="relative group cursor-pointer min-w-[240px] h-[140px] rounded-lg bg-black backdrop-blur-md border border-gray-800 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex-shrink-0 overflow-hidden"
         onClick={() => handleOrganizationClick(organization)}
+        style={{
+          backgroundImage: logoUrl ? `url(${logoUrl})` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
       >
-        {/* Glassmorphism overlay */}
-        <div className="absolute inset-0 bg-white/5 rounded-lg backdrop-blur-sm"></div>
+        {/* Background overlay for logo opacity */}
+        {logoUrl && (
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        )}
         
         {/* Content */}
         <div className="relative z-10 p-4 h-full flex flex-col justify-between">
           {/* Header */}
           <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-2">
-              {/* Logo or Icon */}
-              <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center overflow-hidden">
+            <div className="flex items-center space-x-3">
+              {/* Large circular logo or icon */}
+              <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center overflow-hidden">
                 {logoUrl ? (
                   <img 
                     src={logoUrl} 
@@ -450,7 +458,7 @@ export default function CustomerListPage() {
                     }}
                   />
                 ) : null}
-                <IconComponent className={`w-4 h-4 text-white ${logoUrl ? 'hidden' : ''}`} />
+                <IconComponent className={`w-6 h-6 text-white ${logoUrl ? 'hidden' : ''}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-bold text-white truncate">
