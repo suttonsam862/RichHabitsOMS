@@ -63,26 +63,35 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
     let token: string | null = null;
     let user: any = null;
 
-    // Check session first
+    // Check session first - be more permissive with session validation
     if (req.session?.user && req.session?.token) {
       try {
-        // Verify session hasn't expired
+        // Only check expiry if it exists, and be more lenient
         const sessionExpiry = req.session.expires ? new Date(req.session.expires) : null;
         if (!sessionExpiry || sessionExpiry > new Date()) {
           user = req.session.user;
           token = req.session.token;
+          
+          // Refresh session expiry on valid requests to keep user logged in
+          if (sessionExpiry) {
+            const newExpiry = new Date();
+            newExpiry.setTime(newExpiry.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days
+            req.session.expires = newExpiry.toISOString();
+          }
         } else {
-          // Session expired, clear it
-          console.log('Session expired, clearing session');
-          req.session.destroy((err) => {
-            if (err) console.warn('Session destruction error:', err);
-          });
+          // Only clear expired sessions, but log less aggressively
+          console.log('Session expired for user:', req.session.user?.email);
+          delete req.session.user;
+          delete req.session.token;
+          delete req.session.expires;
         }
       } catch (error) {
-        console.warn('Session validation error:', error);
-        req.session.destroy((err) => {
-          if (err) console.warn('Session destruction error:', err);
-        });
+        console.warn('Session validation error, but keeping session:', error);
+        // Don't destroy session on validation errors - be more resilient
+        if (req.session?.user) {
+          user = req.session.user;
+          token = req.session.token;
+        }
       }
     }
 

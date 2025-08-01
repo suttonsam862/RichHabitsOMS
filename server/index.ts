@@ -171,7 +171,7 @@ app.use(session({
     // In production, Replit handles HTTPS - so we can set secure cookies
     // But we provide an override in case the deployment platform doesn't support HTTPS
     secure: process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days - longer session life
+    maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days - longer session life for better persistence
     sameSite: 'lax', // Prevents CSRF while allowing normal navigation
     httpOnly: true, // Prevents client-side JS from accessing the cookie
     path: '/' // Makes cookie available for all routes

@@ -44,9 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Reduced rate limiting - minimum 2 seconds between requests
-    // BUT always allow forced checks (like on page refresh/initialization)
-    if (!forceCheck && now - lastAuthCheck.current < 2000) {
+    // Be less aggressive with rate limiting - minimum 5 seconds between requests
+    // Always allow forced checks (like on page refresh/initialization)
+    if (!forceCheck && now - lastAuthCheck.current < 5000) {
       return;
     }
 
@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // Longer timeout
 
       const response = await fetch('/api/auth/me', {
         method: 'GET',
@@ -68,26 +68,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signal: controller.signal,
       }).catch(error => {
         clearTimeout(timeoutId);
+        // If the user was logged in and now we get a network error, don't immediately log them out
+        if (user && error.name !== 'AbortError') {
+          console.warn('Auth check network error, keeping user logged in:', error.message);
+          return null; // Skip updating user state
+        }
         throw error;
       });
 
       clearTimeout(timeoutId);
 
-      if (response.ok) {
+      // If we couldn't reach the server but user was logged in, don't log them out
+      if (!response && user) {
+        console.warn('Auth check failed due to network issues, keeping user logged in');
+        return;
+      }
+
+      if (response && response.ok) {
         const data = await response.json().catch(() => ({}));
         if (data.success && data.user) {
           setUser(data.user);
           setError(null);
         } else {
+          // Only log out if we get a clear invalid response
           setUser(null);
         }
-      } else if (response.status === 401) {
-        // Normal unauthenticated state - don't spam logs
+      } else if (response && response.status === 401) {
+        // Clear authentication only on explicit 401
         setUser(null);
         setError(null);
-      } else {
-        setUser(null);
-        console.warn('Auth check failed:', response.status);
+      } else if (response) {
+        // For other errors, be less aggressive about logging out
+        console.warn('Auth check failed with status:', response.status);
+        if (!user) {
+          setUser(null); // Only clear if user wasn't logged in
+        }
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -220,11 +235,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [initialized, checkAuth]);
 
-  // Check auth when window gains focus (user returns to tab)
+  // Check auth when window gains focus (user returns to tab) - but less frequently
   useEffect(() => {
     const handleFocus = () => {
-      // Only check if we're already initialized and have a user
-      if (initialized && user) {
+      // Only check if we're already initialized and have a user, and not too frequently
+      if (initialized && user && (Date.now() - lastAuthCheck.current) > 30000) { // 30 seconds minimum
         checkAuth();
       }
     };
@@ -233,10 +248,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('focus', handleFocus);
   }, [initialized, user, checkAuth]);
 
-  // Handle page visibility change (tab becomes visible)
+  // Handle page visibility change (tab becomes visible) - but less frequently
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && initialized && user) {
+      if (document.visibilityState === 'visible' && initialized && user && 
+          (Date.now() - lastAuthCheck.current) > 30000) { // 30 seconds minimum
         checkAuth();
       }
     };
