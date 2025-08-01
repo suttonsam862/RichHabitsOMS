@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, User, AlertTriangle } from "lucide-react";
 import { UserAvatar } from '@/components/ui/FallbackImage';
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
@@ -173,7 +173,7 @@ export default function CustomerEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.isSubmitDisabled || isSaving,
+    when: validation.hasChanges || isSaving,
     message: "Your form is being saved. Please wait for the process to complete before leaving."
   });
 
@@ -665,7 +665,7 @@ export default function CustomerEditPage() {
               <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Failed to Load Customer</h3>
               <p className="text-muted-foreground mb-4">
-                {customerError.message || 'Unable to fetch customer details. Please try again.'}
+                {customerError || 'Unable to fetch customer details. Please try again.'}
               </p>
               <Button 
                 onClick={() => window.location.reload()} 
@@ -716,9 +716,9 @@ export default function CustomerEditPage() {
         <div>
           <h1 className="text-2xl font-bold">Edit Customer</h1>
           <p className="text-muted-foreground">{customer.firstName} {customer.lastName}</p>
-          {customer?.updated_at && (
+          {customer?.created_at && (
             <p className="text-sm text-muted-foreground">
-              Last updated: {new Date(customer.updated_at).toLocaleString()}
+              Created: {new Date(customer.created_at).toLocaleString()}
             </p>
           )}
         </div>
@@ -1097,15 +1097,14 @@ export default function CustomerEditPage() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={isSaving || !validation.canSubmit || isSubmitDisabled}
-                  className={(!validation.canSubmit || isSubmitDisabled) ? "opacity-50 cursor-not-allowed" : ""}
+                  disabled={isSaving || !validation.canSubmit}
+                  className={(!validation.canSubmit) ? "opacity-50 cursor-not-allowed" : ""}
                   title={!validation.canSubmit ? 
                     (validation.errors.length > 0 ? "Please fix form errors" : "No changes to save") : 
-                    isSubmitDisabled ? "Please wait before submitting again" :
                     "Save customer changes"}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? 'Saving...' : isSubmitDisabled ? 'Processing...' : 'Save Changes'}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </form>
