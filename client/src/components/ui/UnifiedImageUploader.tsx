@@ -118,9 +118,10 @@ export function UnifiedImageUploader({
     if (!file) return;
 
     // Validate file using centralized utility
-    const validation = validateFile(file);
+    const validation = validateFile(file, { maxSizeMB });
     if (!validation.isValid) {
       setUploadError(validation.error || 'Invalid file');
+      // Don't close dialog/popup - just show error message
       return;
     }
 

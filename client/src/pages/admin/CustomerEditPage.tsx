@@ -187,14 +187,16 @@ export default function CustomerEditPage() {
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Use centralized validation
-      const validation = validateFile(file);
+      // Use centralized validation with file size limit
+      const validation = validateFile(file, { maxSizeMB: 10 }); // 10MB limit
       if (!validation.isValid) {
         toast({
-          title: "Invalid file",
+          title: validation.errorTitle || "File Upload Error",
           description: validation.error || 'Please select a valid image file.',
           variant: "destructive",
         });
+        // Clear the file input but don't close any dialogs
+        event.target.value = '';
         return;
       }
 
@@ -244,6 +246,12 @@ export default function CustomerEditPage() {
   // Simple photo upload with async/await
   const uploadPhoto = async (file: File) => {
     try {
+      // Additional client-side file size check before upload
+      const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSizeBytes) {
+        throw new Error(`File size too large. Maximum size is 10MB, but your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`);
+      }
+
       const formData = new FormData();
       formData.append('image', file);
 
@@ -262,9 +270,9 @@ export default function CustomerEditPage() {
         if (errorData?.message) {
           errorMessage = errorData.message;
         } else if (response.status === 413) {
-          errorMessage = 'File size too large. Please choose a smaller image.';
+          errorMessage = 'File size too large. Please choose a smaller image (max 10MB).';
         } else if (response.status === 415) {
-          errorMessage = 'Invalid file format. Please upload a valid image file.';
+          errorMessage = 'Invalid file format. Please upload a valid image file (JPG, PNG, WebP).';
         } else if (response.status === 401) {
           errorMessage = 'Authentication failed. Please refresh the page and try again.';
         } else if (response.status >= 500) {
@@ -291,8 +299,8 @@ export default function CustomerEditPage() {
       await uploadPhoto(selectedFile);
       
       toast({
-        title: "Photo uploaded",
-        description: "Customer photo has been successfully uploaded.",
+        title: "Photo uploaded successfully",
+        description: "Customer photo has been successfully uploaded and optimized.",
       });
       
       // Refresh customer data to get the new photo URL
@@ -307,11 +315,14 @@ export default function CustomerEditPage() {
       setUploadRetryCount(0);
     } catch (error: any) {
       setUploadRetryCount(prev => prev + 1);
+      // Show error but don't close any open dialogs/popups
       toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload customer photo.",
+        title: "Upload Failed",
+        description: error.message || "Failed to upload customer photo. Please try again.",
         variant: "destructive",
       });
+      // Don't reset file selection on error so user can try again
+      // This allows user to see the error message without losing their work
     } finally {
       setIsUploading(false);
     }
