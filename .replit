@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Always Running Dev Server"
+runButton = "Full Stack App"
 
 [[workflows.workflow]]
 name = "Project"
@@ -70,6 +70,41 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "NODE_ENV=development node --import tsx/esm server/index.ts"
+
+[[workflows.workflow]]
+name = "Full Stack Dev"
+author = 41090967
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Full Stack Development"
+author = 41090967
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd server && NODE_ENV=development node --import tsx/esm index.ts"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd client && npm run dev"
+
+[[workflows.workflow]]
+name = "Full Stack App"
+author = 41090967
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run server"
 
 [agent]
 integrations = ["javascript_supabase==1.0.0"]
