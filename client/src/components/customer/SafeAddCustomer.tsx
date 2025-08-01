@@ -14,10 +14,10 @@ interface SafeAddCustomerProps {
 export function SafeAddCustomer({ onCustomerAdded, onCancel }: SafeAddCustomerProps) {
   const { wrapAsync } = useErrorBoundary();
 
-  const safeOnCustomerAdded = wrapAsync(
-    onCustomerAdded || (() => {}),
+  const safeOnCustomerAdded = onCustomerAdded ? wrapAsync(
+    async (customer: any) => onCustomerAdded(customer),
     'Failed to add customer'
-  );
+  ) : async () => {};
 
   return (
     <ComponentErrorBoundary 
