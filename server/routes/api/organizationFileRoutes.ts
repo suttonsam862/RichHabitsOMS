@@ -139,6 +139,48 @@ router.post('/upload', requireAuth, upload.single('file'), async (req: Request, 
       });
     }
 
+    // Create table if it doesn't exist first
+    console.log('🔄 Ensuring organization_files table exists...');
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS organization_files (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
+        file_name VARCHAR(255) NOT NULL,
+        file_type VARCHAR(50) NOT NULL,
+        file_url TEXT NOT NULL,
+        file_size INTEGER,
+        mime_type VARCHAR(100),
+        google_drive_link TEXT,
+        google_drive_folder_id VARCHAR(255),
+        upload_status VARCHAR(50) DEFAULT 'uploaded',
+        is_primary BOOLEAN DEFAULT false,
+        description TEXT,
+        uploaded_by UUID REFERENCES auth.users(id),
+        approved_by UUID REFERENCES auth.users(id),
+        approval_date TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      
+      ALTER TABLE organization_files ENABLE ROW LEVEL SECURITY;
+      
+      DROP POLICY IF EXISTS "Admins can manage all organization files" ON organization_files;
+      CREATE POLICY "Admins can manage all organization files" ON organization_files
+        FOR ALL USING (
+          EXISTS (
+            SELECT 1 FROM user_profiles 
+            WHERE id = auth.uid() AND role = 'admin'
+          )
+        );
+    `;
+
+    try {
+      await supabaseAdmin.rpc('exec_sql', { sql_query: createTableSQL });
+      console.log('✅ Organization_files table ensured');
+    } catch (tableError) {
+      console.warn('⚠️ Could not ensure table exists, proceeding anyway:', tableError);
+    }
+
     // Save file record to database
     console.log('🔄 Saving file record to database');
     const { data: fileRecord, error: dbError } = await supabaseAdmin

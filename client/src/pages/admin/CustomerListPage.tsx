@@ -41,6 +41,7 @@ import { useDataSync } from '@/hooks/useDataSync';
 import { useGlobalDataSync, CACHE_KEYS, DATA_SYNC_EVENTS } from '@/hooks/useGlobalDataSync';
 import { getQueryFn } from '@/lib/queryClient';
 import { useUndoableDelete } from '@/hooks/useUndoableDelete';
+import { useOrganizationLogos } from '@/hooks/useOrganizationLogos';
 import AddCustomerForm from "./AddCustomerForm";
 import CustomerOnboardingFlow from "@/components/customer/CustomerOnboardingFlow";
 import OrganizationDetailModal from "@/components/admin/OrganizationDetailModal";
@@ -301,6 +302,14 @@ export default function CustomerListPage() {
     return [];
   }, [customersResponse]);
 
+  // Get customer IDs for logo fetching
+  const customerIds = React.useMemo(() => {
+    return customers.map((customer: Customer) => customer.id.toString()).filter(Boolean);
+  }, [customers]);
+
+  // Fetch organization logos
+  const { data: logoMap } = useOrganizationLogos(customerIds);
+
   // Group customers by organization and sport
   const organizations = React.useMemo(() => {
     const orgMap = new Map<string, OrganizationCard>();
@@ -403,6 +412,10 @@ export default function CustomerListPage() {
     const IconComponent = organizationIcons[organization.type];
     const colorClasses = organizationColors[organization.type];
     
+    // Get the first customer ID to look up the logo
+    const primaryCustomerId = organization.customers[0]?.id?.toString();
+    const logoUrl = primaryCustomerId ? logoMap?.get(primaryCustomerId) : null;
+    
     return (
       <div 
         className={`relative group cursor-pointer min-w-[240px] h-[140px] rounded-lg bg-gradient-to-br ${colorClasses} backdrop-blur-md border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex-shrink-0`}
@@ -416,8 +429,22 @@ export default function CustomerListPage() {
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
-                <IconComponent className="w-4 h-4 text-white" />
+              {/* Logo or Icon */}
+              <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center overflow-hidden">
+                {logoUrl ? (
+                  <img 
+                    src={logoUrl} 
+                    alt={`${organization.name} logo`}
+                    className="w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      // Fallback to icon if logo fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <IconComponent className={`w-4 h-4 text-white ${logoUrl ? 'hidden' : ''}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-bold text-white truncate">
