@@ -305,13 +305,22 @@ export default function CustomerListPage() {
   // Create a map of customer ID to logo URL from existing customer data
   const logoMap = React.useMemo(() => {
     const map = new Map<string, string>();
+    console.log('Creating logo map from customers:', customers.length);
     customers.forEach((customer: Customer) => {
-      if ((customer as any).company_logo_url) {
-        map.set(customer.id.toString(), (customer as any).company_logo_url);
-        console.log(`Logo mapped for ${customer.id}: ${(customer as any).company_logo_url}`);
+      console.log(`Customer ${customer.id} data:`, {
+        id: customer.id,
+        company: (customer as any).company,
+        company_logo_url: (customer as any).company_logo_url,
+        allKeys: Object.keys(customer)
+      });
+      
+      const logoUrl = (customer as any).company_logo_url || (customer as any).companyLogoUrl;
+      if (logoUrl) {
+        map.set(customer.id.toString(), logoUrl);
+        console.log(`✅ Logo mapped for ${customer.id}: ${logoUrl}`);
       }
     });
-    console.log('Logo map created:', Array.from(map.entries()));
+    console.log('Final logo map:', Array.from(map.entries()));
     return map;
   }, [customers]);
 
