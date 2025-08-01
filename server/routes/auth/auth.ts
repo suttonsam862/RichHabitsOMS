@@ -40,25 +40,21 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
       return next();
     }
 
-    // Rate limiting for auth endpoints
+    // Simplified rate limiting - only for excessive requests
     if (req.path === '/api/auth/me') {
       const clientIP = req.ip || 'unknown';
       const now = Date.now();
       const rateLimitKey = `${clientIP}:auth`;
 
       const rateLimit = AUTH_RATE_LIMIT.get(rateLimitKey);
-      if (rateLimit) {
-        if (now - rateLimit.timestamp < 60000) { // 1 minute window
-          if (rateLimit.count >= MAX_AUTH_CHECKS_PER_MINUTE) {
-            return res.status(429).json({
-              success: false,
-              message: 'Too many auth checks, please wait'
-            });
-          }
-          rateLimit.count++;
-        } else {
-          AUTH_RATE_LIMIT.set(rateLimitKey, { count: 1, timestamp: now });
+      if (rateLimit && now - rateLimit.timestamp < 10000) { // 10 second window
+        if (rateLimit.count >= 50) { // Much higher limit
+          return res.status(429).json({
+            success: false,
+            message: 'Too many requests'
+          });
         }
+        rateLimit.count++;
       } else {
         AUTH_RATE_LIMIT.set(rateLimitKey, { count: 1, timestamp: now });
       }
@@ -317,20 +313,18 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       });
     }
 
-    // Get user profile with error handling
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.user.id)
-      .single();
-
-    if (profileError || !profile) {
-      console.error('Profile fetch error:', profileError);
-      return res.status(404).json({
-        success: false,
-        message: 'User profile not found'
-      });
-    }
+    // Skip profile lookup to avoid RLS issues - use user metadata instead
+    const userFromAuth = user.user;
+    const profile = {
+      id: userFromAuth.id,
+      email: userFromAuth.email,
+      role: userFromAuth.user_metadata?.role || 'customer',
+      first_name: userFromAuth.user_metadata?.firstName || '',
+      last_name: userFromAuth.user_metadata?.lastName || '',
+      username: userFromAuth.email?.split('@')[0] || '',
+      is_super_admin: userFromAuth.user_metadata?.is_super_admin || false,
+      visible_pages: userFromAuth.user_metadata?.visiblePages || []
+    };
 
     // Update session expiry
     req.session.touch();

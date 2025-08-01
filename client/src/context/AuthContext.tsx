@@ -44,9 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Rate limit auth checks - minimum 5 seconds between requests
+    // Reduced rate limiting - minimum 2 seconds between requests
     // BUT always allow forced checks (like on page refresh/initialization)
-    if (!forceCheck && now - lastAuthCheck.current < 5000) {
+    if (!forceCheck && now - lastAuthCheck.current < 2000) {
       return;
     }
 
