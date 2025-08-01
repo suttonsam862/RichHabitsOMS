@@ -1,0 +1,181 @@
+COMPREHENSIVE CUSTOMER PAGE AUDIT PROMPT
+Mission: Perform an exhaustive, zero-tolerance audit of the entire customer management system in ThreadCraft. Every component, every interaction, every data flow must be verified as bulletproof.
+
+PHASE 1: Customer Data Architecture Analysis
+1.1 Database Schema Integrity
+
+Verify customers table structure matches shared/types.ts definitions
+Confirm all foreign key relationships (user_id, organization links)
+Validate RLS policies for customer data access
+Check indexing on frequently queried fields (email, company, status)
+Verify data constraints and validation rules
+1.2 Customer-Order Relationship Mapping
+
+Audit orders.customer_id → customers.id foreign key integrity
+Verify order aggregation queries (total orders, spent amount calculations)
+Test order history display for each customer
+Validate order status filtering by customer
+Check order deletion impact on customer records
+PHASE 2: Customer List Page (CustomerListPage.tsx) Deep Dive
+2.1 Data Loading & Performance
+
+Test customer list query performance with 100+ customers
+Verify search functionality across all customer fields
+Validate organization type filtering logic
+Test sorting by all available columns
+Check pagination if implemented
+2.2 Interactive Components Audit
+
+Organization Cards: Click handlers, data display accuracy
+Quick Add Button: Form validation, submission flow
+New Organization Button: Onboarding flow integration
+View Customer: Modal data population, close handlers
+Edit Actions: Navigation to edit pages
+Delete Actions: Confirmation modals, undo functionality
+2.3 State Management Verification
+
+Test useDataSync and useGlobalDataSync integration
+Verify cache invalidation after customer operations
+Check optimistic updates during CRUD operations
+Validate error state handling and user feedback
+PHASE 3: Customer Creation & Onboarding
+3.1 Customer Onboarding Flow (CustomerOnboardingFlow.tsx)
+
+Multi-step form progression and validation
+Data persistence between steps
+Back/forward navigation handling
+Final submission and confirmation
+3.2 Quick Add Customer (AddCustomerForm.tsx)
+
+Field validation (email format, required fields)
+Duplicate customer detection
+Form submission error handling
+Success feedback and list refresh
+3.3 Invitation System
+
+Email invitation generation and sending
+Invitation token validation and expiry
+Customer registration from invitation
+Invitation status tracking and management
+PHASE 4: Customer Detail & Edit Operations
+4.1 Customer Details View
+
+Complete customer information display
+Order history integration
+Contact information formatting
+Status indicators and badges
+4.2 Customer Edit Page (CustomerEditPage.tsx)
+
+Form pre-population with existing data
+Field-by-field validation
+Photo upload functionality
+Save operation with optimistic updates
+Navigation after successful save
+4.3 Photo Management
+
+Image upload to Supabase storage
+File validation (size, type)
+Preview functionality
+Storage path organization (customers/{id}/)
+Fallback image handling
+PHASE 5: Authentication & Authorization
+5.1 Route Protection
+
+Verify all customer routes require authentication
+Test role-based access (admin vs other roles)
+Check hasPageAccess function integration
+Validate session handling and token refresh
+5.2 API Security
+
+Test all customer API endpoints with various auth states
+Verify CORS and security headers
+Check rate limiting on customer operations
+Validate input sanitization
+PHASE 6: Error Handling & Edge Cases
+6.1 Network Error Scenarios
+
+Test behavior during API timeouts
+Verify graceful degradation when offline
+Check retry mechanisms for failed requests
+Validate error message display to users
+6.2 Data Integrity Edge Cases
+
+Test with customers having zero orders
+Verify behavior with missing profile images
+Check handling of long customer names/descriptions
+Test special characters in customer data
+PHASE 7: Customer-Order Integration Testing
+7.1 Order Creation Flow
+
+Customer selection in order forms
+Customer data auto-population
+Order assignment validation
+Customer notification systems
+7.2 Order Management Integration
+
+Filter orders by customer
+Customer order history accuracy
+Order status impact on customer metrics
+Revenue calculation verification
+PHASE 8: UI/UX Consistency
+8.1 Visual Components
+
+Consistent styling across all customer components
+Loading states and spinners
+Empty states (no customers, no orders)
+Responsive design on all screen sizes
+8.2 Navigation Flow
+
+Breadcrumb navigation accuracy
+Back button functionality
+Deep linking to customer details
+Tab navigation within customer sections
+PHASE 9: Performance & Optimization
+9.1 Query Optimization
+
+Customer list loading performance
+Search query response times
+Image loading optimization
+Memory leak detection
+9.2 Caching Strategy
+
+React Query cache configuration
+Customer data freshness validation
+Background refresh behavior
+Cache invalidation triggers
+PHASE 10: Integration Testing Matrix
+10.1 Cross-Component Testing
+
+Customer → Order creation flow
+Customer → Manufacturing assignment
+Customer → Message/Communication
+Customer → Payment processing
+10.2 End-to-End Workflows
+
+Complete customer lifecycle (invite → register → order → fulfill)
+Admin customer management workflow
+Customer self-service capabilities
+Data export/reporting functionality
+EXECUTION CHECKLIST
+For each test phase:
+
+ Document current behavior
+ Identify any errors or inconsistencies
+ Test with different user roles
+ Verify mobile responsiveness
+ Check accessibility compliance
+ Validate data persistence
+ Test undo/redo capabilities where applicable
+ Verify real-time updates and synchronization
+SUCCESS CRITERIA
+The customer system passes audit when:
+
+Zero console errors during any customer operation
+All CRUD operations complete successfully
+Data consistency maintained across all views
+Authentication works flawlessly
+Performance meets acceptable thresholds
+Error states provide clear user guidance
+Customer-order relationships remain intact
+All UI components render correctly
+This audit should result in a bulletproof customer management system that serves as the foundation for the entire ThreadCraft application's data integrity and user experience.
