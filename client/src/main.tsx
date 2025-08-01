@@ -9,22 +9,28 @@ import "./index.css";
 
 // Add global unhandled promise rejection handler
 window.addEventListener('unhandledrejection', (event) => {
-  // Filter out Vite dev server ping errors to reduce spam
-  const isVitePingError = (event.reason?.stack?.includes('@vite/client') && 
-                          event.reason?.message?.includes('Failed to fetch')) ||
-                         (event.reason?.stack?.includes('ping') && 
-                          event.reason?.message?.includes('Failed to fetch')) ||
-                         (event.reason?.name === 'TypeError' && 
-                          event.reason?.message === 'Failed to fetch' &&
-                          event.reason?.stack?.includes('waitForSuccessfulPing'));
+  // Enhanced filtering for all Vite dev server errors
+  const errorMessage = event.reason?.message || '';
+  const errorStack = event.reason?.stack || '';
   
-  if (isVitePingError) {
-    // Silent prevention for Vite dev server ping errors
+  const isViteDevError = (
+    // Vite client ping errors
+    (errorStack.includes('@vite/client') && errorMessage.includes('Failed to fetch')) ||
+    (errorStack.includes('ping') && errorMessage.includes('Failed to fetch')) ||
+    (errorStack.includes('waitForSuccessfulPing') && errorMessage.includes('Failed to fetch')) ||
+    // Generic dev server connection issues
+    (errorMessage === 'Failed to fetch' && errorStack.includes('vite')) ||
+    // Network errors during development
+    (event.reason?.name === 'TypeError' && errorMessage === 'Failed to fetch' && import.meta.env.DEV)
+  );
+  
+  if (isViteDevError) {
+    // Completely silent prevention for all Vite dev errors
     event.preventDefault();
     return;
   }
   
-  // Log other promise rejections with full details
+  // Log only non-dev related promise rejections
   console.error('🚨 Unhandled Promise Rejection:', event.reason);
   console.error('🔍 Promise:', event.promise);
   console.error('📍 Stack trace:', event.reason?.stack || 'No stack trace available');
