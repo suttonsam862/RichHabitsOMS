@@ -227,8 +227,18 @@ export async function loginUser(req: Request, res: Response) {
       visiblePages: data.user.user_metadata?.visiblePages || [],
     };
 
-    // Store in session
+    // Store in session - ensure session exists
     const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    // Initialize session object if it doesn't exist
+    if (!req.session) {
+      console.error('Session middleware not initialized');
+      return res.status(500).json({
+        success: false,
+        message: 'Session configuration error'
+      });
+    }
+    
     req.session.user = user;
     req.session.token = data.session.access_token;
     req.session.expires = sessionExpiry.toISOString();
