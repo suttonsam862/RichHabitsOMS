@@ -4,6 +4,8 @@ import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 // Initialize error handling with simplified approach
 import "./lib/errorHandler";
+// Fix ResizeObserver errors that cause popup crashes
+import "./utils/resizeObserverFix";
 import "./index.css";
 
 // Completely disable Vite HMR to prevent promise rejection spam
