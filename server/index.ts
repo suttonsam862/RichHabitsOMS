@@ -402,6 +402,7 @@ import manufacturingRoutes, {
     app.use('/api/sales-management', authenticateRequest);
     app.use('/api/storage-cleanup', authenticateRequest);
     app.use('/api/upload-test', authenticateRequest);
+    app.use('/api/organizations', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
