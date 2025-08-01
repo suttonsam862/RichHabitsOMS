@@ -64,12 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'Content-Type': 'application/json',
         },
         signal: controller.signal,
+      }).catch(error => {
+        clearTimeout(timeoutId);
+        throw error;
       });
 
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (data.success && data.user) {
           setUser(data.user);
           setError(null);
@@ -111,9 +114,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         credentials: 'include',
         body: JSON.stringify({ email, password }),
+      }).catch(error => {
+        throw new Error(`Network error: ${error.message}`);
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({
+        success: false,
+        message: 'Invalid response from server'
+      }));
 
       if (response.ok && data.success && data.user) {
         setUser(data.user);

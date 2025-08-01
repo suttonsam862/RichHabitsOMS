@@ -1,0 +1,86 @@
+Based on the chat history and webview logs showing massive unhandled promise rejections, I can see that the ThreadCraft application is experiencing severe authentication and structural integrity issues. Here's a comprehensive prompt for fixing the critical reliability problems:
+
+ThreadCraft Reliability & Structural Integrity Repair Agent Prompt
+MISSION: Complete Application Stabilization & Authentication Repair
+
+🚨 CRITICAL ISSUES IDENTIFIED
+Massive Unhandled Promise Rejections - 95+ unhandled rejections causing app instability
+Authentication System Failure - Users cannot login, constant 401 errors
+Router Configuration Conflicts - Multiple BrowserRouter instances and navigation issues
+Session Management Breakdown - Sessions not persisting, constant re-authentication requests
+Database Connection Instability - Supabase connection issues and RLS policy conflicts
+🎯 AGENT OBJECTIVES
+Phase 1: Authentication System Stabilization
+
+Fix the authentication flow in AuthContext.tsx to prevent infinite loops
+Resolve the session persistence issues in server/routes/auth/auth.ts
+Eliminate unhandled promise rejections in auth-related code
+Ensure proper error handling in all auth endpoints
+Phase 2: Router & Navigation Integrity
+
+Fix the dual BrowserRouter issue in main.tsx and Router.tsx
+Ensure proper route protection and navigation flow
+Fix the RequireAuth component to prevent auth loops
+Resolve navigation blocking and route conflicts
+Phase 3: Database & API Reliability
+
+Fix RLS policies causing authentication recursion
+Stabilize Supabase connection handling
+Resolve the /api/auth/me endpoint failures
+Fix session storage and cookie management
+Phase 4: Error Handling & Promise Management
+
+Implement comprehensive promise rejection handling
+Add proper error boundaries for auth components
+Fix async/await patterns causing unhandled rejections
+Add timeout and retry logic for API calls
+🔧 SPECIFIC TECHNICAL REQUIREMENTS
+Fix AuthContext.tsx:
+
+Remove infinite checkAuth loops
+Add proper promise rejection handling
+Implement rate limiting for auth checks
+Fix the loading state management
+Repair Router Configuration:
+
+Consolidate to single BrowserRouter
+Fix route protection logic
+Ensure proper redirect handling
+Stabilize Server Authentication:
+
+Fix session middleware
+Repair RLS policies
+Add proper error responses
+Fix token validation logic
+Promise Rejection Cleanup:
+
+Add global unhandled rejection handler
+Wrap all async operations in proper try/catch
+Fix fetch interceptors and error handling
+🛡️ RELIABILITY STANDARDS
+Zero unhandled promise rejections
+Consistent authentication state
+Stable session management
+Proper error boundaries
+Graceful failure handling
+Fast application startup (<3 seconds)
+Reliable login/logout flow
+🎯 SUCCESS CRITERIA
+✅ Application starts without errors
+✅ Login page loads and functions properly
+✅ Authentication persists across page refreshes
+✅ No unhandled promise rejections in console
+✅ Proper error messages for failed operations
+✅ Stable navigation between protected routes
+✅ Session management works correctly
+✅ Database operations execute reliably
+
+Priority: CRITICAL - Application currently non-functional
+Timeline: Immediate - Core functionality must be restored
+Scope: Full authentication and routing system repair
+
+Focus on creating a bulletproof, reliable foundation that ensures the app can start, users can login, and the core functionality remains stable under all conditions.
+
+
+Scroll to latest
+Assistant mode
