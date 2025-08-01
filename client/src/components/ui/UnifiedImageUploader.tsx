@@ -448,36 +448,55 @@ export function UnifiedImageUploader({
         </div>
       )}
 
-      {/* Error Message with Retry */}
+      {/* Error Display - Does NOT close dialogs/popups */}
       {uploadError && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
-          <p className="text-sm text-red-600">{uploadError}</p>
-          {retryCount < 3 && selectedFile && (
-            <div className="flex gap-2">
-              <Button
-                onClick={retryUpload}
-                disabled={isUploading}
-                variant="outline"
-                size="sm"
-                className="text-red-600 border-red-300 hover:bg-red-50"
-              >
-                Retry Upload
-              </Button>
-              <Button
-                onClick={resetState}
-                variant="ghost"
-                size="sm"
-                className="text-gray-600"
-              >
-                Reset
-              </Button>
+        <div className="p-4 bg-red-50 border-l-4 border-red-400 rounded-md space-y-3">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <span className="text-red-500 text-lg">⚠️</span>
             </div>
-          )}
-          {retryCount >= 3 && (
-            <p className="text-xs text-red-500">
-              Maximum retry attempts reached. Please check your connection and try again later.
-            </p>
-          )}
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-red-800">File Upload Error</h3>
+              <p className="text-sm text-red-700 mt-1">{uploadError}</p>
+              
+              {/* File size specific error handling */}
+              {uploadError.includes('exceeds') && (
+                <p className="text-xs text-red-600 mt-2">
+                  💡 Try compressing your image before uploading, or choose a smaller file.
+                </p>
+              )}
+              
+              <div className="mt-3 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUploadError(null)}
+                  className="text-red-600 border-red-300 bg-white hover:bg-red-50"
+                >
+                  Dismiss
+                </Button>
+                {retryCount < 3 && selectedFile && !uploadError.includes('exceeds') && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={retryUpload}
+                    disabled={isUploading}
+                    className="text-blue-600 border-blue-300 bg-white hover:bg-blue-50"
+                  >
+                    Try Again
+                  </Button>
+                )}
+              </div>
+              
+              {retryCount >= 3 && (
+                <p className="text-xs text-red-500 mt-2">
+                  Maximum retry attempts reached. Please refresh the page and try again.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

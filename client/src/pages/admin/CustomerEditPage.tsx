@@ -857,18 +857,18 @@ export default function CustomerEditPage() {
                         className="mx-auto w-32 h-32 rounded-full object-cover border border-gray-200"
                       />
 
-                      {/* Upload Error with Retry */}
-                      {uploadPhotoMutation.isError && (
+                      {/* Upload Error Display - Shows error without closing dialog */}
+                      {uploadRetryCount > 0 && (
                         <div className="p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
                           <p className="text-sm text-red-600">
-                            {uploadPhotoMutation.error?.message || 'Upload failed'}
+                            Upload failed. Please try again.
                           </p>
                           {uploadRetryCount < 3 && (
                             <div className="flex justify-center gap-2">
                               <Button
                                 type="button"
                                 onClick={retryPhotoUpload}
-                                disabled={isUploading || uploadPhotoMutation.isPending}
+                                disabled={isUploading}
                                 variant="outline"
                                 size="sm"
                                 className="text-red-600 border-red-300 hover:bg-red-50"
@@ -895,28 +895,26 @@ export default function CustomerEditPage() {
                       )}
 
                       {/* Upload Buttons */}
-                      {!uploadPhotoMutation.isError && (
-                        <div className="flex justify-center space-x-2">
-                          <Button
-                            type="button"
-                            onClick={handlePhotoUpload}
-                            disabled={isUploading || uploadPhotoMutation.isPending}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Upload className="w-4 h-4 mr-2" />
-                            {isUploading || uploadPhotoMutation.isPending ? 'Uploading...' : 'Upload Photo'}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleFileRemove}
-                            disabled={isUploading || uploadPhotoMutation.isPending}
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Remove
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex justify-center space-x-2">
+                        <Button
+                          type="button"
+                          onClick={handlePhotoUpload}
+                          disabled={isUploading}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {isUploading ? 'Uploading...' : 'Upload Photo'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleFileRemove}
+                          disabled={isUploading}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center">
@@ -939,7 +937,7 @@ export default function CustomerEditPage() {
                         <p className="pl-1 text-gray-500">or drag and drop</p>
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        PNG, JPG, WebP up to 5MB
+                        PNG, JPG, WebP up to 10MB (automatically optimized)
                       </p>
                     </div>
                   )}

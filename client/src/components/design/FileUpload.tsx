@@ -57,10 +57,9 @@ export function FileUpload({ designTaskId, onSuccess }: FileUploadProps) {
         </DialogHeader>
 
         <UnifiedImageUploader
-          itemType="design_task"
-          itemId={designTaskId.toString()}
+          uploadType="design"
+          entityId={designTaskId.toString()}
           onUploadComplete={handleUploadComplete}
-          allowMultiple={false}
         />
 
         <div className="flex justify-end mt-4">
