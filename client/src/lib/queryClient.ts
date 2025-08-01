@@ -220,12 +220,13 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false, // No retries in development
-      retryDelay: 0,
-      staleTime: import.meta.env.DEV ? 0 : 5 * 60 * 1000,
-      gcTime: import.meta.env.DEV ? 0 : 10 * 60 * 1000,
-      // Prevent rejections from bubbling up
-      throwOnError: false,
+      retry: 1, // Single retry for network errors
+      retryDelay: 300, // Fast retry for startup
+      staleTime: 2 * 60 * 1000, // 2 minutes - balance between performance and freshness
+      gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
+      refetchOnWindowFocus: false, // Prevent unnecessary refetches
+      refetchOnMount: false, // Speed up component mounting
+      throwOnError: false, // Prevent startup crashes
     },
     mutations: {
       retry: false,

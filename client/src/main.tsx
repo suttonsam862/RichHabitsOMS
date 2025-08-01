@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+// Removed duplicate QueryClient imports - using centralized version
 import App from "./App.tsx";
 // Initialize error handling with simplified approach
 import "./lib/errorHandler";
@@ -95,25 +94,9 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Simple QueryClient configuration
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      staleTime: 5 * 60 * 1000,
-      refetchOnWindowFocus: false,
-    },
-    mutations: {
-      retry: false,
-    },
-  },
-});
-
+// Use centralized QueryClient to avoid duplication
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ReactQueryDevtools initialIsOpen={false} />
-      <App />
-    </QueryClientProvider>
+    <App />
   </React.StrictMode>
 );

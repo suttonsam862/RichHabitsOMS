@@ -7,17 +7,12 @@ interface AppWithSpinnerProps {
 }
 
 export function AppWithSpinner({ children }: AppWithSpinnerProps) {
-  const [serverReady, setServerReady] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start as ready, avoid artificial delays
   const [error, setError] = useState<string | null>(null);
 
+  // No artificial loading delays - start immediately
   useEffect(() => {
-    // Simple initialization without server health check
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
+    setLoading(false);
   }, []);
 
   if (loading) {

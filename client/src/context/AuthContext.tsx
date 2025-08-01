@@ -212,10 +212,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // Initial auth check
+  // Optimized initial auth check - immediate execution
   useEffect(() => {
     if (!initialized) {
-      checkAuth();
+      checkAuth().finally(() => setInitialized(true));
     }
   }, [initialized, checkAuth]);
 
