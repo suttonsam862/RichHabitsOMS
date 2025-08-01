@@ -255,6 +255,7 @@ import orderRoutes from './routes/api/orderRoutes';
 // import orderImageRoutes from './routes/api/orderImageRoutes'; // Removed - using Supabase Storage only
 import storageCleanupRoutes from './routes/api/storageCleanupRoutes';
 import organizationRoutes from './routes/api/organizationRoutes';
+import organizationFileRoutes from './routes/api/organizationFileRoutes';
 // import unifiedImageRoutes from './routes/api/unifiedImageRoutes'; // Removed - using Supabase Storage only
 import invitationRoutes from './routes/api/invitationRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
@@ -403,6 +404,7 @@ import manufacturingRoutes, {
     app.use('/api/storage-cleanup', authenticateRequest);
     app.use('/api/upload-test', authenticateRequest);
     app.use('/api/organizations', authenticateRequest);
+    app.use('/api/organization-files', authenticateRequest);
 
     // Register protected API routes
     app.use('/api/catalog-options', catalogOptionsRoutes);
@@ -415,6 +417,7 @@ import manufacturingRoutes, {
     app.use('/api/orders', orderRoutes);
     // app.use('/api/orders', orderImageRoutes); // Removed - using Supabase Storage only
     app.use('/api/organizations', organizationRoutes);
+    app.use('/api/organization-files', organizationFileRoutes);
     // app.use('/api/images-unified', unifiedImageRoutes); // Removed - using Supabase Storage only
     app.use('/api/images/access', imageAccessRoutes); // Image access and temporary links
     // app.use('/api', imageVariantsRoutes); // Removed - using Supabase Storage only
