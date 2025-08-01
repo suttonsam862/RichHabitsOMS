@@ -30,7 +30,8 @@ const customerSchema = z.object({
   state: z.string().optional(),
   zip: z.string().optional(),
   country: z.string().optional(),
-  status: z.enum(['active', 'inactive', 'suspended'])
+  status: z.enum(['active', 'inactive', 'suspended']),
+  salesperson_id: z.string().optional(),
 });
 
 type CustomerFormData = z.infer<typeof customerSchema>;
@@ -59,7 +60,7 @@ export default function CustomerEditPage() {
   // Photo upload state
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
-  const [isUploading, setIsUploading] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(isUploading);
   const [uploadRetryCount, setUploadRetryCount] = React.useState(0);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
 
@@ -104,7 +105,8 @@ export default function CustomerEditPage() {
         lastOrder: data.lastOrder || data.last_order,
         created_at: data.created_at,
         photo_url: data.photo_url,
-        profile_image_url: data.profile_image_url
+        profile_image_url: data.profile_image_url,
+        salesperson_id: data.salesperson_id || '',
       } as Customer;
 
       setCustomer(customerData);
@@ -136,7 +138,8 @@ export default function CustomerEditPage() {
       state: '',
       zip: '',
       country: '',
-      status: 'active'
+      status: 'active',
+      salesperson_id: '',
     }
   });
 
@@ -157,7 +160,8 @@ export default function CustomerEditPage() {
         state: customer.state || '',
         zip: customer.zip || '',
         country: customer.country || '',
-        status: customer.status as 'active' | 'inactive' | 'suspended' || 'active'
+        status: customer.status as 'active' | 'inactive' | 'suspended' || 'active',
+        salesperson_id: customer.salesperson_id || '',
       };
       form.reset(formData);
       setInitialData(formData);
@@ -371,7 +375,8 @@ export default function CustomerEditPage() {
       state: data.state || '',
       zip: data.zip || '',
       country: data.country || '',
-      status: data.status
+      status: data.status,
+      salesperson_id: data.salesperson_id || null,
     };
 
     console.log(`Updating customer with ID: ${customerId}`, requestData);
@@ -492,7 +497,8 @@ export default function CustomerEditPage() {
             state: updatedCustomer.state || '',
             zip: updatedCustomer.zip || '',
             country: updatedCustomer.country || '',
-            status: updatedCustomer.status || 'active'
+            status: updatedCustomer.status || 'active',
+            salesperson_id: updatedCustomer.salesperson_id || '',
           };
 
           form.reset(formData);
@@ -929,6 +935,7 @@ export default function CustomerEditPage() {
                         <label
                           htmlFor="photo-upload"
                           className="cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+```python
                         >
                           <span>Upload a photo</span>
                           <input
@@ -1045,6 +1052,33 @@ export default function CustomerEditPage() {
                   )}
                 />
               </div>
+
+              {/* Salesperson Assignment */}
+              <FormField
+                control={form.control}
+                name="salesperson_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned Salesperson</FormLabel>
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Assign a salesperson to manage this customer relationship
+                    </div>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select salesperson" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">No assignment</SelectItem>
+                        {/* TODO: map through salespeople */}
+                        <SelectItem value="placeholder">Loading salespeople...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Inline error message */}
               {submitError && (

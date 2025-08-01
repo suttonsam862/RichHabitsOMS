@@ -1,42 +1,45 @@
-import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/use-auth';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Users } from 'lucide-react'; // Assuming lucide-react is used for icons
 
-/**
- * Navigation Manager Component
- * Handles proper navigation flow and prevents users from getting stuck at login
- */
-export const NavigationManager = () => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+// Define a NavigationMenuItem component (assumed)
+const NavigationMenuItem = ({ children }) => (
+  <li>{children}</li>
+);
+
+const AdminNavigationMenu = () => {
   const location = useLocation();
 
-  useEffect(() => {
-    // Don't do anything while auth is loading
-    if (loading) return;
+  return (
+    <nav>
+      <ul>
+        <NavigationMenuItem>
+          <Link 
+            to="/admin/customers" 
+            className={`group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50 ${
+              location.pathname === '/admin/customers' ? 'bg-accent text-accent-foreground' : ''
+            }`}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            Customers
+          </Link>
+        </NavigationMenuItem>
 
-    // Only handle specific navigation cases to avoid conflicts
-    const currentPath = location.pathname;
-    
-    // If user is authenticated and on login page, redirect to their dashboard
-    if (user && currentPath === '/login') {
-      const targetPath = user.role ? `/dashboard/${user.role}` : '/dashboard';
-      setTimeout(() => {
-        navigate(targetPath, { replace: true });
-      }, 100);
-      return;
-    }
-
-    // If user is authenticated and on root, redirect to their dashboard
-    if (user && currentPath === '/') {
-      const targetPath = user.role ? `/dashboard/${user.role}` : '/dashboard';
-      setTimeout(() => {
-        navigate(targetPath, { replace: true });
-      }, 100);
-      return;
-    }
-  }, [user, loading, location.pathname, navigate]);
-
-  // This component doesn't render anything, it just manages navigation
-  return null;
+        <NavigationMenuItem>
+          {/* TODO: add link to SalespersonManagement */}
+          <Link 
+            to="/admin/salespeople" 
+            className={`group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50 ${
+              location.pathname === '/admin/salespeople' ? 'bg-accent text-accent-foreground' : ''
+            }`}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            Salespeople
+          </Link>
+        </NavigationMenuItem>
+      </ul>
+    </nav>
+  );
 };
+
+export default AdminNavigationMenu;

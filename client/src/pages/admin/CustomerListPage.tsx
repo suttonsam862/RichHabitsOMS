@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -83,6 +82,7 @@ interface Customer {
   zip?: string;
   country?: string;
   created_at?: string;
+  salesperson_id?: number;
 }
 
 interface OrganizationCard {
@@ -239,7 +239,7 @@ export default function CustomerListPage() {
     const customerName = customer.firstName && customer.lastName 
       ? `${customer.firstName} ${customer.lastName}` 
       : customer.name || customer.email || 'Customer';
-    
+
     softDeleteCustomer(
       customer.id.toString(),
       customer,
@@ -275,9 +275,9 @@ export default function CustomerListPage() {
     if (!customersResponse) {
       return [];
     }
-    
+
     console.log('Processing customer data:', customersResponse);
-    
+
     // Handle different response structures - match the actual API response
     if ((customersResponse as any).success && (customersResponse as any).data) {
       // Check if data has customers array (new API format)
@@ -289,15 +289,15 @@ export default function CustomerListPage() {
         return (customersResponse as any).data;
       }
     }
-    
+
     if ((customersResponse as any).customers && Array.isArray((customersResponse as any).customers)) {
       return (customersResponse as any).customers;
     }
-    
+
     if (Array.isArray(customersResponse)) {
       return customersResponse;
     }
-    
+
     console.warn('Unexpected customer response structure:', customersResponse);
     return [];
   }, [customersResponse]);
@@ -317,12 +317,12 @@ export default function CustomerListPage() {
   // Group customers by organization and sport
   const organizations = React.useMemo(() => {
     const orgMap = new Map<string, OrganizationCard>();
-    
+
     customers.forEach((customer: Customer) => {
       const orgName = customer.company || 'Individual Customers';
       const orgType = customer.organizationType || getOrganizationType(orgName);
       const sport = customer.sport || (orgType === 'sports' ? 'General Sports' : 'N/A');
-      
+
       if (!orgMap.has(orgName)) {
         orgMap.set(orgName, {
           id: orgName.toLowerCase().replace(/\s+/g, '-'),
@@ -335,18 +335,18 @@ export default function CustomerListPage() {
           customers: []
         });
       }
-      
+
       const org = orgMap.get(orgName)!;
       org.customers.push(customer);
       org.customerCount += 1;
       org.totalOrders += customer.orders || 0;
-      
+
       // Set primary contact as first customer
       if (!org.primaryContact) {
         org.primaryContact = `${customer.firstName} ${customer.lastName}`;
       }
     });
-    
+
     return Array.from(orgMap.values());
   }, [customers]);
 
@@ -367,9 +367,9 @@ export default function CustomerListPage() {
         org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         org.primaryContact?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         org.sport.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesType = selectedOrganizationType === 'all' || org.type === selectedOrganizationType;
-      
+
       return matchesSearch && matchesType;
     });
   }, [organizations, searchTerm, selectedOrganizationType]);
@@ -378,7 +378,7 @@ export default function CustomerListPage() {
   const sportOrganizations = React.useMemo(() => {
     const sportsOrgs = filteredOrganizations.filter(org => org.type === 'sports');
     const grouped = new Map<string, OrganizationCard[]>();
-    
+
     sportsOrgs.forEach(org => {
       const sport = org.sport || 'General Sports';
       if (!grouped.has(sport)) {
@@ -386,11 +386,11 @@ export default function CustomerListPage() {
       }
       grouped.get(sport)!.push(org);
     });
-    
+
     // Sort by predefined sports order
     const sortedSports = sportsOrder.filter(sport => grouped.has(sport));
     const otherSports = Array.from(grouped.keys()).filter(sport => !sportsOrder.includes(sport));
-    
+
     return [...sortedSports, ...otherSports].map(sport => ({
       sport,
       organizations: grouped.get(sport) || []
@@ -406,7 +406,7 @@ export default function CustomerListPage() {
       nonprofit: nonSportsOrgs.filter(org => org.type === 'nonprofit'),
       government: nonSportsOrgs.filter(org => org.type === 'government')
     };
-    
+
     return Object.fromEntries(
       Object.entries(grouped).filter(([_, orgs]) => orgs.length > 0)
     );
@@ -415,13 +415,13 @@ export default function CustomerListPage() {
   const OrganizationCard = ({ organization }: { organization: OrganizationCard }) => {
     const IconComponent = organizationIcons[organization.type];
     const colorClasses = organizationColors[organization.type];
-    
+
     // Get the first customer ID to look up the logo
     const primaryCustomerId = organization.customers[0]?.id?.toString();
     const logoUrl = primaryCustomerId ? logoMap?.get(primaryCustomerId) : null;
-    
+
     // Debug removed - logo display working
-    
+
     return (
       <div 
         className="relative group cursor-pointer min-w-[240px] h-[140px] rounded-lg bg-black backdrop-blur-md border border-gray-800 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex-shrink-0 overflow-hidden"
@@ -437,7 +437,7 @@ export default function CustomerListPage() {
         {logoUrl && (
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
         )}
-        
+
         {/* Content */}
         <div className="relative z-10 p-4 h-full flex flex-col justify-between">
           {/* Header */}
@@ -462,7 +462,7 @@ export default function CustomerListPage() {
                 </p>
               </div>
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
@@ -477,7 +477,7 @@ export default function CustomerListPage() {
               <DropdownMenuContent align="end" className="glass-panel border-glass-border w-48">
                 <DropdownMenuLabel className="text-foreground">Organization Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-glass-border" />
-                
+
                 {/* View & Communication */}
                 <DropdownMenuItem 
                   className="text-foreground hover:bg-white/10"
@@ -499,9 +499,9 @@ export default function CustomerListPage() {
                   <Mail className="mr-2 h-3 w-3" />
                   Contact Primary
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuSeparator className="bg-glass-border" />
-                
+
                 {/* Management Actions */}
                 <DropdownMenuItem 
                   className="text-foreground hover:bg-white/10"
@@ -541,9 +541,9 @@ export default function CustomerListPage() {
                   <FileText className="mr-2 h-3 w-3" />
                   View Orders
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuSeparator className="bg-glass-border" />
-                
+
                 {/* Administrative Actions */}
                 <DropdownMenuItem 
                   className="text-foreground hover:bg-white/10"
@@ -570,7 +570,7 @@ export default function CustomerListPage() {
             </DropdownMenu>
           </div>
 
-          
+
 
           {/* Stats */}
           <div className="flex justify-between items-end">
@@ -630,7 +630,7 @@ export default function CustomerListPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="flex gap-2 flex-wrap">
               <Button 
                 variant={selectedOrganizationType === 'all' ? 'default' : 'outline'} 
@@ -663,7 +663,7 @@ export default function CustomerListPage() {
                 <GraduationCap className="mr-2 h-4 w-4" />
                 Education
               </Button>
-              
+
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -713,14 +713,14 @@ export default function CustomerListPage() {
                   {sportOrganizations.reduce((acc, sport) => acc + sport.organizations.length, 0)}
                 </Badge>
               </div>
-              
+
               {sportOrganizations.map(({ sport, organizations }) => (
                 <div key={sport} className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <h3 className="text-lg font-semibold text-foreground">{sport}</h3>
                     <Badge variant="outline">{organizations.length}</Badge>
                   </div>
-                  
+
                   <div className="overflow-x-auto pb-2">
                     <div className="flex space-x-4" style={{ width: 'max-content' }}>
                       {organizations.map((org) => (
@@ -745,7 +745,7 @@ export default function CustomerListPage() {
                   {Object.values(businessOrganizations).reduce((acc, orgs) => acc + orgs.length, 0)}
                 </Badge>
               </div>
-              
+
               {Object.entries(businessOrganizations).map(([type, orgs]) => {
                 const IconComponent = organizationIcons[type as keyof typeof organizationIcons];
                 return (
@@ -755,7 +755,7 @@ export default function CustomerListPage() {
                       <h3 className="text-lg font-semibold text-foreground capitalize">{type}</h3>
                       <Badge variant="outline">{orgs.length}</Badge>
                     </div>
-                    
+
                     <div className="overflow-x-auto pb-2">
                       <div className="flex space-x-4" style={{ width: 'max-content' }}>
                         {orgs.map((org) => (
@@ -886,7 +886,7 @@ export default function CustomerListPage() {
                     </Button>
                   )}
                 </div>
-                
+
                 <Button
                   variant="outline"
                   size="sm"

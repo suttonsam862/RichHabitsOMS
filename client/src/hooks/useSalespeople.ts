@@ -1,164 +1,116 @@
-/**
- * React Query hooks for salesperson management
- */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  getSalespeople, 
-  getSalesperson, 
-  createSalesperson, 
-  updateSalesperson, 
-  deleteSalesperson,
-  assignCustomerToSalesperson,
-  type Salesperson 
-} from '@/lib/salespersonApi';
-import { useToast } from '@/hooks/use-toast';
+import { Salesperson } from '@shared/types';
+import * as salespersonApi from '@/lib/salespersonApi';
 
-/**
- * Hook to fetch all salespeople
- */
+// TODO: wire these to salespersonApi functions
 export function useSalespeople() {
   return useQuery({
     queryKey: ['salespeople'],
-    queryFn: async () => {
-      const response = await getSalespeople();
-      return response.data || [];
-    },
+    queryFn: salespersonApi.getSalespeople,
+    // TODO: add error handling and caching strategy
   });
 }
 
-/**
- * Hook to fetch single salesperson by ID
- */
 export function useSalesperson(id: string) {
   return useQuery({
-    queryKey: ['salespeople', id],
-    queryFn: async () => {
-      const response = await getSalesperson(id);
-      return response.data;
-    },
+    queryKey: ['salesperson', id],
+    queryFn: () => salespersonApi.getSalesperson(id),
     enabled: !!id,
+    // TODO: add error handling
   });
 }
 
-/**
- * Hook to create new salesperson
- */
 export function useCreateSalesperson() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async (salespersonData: Partial<Salesperson>) => {
-      const response = await createSalesperson(salespersonData);
-      return response.data;
-    },
-    onSuccess: (data) => {
+    mutationFn: salespersonApi.createSalesperson,
+    onSuccess: () => {
+      // TODO: invalidate and refetch queries
       queryClient.invalidateQueries({ queryKey: ['salespeople'] });
-      toast({
-        title: 'Salesperson Created',
-        description: `${data?.first_name} ${data?.last_name} has been added successfully.`,
-      });
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create salesperson',
-        variant: 'destructive',
-      });
-    },
+    // TODO: add error handling and optimistic updates
   });
 }
 
-/**
- * Hook to update existing salesperson
- */
 export function useUpdateSalesperson() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Salesperson> }) => {
-      const response = await updateSalesperson(id, data);
-      return response.data;
-    },
-    onSuccess: (data, variables) => {
+    mutationFn: ({ id, data }: { id: string; data: Partial<Salesperson> }) =>
+      salespersonApi.updateSalesperson(id, data),
+    onSuccess: (_, { id }) => {
+      // TODO: invalidate and refetch queries
+      queryClient.invalidateQueries({ queryKey: ['salesperson', id] });
       queryClient.invalidateQueries({ queryKey: ['salespeople'] });
-      queryClient.invalidateQueries({ queryKey: ['salespeople', variables.id] });
-      toast({
-        title: 'Salesperson Updated',
-        description: `${data?.first_name} ${data?.last_name} has been updated successfully.`,
-      });
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update salesperson',
-        variant: 'destructive',
-      });
-    },
+    // TODO: add error handling and optimistic updates
   });
 }
 
-/**
- * Hook to delete salesperson
- */
 export function useDeleteSalesperson() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await deleteSalesperson(id);
-      return response.data;
-    },
+    mutationFn: salespersonApi.deleteSalesperson,
     onSuccess: () => {
+      // TODO: invalidate and refetch queries
       queryClient.invalidateQueries({ queryKey: ['salespeople'] });
-      toast({
-        title: 'Salesperson Deleted',
-        description: 'Salesperson has been removed successfully.',
-      });
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to delete salesperson',
-        variant: 'destructive',
-      });
+    // TODO: add error handling and cleanup
+  });
+}
+
+// TODO: add assignment hooks
+export function useAssignSalesperson() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ customerId, salespersonId }: { customerId: string; salespersonId: string }) =>
+      salespersonApi.assignSalespersonToCustomer(customerId, salespersonId),
+    onSuccess: () => {
+      // TODO: invalidate customer and salesperson queries
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
   });
 }
 
-/**
- * Hook to assign customer to salesperson
- */
-export function useAssignCustomer() {
+export function useUnassignSalesperson() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async ({ customerId, salespersonId, assignmentType = 'primary' }: {
-      customerId: string;
-      salespersonId: string;
-      assignmentType?: string;
-    }) => {
-      const response = await assignCustomerToSalesperson(customerId, salespersonId, assignmentType);
-      return response.data;
-    },
+    mutationFn: salespersonApi.unassignSalespersonFromCustomer,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['salespeople'] });
+      // TODO: invalidate customer queries
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      toast({
-        title: 'Assignment Updated',
-        description: 'Customer has been assigned to salesperson successfully.',
-      });
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to assign customer',
-        variant: 'destructive',
-      });
+  });
+}
+
+// TODO: add file upload hooks
+export function useUploadSalespersonProfileImage() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) =>
+      salespersonApi.uploadSalespersonProfileImage(id, file),
+    onSuccess: (_, { id }) => {
+      // TODO: invalidate salesperson query
+      queryClient.invalidateQueries({ queryKey: ['salesperson', id] });
+    },
+  });
+}
+
+export function useUploadSalespersonPayrollFile() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) =>
+      salespersonApi.uploadSalespersonPayrollFile(id, file),
+    onSuccess: (_, { id }) => {
+      // TODO: invalidate salesperson query
+      queryClient.invalidateQueries({ queryKey: ['salesperson', id] });
     },
   });
 }

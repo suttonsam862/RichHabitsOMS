@@ -25,7 +25,6 @@ import CatalogPage from '@/pages/admin/CatalogPage';
 import CatalogItemEditPage from '@/pages/admin/CatalogItemEditPage';
 import UserPermissionsPage from '@/pages/admin/UserPermissionsPage';
 import SettingsPage from '@/pages/admin/SettingsPage';
-import SalesManagementPage from '@/pages/admin/SalesManagementPage';
 
 // Order pages
 import Orders from '@/pages/Orders';
@@ -90,11 +89,8 @@ export function AppRouter() {
           {/* Admin routes */}
           <Route path="admin/customers" element={<CustomerListPage />} />
           <Route path="admin/customers/:id/edit" element={<CustomerEditPage />} />
-          <Route path="admin/catalog" element={<CatalogPage />} />
-          <Route path="admin/catalog/:id/edit" element={<CatalogItemEditPage />} />
-          <Route path="admin/user-permissions" element={<UserPermissionsPage />} />
-          <Route path="admin/sales-management" element={<SalesManagementPage />} />
-          <Route path="admin/settings" element={<SettingsPage />} />
+          {/* TODO: register SalespersonManagement route */}
+          <Route path="/admin/salespeople" element={<SalespersonManagementPage />} />
 
           {/* Customer management routes */}
           <Route path="customers" element={<CustomerListPage />} />
