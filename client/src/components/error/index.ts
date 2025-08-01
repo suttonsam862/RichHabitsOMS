@@ -57,12 +57,12 @@ export const logError = (error: Error, context?: string) => {
 // Error boundary wrapper for React Query
 export const withReactQueryErrorBoundary = <T extends object>(
   Component: React.ComponentType<T>
-): React.ForwardRefExoticComponent<React.PropsWithoutRef<T> & React.RefAttributes<any>> => {
-  const WrappedComponent = React.forwardRef<any, T>((props, ref) => (
+): React.ComponentType<T> => {
+  const WrappedComponent = (props: T) => (
     <AsyncErrorBoundary componentName={Component.displayName || Component.name || 'Component'}>
-      <Component {...props} ref={ref} />
+      <Component {...props} />
     </AsyncErrorBoundary>
-  ));
+  );
   
   WrappedComponent.displayName = `withReactQueryErrorBoundary(${Component.displayName || Component.name})`;
   

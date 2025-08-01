@@ -62,7 +62,7 @@ export function withErrorBoundary<P extends object>(
   ErrorBoundaryComponent: React.ComponentType<{ children: React.ReactNode; featureName: string }>,
   featureName: string
 ): React.ComponentType<P> {
-  const WrappedComponent = (props: P) => (
+  const WrappedComponent: React.ComponentType<P> = (props: P) => (
     <ErrorBoundaryComponent featureName={featureName}>
       <Component {...props} />
     </ErrorBoundaryComponent>

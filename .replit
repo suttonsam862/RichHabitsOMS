@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Development Server"
+runButton = "Auto Development Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -123,6 +123,19 @@ args = "cd client && npm run dev -- --host 0.0.0.0 --port 3000"
 name = "Development Server"
 author = 41090967
 mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Auto Development Server"
+author = 41090967
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run build"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
