@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Catalog Development Server"
+runButton = "Fixed Catalog Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -143,6 +143,15 @@ args = "npm run dev"
 
 [[workflows.workflow]]
 name = "Catalog Development Server"
+author = 41090967
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Fixed Catalog Server"
 author = 41090967
 mode = "sequential"
 

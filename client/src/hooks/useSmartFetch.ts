@@ -59,7 +59,10 @@ export function useSmartFetch<T = any>(options: SmartFetchOptions) {
       try {
         const authToken = localStorage.getItem('authToken') || localStorage.getItem('token') || 'dev-admin-token-12345';
         
-        const response = await fetch(endpoint, {
+        // Ensure endpoint starts with /api for catalog requests
+        const fullEndpoint = endpoint.startsWith('/api') ? endpoint : `/api/${endpoint}`;
+        
+        const response = await fetch(fullEndpoint, {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json',
@@ -69,6 +72,7 @@ export function useSmartFetch<T = any>(options: SmartFetchOptions) {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+          console.error(`❌ Fetch error for ${fullEndpoint}:`, errorData);
           throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
         }
 
@@ -83,6 +87,11 @@ export function useSmartFetch<T = any>(options: SmartFetchOptions) {
             isBlocked: false,
             backoffDelay: 1000
           }));
+        }
+
+        // Handle catalog-specific data structure
+        if (fullEndpoint.includes('/catalog')) {
+          return data.data || data;
         }
 
         return data.data || data.orders || data.customers || data.teamMembers || data;
