@@ -183,23 +183,42 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
 
   const createCustomerMutation = useMutation({
     mutationFn: async (data: any) => {
-      // First create the customer
-      const customerResponse = await apiRequest('POST', '/api/customers', {
-        firstName: contacts[0]?.firstName,
-        lastName: contacts[0]?.lastName,
-        email: contacts[0]?.email,
-        phone: contacts[0]?.phone,
-        company: organizationDetailsData.organizationName,
-        sport: organizationTypeData.primaryType === 'sports' ? organizationTypeData.subcategory : null,
-        organizationType: organizationTypeData.primaryType,
-        address: organizationDetailsData.address,
-        city: organizationDetailsData.city,
-        state: organizationDetailsData.state,
-        zip: organizationDetailsData.zip,
-      });
+      console.log('🔄 Starting customer creation process...');
+      
+      try {
+        // First create the customer
+        console.log('Creating customer with data:', {
+          firstName: contacts[0]?.firstName,
+          lastName: contacts[0]?.lastName,
+          email: contacts[0]?.email,
+          phone: contacts[0]?.phone,
+          company: organizationDetailsData.organizationName,
+          sport: organizationTypeData.primaryType === 'sports' ? organizationTypeData.subcategory : null,
+          organizationType: organizationTypeData.primaryType,
+        });
+        
+        const customerResponse = await apiRequest('POST', '/api/customers', {
+          firstName: contacts[0]?.firstName,
+          lastName: contacts[0]?.lastName,
+          email: contacts[0]?.email,
+          phone: contacts[0]?.phone,
+          company: organizationDetailsData.organizationName,
+          sport: organizationTypeData.primaryType === 'sports' ? organizationTypeData.subcategory : null,
+          organizationType: organizationTypeData.primaryType,
+          address: organizationDetailsData.address,
+          city: organizationDetailsData.city,
+          state: organizationDetailsData.state,
+          zip: organizationDetailsData.zip,
+        });
 
-      const customerData = await customerResponse.json();
-      const customerId = customerData.data.id;
+        const customerData = await customerResponse.json();
+        console.log('✅ Customer created:', customerData);
+        
+        if (!customerData.success || !customerData.data?.id) {
+          throw new Error('Customer creation failed: ' + (customerData.message || 'Unknown error'));
+        }
+        
+        const customerId = customerData.data.id;
 
       // Add additional contacts
       if (contacts.length > 1) {
@@ -218,16 +237,39 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
       // Upload logo if provided
       if (logoFile) {
         try {
+          console.log('🔄 Starting logo upload for customer:', customerId);
+          console.log('Logo file details:', {
+            name: logoFile.name,
+            size: logoFile.size,
+            type: logoFile.type
+          });
+          
           const formData = new FormData();
           formData.append('file', logoFile);
           formData.append('customerId', customerId);
           formData.append('fileType', 'logo');
           formData.append('isPrimary', 'true');
 
-          await apiRequest('POST', '/api/organization-files/upload', formData);
-          console.log('✅ Logo uploaded successfully');
-        } catch (logoError) {
-          console.warn('Logo upload failed, continuing without logo:', logoError);
+          const uploadResponse = await apiRequest('POST', '/api/organization-files/upload', formData);
+          const uploadResult = await uploadResponse.json();
+          
+          console.log('✅ Logo uploaded successfully:', uploadResult);
+          
+          // Show success toast
+          toast({
+            title: "Logo uploaded",
+            description: "Organization logo has been uploaded successfully!",
+          });
+        } catch (logoError: any) {
+          console.error('❌ Logo upload failed:', logoError);
+          
+          // Show error toast but don't fail the customer creation
+          toast({
+            title: "Logo upload failed",
+            description: logoError.message || "Could not upload logo, but organization was created successfully",
+            variant: "destructive",
+          });
+          
           // Don't fail the entire customer creation if logo upload fails
         }
       }
@@ -253,9 +295,14 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
         });
       }
 
-      return customerData;
+        return customerData;
+      } catch (error: any) {
+        console.error('❌ Customer creation process failed:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
+      console.log('✅ Customer creation mutation completed successfully');
       toast({
         title: 'Organization Created Successfully',
         description: 'Your organization has been set up and is ready to go!',
@@ -265,6 +312,7 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
       onClose();
     },
     onError: (error: any) => {
+      console.error('❌ Customer creation mutation failed:', error);
       toast({
         title: 'Error Creating Organization',
         description: error.message || 'Failed to create organization',
@@ -661,6 +709,12 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          console.log('File selected:', {
+                            name: file.name,
+                            size: file.size,
+                            type: file.type
+                          });
+                          
                           // Validate file size (5MB limit)
                           if (file.size > 5 * 1024 * 1024) {
                             toast({
@@ -671,12 +725,34 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
                             e.target.value = ''; // Clear the input
                             return;
                           }
+                          
+                          // Validate file type
+                          if (!file.type.startsWith('image/')) {
+                            toast({
+                              title: "Invalid file type",
+                              description: "Please select an image file (PNG, JPG, GIF, etc.)",
+                              variant: "destructive",
+                            });
+                            e.target.value = ''; // Clear the input
+                            return;
+                          }
+                          
                           setLogoFile(file);
+                          toast({
+                            title: "Logo selected",
+                            description: `${file.name} is ready to upload`,
+                          });
                         }
                       }}
                       className="w-full glass-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-neon-blue file:text-black hover:file:bg-neon-blue/80"
                     />
                     <p className="text-xs text-gray-300 mt-1">Maximum file size: 5MB</p>
+                    {logoFile && (
+                      <div className="mt-2 p-2 glass-panel rounded-lg">
+                        <p className="text-sm text-white">Selected: {logoFile.name}</p>
+                        <p className="text-xs text-white/70">{(logoFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
