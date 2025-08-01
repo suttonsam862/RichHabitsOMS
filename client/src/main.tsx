@@ -7,9 +7,54 @@ import App from "./App.tsx";
 import "./lib/errorHandler";
 import "./index.css";
 
-// Add global unhandled promise rejection handler
+// Completely disable Vite HMR to prevent promise rejection spam
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  // Intercept the Vite client import and disable HMR altogether
+  const originalFetch = window.fetch;
+  window.fetch = function(input, init?) {
+    const url = typeof input === 'string' ? input : (input as Request).url;
+    
+    // Block ALL Vite development server polling that causes rejections
+    if (url.includes('__vite_ping') || 
+        url.includes('@vite/client') || 
+        url.includes('vite-dev-server') ||
+        url.includes(':5173') ||
+        url.includes('/@vite/') ||
+        (url.includes('ping') && import.meta.env.DEV)) {
+      
+      // Return successful response immediately to stop polling
+      return Promise.resolve(new Response(JSON.stringify({ 
+        status: 'ok',
+        type: 'connected' 
+      }), {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'Content-Type': 'application/json' }
+      }));
+    }
+    
+    return originalFetch.call(this, input, init);
+  };
+
+  // Also disable WebSocket connections for HMR
+  const originalWebSocket = window.WebSocket;
+  window.WebSocket = class extends WebSocket {
+    constructor(url: string | URL, protocols?: string | string[]) {
+      const urlStr = typeof url === 'string' ? url : url.toString();
+      if (urlStr.includes('__vite_hmr') || urlStr.includes(':5173') || urlStr.includes('vite')) {
+        // Create a mock WebSocket that doesn't actually connect
+        super('ws://localhost:0'); // Invalid address to prevent connection
+        this.close(); // Close immediately
+        return this;
+      }
+      super(url, protocols);
+    }
+  };
+}
+
+// Add global unhandled promise rejection handler as backup
 window.addEventListener('unhandledrejection', (event) => {
-  // Enhanced filtering for all Vite dev server errors
+  // Enhanced filtering for all Vite dev server errors  
   const errorMessage = event.reason?.message || '';
   const errorStack = event.reason?.stack || '';
   
@@ -20,8 +65,14 @@ window.addEventListener('unhandledrejection', (event) => {
     (errorStack.includes('waitForSuccessfulPing') && errorMessage.includes('Failed to fetch')) ||
     // Generic dev server connection issues
     (errorMessage === 'Failed to fetch' && errorStack.includes('vite')) ||
+    // WebSocket and HMR connection errors
+    (errorMessage.includes('WebSocket') && import.meta.env.DEV) ||
+    (errorStack.includes('websocket') && import.meta.env.DEV) ||
+    (errorStack.includes('hmr') && import.meta.env.DEV) ||
     // Network errors during development
-    (event.reason?.name === 'TypeError' && errorMessage === 'Failed to fetch' && import.meta.env.DEV)
+    (event.reason?.name === 'TypeError' && errorMessage === 'Failed to fetch' && import.meta.env.DEV) ||
+    // Connection refused errors in development
+    (errorMessage.includes('Connection refused') && import.meta.env.DEV)
   );
   
   if (isViteDevError) {

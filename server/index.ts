@@ -352,14 +352,32 @@ import manufacturingRoutes, {
     // Create HTTP server
     const server = createServer(app);
 
-    // Handle Vite HMR ping requests to prevent fetch failures
+    // Comprehensive Vite development server endpoint handling
     app.get('/__vite_ping', (req, res) => {
       res.status(200).json({ status: 'ok' });
     });
 
-    // Handle only specific Vite ping failures, not all Vite module requests
+    // Handle Vite client HMR ping endpoints
     app.get('/@vite/client-ping', (req, res) => {
       res.status(200).json({ status: 'ok' });
+    });
+
+    // Handle Vite client connection status
+    app.get('/@vite/client', (req, res, next) => {
+      // Let Vite middleware handle this
+      next();
+    });
+
+    // Add WebSocket upgrade handling for HMR
+    server.on('upgrade', (request, socket, head) => {
+      if (request.url === '/__vite_hmr' || request.url?.includes('vite')) {
+        // For development, just close WebSocket connections gracefully
+        socket.write('HTTP/1.1 101 Switching Protocols\r\n' +
+                    'Upgrade: websocket\r\n' +
+                    'Connection: Upgrade\r\n' +
+                    '\r\n');
+        socket.end();
+      }
     });
 
     // Register health and auth routes first (no auth required for these)
