@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const authCheckInProgress = useRef(false);
   const lastAuthCheck = useRef<number>(0);
 
-  const checkAuth = useCallback(async () => {
+  const checkAuth = useCallback(async (forceCheck = false) => {
     const now = Date.now();
 
     // Prevent multiple simultaneous auth checks
@@ -45,7 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Rate limit auth checks - minimum 5 seconds between requests
-    if (now - lastAuthCheck.current < 5000) {
+    // BUT always allow forced checks (like on page refresh/initialization)
+    if (!forceCheck && now - lastAuthCheck.current < 5000) {
       return;
     }
 
@@ -212,12 +213,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // Optimized initial auth check - immediate execution
+  // Optimized initial auth check - immediate execution with force flag
   useEffect(() => {
     if (!initialized) {
-      checkAuth().finally(() => setInitialized(true));
+      checkAuth(true).finally(() => setInitialized(true));
     }
   }, [initialized, checkAuth]);
+
+  // Check auth when window gains focus (user returns to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Only check if we're already initialized and have a user
+      if (initialized && user) {
+        checkAuth();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [initialized, user, checkAuth]);
+
+  // Handle page visibility change (tab becomes visible)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && initialized && user) {
+        checkAuth();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [initialized, user, checkAuth]);
 
   return (
     <AuthContext.Provider 
