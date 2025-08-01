@@ -189,7 +189,7 @@ app.use((req, res, next) => {
   // Log all incoming API requests immediately
   if (path.startsWith("/api")) {
     console.log(`🌐 API Request: ${req.method} ${path} - ${new Date().toISOString()}`);
-    
+
     // Log request body for POST/PUT/PATCH requests (but not for auth routes for security)
     if (['POST', 'PUT', 'PATCH'].includes(req.method) && !path.includes('/auth/')) {
       console.log(`📦 Request Body:`, JSON.stringify(req.body, null, 2));
@@ -207,7 +207,7 @@ app.use((req, res, next) => {
       if (path.startsWith("/api")) {
         // Log all API responses with status and timing
         console.log(`📊 API Response: ${req.method} ${path} → ${res.statusCode} (${duration}ms)`);
-        
+
         // Log response body for errors or in development mode
         if (capturedJsonResponse && (res.statusCode >= 400 || process.env.NODE_ENV === 'development')) {
           console.log(`📋 Response Body:`, JSON.stringify(capturedJsonResponse, null, 2));
@@ -407,7 +407,7 @@ app.use('/api/users', userManagementRoutes);
     app.post('/api/manufacturing/manufacturers', createManufacturer);
     app.patch('/api/manufacturing/manufacturers/:id', updateManufacturer);
     app.get('/api/users/manufacturers', getUserManufacturers);
-    
+
     // Manufacturer media routes removed - using Supabase Storage only
     app.get('/api/design-tasks', getDesignTasks);
     app.get('/api/production-tasks', getProductionTasks);
