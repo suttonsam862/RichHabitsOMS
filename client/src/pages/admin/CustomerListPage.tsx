@@ -570,16 +570,7 @@ export default function CustomerListPage() {
             </DropdownMenu>
           </div>
 
-          {/* Primary Contact Avatar */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-neon-blue/30 to-neon-green/30 flex items-center justify-center">
-                <span className="text-white font-bold text-xs">
-                  {organization.primaryContact?.charAt(0) || organization.name.charAt(0)}
-                </span>
-              </div>
-            </div>
-          </div>
+          
 
           {/* Stats */}
           <div className="flex justify-between items-end">
