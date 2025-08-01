@@ -181,15 +181,12 @@ export function useUndoableDelete({
       variant: "default"
     });
 
-    // Add undo functionality via a custom timeout (since toast actions may not be supported)
+    // Add undo functionality via a simple toast (removing problematic action object)
     setTimeout(() => {
       toast({
         title: "Undo Available",
-        description: `Click to restore ${pendingDelete.entityName}`,
-        action: {
-          label: "Undo",
-          onClick: () => handleUndo(id)
-        }
+        description: `${pendingDelete.entityName} will be deleted. Refresh to cancel or wait for permanent deletion.`,
+        variant: "default"
       });
     }, 100);
 
