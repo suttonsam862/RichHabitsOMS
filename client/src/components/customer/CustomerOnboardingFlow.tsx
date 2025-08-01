@@ -217,13 +217,19 @@ export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: C
 
       // Upload logo if provided
       if (logoFile) {
-        const formData = new FormData();
-        formData.append('file', logoFile);
-        formData.append('customerId', customerId);
-        formData.append('fileType', 'logo');
-        formData.append('isPrimary', 'true');
+        try {
+          const formData = new FormData();
+          formData.append('file', logoFile);
+          formData.append('customerId', customerId);
+          formData.append('fileType', 'logo');
+          formData.append('isPrimary', 'true');
 
-        await apiRequest('POST', '/api/organization-files/upload', formData);
+          await apiRequest('POST', '/api/organization-files/upload', formData);
+          console.log('✅ Logo uploaded successfully');
+        } catch (logoError) {
+          console.warn('Logo upload failed, continuing without logo:', logoError);
+          // Don't fail the entire customer creation if logo upload fails
+        }
       }
 
       // Save Google Drive link if provided

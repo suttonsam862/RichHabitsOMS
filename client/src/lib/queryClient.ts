@@ -40,7 +40,8 @@ export async function apiRequest(
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
   // Use session-based authentication - no need for token headers
-  const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
+  // Don't set Content-Type for FormData - browser sets it automatically with boundary
+  const headers: HeadersInit = (data && !(data instanceof FormData)) ? { "Content-Type": "application/json" } : {};
 
   try {
     // Log request details for debugging
@@ -59,7 +60,7 @@ export async function apiRequest(
     const res = await fetch(fullUrl, {
       method,
       headers,
-      body: data ? JSON.stringify(data) : undefined,
+      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
       credentials: "include",
       signal: controller.signal,
     });
