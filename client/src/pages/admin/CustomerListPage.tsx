@@ -277,6 +277,7 @@ export default function CustomerListPage() {
     }
 
     console.log('Processing customer data:', customersResponse);
+    console.log('Raw customers array:', Array.isArray(customersResponse) ? customersResponse : 'Not an array');
 
     // Handle different response structures - match the actual API response
     if ((customersResponse as any).success && (customersResponse as any).data) {
@@ -347,7 +348,9 @@ export default function CustomerListPage() {
       }
     });
 
-    return Array.from(orgMap.values());
+    const result = Array.from(orgMap.values());
+    console.log('Generated organizations:', result);
+    return result;
   }, [customers]);
 
   // Helper function to determine organization type
@@ -407,9 +410,11 @@ export default function CustomerListPage() {
       government: nonSportsOrgs.filter(org => org.type === 'government')
     };
 
-    return Object.fromEntries(
+    const result = Object.fromEntries(
       Object.entries(grouped).filter(([_, orgs]) => orgs.length > 0)
     );
+    console.log('Business organizations:', result);
+    return result;
   }, [filteredOrganizations]);
 
   const OrganizationCard = ({ organization }: { organization: OrganizationCard }) => {
