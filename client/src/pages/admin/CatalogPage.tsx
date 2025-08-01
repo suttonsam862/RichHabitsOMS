@@ -618,7 +618,7 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
                 {currentImageUrl ? (
                   <div className="relative group">
                     <OptimizedImage
-                      src={currentImageUrl}
+                      src={Array.isArray(currentImageUrl) ? currentImageUrl[0] : currentImageUrl}
                       alt={item.name}
                       className="w-full h-full object-cover"
                       sizes="(max-width: 768px) 100vw, 600px"
@@ -648,7 +648,7 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
                     >
                       <div className="aspect-square p-2">
                         <OptimizedImage
-                          src={url}
+                          src={Array.isArray(url) ? url[0] : url}
                           alt={`${item.name} - ${variant}`}
                           className="w-full h-full object-cover rounded-sm"
                           sizes="150px"
@@ -1640,8 +1640,8 @@ export default function CatalogPage() {
             <div>
               <Label className="text-foreground">Product Image</Label>
               <UnifiedImageUploader
-                itemType="catalog_item"
-                itemId={editingItem?.id}
+                entityType="catalog_item"
+                entityId={editingItem?.id}
                 onUploadComplete={handleImageUploadComplete}
                 allowMultiple={false}
               />
@@ -1655,7 +1655,7 @@ export default function CatalogPage() {
   };
 
   // Handle error states
-  if (isError || catalogError) {
+  if (error) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -1670,7 +1670,7 @@ export default function CatalogPage() {
             <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2 text-foreground">Unable to load catalog</h3>
             <p className="text-muted-foreground mb-4">
-              {catalogError?.message || 'There was an error loading the catalog. Please try again.'}
+              {error?.message || 'There was an error loading the catalog. Please try again.'}
             </p>
             <Button onClick={() => refetch()} className="glass-button">
               <RefreshCw className="w-4 h-4 mr-2" />

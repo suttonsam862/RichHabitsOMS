@@ -1,0 +1,34 @@
+The above error occurred in the <CatalogPage> component:
+
+    at CatalogPage (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/pages/admin/CatalogPage.tsx:1513:43)
+    at RenderedRoute (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=d0675049:5449:26)
+    at Outlet (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=d0675049:6116:26)
+    at main
+    at div
+    at div
+    at AppLayout (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/layout/AppLayout.tsx:47:43)
+    at RequireAuth (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/Router.tsx:47:24)
+    at RenderedRoute (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=d0675049:5449:26)
+    at Routes (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=d0675049:6182:3)
+    at Router (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=d0675049:6125:13)
+    at BrowserRouter (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=d0675049:9111:3)
+    at AppRouter
+    at AppWithSpinner (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/AppWithSpinner.tsx:20:34)
+    at Provider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=d0675049:38:15)
+    at TooltipProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=d0675049:64:5)
+    at AuthProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/context/AuthContext.tsx:21:32)
+    at MutationProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/context/MutationContext.tsx:29:36)
+    at QueryClientProvider (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-VUOKJWYZ.js?v=d0675049:2934:3)
+    at GlobalErrorBoundary (https://9a09c15e-e041-45c1-b33a-b993b4b4d1be-00-1ng27mbrh0clp.worf.replit.dev/src/components/error/GlobalErrorBoundary.tsx:10:5)
+    at App
+
+React will try to recreate this component tree from scratch using the error boundary you provided, GlobalErrorBoundary.
+🚨 Global Error Boundary - ERR-1754069560720-bac1oa6xt
+Error Details: 
+Object {errorId: "ERR-1754069560720-bac1oa6xt", message: "isError is not defined", stack: "ReferenceError: isError is not defined↵    at CatalogPage…", componentStack: "↵    at CatalogPage…", timestamp: "2025-08-01T17:32:40.726Z", …}
+
+Original Error: 
+ReferenceError {}
+
+Error Info: 
+Object {componentStack: "↵    at CatalogPage…"}
