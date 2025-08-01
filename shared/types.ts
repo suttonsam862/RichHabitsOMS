@@ -60,6 +60,25 @@ export type OrganizationType =
 export type PriorityLevel = 'low' | 'medium' | 'high' | 'urgent';
 
 // =====================================
+// SALESPERSON TYPES
+// =====================================
+
+export interface Salesperson {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  commissionRate?: number;
+  territory?: string[];
+  status: 'active' | 'inactive' | 'suspended';
+  profileImageUrl?: string;
+  payrollFiles?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// =====================================
 // DATABASE TYPES
 // =====================================
 
