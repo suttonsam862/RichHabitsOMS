@@ -114,6 +114,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register admin routes
   app.use('/api/admin', adminRoutes);
 
+  // Organizations endpoint - group customers by company to create organizations
+  app.get('/api/organizations', requireAuth, async (req, res) => {
+    try {
+      console.log('Fetching organizations from customer data...');
+
+      // Get all customers first
+      const { data: customersData, error: customersError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (customersError) {
+        console.error('Error fetching customers:', customersError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to retrieve customer data'
+        });
+      }
+
+      // Filter for customers and extract organization data
+      const organizations = new Map();
+      
+      (customersData.users || []).forEach((user: any) => {
+        const metadata = user.user_metadata || {};
+        if (metadata.role === 'customer') {
+          // Extract organization info from user metadata or email domain
+          const company = metadata.company || getCompanyFromEmail(user.email);
+          const sport = metadata.sport || 'General';
+          const orgType = metadata.organizationType || inferOrgType(company);
+          
+          if (!organizations.has(company)) {
+            organizations.set(company, {
+              id: company.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+              name: company,
+              type: orgType,
+              sport: sport,
+              contacts: [],
+              totalOrders: 0,
+              totalSpent: '$0.00',
+              lastOrderDate: null,
+              status: 'active',
+              created_at: user.created_at
+            });
+          }
+          
+          // Add this user as a contact
+          const org = organizations.get(company);
+          org.contacts.push({
+            id: user.id,
+            firstName: metadata.firstName || '',
+            lastName: metadata.lastName || '',
+            email: user.email,
+            phone: metadata.phone || '',
+            title: metadata.title || 'Contact',
+            isPrimary: org.contacts.length === 0, // First contact is primary
+            created_at: user.created_at
+          });
+        }
+      });
+
+      const organizationsArray = Array.from(organizations.values());
+      console.log(`Found ${organizationsArray.length} organizations`);
+
+      res.json({
+        success: true,
+        data: organizationsArray
+      });
+
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  });
+
+  // Helper functions for organization processing
+  function getCompanyFromEmail(email: string): string {
+    if (!email) return 'Individual Customer';
+    
+    // Extract meaningful company names from common email patterns
+    const domain = email.split('@')[1] || '';
+    
+    // Known company domains
+    if (domain.includes('rich-habits.com')) return 'Rich Habits';
+    if (domain.includes('jefcoed.com')) return 'Jefferson County Board of Education';
+    if (domain.includes('gmail.com') || domain.includes('yahoo.com') || domain.includes('hotmail.com')) {
+      // For personal emails, try to infer from the local part
+      const localPart = email.split('@')[0];
+      if (localPart.includes('ironclad')) return 'Ironclad Wrestling';
+      if (localPart.includes('wrestling')) return 'Wrestling Organization';
+      return 'Individual Customer';
+    }
+    
+    // Convert domain to company name
+    return domain.split('.')[0]
+      .split(/[-_]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  function inferOrgType(company: string): string {
+    const name = company.toLowerCase();
+    if (name.includes('wrestling') || name.includes('football') || name.includes('sport') || name.includes('athletic')) return 'sports';
+    if (name.includes('school') || name.includes('education') || name.includes('college') || name.includes('university')) return 'education';
+    if (name.includes('nonprofit') || name.includes('foundation') || name.includes('charity')) return 'nonprofit';
+    if (name.includes('government') || name.includes('city') || name.includes('county')) return 'government';
+    return 'business';
+  }
+
 
   // Register customer creation endpoint
   app.post('/api/customers', requireAuth, requireRole(['admin']), createCustomer);

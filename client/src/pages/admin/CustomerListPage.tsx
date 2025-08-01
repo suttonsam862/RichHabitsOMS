@@ -260,9 +260,9 @@ export default function CustomerListPage() {
     }
   };
 
-  // Fetch customer data using standardized patterns with global sync
-  const { data: customersResponse, isLoading, isError, refetch } = useQuery({
-    queryKey: CACHE_KEYS.customers, // Use global cache keys
+  // Fetch organizations data instead of individual customers
+  const { data: organizationsResponse, isLoading, isError, refetch } = useQuery({
+    queryKey: ['/api/organizations'], // Use organizations endpoint
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 1000 * 60 * 2, // 2 minutes for better sync
     gcTime: 1000 * 60 * 10, // 10 minutes
@@ -270,88 +270,45 @@ export default function CustomerListPage() {
     retryDelay: 2000 // Wait 2 seconds before retry
   });
 
-  // Extract customers array with proper error handling - same logic as orders page
-  const customers = React.useMemo(() => {
-    if (!customersResponse) {
+  // Extract organizations array from API response
+  const organizations = React.useMemo(() => {
+    if (!organizationsResponse) {
       return [];
     }
 
-    console.log('Processing customer data:', customersResponse);
-    console.log('Raw customers array:', Array.isArray(customersResponse) ? customersResponse : 'Not an array');
+    console.log('Processing organizations data:', organizationsResponse);
 
-    // Handle different response structures - match the actual API response
-    if ((customersResponse as any).success && (customersResponse as any).data) {
-      // Check if data has customers array (new API format)
-      if ((customersResponse as any).data.customers && Array.isArray((customersResponse as any).data.customers)) {
-        return (customersResponse as any).data.customers;
-      }
-      // Check if data is directly an array (legacy format)
-      if (Array.isArray((customersResponse as any).data)) {
-        return (customersResponse as any).data;
+    // Handle API response structure
+    if ((organizationsResponse as any).success && (organizationsResponse as any).data) {
+      if (Array.isArray((organizationsResponse as any).data)) {
+        return (organizationsResponse as any).data;
       }
     }
 
-    if ((customersResponse as any).customers && Array.isArray((customersResponse as any).customers)) {
-      return (customersResponse as any).customers;
+    if (Array.isArray(organizationsResponse)) {
+      return organizationsResponse;
     }
 
-    if (Array.isArray(customersResponse)) {
-      return customersResponse;
-    }
-
-    console.warn('Unexpected customer response structure:', customersResponse);
+    console.warn('Unexpected organizations response structure:', organizationsResponse);
     return [];
-  }, [customersResponse]);
+  }, [organizationsResponse]);
 
-  // Create a map of customer ID to logo URL from existing customer data
-  const logoMap = React.useMemo(() => {
-    const map = new Map<string, string>();
-    customers.forEach((customer: Customer) => {
-      const logoUrl = (customer as any).company_logo_url;
-      if (logoUrl) {
-        map.set(customer.id.toString(), logoUrl);
-      }
-    });
-    return map;
-  }, [customers]);
+  // Transform API organizations to match component interface
+  const organizationCards = React.useMemo(() => {
+    return organizations.map((org: any) => ({
+      id: org.id,
+      name: org.name,
+      sport: org.sport || 'General',
+      type: org.type as OrganizationCard['type'],
+      customerCount: org.contacts?.length || 0,
+      totalOrders: org.totalOrders || 0,
+      totalSpent: org.totalSpent || '$0.00',
+      primaryContact: org.contacts?.[0] ? `${org.contacts[0].firstName} ${org.contacts[0].lastName}` : '',
+      customers: org.contacts || [] // Use contacts as customers for compatibility
+    }));
+  }, [organizations]);
 
-  // Group customers by organization and sport
-  const organizations = React.useMemo(() => {
-    const orgMap = new Map<string, OrganizationCard>();
-
-    customers.forEach((customer: Customer) => {
-      const orgName = customer.company || 'Individual Customers';
-      const orgType = customer.organizationType || getOrganizationType(orgName);
-      const sport = customer.sport || (orgType === 'sports' ? 'General Sports' : 'N/A');
-
-      if (!orgMap.has(orgName)) {
-        orgMap.set(orgName, {
-          id: orgName.toLowerCase().replace(/\s+/g, '-'),
-          name: orgName,
-          sport: sport,
-          type: orgType as OrganizationCard['type'],
-          customerCount: 0,
-          totalOrders: 0,
-          totalSpent: '$0.00',
-          customers: []
-        });
-      }
-
-      const org = orgMap.get(orgName)!;
-      org.customers.push(customer);
-      org.customerCount += 1;
-      org.totalOrders += customer.orders || 0;
-
-      // Set primary contact as first customer
-      if (!org.primaryContact) {
-        org.primaryContact = `${customer.firstName} ${customer.lastName}`;
-      }
-    });
-
-    const result = Array.from(orgMap.values());
-    console.log('Generated organizations:', result);
-    return result;
-  }, [customers]);
+  console.log('Transformed organization cards:', organizationCards);
 
   // Helper function to determine organization type
   function getOrganizationType(orgName: string): OrganizationCard['type'] {
@@ -365,7 +322,7 @@ export default function CustomerListPage() {
 
   // Filter organizations by type and search
   const filteredOrganizations = React.useMemo(() => {
-    return organizations.filter(org => {
+    return organizationCards.filter(org => {
       const matchesSearch = searchTerm === '' || 
         org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         org.primaryContact?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -375,7 +332,7 @@ export default function CustomerListPage() {
 
       return matchesSearch && matchesType;
     });
-  }, [organizations, searchTerm, selectedOrganizationType]);
+  }, [organizationCards, searchTerm, selectedOrganizationType]);
 
   // Group sports organizations by sport
   const sportOrganizations = React.useMemo(() => {
