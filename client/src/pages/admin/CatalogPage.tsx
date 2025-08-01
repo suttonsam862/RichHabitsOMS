@@ -889,8 +889,29 @@ export default function CatalogPage() {
 
   // Fetch catalog items with standardized patterns
   const { data: catalogItems = [], isLoading, error, refetch } = useQuery({
-    queryKey: queryKeys.catalog.all,
-    queryFn: getQueryFn({ on401: 'returnNull' }),
+    queryKey: ['catalog'],  // Simplified query key
+    queryFn: async () => {
+      const response = await fetch('/api/catalog', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Catalog API response:', result);
+      
+      if (result.success) {
+        return result.data || [];
+      } else {
+        throw new Error(result.message || 'Failed to fetch catalog items');
+      }
+    },
     staleTime: 1000 * 60 * 2, // 2 minutes for better sync
     gcTime: 1000 * 60 * 10, // 10 minutes  
     retry: 1,

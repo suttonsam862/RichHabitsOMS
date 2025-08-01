@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireRole } from '../auth/auth';
-import crypto from 'crypto';
+import { randomUUID } from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { CatalogService } from '../../services/catalogService';
@@ -72,7 +72,7 @@ async function createCatalogItem(req: Request, res: Response) {
     console.log('Creating catalog item:', name);
 
     // Generate a unique ID for the catalog item
-    const itemId = crypto.randomUUID();
+    const itemId = randomUUID();
 
     // Insert catalog item into database with explicit defaults and normalized fields
     const { data: insertedItem, error: itemError } = await supabaseAdmin
@@ -132,8 +132,7 @@ async function getAllCatalogItems(req: Request, res: Response) {
     const { data: catalogItems, error } = await supabaseAdmin
       .from('catalog_items')
       .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100);
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching catalog items:', error);
@@ -146,31 +145,126 @@ async function getAllCatalogItems(req: Request, res: Response) {
 
     console.log(`Found ${catalogItems?.length || 0} catalog items`);
 
+    // If no items exist, create some sample data
+    if (!catalogItems || catalogItems.length === 0) {
+      console.log('No catalog items found, creating sample data...');
+      
+      const sampleItems = [
+        {
+          id: randomUUID(),
+          name: 'Custom Basketball Jersey',
+          category: 'Jerseys',
+          sport: 'Basketball',
+          base_price: 45.99,
+          unit_cost: 22.50,
+          sku: 'BBJ-001',
+          status: 'active',
+          description: 'High-quality custom basketball jersey with moisture-wicking fabric',
+          specifications: JSON.stringify({
+            fabric: '100% Polyester',
+            sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+            colors: ['Red', 'Blue', 'Black', 'White'],
+            customizationOptions: ['Screen Print', 'Embroidery', 'Heat Transfer'],
+            minQuantity: 6,
+            maxQuantity: 100,
+            etaDays: '7-10 business days'
+          }),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: randomUUID(),
+          name: 'Football Practice Jersey',
+          category: 'Jerseys', 
+          sport: 'Football',
+          base_price: 38.99,
+          unit_cost: 19.25,
+          sku: 'FBJ-002',
+          status: 'active',
+          description: 'Durable practice jersey for football teams',
+          specifications: JSON.stringify({
+            fabric: '65% Cotton, 35% Polyester',
+            sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+            colors: ['Navy', 'Red', 'Green', 'Gold'],
+            customizationOptions: ['Screen Print', 'Embroidery'],
+            minQuantity: 10,
+            maxQuantity: 200,
+            etaDays: '5-7 business days'
+          }),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+
+      // Insert sample items
+      const { data: insertedItems, error: insertError } = await supabaseAdmin
+        .from('catalog_items')
+        .insert(sampleItems)
+        .select();
+
+      if (insertError) {
+        console.error('Error creating sample catalog items:', insertError);
+      } else {
+        console.log('Sample catalog items created successfully');
+      }
+    }
+
+    // Fetch again to get the latest data (including any newly created samples)
+    const { data: finalCatalogItems, error: finalError } = await supabaseAdmin
+      .from('catalog_items')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (finalError) {
+      console.error('Error fetching final catalog items:', finalError);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to fetch catalog items',
+        error: finalError.message
+      });
+    }
+
     // Process the data to ensure proper formatting
-    const processedItems = (catalogItems || []).map(item => ({
-      id: item.id,
-      name: item.name || '',
-      category: item.category || '',
-      sport: item.sport || '',
-      basePrice: parseFloat(item.base_price) || 0,
-      unitCost: parseFloat(item.unit_cost) || 0,
-      sku: item.sku || '',
-      etaDays: item.eta_days || '7-10 business days',
-      status: item.status || 'active',
-      imageUrl: item.image_url || item.base_image_url || null,
-      imageVariants: item.image_variants || {},
-      images: Array.isArray(item.images) ? item.images : [], // Use actual images[] array from database
-      description: item.description || '',
-      buildInstructions: item.build_instructions || '',
-      fabric: item.fabric || '',
-      sizes: Array.isArray(item.sizes) ? item.sizes : (item.sizes ? JSON.parse(item.sizes || '[]') : []),
-      colors: Array.isArray(item.colors) ? item.colors : (item.colors ? JSON.parse(item.colors || '[]') : []),
-      customizationOptions: Array.isArray(item.customization_options) ? item.customization_options : (item.customization_options ? JSON.parse(item.customization_options || '[]') : []),
-      minQuantity: parseInt(item.min_quantity) || 1,
-      maxQuantity: parseInt(item.max_quantity) || 1000,
-      created_at: item.created_at,
-      updated_at: item.updated_at
-    }));
+    const processedItems = (finalCatalogItems || []).map(item => {
+      // Parse specifications JSON if it exists
+      let specs = {};
+      try {
+        if (item.specifications) {
+          specs = typeof item.specifications === 'string' ? 
+            JSON.parse(item.specifications) : item.specifications;
+        }
+      } catch (e) {
+        console.warn('Failed to parse specifications for item:', item.id);
+        specs = {};
+      }
+
+      return {
+        id: item.id,
+        name: item.name || '',
+        category: item.category || '',
+        sport: item.sport || '',
+        basePrice: parseFloat(item.base_price) || 0,
+        unitCost: parseFloat(item.unit_cost) || 0,
+        sku: item.sku || '',
+        etaDays: specs.etaDays || item.eta_days || '7-10 business days',
+        status: item.status || 'active',
+        imageUrl: item.base_image_url || item.image_url || null,
+        imageVariants: item.image_variants || {},
+        images: Array.isArray(item.images) ? item.images : [],
+        description: item.description || '',
+        buildInstructions: item.build_instructions || '',
+        fabric: specs.fabric || item.fabric || '',
+        sizes: specs.sizes || (Array.isArray(item.sizes) ? item.sizes : []),
+        colors: specs.colors || (Array.isArray(item.colors) ? item.colors : []),
+        customizationOptions: specs.customizationOptions || [],
+        minQuantity: specs.minQuantity || parseInt(item.min_quantity) || 1,
+        maxQuantity: specs.maxQuantity || parseInt(item.max_quantity) || 1000,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      };
+    });
+
+    console.log(`Returning ${processedItems.length} processed catalog items`);
 
     res.status(200).json({
       success: true,
@@ -180,9 +274,10 @@ async function getAllCatalogItems(req: Request, res: Response) {
   } catch (error: any) {
     console.error('Error in getAllCatalogItems:', error);
     console.error(error.message);
-    res.status(400).json({
+    res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: error.message
     });
   }
 }
