@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Fixed Catalog Server"
+runButton = "Development Server"
 
 [[workflows.workflow]]
 name = "Project"
