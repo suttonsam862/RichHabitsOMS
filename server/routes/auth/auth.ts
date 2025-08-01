@@ -90,7 +90,7 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
         // Don't destroy session on validation errors - be more resilient
         if (req.session?.user) {
           user = req.session.user;
-          token = req.session.token;
+          token = req.session.token || null;
         }
       }
     }

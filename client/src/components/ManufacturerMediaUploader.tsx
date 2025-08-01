@@ -47,7 +47,7 @@ const MEDIA_TYPES = [
   { value: 'certificate', label: 'Certifications', icon: File }
 ];
 
-const formatFileSize = (bytes: number): string => {
+const formatFileSizeLocal = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -438,7 +438,7 @@ export default function ManufacturerMediaUploader({ manufacturerId, className = 
                             )}
                             
                             <div className="flex items-center justify-between text-xs text-gray-500">
-                              <span>{formatFileSize(file.fileSize)}</span>
+                              <span>{formatFileSizeLocal(file.fileSize)}</span>
                               <span>{new Date(file.uploadedAt).toLocaleDateString()}</span>
                             </div>
                           </div>

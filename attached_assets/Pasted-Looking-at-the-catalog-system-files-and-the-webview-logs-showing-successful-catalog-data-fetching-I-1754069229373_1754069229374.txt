@@ -1,0 +1,48 @@
+Looking at the catalog system files and the webview logs showing successful catalog data fetching, I can see there are TypeScript compilation errors in the error boundary files that are preventing the build from running. Let me create a comprehensive phase prompt to address all catalog-related issues systematically.
+
+COMPREHENSIVE CATALOG SYSTEM REFINEMENT PHASE PROMPT
+MISSION STATEMENT
+Perform a complete end-to-end audit, repair, and optimization of the ThreadCraft catalog system. Address every route, component, image handling aspect, CRUD operation, error boundary, and user interaction flow to create a bulletproof, production-ready catalog management system.
+
+PHASE 1: CRITICAL ERROR RESOLUTION (IMMEDIATE)
+1.1 Fix TypeScript Compilation Errors
+Target Files: client/src/components/error/index.ts, client/src/hooks/useErrorBoundary.ts
+Issue: JSX syntax in TypeScript files causing build failures
+Action: Convert JSX components to proper TypeScript/React patterns
+client/src/components/error/index.ts
+client/src/hooks/useErrorBoundary.ts
+1.2 Fix Import Dependencies in Error Files
+PHASE 2: CATALOG API ROUTES COMPREHENSIVE AUDIT
+2.1 Catalog Routes Bulletproofing
+File: server/routes/api/catalogRoutes.ts
+Issues: Field mapping inconsistencies, error handling gaps, authentication edge cases
+Actions: Standardize all CRUD operations, fix field transformations, add comprehensive validation
+server/routes/api/catalogRoutes.ts
+2.2 Enhanced Create Catalog Item Validation
+PHASE 3: CATALOG FRONTEND COMPONENT OPTIMIZATION
+3.1 CatalogPage Component Performance and Error Handling
+client/src/pages/admin/CatalogPage.tsx
+3.2 Enhanced Image Upload and Management
+PHASE 4: CATALOG SERVICE OPTIMIZATION
+4.1 CatalogService Error Handling and Data Processing
+server/services/catalogService.ts
+PHASE 5: IMAGE HANDLING SYSTEM CONSOLIDATION
+5.1 Update Workflow Configuration for Development
+Set
+Catalog Development Server
+to run
+npm run dev
+PHASE 6: COMPREHENSIVE TESTING AND VALIDATION
+6.1 Create Comprehensive Catalog Test Suite
+tests/catalog-comprehensive.spec.js
+SUCCESS CRITERIA CHECKLIST
+✅ Build System: TypeScript compilation errors resolved
+✅ API Routes: All CRUD operations bulletproofed with validation
+✅ Error Handling: Comprehensive error boundaries and user feedback
+✅ Image System: Unified upload and management system
+✅ Data Processing: Null-safe transformations and validation
+✅ Performance: Query optimization and caching strategies
+✅ Testing: Comprehensive test coverage for all workflows
+✅ User Experience: Smooth onboarding and interaction flows
+
+This comprehensive phase addresses every aspect of the catalog system from the ground up, ensuring production-ready reliability and performance.

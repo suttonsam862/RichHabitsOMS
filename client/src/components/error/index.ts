@@ -1,4 +1,5 @@
 import React from 'react';
+
 // Error Boundary exports for easy importing  
 export { ErrorBoundary } from './ErrorBoundary';
 export { GlobalErrorBoundary } from './GlobalErrorBoundary';
@@ -6,8 +7,6 @@ export { FeatureErrorBoundary } from './FeatureErrorBoundary';
 export { AsyncErrorBoundary } from './AsyncErrorBoundary';
 export { ComponentErrorBoundary } from './ComponentErrorBoundary';
 export { default as ErrorBoundaryProvider } from './ErrorBoundaryProvider';
-
-import React from 'react';
 
 // Error boundary types
 export type ErrorBoundaryFallback = React.ComponentType<{
@@ -59,11 +58,15 @@ export const logError = (error: Error, context?: string) => {
 export const withReactQueryErrorBoundary = <T extends object>(
   Component: React.ComponentType<T>
 ): React.ComponentType<T> => {
-  const WrappedComponent = (props: T) => (
-    <AsyncErrorBoundary componentName={Component.displayName || Component.name || 'Component'}>
-      <Component {...props} />
-    </AsyncErrorBoundary>
-  );
+  const WrappedComponent = (props: T) => {
+    // Import AsyncErrorBoundary dynamically to avoid circular dependency
+    const { AsyncErrorBoundary: ErrorBoundary } = require('./AsyncErrorBoundary');
+    return React.createElement(
+      ErrorBoundary,
+      { componentName: Component.displayName || Component.name || 'Component' },
+      React.createElement(Component, props)
+    );
+  };
 
   WrappedComponent.displayName = `withReactQueryErrorBoundary(${Component.displayName || Component.name})`;
 
