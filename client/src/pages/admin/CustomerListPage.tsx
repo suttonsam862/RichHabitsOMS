@@ -308,8 +308,10 @@ export default function CustomerListPage() {
     customers.forEach((customer: Customer) => {
       if ((customer as any).company_logo_url) {
         map.set(customer.id.toString(), (customer as any).company_logo_url);
+        console.log(`Logo mapped for ${customer.id}: ${(customer as any).company_logo_url}`);
       }
     });
+    console.log('Logo map created:', Array.from(map.entries()));
     return map;
   }, [customers]);
 
@@ -418,6 +420,13 @@ export default function CustomerListPage() {
     // Get the first customer ID to look up the logo
     const primaryCustomerId = organization.customers[0]?.id?.toString();
     const logoUrl = primaryCustomerId ? logoMap?.get(primaryCustomerId) : null;
+    
+    console.log(`Organization ${organization.name}:`, {
+      primaryCustomerId,
+      logoUrl,
+      customerCount: organization.customers.length,
+      customers: organization.customers.map(c => ({ id: c.id, company: c.company }))
+    });
     
     return (
       <div 
