@@ -144,7 +144,7 @@ export default function CustomerListPage() {
   } = useUndoableDelete({
     entityName: 'organization',
     deleteEndpoint: '/api/organizations',
-    invalidateQueries: [CACHE_KEYS.customers],
+    invalidateQueries: CACHE_KEYS.customers,
     onDeleteSuccess: () => {
       globalDataSync.syncCustomers();
     },
@@ -162,7 +162,7 @@ export default function CustomerListPage() {
   } = useUndoableDelete({
     entityName: 'customer',
     deleteEndpoint: '/api/customers',
-    invalidateQueries: [CACHE_KEYS.customers],
+    invalidateQueries: CACHE_KEYS.customers,
     onDeleteSuccess: () => {
       globalDataSync.syncCustomers();
     },
@@ -277,9 +277,16 @@ export default function CustomerListPage() {
     
     console.log('Processing customer data:', customersResponse);
     
-    // Handle different response structures - match OrderCreatePage logic exactly
-    if ((customersResponse as any).success && Array.isArray((customersResponse as any).data)) {
-      return (customersResponse as any).data;
+    // Handle different response structures - match the actual API response
+    if ((customersResponse as any).success && (customersResponse as any).data) {
+      // Check if data has customers array (new API format)
+      if ((customersResponse as any).data.customers && Array.isArray((customersResponse as any).data.customers)) {
+        return (customersResponse as any).data.customers;
+      }
+      // Check if data is directly an array (legacy format)
+      if (Array.isArray((customersResponse as any).data)) {
+        return (customersResponse as any).data;
+      }
     }
     
     if ((customersResponse as any).customers && Array.isArray((customersResponse as any).customers)) {
