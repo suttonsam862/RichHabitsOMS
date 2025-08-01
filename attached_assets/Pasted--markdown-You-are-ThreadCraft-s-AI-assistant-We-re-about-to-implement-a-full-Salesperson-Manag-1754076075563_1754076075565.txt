@@ -1,0 +1,177 @@
+````markdown
+You are ThreadCraft’s AI assistant. We’re about to implement a full “Salesperson Management” feature end-to-end—but first you must **prime the entire codebase** by scaffolding all necessary files, types, migrations, API clients, hooks, pages, forms, and navigation entries. **Do not** implement any business logic yet—only create skeletons with `TODO` comments so that detailed Agent prompts can fill them in later. Follow these steps exactly:
+
+---
+
+## 1. Database Migration Stub
+
+Create `scripts/migrations/20250801_add_salesperson_fields.sql` containing:
+```sql
+-- TODO: add fields for Salesperson Management
+ALTER TABLE user_profiles
+  ADD COLUMN IF NOT EXISTS commission_rate NUMERIC(5,2) DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS payroll_file_url TEXT,
+  ADD COLUMN IF NOT EXISTS profile_image_url TEXT;
+
+ALTER TABLE customers
+  ADD COLUMN IF NOT EXISTS salesperson_id UUID REFERENCES user_profiles(id);
+````
+
+---
+
+## 2. Shared Types
+
+In `shared/types.ts`, add:
+
+```ts
+// TODO: flesh out Salesperson fields
+export interface Salesperson {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  commission_rate: number;
+  profile_image_url?: string;
+  payroll_file_url?: string;
+}
+
+// TODO: allow assigning salespeople to customers
+export interface Customer {
+  // existing fields...
+  salesperson_id?: string;
+}
+```
+
+---
+
+## 3. API Client Stubs
+
+Create `client/src/lib/salespersonApi.ts` with:
+
+```ts
+// TODO: implement actual fetch logic
+export async function getSalespeople(): Promise<Salesperson[]> { /* … */ }
+export async function getSalesperson(id: string): Promise<Salesperson> { /* … */ }
+export async function createSalesperson(data: Partial<Salesperson>) { /* … */ }
+export async function updateSalesperson(id: string, data: Partial<Salesperson>) { /* … */ }
+export async function deleteSalesperson(id: string) { /* … */ }
+```
+
+---
+
+## 4. React Query Hooks
+
+Create `client/src/hooks/useSalespeople.ts`:
+
+```ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+// TODO: wire these to salespersonApi functions
+export function useSalespeople() { /* … */ }
+export function useSalesperson(id: string) { /* … */ }
+export function useCreateSalesperson() { /* … */ }
+export function useUpdateSalesperson() { /* … */ }
+export function useDeleteSalesperson() { /* … */ }
+```
+
+---
+
+## 5. Frontend Page Scaffolds
+
+5.1. **Salesperson Management Page**
+Create `client/src/pages/admin/SalespersonManagement.tsx`:
+
+```tsx
+import React from 'react';
+// TODO: import UI components, hooks
+export default function SalespersonManagement() {
+  return (
+    <div>
+      <h1>Salesperson Management</h1>
+      {/* TODO: add table/list of salespeople */}
+      {/* TODO: add “Add” button + SalespersonForm modal */}
+    </div>
+  );
+}
+```
+
+5.2. **Customer List & Details Updates**
+
+* In `client/src/pages/admin/CustomerList.tsx`, add a “Salesperson” column header and placeholder `<td>{customer.salesperson_id}</td>`.
+* In `client/src/pages/admin/CustomerDetails.tsx`, add a `<div>` labeled “Salesperson” with a `TODO` for dropdown/autocomplete to select `salesperson_id`.
+
+---
+
+## 6. Form Component Stub
+
+Create `client/src/components/forms/SalespersonForm.tsx`:
+
+```tsx
+import React from 'react';
+// TODO: use shadcn/ui Dialog and Form components
+export function SalespersonForm({ initialValues, onSubmit }) {
+  return (
+    <form>
+      {/* TODO: First Name, Last Name, Email */}
+      {/* TODO: Commission Rate */}
+      {/* TODO: Profile Image Upload */}
+      {/* TODO: Payroll File Upload */}
+      {/* TODO: Submit & Cancel buttons */}
+    </form>
+  );
+}
+```
+
+---
+
+## 7. Navigation & Routing
+
+7.1. **Nav Link**
+In `client/src/components/navigation/NavigationManager.tsx`, add:
+
+```tsx
+// TODO: add link to SalespersonManagement
+<Link to="/admin/salespeople">Salespeople</Link>
+```
+
+7.2. **Route Entry**
+In `client/src/components/Router.tsx`, under admin routes:
+
+```tsx
+{/* TODO: register SalespersonManagement route */}
+<Route path="/admin/salespeople" element={<SalespersonManagement />} />
+```
+
+---
+
+## 8. Storage Service Placeholder
+
+In your API client or hooks (`salespersonApi.ts` or `useSalespeople.ts`), insert:
+
+```ts
+// TODO: call storageService.uploadFile('salesperson_profiles', `${id}/…`, file)
+```
+
+for both profile images and payroll files.
+
+---
+
+## 9. TODO Summary
+
+At the end of scaffolding, generate a `TODO_LIST.md` with:
+
+* Migration file created
+* Shared types updated
+* API client stubs added
+* React Query hooks scaffolded
+* SalespersonManagement page created
+* CustomerList & CustomerDetails updated
+* SalespersonForm stub created
+* Navigation link & route stubbed
+* Storage service integration placeholders
+
+---
+
+**Stop here**—wait for my review before filling in any business logic. Once approved, we’ll run detailed Agent prompts to complete each `TODO`.
+
+```
+```
