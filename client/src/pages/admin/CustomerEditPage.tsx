@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Save, Upload, X, User } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, User, AlertTriangle } from "lucide-react";
 import { UserAvatar } from '@/components/ui/FallbackImage';
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
@@ -42,6 +42,7 @@ interface Customer extends CustomerFormData {
   spent: string;
   lastOrder?: string;
   created_at: string;
+  updated_at?: string;
   photo_url?: string;
   profile_image_url?: string;
 }
@@ -60,7 +61,7 @@ export default function CustomerEditPage() {
   // Photo upload state
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
-  const [isUploading, setIsUploading] = React.useState(isUploading);
+  const [isUploading, setIsUploading] = React.useState(false);
   const [uploadRetryCount, setUploadRetryCount] = React.useState(0);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
 
@@ -178,7 +179,7 @@ export default function CustomerEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.isSubmitDisabled || isSaving,
+    when: validation.hasUnsavedChanges || isSaving,
     message: "Your form is being saved. Please wait for the process to complete before leaving."
   });
 
@@ -675,7 +676,7 @@ export default function CustomerEditPage() {
               <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Failed to Load Customer</h3>
               <p className="text-muted-foreground mb-4">
-                {customerError.message || 'Unable to fetch customer details. Please try again.'}
+                {customerError || 'Unable to fetch customer details. Please try again.'}
               </p>
               <Button 
                 onClick={() => window.location.reload()} 
@@ -935,7 +936,6 @@ export default function CustomerEditPage() {
                         <label
                           htmlFor="photo-upload"
                           className="cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
-```python
                         >
                           <span>Upload a photo</span>
                           <input

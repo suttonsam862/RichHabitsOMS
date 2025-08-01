@@ -229,3 +229,5 @@ export function SalespersonForm({
     </Dialog>
   );
 }
+
+export default SalespersonForm;

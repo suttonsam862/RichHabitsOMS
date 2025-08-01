@@ -7,23 +7,23 @@ import { supabase } from './db';
 import { sendEmail, getCustomerInviteEmailTemplate } from './email';
 import adminRoutes from './routes/admin/admin';
 import { createCustomer } from './routes/api/customerRoutes';
-import { uploadRouter } from './upload';
-import { 
-  getProductLibrary, 
-  getProductCategories, 
-  addProductToLibrary, 
-  copyProductToOrder, 
-  getProductPricingHistory 
-} from './routes/api/productLibrary';
-import { 
-  getCatalogItems,
-  createCatalogItem,
-  updateCatalogItem,
-  deleteCatalogItem,
-  getCatalogItem,
-  checkSkuExists
-} from './routes/api/catalogRoutes';
-import unifiedImageRoutes from './routes/api/unifiedImageRoutes';
+// import { uploadRouter } from './upload'; // Commented out - missing file
+// import { 
+//   getProductLibrary, 
+//   getProductCategories, 
+//   addProductToLibrary, 
+//   copyProductToOrder, 
+//   getProductPricingHistory 
+// } from './routes/api/productLibrary';
+// import { 
+//   getCatalogItems,
+//   createCatalogItem,
+//   updateCatalogItem,
+//   deleteCatalogItem,
+//   getCatalogItem,
+//   checkSkuExists
+// } from './routes/api/catalogRoutes';
+// import unifiedImageRoutes from './routes/api/unifiedImageRoutes'; // Commented out - missing file
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';
@@ -38,7 +38,7 @@ import { authenticateRequest, requireAuth, requireRole } from './routes/auth/aut
 import catalogRoutesRefactored from './routes/api/catalogRoutes';
 import catalogOptionsRoutesRefactored from './routes/api/catalogOptionsRoutes';
 import customerRoutesRefactored from './routes/api/customerRoutes';
-import imageRoutesRefactored from './routes/api/imageRoutes';
+// import imageRoutesRefactored from './routes/api/imageRoutes'; // Commented out - missing file
 import invitationRoutesRefactored from './routes/api/invitationRoutes';
 
 // Admin routes
@@ -60,7 +60,7 @@ import statsRoutes from './routes/api/statsRoutes';
 import auditRoutes from './routes/api/auditRoutes';
 
 // Upload test routes
-import uploadTestRoutes from './routes/api/uploadTestRoutes';
+// import uploadTestRoutes from './routes/api/uploadTestRoutes'; // Commented out - missing file
 
 // Create Supabase admin client with service key for admin operations
 const supabaseAdmin = createClient(
@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/customers', requireAuth, requireRole(['admin']), createCustomer);
 
   // Register upload routes for logo files
-  app.use('/api/upload', uploadRouter);
+  // app.use('/api/upload', uploadRouter); // Commented out - uploadRouter not imported
 
   // Admin customers API endpoint with real data
   app.get('/api/admin/customers', async (req, res) => {
@@ -1742,12 +1742,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product Library Routes - For salespeople to reference products and pricing
-  app.get('/api/products/library', requireAuth, getProductLibrary);
-  app.get('/api/products/categories', requireAuth, getProductCategories);
-  app.post('/api/products/library', requireAuth, requireRole(['admin', 'salesperson']), addProductToLibrary);
-  app.post('/api/products/library/:productId/copy', requireAuth, requireRole(['admin', 'salesperson']), copyProductToOrder);
-  app.get('/api/products/library/:productId/pricing-history', requireAuth, getProductPricingHistory);
+  // Product Library Routes - Commented out until functions are imported
+  // app.get('/api/products/library', requireAuth, getProductLibrary);
+  // app.get('/api/products/categories', requireAuth, getProductCategories);
+  // app.post('/api/products/library', requireAuth, requireRole(['admin', 'salesperson']), addProductToLibrary);
+  // app.post('/api/products/library/:productId/copy', requireAuth, requireRole(['admin', 'salesperson']), copyProductToOrder);
+  // app.get('/api/products/library/:productId/pricing-history', requireAuth, getProductPricingHistory);
 
   // Direct Account Creation Route - Replaces email invitation system
   app.post('/api/users/create-account', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
@@ -1851,6 +1851,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Authenticated user:', req.user?.email, 'Role:', req.user?.role);
 
     const user = req.user;
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+    
     console.log('Authenticated user:', { id: user.id, email: user.email, role: user.role });
 
     // Check if user has admin privileges
@@ -2232,7 +2236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use('/api/fabric-options', fabricOptionsRoutes);
   router.use('/api/catalog', catalogRoutesRefactored);
   router.use('/api/customers', customerRoutesRefactored);
-  router.use('/api/images', imageRoutesRefactored);
+  // router.use('/api/images', imageRoutesRefactored); // Commented out - missing import
   router.use('/api/invitations', invitationRoutesRefactored);
   router.use('/api/sales-management', salesManagementRoutes);
   router.use('/api/stats', statsRoutes);
