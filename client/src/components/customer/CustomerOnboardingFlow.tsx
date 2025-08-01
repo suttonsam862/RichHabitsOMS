@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { CustomerLogoUpload } from '@/components/ui/CustomerLogoUpload';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +36,8 @@ import {
   GraduationCap,
   Heart,
   Plus,
-  Trash2
+  Trash2,
+  Camera
 } from 'lucide-react';
 
 // Enhanced form validation schemas
@@ -46,830 +46,930 @@ const organizationTypeSchema = z.object({
   subcategory: z.string().min(1, 'Subcategory is required'),
 });
 
-const contactSchema = z.object({
+const basicInfoSchema = z.object({
+  organizationName: z.string().min(2, 'Organization name must be at least 2 characters'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Valid email is required'),
-  phone: z.string().optional(),
-  mobilePhone: z.string().optional(),
-  jobTitle: z.string().optional(),
-  department: z.string().optional(),
-  contactType: z.enum(['primary', 'billing', 'shipping', 'technical', 'general']).default('general'),
-  isDecisionMaker: z.boolean().default(false),
-  canApproveOrders: z.boolean().default(false),
-  preferredContactMethod: z.enum(['email', 'phone', 'mobile']).default('email'),
+  email: z.string().email('Please enter a valid email address'),
+  phone: z.string().min(10, 'Please enter a valid phone number'),
+  website: z.string().url().optional().or(z.literal('')),
 });
 
-const organizationDetailsSchema = z.object({
-  organizationName: z.string().min(1, 'Organization name is required'),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip: z.string().optional(),
-  website: z.string().optional(),
-  description: z.string().optional(),
+const addressSchema = z.object({
+  street: z.string().min(1, 'Street address is required'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(1, 'State is required'),
+  zipCode: z.string().min(5, 'ZIP code is required'),
+  country: z.string().min(1, 'Country is required'),
 });
 
-const fileUploadsSchema = z.object({
-  logoFile: z.any().optional(),
-  googleDriveLink: z.string().optional(),
-  additionalNotes: z.string().optional(),
+const additionalInfoSchema = z.object({
+  teamSize: z.string().optional(),
+  seasonLength: z.string().optional(),
+  budget: z.string().optional(),
+  timeline: z.string().optional(),
+  specialRequirements: z.string().optional(),
 });
-
-const salespersonAssignmentSchema = z.object({
-  salespersonId: z.string().optional(),
-  assignmentNotes: z.string().optional(),
-});
-
-type OrganizationTypeData = z.infer<typeof organizationTypeSchema>;
-type ContactData = z.infer<typeof contactSchema>;
-type OrganizationDetailsData = z.infer<typeof organizationDetailsSchema>;
-type FileUploadsData = z.infer<typeof fileUploadsSchema>;
-type SalespersonAssignmentData = z.infer<typeof salespersonAssignmentSchema>;
 
 interface CustomerOnboardingFlowProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
-const SPORT_SUBCATEGORIES = [
-  'Football', 'Basketball', 'Baseball', 'Soccer', 'Hockey', 'Tennis', 
-  'Golf', 'Swimming', 'Track & Field', 'Wrestling', 'Volleyball', 
-  'Softball', 'Cross Country', 'Cheerleading', 'Dance', 'Other Sport'
-];
-
-const BUSINESS_SUBCATEGORIES = [
-  'Corporate', 'Restaurant/Food Service', 'Healthcare', 'Education',
-  'Retail', 'Manufacturing', 'Technology', 'Professional Services',
-  'Construction', 'Transportation', 'Non-Profit', 'Government', 'Other Business'
-];
-
-const CONTACT_TYPES = [
-  { value: 'primary', label: 'Primary Contact', icon: User },
-  { value: 'billing', label: 'Billing Contact', icon: Mail },
-  { value: 'shipping', label: 'Shipping Contact', icon: MapPin },
-  { value: 'technical', label: 'Technical Contact', icon: Target },
-  { value: 'general', label: 'General Contact', icon: Users },
-];
-
-const steps = [
-  {
-    id: 'type',
-    title: 'Organization Type',
-    subtitle: 'What type of organization are you?',
-    icon: Building2,
-    schema: organizationTypeSchema,
-  },
-  {
-    id: 'contacts',
-    title: 'Contact Information',
-    subtitle: 'Add your organization contacts',
-    icon: Users,
-    schema: z.object({}), // Dynamic validation
-  },
-  {
-    id: 'details',
-    title: 'Organization Details',
-    subtitle: 'Tell us about your organization',
-    icon: MapPin,
-    schema: organizationDetailsSchema,
-  },
-  {
-    id: 'files',
-    title: 'Files & Graphics',
-    subtitle: 'Upload logos and graphics',
-    icon: Upload,
-    schema: fileUploadsSchema,
-  },
-  {
-    id: 'salesperson',
-    title: 'Salesperson Assignment',
-    subtitle: 'Choose your dedicated representative',
-    icon: UserCheck,
-    schema: salespersonAssignmentSchema,
-  },
-];
+interface OrganizationData {
+  primaryType: string;
+  subcategory: string;
+  organizationName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  website?: string;
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  teamSize?: string;
+  seasonLength?: string;
+  budget?: string;
+  timeline?: string;
+  specialRequirements?: string;
+  logoFile?: File;
+}
 
 export default function CustomerOnboardingFlow({ isOpen, onClose, onSuccess }: CustomerOnboardingFlowProps) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [direction, setDirection] = useState(0);
-  const [organizationTypeData, setOrganizationTypeData] = useState<Partial<OrganizationTypeData>>({});
-  const [contacts, setContacts] = useState<Partial<ContactData>[]>([{}]);
-  const [organizationDetailsData, setOrganizationDetailsData] = useState<Partial<OrganizationDetailsData>>({});
-  const [fileUploadsData, setFileUploadsData] = useState<Partial<FileUploadsData>>({});
-  const [salespersonData, setSalespersonData] = useState<Partial<SalespersonAssignmentData>>({});
+  const [currentStep, setCurrentStep] = useState(1);
+  const [organizationData, setOrganizationData] = useState<Partial<OrganizationData>>({});
   const [logoFile, setLogoFile] = useState<File | null>(null);
-
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const currentStepData = steps[currentStep];
-  
-  const form = useForm({
-    resolver: zodResolver(currentStepData.schema),
-    defaultValues: {},
+  // Form instances for each step
+  const typeForm = useForm({
+    resolver: zodResolver(organizationTypeSchema),
+    defaultValues: { primaryType: 'sports' as const, subcategory: '' }
   });
 
-  // Fetch available salespeople
-  const { data: salespeople } = useQuery({
-    queryKey: ['salespeople', 'available'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/sales-management/available');
-      const data = await response.json();
-      return data.data;
-    },
-    enabled: currentStep === 4,
+  const basicForm = useForm({
+    resolver: zodResolver(basicInfoSchema),
+    defaultValues: {
+      organizationName: '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      website: ''
+    }
   });
 
-  const createCustomerMutation = useMutation({
-    mutationFn: async (data: any) => {
-      console.log('🔄 Starting customer creation process...');
+  const addressForm = useForm({
+    resolver: zodResolver(addressSchema),
+    defaultValues: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'United States'
+    }
+  });
+
+  const additionalForm = useForm({
+    resolver: zodResolver(additionalInfoSchema),
+    defaultValues: {
+      teamSize: '',
+      seasonLength: '',
+      budget: '',
+      timeline: '',
+      specialRequirements: ''
+    }
+  });
+
+  // Subcategory options
+  const subcategoryOptions = {
+    sports: [
+      'Football', 'Basketball', 'Soccer', 'Baseball', 'Hockey',
+      'Tennis', 'Golf', 'Swimming', 'Track & Field', 'Volleyball',
+      'Wrestling', 'Cross Country', 'Softball', 'Lacrosse', 'Rugby'
+    ],
+    business: [
+      'Technology', 'Healthcare', 'Finance', 'Manufacturing', 'Retail',
+      'Education', 'Hospitality', 'Construction', 'Real Estate', 'Consulting'
+    ]
+  };
+
+  // Handle logo file selection with proper error handling
+  const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file (PNG, JPG, GIF, etc.)",
+        variant: "destructive",
+      });
+      event.target.value = '';
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Logo file must be smaller than 5MB",
+        variant: "destructive",
+      });
+      event.target.value = '';
+      return;
+    }
+
+    setLogoFile(file);
+    
+    // Create preview URL with cleanup
+    if (logoPreview) {
+      URL.revokeObjectURL(logoPreview);
+    }
+    const newPreviewUrl = URL.createObjectURL(file);
+    setLogoPreview(newPreviewUrl);
+
+    console.log('Logo file selected:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+  };
+
+  const removeLogo = () => {
+    if (logoPreview) {
+      URL.revokeObjectURL(logoPreview);
+    }
+    setLogoFile(null);
+    setLogoPreview(null);
+    
+    // Clear file input
+    const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  // Navigation handlers
+  const nextStep = async () => {
+    let isValid = false;
+    let data: any = {};
+
+    switch (currentStep) {
+      case 1:
+        isValid = await typeForm.trigger();
+        if (isValid) {
+          data = typeForm.getValues();
+          setOrganizationData(prev => ({ ...prev, ...data }));
+        }
+        break;
+      case 2:
+        isValid = await basicForm.trigger();
+        if (isValid) {
+          data = basicForm.getValues();
+          setOrganizationData(prev => ({ ...prev, ...data }));
+        }
+        break;
+      case 3:
+        isValid = await addressForm.trigger();
+        if (isValid) {
+          data = addressForm.getValues();
+          setOrganizationData(prev => ({ ...prev, ...data }));
+        }
+        break;
+      case 4:
+        isValid = await additionalForm.trigger();
+        if (isValid) {
+          data = additionalForm.getValues();
+          setOrganizationData(prev => ({ ...prev, ...data }));
+        }
+        break;
+      case 5:
+        // Logo upload step - always valid since it's optional
+        isValid = true;
+        break;
+    }
+
+    if (isValid && currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Create customer with all collected data
+  const createCustomer = async () => {
+    try {
+      setIsCreating(true);
       
-      try {
-        // First create the customer
-        console.log('Creating customer with data:', {
-          firstName: contacts[0]?.firstName,
-          lastName: contacts[0]?.lastName,
-          email: contacts[0]?.email,
-          phone: contacts[0]?.phone,
-          company: organizationDetailsData.organizationName,
-          sport: organizationTypeData.primaryType === 'sports' ? organizationTypeData.subcategory : null,
-          organizationType: organizationTypeData.primaryType,
-        });
-        
-        const customerResponse = await apiRequest('POST', '/api/customers', {
-          firstName: contacts[0]?.firstName,
-          lastName: contacts[0]?.lastName,
-          email: contacts[0]?.email,
-          phone: contacts[0]?.phone,
-          company: organizationDetailsData.organizationName,
-          sport: organizationTypeData.primaryType === 'sports' ? organizationTypeData.subcategory : null,
-          organizationType: organizationTypeData.primaryType,
-          address: organizationDetailsData.address,
-          city: organizationDetailsData.city,
-          state: organizationDetailsData.state,
-          zip: organizationDetailsData.zip,
-        });
+      // Combine all form data
+      const finalData = {
+        ...organizationData,
+        ...additionalForm.getValues()
+      };
 
-        const customerData = await customerResponse.json();
-        console.log('✅ Customer created:', customerData);
-        
-        if (!customerData.success || !customerData.data?.id) {
-          throw new Error('Customer creation failed: ' + (customerData.message || 'Unknown error'));
-        }
-        
-        const customerId = customerData.data.id;
+      console.log('🔄 Creating customer with data:', finalData);
 
-      // Add additional contacts
-      if (contacts.length > 1) {
-        for (let i = 1; i < contacts.length; i++) {
-          const contact = contacts[i];
-          if (contact.firstName && contact.lastName) {
-            await apiRequest('POST', '/api/customer-contacts', {
-              customerId,
-              ...contact,
-              isPrimary: false,
-            });
-          }
-        }
+      // Create the customer first
+      const customerResponse = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          firstName: finalData.firstName,
+          lastName: finalData.lastName,
+          email: finalData.email,
+          company: finalData.organizationName,
+          phone: finalData.phone,
+          sport: finalData.subcategory,
+          organizationType: finalData.primaryType,
+          website: finalData.website || '',
+          address: `${finalData.street}, ${finalData.city}, ${finalData.state} ${finalData.zipCode}`,
+          country: finalData.country,
+          teamSize: finalData.teamSize,
+          seasonLength: finalData.seasonLength,
+          budget: finalData.budget,
+          timeline: finalData.timeline,
+          specialRequirements: finalData.specialRequirements
+        })
+      });
+
+      if (!customerResponse.ok) {
+        const errorData = await customerResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create customer');
       }
 
-      // Upload logo if provided using the reliable customer logo endpoint
-      if (logoFile) {
-        try {
-          console.log('🔄 Starting logo upload for customer:', customerId);
-          console.log('Logo file details:', {
-            name: logoFile.name,
-            size: logoFile.size,
-            type: logoFile.type
-          });
-          
-          const formData = new FormData();
-          formData.append('logo', logoFile); // Changed from 'file' to 'logo' to match endpoint
+      const customerResult = await customerResponse.json();
+      const customerId = customerResult.customer?.id;
 
-          const uploadResponse = await fetch(`/api/customers/${customerId}/logo`, {
+      if (!customerId) {
+        throw new Error('Customer created but no ID returned');
+      }
+
+      console.log('✅ Customer created successfully:', customerId);
+
+      // Upload logo if provided
+      if (logoFile) {
+        console.log('🔄 Uploading logo file...');
+        
+        try {
+          const formData = new FormData();
+          formData.append('logo', logoFile);
+
+          const logoResponse = await fetch(`/api/customers/${customerId}/logo`, {
             method: 'POST',
-            body: formData,
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            }
+            credentials: 'include',
+            body: formData
           });
-        
-          if (!uploadResponse.ok) {
-            const errorData = await uploadResponse.json().catch(() => null);
-            throw new Error(errorData?.message || 'Failed to upload logo');
+
+          if (!logoResponse.ok) {
+            const logoError = await logoResponse.json().catch(() => ({}));
+            console.warn('Logo upload failed:', logoError);
+            toast({
+              title: "Logo Upload Warning",
+              description: "Customer created successfully, but logo upload failed. You can upload it later.",
+              variant: "default",
+            });
+          } else {
+            console.log('✅ Logo uploaded successfully');
+            toast({
+              title: "Logo uploaded",
+              description: "Organization logo has been uploaded successfully!",
+            });
           }
-        
-          const uploadResult = await uploadResponse.json();
-          
-          console.log('✅ Logo uploaded successfully:', uploadResult);
-          
-          // Show success toast
-          toast({
-            title: "Logo uploaded",
-            description: "Organization logo has been uploaded successfully!",
-          });
         } catch (logoError: any) {
           console.error('❌ Logo upload failed:', logoError);
-          
-          // Show error toast but don't fail the customer creation
           toast({
             title: "Logo upload failed",
             description: logoError.message || "Could not upload logo, but organization was created successfully",
             variant: "destructive",
           });
-          
-          // Don't fail the entire customer creation if logo upload fails
         }
       }
 
-      // Save Google Drive link if provided
-      if (fileUploadsData.googleDriveLink) {
-        await apiRequest('POST', '/api/organization-files', {
-          customerId,
-          fileName: 'Google Drive Folder',
-          fileType: 'graphics',
-          googleDriveLink: fileUploadsData.googleDriveLink,
-          description: fileUploadsData.additionalNotes,
-        });
-      }
-
-      // Assign salesperson if selected
-      if (salespersonData.salespersonId) {
-        await apiRequest('POST', '/api/sales-management/assign-customer', {
-          customerId,
-          salespersonId: salespersonData.salespersonId,
-          assignmentType: 'primary',
-          notes: salespersonData.assignmentNotes,
-        });
-      }
-
-        return customerData;
-      } catch (error: any) {
-        console.error('❌ Customer creation process failed:', error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      console.log('✅ Customer creation mutation completed successfully');
+      // Show success message
       toast({
-        title: 'Organization Created Successfully',
-        description: 'Your organization has been set up and is ready to go!',
+        title: "Organization Created!",
+        description: `${finalData.organizationName} has been successfully added to your system.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'customers'] });
-      onSuccess?.();
+
+      // Invalidate customers cache to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+
+      // Call success callback and close modal
+      onSuccess();
       onClose();
-    },
-    onError: (error: any) => {
-      console.error('❌ Customer creation mutation failed:', error);
+
+    } catch (error: any) {
+      console.error('❌ Error creating customer:', error);
       toast({
-        title: 'Error Creating Organization',
-        description: error.message || 'Failed to create organization',
-        variant: 'destructive',
+        title: "Creation Failed",
+        description: error.message || "Failed to create organization. Please try again.",
+        variant: "destructive",
       });
-    },
-  });
-
-  const nextStep = async () => {
-    if (currentStep < steps.length - 1) {
-      setDirection(1);
-      setCurrentStep(prev => prev + 1);
-    } else {
-      // Final step - create organization
-      createCustomerMutation.mutate({});
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setDirection(-1);
-      setCurrentStep(prev => prev - 1);
+  // Close handler with cleanup
+  const handleClose = () => {
+    if (logoPreview) {
+      URL.revokeObjectURL(logoPreview);
     }
-  };
-
-  const addContact = () => {
-    if (contacts.length < 10) {
-      setContacts([...contacts, {}]);
-    }
-  };
-
-  const removeContact = (index: number) => {
-    if (contacts.length > 1) {
-      const newContacts = contacts.filter((_, i) => i !== index);
-      setContacts(newContacts);
-    }
-  };
-
-  const updateContact = (index: number, field: keyof ContactData, value: any) => {
-    const newContacts = [...contacts];
-    newContacts[index] = { ...newContacts[index], [field]: value };
-    setContacts(newContacts);
-  };
-
-  const canProceed = () => {
-    switch (currentStep) {
-      case 0:
-        return organizationTypeData.primaryType && organizationTypeData.subcategory;
-      case 1:
-        return contacts[0]?.firstName && contacts[0]?.lastName && contacts[0]?.email;
-      case 2:
-        return organizationDetailsData.organizationName;
-      case 3:
-        return true; // Files are optional
-      case 4:
-        return true; // Salesperson assignment is optional
-      default:
-        return false;
-    }
+    setCurrentStep(1);
+    setOrganizationData({});
+    setLogoFile(null);
+    setLogoPreview(null);
+    typeForm.reset();
+    basicForm.reset();
+    addressForm.reset();
+    additionalForm.reset();
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-start sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-4xl glass-panel rounded-none sm:rounded-2xl shadow-2xl border-0 sm:border border-glass-border min-h-screen sm:min-h-0 sm:max-h-[90vh] flex flex-col"
-      >
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-rich-black/90 backdrop-blur-md border border-glass-border rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="relative bg-black/40 border-b border-glass-border p-4 sm:p-6">
+        <div className="p-6 border-b border-glass-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <motion.div
-                key={currentStep}
-                initial={{ rotate: -180, scale: 0 }}
-                animate={{ rotate: 0, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                className="p-2 rounded-full bg-gradient-to-r from-neon-blue to-neon-green"
-              >
-                <currentStepData.icon className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
-              </motion.div>
+              <Building2 className="h-6 w-6 text-neon-blue" />
               <div>
-                <h2 className="text-lg sm:text-2xl font-bold text-white">{currentStepData.title}</h2>
-                <p className="text-xs sm:text-sm text-white/70">{currentStepData.subtitle}</p>
+                <h2 className="text-xl font-bold text-foreground">New Organization</h2>
+                <p className="text-sm text-muted-foreground">Step {currentStep} of 5</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClose}
-              className="text-white hover:bg-white/10 h-8 w-8 p-0"
+              onClick={handleClose}
+              className="text-muted-foreground hover:text-foreground"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-4 sm:mt-6 flex space-x-2">
-            {steps.map((_, index) => (
-              <div
-                key={index}
-                className="flex-1 h-1 sm:h-2 bg-white/10 rounded-full overflow-hidden"
-              >
-                <motion.div
-                  className="h-full bg-gradient-to-r from-neon-blue to-neon-green"
-                  initial={{ width: '0%' }}
-                  animate={{ 
-                    width: index <= currentStep ? '100%' : '0%' 
-                  }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
+          <div className="mt-4">
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4, 5].map((step) => (
+                <div
+                  key={step}
+                  className={`h-2 flex-1 rounded-full ${
+                    step <= currentStep ? 'bg-neon-blue' : 'bg-glass-border'
+                  }`}
                 />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
-          <div className="space-y-4 pb-4">
-            {/* Step 0: Organization Type */}
-            {currentStep === 0 && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h3 className="text-xl font-semibold text-white mb-2">What type of organization are you?</h3>
-                  <p className="text-white/70">This helps us customize your experience</p>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Card 
-                    className={`cursor-pointer transition-all duration-200 ${
-                      organizationTypeData.primaryType === 'sports' 
-                        ? 'bg-gradient-to-r from-neon-blue/20 to-neon-green/20 border-neon-blue' 
-                        : 'glass-panel border-glass-border hover:border-neon-blue/50'
-                    }`}
-                    onClick={() => setOrganizationTypeData({ ...organizationTypeData, primaryType: 'sports', subcategory: '' })}
-                  >
-                    <CardContent className="flex flex-col items-center p-6">
-                      <Trophy className="w-12 h-12 text-neon-blue mb-4" />
-                      <h4 className="text-lg font-semibold text-white">Sports Organization</h4>
-                      <p className="text-white/70 text-center text-sm">Teams, leagues, athletic programs</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card 
-                    className={`cursor-pointer transition-all duration-200 ${
-                      organizationTypeData.primaryType === 'business' 
-                        ? 'bg-gradient-to-r from-neon-blue/20 to-neon-green/20 border-neon-blue' 
-                        : 'glass-panel border-glass-border hover:border-neon-blue/50'
-                    }`}
-                    onClick={() => setOrganizationTypeData({ ...organizationTypeData, primaryType: 'business', subcategory: '' })}
-                  >
-                    <CardContent className="flex flex-col items-center p-6">
-                      <Briefcase className="w-12 h-12 text-neon-green mb-4" />
-                      <h4 className="text-lg font-semibold text-white">Business Organization</h4>
-                      <p className="text-white/70 text-center text-sm">Companies, schools, nonprofits</p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {organizationTypeData.primaryType && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-4"
-                  >
-                    <Label className="text-white">Select your specific category:</Label>
-                    <Select 
-                      value={organizationTypeData.subcategory} 
-                      onValueChange={(value) => setOrganizationTypeData({ ...organizationTypeData, subcategory: value })}
-                    >
-                      <SelectTrigger className="glass-input">
-                        <SelectValue placeholder="Choose category" />
-                      </SelectTrigger>
-                      <SelectContent className="glass-panel border-glass-border">
-                        {(organizationTypeData.primaryType === 'sports' ? SPORT_SUBCATEGORIES : BUSINESS_SUBCATEGORIES).map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </motion.div>
-                )}
-              </div>
-            )}
-
-            {/* Step 1: Contacts */}
+        <div className="p-6">
+          <AnimatePresence mode="wait">
+            {/* Step 1: Organization Type */}
             {currentStep === 1 && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h3 className="text-xl font-semibold text-white mb-2">Contact Information</h3>
-                  <p className="text-white/70">Add up to 10 contacts for your organization</p>
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Organization Type</h3>
+                  <p className="text-muted-foreground mb-6">Tell us about your organization</p>
                 </div>
 
-                {contacts.map((contact, index) => {
-                  const isComplete = contact.firstName && contact.lastName && contact.email;
-                  const showContact = index === 0 || contacts[index - 1]?.firstName;
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-foreground">Primary Type</Label>
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          typeForm.watch('primaryType') === 'sports'
+                            ? 'ring-2 ring-neon-blue bg-neon-blue/10'
+                            : 'hover:bg-glass-border/50'
+                        }`}
+                        onClick={() => {
+                          typeForm.setValue('primaryType', 'sports');
+                          typeForm.setValue('subcategory', '');
+                        }}
+                      >
+                        <CardContent className="p-4 text-center">
+                          <Trophy className="h-8 w-8 mx-auto mb-2 text-neon-blue" />
+                          <p className="font-medium text-foreground">Sports</p>
+                          <p className="text-xs text-muted-foreground">Teams, clubs, leagues</p>
+                        </CardContent>
+                      </Card>
 
-                  if (!showContact) return null;
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          typeForm.watch('primaryType') === 'business'
+                            ? 'ring-2 ring-neon-blue bg-neon-blue/10'
+                            : 'hover:bg-glass-border/50'
+                        }`}
+                        onClick={() => {
+                          typeForm.setValue('primaryType', 'business');
+                          typeForm.setValue('subcategory', '');
+                        }}
+                      >
+                        <CardContent className="p-4 text-center">
+                          <Briefcase className="h-8 w-8 mx-auto mb-2 text-neon-green" />
+                          <p className="font-medium text-foreground">Business</p>
+                          <p className="text-xs text-muted-foreground">Companies, corporations</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
 
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="glass-panel p-4 rounded-lg space-y-4"
-                    >
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-lg font-semibold text-white">
-                          Contact {index + 1} {index === 0 && '(Primary)'}
-                        </h4>
-                        {index > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeContact(index)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-white">First Name *</Label>
-                          <Input
-                            value={contact.firstName || ''}
-                            onChange={(e) => updateContact(index, 'firstName', e.target.value)}
-                            className="glass-input"
-                            placeholder="Enter first name"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-white">Last Name *</Label>
-                          <Input
-                            value={contact.lastName || ''}
-                            onChange={(e) => updateContact(index, 'lastName', e.target.value)}
-                            className="glass-input"
-                            placeholder="Enter last name"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-white">Email *</Label>
-                          <Input
-                            type="email"
-                            value={contact.email || ''}
-                            onChange={(e) => updateContact(index, 'email', e.target.value)}
-                            className="glass-input"
-                            placeholder="Enter email"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-white">Phone</Label>
-                          <Input
-                            value={contact.phone || ''}
-                            onChange={(e) => updateContact(index, 'phone', e.target.value)}
-                            className="glass-input"
-                            placeholder="Enter phone"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-white">Job Title</Label>
-                          <Input
-                            value={contact.jobTitle || ''}
-                            onChange={(e) => updateContact(index, 'jobTitle', e.target.value)}
-                            className="glass-input"
-                            placeholder="Enter job title"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-white">Contact Type</Label>
-                          <Select 
-                            value={contact.contactType || 'general'} 
-                            onValueChange={(value) => updateContact(index, 'contactType', value)}
-                          >
-                            <SelectTrigger className="glass-input">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="glass-panel border-glass-border">
-                              {CONTACT_TYPES.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                  {type.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-
-                {contacts.length < 10 && contacts[contacts.length - 1]?.firstName && (
-                  <Button
-                    variant="outline"
-                    onClick={addContact}
-                    className="w-full glass-button border-glass-border text-white hover:bg-white/10"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Another Contact
-                  </Button>
-                )}
-              </div>
+                  {typeForm.watch('primaryType') && (
+                    <div>
+                      <Label className="text-foreground">Category</Label>
+                      <Select
+                        value={typeForm.watch('subcategory')}
+                        onValueChange={(value) => typeForm.setValue('subcategory', value)}
+                      >
+                        <SelectTrigger className="glass-input mt-2">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent className="glass-panel border-glass-border">
+                          {subcategoryOptions[typeForm.watch('primaryType') as keyof typeof subcategoryOptions]?.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {typeForm.formState.errors.subcategory && (
+                        <p className="text-destructive text-sm mt-1">
+                          {typeForm.formState.errors.subcategory.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             )}
 
-            {/* Step 2: Organization Details */}
+            {/* Step 2: Basic Information */}
             {currentStep === 2 && (
-              <div className="space-y-4">
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
                 <div>
-                  <Label className="text-white">Organization Name *</Label>
-                  <Input
-                    value={organizationDetailsData.organizationName || ''}
-                    onChange={(e) => setOrganizationDetailsData({ ...organizationDetailsData, organizationName: e.target.value })}
-                    className="glass-input"
-                    placeholder="Enter organization name"
-                  />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Basic Information</h3>
+                  <p className="text-muted-foreground mb-6">Organization and contact details</p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <Label className="text-white">Address</Label>
+                    <Label className="text-foreground">Organization Name</Label>
                     <Input
-                      value={organizationDetailsData.address || ''}
-                      onChange={(e) => setOrganizationDetailsData({ ...organizationDetailsData, address: e.target.value })}
-                      className="glass-input"
-                      placeholder="Street address"
+                      {...basicForm.register('organizationName')}
+                      placeholder="Enter organization name"
+                      className="glass-input mt-2"
                     />
-                  </div>
-                  <div>
-                    <Label className="text-white">City</Label>
-                    <Input
-                      value={organizationDetailsData.city || ''}
-                      onChange={(e) => setOrganizationDetailsData({ ...organizationDetailsData, city: e.target.value })}
-                      className="glass-input"
-                      placeholder="City"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-white">State</Label>
-                    <Input
-                      value={organizationDetailsData.state || ''}
-                      onChange={(e) => setOrganizationDetailsData({ ...organizationDetailsData, state: e.target.value })}
-                      className="glass-input"
-                      placeholder="State"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-white">ZIP Code</Label>
-                    <Input
-                      value={organizationDetailsData.zip || ''}
-                      onChange={(e) => setOrganizationDetailsData({ ...organizationDetailsData, zip: e.target.value })}
-                      className="glass-input"
-                      placeholder="ZIP code"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-white">Website</Label>
-                  <Input
-                    value={organizationDetailsData.website || ''}
-                    onChange={(e) => setOrganizationDetailsData({ ...organizationDetailsData, website: e.target.value })}
-                    className="glass-input"
-                    placeholder="https://example.com"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-white">Description</Label>
-                  <Textarea
-                    value={organizationDetailsData.description || ''}
-                    onChange={(e) => setOrganizationDetailsData({ ...organizationDetailsData, description: e.target.value })}
-                    className="glass-input resize-none"
-                    placeholder="Tell us about your organization..."
-                    rows={3}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: File Uploads */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                <div>
-                  <Label className="text-white">Primary Logo Upload</Label>
-                  <div className="mt-2">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('File selected:', {
-                            name: file.name,
-                            size: file.size,
-                            type: file.type
-                          });
-                          
-                          // Validate file size (5MB limit)
-                          if (file.size > 5 * 1024 * 1024) {
-                            toast({
-                              title: "File too large",
-                              description: "Logo file must be smaller than 5MB. Please compress or choose a smaller image.",
-                              variant: "destructive",
-                            });
-                            e.target.value = ''; // Clear the input
-                            return;
-                          }
-                          
-                          // Validate file type
-                          if (!file.type.startsWith('image/')) {
-                            toast({
-                              title: "Invalid file type",
-                              description: "Please select an image file (PNG, JPG, GIF, etc.)",
-                              variant: "destructive",
-                            });
-                            e.target.value = ''; // Clear the input
-                            return;
-                          }
-                          
-                          setLogoFile(file);
-                          toast({
-                            title: "Logo selected",
-                            description: `${file.name} is ready to upload`,
-                          });
-                        }
-                      }}
-                      className="w-full glass-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-neon-blue file:text-black hover:file:bg-neon-blue/80"
-                    />
-                    <p className="text-xs text-gray-300 mt-1">Maximum file size: 5MB</p>
-                    {logoFile && (
-                      <div className="mt-2 p-2 glass-panel rounded-lg">
-                        <p className="text-sm text-white">Selected: {logoFile.name}</p>
-                        <p className="text-xs text-white/70">{(logoFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
+                    {basicForm.formState.errors.organizationName && (
+                      <p className="text-destructive text-sm mt-1">
+                        {basicForm.formState.errors.organizationName.message}
+                      </p>
                     )}
                   </div>
-                </div>
 
-                <div>
-                  <Label className="text-white">Google Drive Link</Label>
-                  <Input
-                    value={fileUploadsData.googleDriveLink || ''}
-                    onChange={(e) => setFileUploadsData({ ...fileUploadsData, googleDriveLink: e.target.value })}
-                    className="glass-input"
-                    placeholder="Share link to Google Drive folder with graphics"
-                  />
-                </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-foreground">First Name</Label>
+                      <Input
+                        {...basicForm.register('firstName')}
+                        placeholder="First name"
+                        className="glass-input mt-2"
+                      />
+                      {basicForm.formState.errors.firstName && (
+                        <p className="text-destructive text-sm mt-1">
+                          {basicForm.formState.errors.firstName.message}
+                        </p>
+                      )}
+                    </div>
 
-                <div>
-                  <Label className="text-white">Additional Notes</Label>
-                  <Textarea
-                    value={fileUploadsData.additionalNotes || ''}
-                    onChange={(e) => setFileUploadsData({ ...fileUploadsData, additionalNotes: e.target.value })}
-                    className="glass-input resize-none"
-                    placeholder="Any additional information about your graphics or brand guidelines..."
-                    rows={3}
-                  />
+                    <div>
+                      <Label className="text-foreground">Last Name</Label>
+                      <Input
+                        {...basicForm.register('lastName')}
+                        placeholder="Last name"
+                        className="glass-input mt-2"
+                      />
+                      {basicForm.formState.errors.lastName && (
+                        <p className="text-destructive text-sm mt-1">
+                          {basicForm.formState.errors.lastName.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-foreground">Email Address</Label>
+                    <Input
+                      {...basicForm.register('email')}
+                      type="email"
+                      placeholder="email@example.com"
+                      className="glass-input mt-2"
+                    />
+                    {basicForm.formState.errors.email && (
+                      <p className="text-destructive text-sm mt-1">
+                        {basicForm.formState.errors.email.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-foreground">Phone Number</Label>
+                      <Input
+                        {...basicForm.register('phone')}
+                        placeholder="(555) 123-4567"
+                        className="glass-input mt-2"
+                      />
+                      {basicForm.formState.errors.phone && (
+                        <p className="text-destructive text-sm mt-1">
+                          {basicForm.formState.errors.phone.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-foreground">Website (Optional)</Label>
+                      <Input
+                        {...basicForm.register('website')}
+                        placeholder="https://example.com"
+                        className="glass-input mt-2"
+                      />
+                      {basicForm.formState.errors.website && (
+                        <p className="text-destructive text-sm mt-1">
+                          {basicForm.formState.errors.website.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            {/* Step 4: Salesperson Assignment */}
-            {currentStep === 4 && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h3 className="text-xl font-semibold text-white mb-2">Choose Your Sales Representative</h3>
-                  <p className="text-white/70">Select a dedicated representative to help with your orders</p>
+            {/* Step 3: Address Information */}
+            {currentStep === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Address Information</h3>
+                  <p className="text-muted-foreground mb-6">Where is your organization located?</p>
                 </div>
 
-                {salespeople && salespeople.length > 0 && (
+                <div className="space-y-4">
                   <div>
-                    <Label className="text-white">Sales Representative</Label>
-                    <Select 
-                      value={salespersonData.salespersonId || ''} 
-                      onValueChange={(value) => setSalespersonData({ ...salespersonData, salespersonId: value })}
+                    <Label className="text-foreground">Street Address</Label>
+                    <Input
+                      {...addressForm.register('street')}
+                      placeholder="123 Main Street"
+                      className="glass-input mt-2"
+                    />
+                    {addressForm.formState.errors.street && (
+                      <p className="text-destructive text-sm mt-1">
+                        {addressForm.formState.errors.street.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-foreground">City</Label>
+                      <Input
+                        {...addressForm.register('city')}
+                        placeholder="City"
+                        className="glass-input mt-2"
+                      />
+                      {addressForm.formState.errors.city && (
+                        <p className="text-destructive text-sm mt-1">
+                          {addressForm.formState.errors.city.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-foreground">State</Label>
+                      <Input
+                        {...addressForm.register('state')}
+                        placeholder="State"
+                        className="glass-input mt-2"
+                      />
+                      {addressForm.formState.errors.state && (
+                        <p className="text-destructive text-sm mt-1">
+                          {addressForm.formState.errors.state.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-foreground">ZIP Code</Label>
+                      <Input
+                        {...addressForm.register('zipCode')}
+                        placeholder="12345"
+                        className="glass-input mt-2"
+                      />
+                      {addressForm.formState.errors.zipCode && (
+                        <p className="text-destructive text-sm mt-1">
+                          {addressForm.formState.errors.zipCode.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-foreground">Country</Label>
+                      <Select
+                        value={addressForm.watch('country')}
+                        onValueChange={(value) => addressForm.setValue('country', value)}
+                      >
+                        <SelectTrigger className="glass-input mt-2">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-panel border-glass-border">
+                          <SelectItem value="United States">United States</SelectItem>
+                          <SelectItem value="Canada">Canada</SelectItem>
+                          <SelectItem value="Mexico">Mexico</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 4: Additional Information */}
+            {currentStep === 4 && (
+              <motion.div
+                key="step4"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Additional Details</h3>
+                  <p className="text-muted-foreground mb-6">Help us serve you better (optional)</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-foreground">Team Size</Label>
+                    <Select
+                      value={additionalForm.watch('teamSize')}
+                      onValueChange={(value) => additionalForm.setValue('teamSize', value)}
                     >
-                      <SelectTrigger className="glass-input">
-                        <SelectValue placeholder="Choose a sales representative" />
+                      <SelectTrigger className="glass-input mt-2">
+                        <SelectValue placeholder="Select team size" />
                       </SelectTrigger>
                       <SelectContent className="glass-panel border-glass-border">
-                        {salespeople.map((salesperson: any) => (
-                          <SelectItem key={salesperson.id} value={salesperson.id}>
-                            {salesperson.first_name} {salesperson.last_name} - {salesperson.employee_id}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="1-10">1-10 members</SelectItem>
+                        <SelectItem value="11-25">11-25 members</SelectItem>
+                        <SelectItem value="26-50">26-50 members</SelectItem>
+                        <SelectItem value="51-100">51-100 members</SelectItem>
+                        <SelectItem value="100+">100+ members</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                )}
+
+                  <div>
+                    <Label className="text-foreground">Season Length</Label>
+                    <Select
+                      value={additionalForm.watch('seasonLength')}
+                      onValueChange={(value) => additionalForm.setValue('seasonLength', value)}
+                    >
+                      <SelectTrigger className="glass-input mt-2">
+                        <SelectValue placeholder="Select season length" />
+                      </SelectTrigger>
+                      <SelectContent className="glass-panel border-glass-border">
+                        <SelectItem value="year-round">Year Round</SelectItem>
+                        <SelectItem value="fall">Fall</SelectItem>
+                        <SelectItem value="winter">Winter</SelectItem>
+                        <SelectItem value="spring">Spring</SelectItem>
+                        <SelectItem value="summer">Summer</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-foreground">Budget Range</Label>
+                    <Select
+                      value={additionalForm.watch('budget')}
+                      onValueChange={(value) => additionalForm.setValue('budget', value)}
+                    >
+                      <SelectTrigger className="glass-input mt-2">
+                        <SelectValue placeholder="Select budget range" />
+                      </SelectTrigger>
+                      <SelectContent className="glass-panel border-glass-border">
+                        <SelectItem value="under-1000">Under $1,000</SelectItem>
+                        <SelectItem value="1000-5000">$1,000 - $5,000</SelectItem>
+                        <SelectItem value="5000-10000">$5,000 - $10,000</SelectItem>
+                        <SelectItem value="10000-25000">$10,000 - $25,000</SelectItem>
+                        <SelectItem value="25000+">$25,000+</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-foreground">Timeline</Label>
+                    <Select
+                      value={additionalForm.watch('timeline')}
+                      onValueChange={(value) => additionalForm.setValue('timeline', value)}
+                    >
+                      <SelectTrigger className="glass-input mt-2">
+                        <SelectValue placeholder="Select timeline" />
+                      </SelectTrigger>
+                      <SelectContent className="glass-panel border-glass-border">
+                        <SelectItem value="urgent">ASAP (Rush)</SelectItem>
+                        <SelectItem value="1-2-weeks">1-2 weeks</SelectItem>
+                        <SelectItem value="3-4-weeks">3-4 weeks</SelectItem>
+                        <SelectItem value="1-2-months">1-2 months</SelectItem>
+                        <SelectItem value="flexible">Flexible</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
                 <div>
-                  <Label className="text-white">Assignment Notes</Label>
+                  <Label className="text-foreground">Special Requirements</Label>
                   <Textarea
-                    value={salespersonData.assignmentNotes || ''}
-                    onChange={(e) => setSalespersonData({ ...salespersonData, assignmentNotes: e.target.value })}
-                    className="glass-input resize-none"
-                    placeholder="Any specific notes about your account or preferences..."
+                    {...additionalForm.register('specialRequirements')}
+                    placeholder="Any special requirements, preferences, or notes..."
+                    className="glass-input mt-2"
                     rows={3}
                   />
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+
+            {/* Step 5: Logo Upload */}
+            {currentStep === 5 && (
+              <motion.div
+                key="step5"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Organization Logo</h3>
+                  <p className="text-muted-foreground mb-6">Upload your organization's logo (optional)</p>
+                </div>
+
+                <div className="space-y-4">
+                  {logoPreview ? (
+                    <div className="flex items-center space-x-4 p-4 glass-panel border border-glass-border rounded-lg">
+                      <div className="relative">
+                        <img 
+                          src={logoPreview} 
+                          alt="Logo preview" 
+                          className="w-16 h-16 object-contain rounded-lg border border-glass-border bg-white/5"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-foreground font-medium">
+                          {logoFile?.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {logoFile && (logoFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={removeLogo}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-glass-border rounded-lg p-8 text-center">
+                      <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-foreground font-medium mb-2">Upload Organization Logo</p>
+                      <p className="text-muted-foreground text-sm mb-4">
+                        PNG, JPG, GIF up to 5MB
+                      </p>
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoFileChange}
+                          className="hidden"
+                          id="logo-upload"
+                        />
+                        <label htmlFor="logo-upload">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex items-center glass-button"
+                            asChild
+                          >
+                            <span>
+                              <Upload className="mr-2 h-4 w-4" />
+                              Choose Logo File
+                            </span>
+                          </Button>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    This step is optional. You can upload a logo later if needed.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-6 bg-black/40 border-t border-glass-border flex flex-col sm:flex-row justify-between items-center gap-3 flex-shrink-0">
+        <div className="p-6 border-t border-glass-border flex justify-between">
           <Button
             variant="outline"
             onClick={prevStep}
-            disabled={currentStep === 0}
-            className="flex items-center space-x-2 glass-button border-glass-border text-white hover:bg-white/10 order-2 sm:order-1 w-full sm:w-auto"
+            disabled={currentStep === 1}
+            className="glass-button"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Previous</span>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Previous
           </Button>
 
-          <div className="text-xs sm:text-sm text-white/70 order-1 sm:order-2">
-            Step {currentStep + 1} of {steps.length}
-          </div>
+          <div className="flex space-x-3">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="glass-button"
+            >
+              Cancel
+            </Button>
 
-          <Button
-            onClick={nextStep}
-            disabled={!canProceed() || createCustomerMutation.isPending}
-            className="flex items-center space-x-2 bg-gradient-to-r from-neon-blue to-neon-green text-black hover:opacity-90 border-0 order-3 w-full sm:w-auto"
-          >
-            {currentStep === steps.length - 1 ? (
-              <>
-                <CheckCircle className="w-4 h-4" />
-                <span>
-                  {createCustomerMutation.isPending ? 'Creating...' : 'Complete Setup'}
-                </span>
-              </>
+            {currentStep < 5 ? (
+              <Button
+                onClick={nextStep}
+                className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
+              >
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             ) : (
-              <>
-                <span>Next</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
+              <Button
+                onClick={createCustomer}
+                disabled={isCreating}
+                className="bg-neon-green hover:bg-neon-green/80 text-rich-black font-semibold"
+              >
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-rich-black border-t-transparent rounded-full mr-2" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Create Organization
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
+          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

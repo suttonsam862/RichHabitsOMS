@@ -9,7 +9,8 @@ import { customerTransformers } from '../../utils/schemaTransformers';
 import { validateRequiredFields, validateCustomerData } from '../../utils/validation';
 import crypto from 'crypto';
 import multer from 'multer';
-
+import path from 'path'; // Import the path module
+import sharp from 'sharp'; // Import the sharp library
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
@@ -1072,6 +1073,338 @@ async function uploadCustomerLogo(req: Request, res: Response) {
     });
   }
 }
+
+/**
+ * POST /api/customers
+ * Create a new customer account
+ */
+router.post('/', requireAuth, async (req: Request, res: Response) => {
+  try {
+    console.log('Creating customer - request received');
+    console.log('Request body:', req.body);
+
+    const {
+      firstName,
+      lastName,
+      email,
+      company = '',
+      phone = '',
+      sport = '',
+      organizationType = 'business',
+      website = '',
+      address = '',
+      country = '',
+      teamSize = '',
+      seasonLength = '',
+      budget = '',
+      timeline = '',
+      specialRequirements = ''
+    } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: firstName, lastName, and email are required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address'
+      });
+    }
+
+    // Check if email already exists in auth users
+    const { data: existingAuthUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const emailExists = existingAuthUsers?.users?.some((user: any) => 
+      user.email?.toLowerCase() === email.toLowerCase()
+    );
+
+    if (emailExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email address already exists'
+      });
+    }
+
+    // Generate a secure temporary password
+    const tempPassword = Math.random().toString(36).substring(2, 10) + 
+                         Math.random().toString(36).substring(2, 10);
+
+    console.log('Creating auth user with Supabase...');
+
+    // Create auth user first
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        firstName,
+        lastName,
+        role: 'customer'
+      }
+    });
+
+    if (authError || !authData?.user) {
+      console.error('Error creating auth user:', authError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create user account: ' + (authError?.message || 'Unknown error')
+      });
+    }
+
+    const userId = authData.user.id;
+    console.log('✅ Auth user created with ID:', userId);
+
+    // Create customer profile with proper error handling
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('customer_profiles')
+      .insert({
+        id: userId,
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        company: company,
+        phone: phone,
+        sport: sport,
+        organization_type: organizationType,
+        website: website,
+        address: address,
+        country: country,
+        team_size: teamSize,
+        season_length: seasonLength,
+        budget: budget,
+        timeline: timeline,
+        special_requirements: specialRequirements,
+        company_logo_url: null // Initialize logo URL as null
+      })
+      .select()
+      .single();
+
+    if (profileError) {
+      console.error('Error creating customer profile:', profileError);
+
+      // Try to clean up the auth user if profile creation fails
+      await supabaseAdmin.auth.admin.deleteUser(userId).catch(console.warn);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create customer profile: ' + profileError.message
+      });
+    }
+
+    console.log('✅ Customer profile created successfully');
+
+    // Return success with customer data including the ID for logo upload
+    res.status(201).json({
+      success: true,
+      message: 'Customer created successfully',
+      customer: {
+        id: userId,
+        firstName,
+        lastName,
+        email,
+        company,
+        phone,
+        sport,
+        organizationType,
+        website,
+        address,
+        country,
+        teamSize,
+        seasonLength,
+        budget,
+        timeline,
+        specialRequirements,
+        created_at: profileData.created_at || new Date().toISOString()
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Unexpected error creating customer:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Unexpected error creating customer: ' + (error.message || 'Unknown error')
+    });
+  }
+});
+
+/**
+ * POST /api/customers/:id/logo
+ * Upload logo for customer organization
+ */
+router.post('/:id/logo', requireAuth, upload.single('logo'), async (req: Request, res: Response) => {
+  try {
+    console.log('🔄 Customer logo upload request received');
+    console.log('Customer ID:', req.params.id);
+    console.log('File info:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    } : 'No file');
+
+    const { id: customerId } = req.params;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No logo file uploaded'
+      });
+    }
+
+    if (!customerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer ID is required'
+      });
+    }
+
+    // Validate file type
+    if (!file.mimetype.startsWith('image/')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only image files are allowed'
+      });
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        message: 'File size must be less than 5MB'
+      });
+    }
+
+    // Verify customer exists
+    const { data: customer, error: customerError } = await supabaseAdmin
+      .from('customer_profiles')
+      .select('id, company, first_name, last_name')
+      .eq('id', customerId)
+      .single();
+
+    if (customerError || !customer) {
+      console.error('Customer not found:', customerError);
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    // Generate unique filename with timestamp
+    const fileExtension = path.extname(file.originalname);
+    const timestamp = Date.now();
+    const filename = `logo_${timestamp}_${uuidv4()}${fileExtension}`;
+    const bucketPath = `organizations/${customerId}/${filename}`;
+
+    // Optimize image for logo use
+    let processedBuffer = file.buffer;
+    let finalMimeType = file.mimetype;
+
+    try {
+      // Convert to PNG for better quality and transparency support
+      processedBuffer = await sharp(file.buffer)
+        .resize(500, 500, { 
+          fit: 'inside',
+          withoutEnlargement: true,
+          background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
+        })
+        .png({ quality: 90 })
+        .toBuffer();
+
+      finalMimeType = 'image/png';
+      console.log('✅ Logo optimized successfully');
+    } catch (optimizeError) {
+      console.warn('Logo optimization failed, using original:', optimizeError);
+      processedBuffer = file.buffer;
+      finalMimeType = file.mimetype;
+    }
+
+    // Upload to Supabase Storage
+    console.log('🔄 Uploading to Supabase Storage:', bucketPath);
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from('uploads')
+      .upload(bucketPath, processedBuffer, {
+        contentType: finalMimeType,
+        upsert: true, // Allow overwriting existing files
+        cacheControl: '3600' // Cache for 1 hour
+      });
+
+    if (uploadError) {
+      console.error('❌ Supabase storage upload error:', uploadError);
+      return res.status(500).json({
+        success: false,
+        message: `Storage upload failed: ${uploadError.message}`
+      });
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseAdmin.storage
+      .from('uploads')
+      .getPublicUrl(bucketPath);
+
+    if (!urlData?.publicUrl) {
+      console.error('❌ Failed to get public URL');
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get file URL'
+      });
+    }
+
+    console.log('🔄 Updating customer profile with logo URL...');
+
+    // Update customer profile with logo URL
+    const { data: updatedCustomer, error: updateError } = await supabaseAdmin
+      .from('customer_profiles')
+      .update({
+        company_logo_url: urlData.publicUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', customerId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('❌ Failed to update customer profile:', updateError);
+
+      // Try to clean up uploaded file
+      await supabaseAdmin.storage
+        .from('uploads')
+        .remove([bucketPath])
+        .catch(cleanupError => console.warn('Cleanup failed:', cleanupError));
+
+      return res.status(500).json({
+        success: false,
+        message: `Failed to update customer profile: ${updateError.message}`
+      });
+    }
+
+    console.log('✅ Customer logo uploaded and profile updated successfully');
+
+    res.json({
+      success: true,
+      message: 'Logo uploaded successfully',
+      data: {
+        logoUrl: urlData.publicUrl,
+        fileName: file.originalname,
+        fileSize: processedBuffer.length,
+        customerId: customerId,
+        updatedAt: updatedCustomer.updated_at
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Customer logo upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Logo upload failed'
+    });
+  }
+});
 
 // Configure routes
 router.get('/', getAllCustomers);
