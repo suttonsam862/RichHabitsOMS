@@ -24,10 +24,7 @@ async function throwIfResNotOk(res: Response) {
 
     // Handle authentication errors specifically
     if (res.status === 401) {
-      // Clear tokens on auth failures
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('tokenExpires');
-      console.warn('Authentication token cleared due to 401 response');
+      console.warn('Authentication failed - session may be expired');
     }
 
     throw new Error(`${res.status}: ${responseBody}`);
@@ -39,24 +36,18 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Check for authentication token
-  const token = localStorage.getItem('authToken');
-
   // Create full URL with base URL
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
-  // Create headers with auth token if available
+  // Use session-based authentication - no need for token headers
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
 
   try {
     // Log request details for debugging
     console.log('API Request:', {
       method,
       url: fullUrl,
-      hasAuth: !!token,
+      usesCookies: true,
       hasBody: !!data,
       timestamp: new Date().toISOString()
     });
@@ -121,28 +112,21 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Check for authentication token
-    const token = localStorage.getItem('authToken');
-
     // Create full URL with base URL
     const url = queryKey[0] as string;
     const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
-    // Create headers with auth token if available
+    // Use session-based authentication (credentials: include) instead of token headers
     const headers: HeadersInit = {
       'Content-Type': 'application/json'
     };
-
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
 
     try {
       // Log query request details
       console.log('Query Request:', {
         url: fullUrl,
         queryKey: queryKey[0],
-        hasAuth: !!token,
+        usesCookies: true,
         timestamp: new Date().toISOString()
       });
 
@@ -159,12 +143,11 @@ export const getQueryFn: <T>(options: {
       clearTimeout(timeoutId);
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        console.warn('Query 401 response - clearing auth tokens:', {
+        console.warn('Query 401 response - session expired:', {
           url: fullUrl,
           queryKey: queryKey[0]
         });
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('tokenExpires');
+        // No need to clear localStorage tokens since we use session cookies
         return null;
       }
 
