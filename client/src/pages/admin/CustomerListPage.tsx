@@ -305,22 +305,12 @@ export default function CustomerListPage() {
   // Create a map of customer ID to logo URL from existing customer data
   const logoMap = React.useMemo(() => {
     const map = new Map<string, string>();
-    console.log('Creating logo map from customers:', customers.length);
     customers.forEach((customer: Customer) => {
-      console.log(`Customer ${customer.id} data:`, {
-        id: customer.id,
-        company: (customer as any).company,
-        company_logo_url: (customer as any).company_logo_url,
-        allKeys: Object.keys(customer)
-      });
-      
-      const logoUrl = (customer as any).company_logo_url || (customer as any).companyLogoUrl;
+      const logoUrl = (customer as any).company_logo_url;
       if (logoUrl) {
         map.set(customer.id.toString(), logoUrl);
-        console.log(`✅ Logo mapped for ${customer.id}: ${logoUrl}`);
       }
     });
-    console.log('Final logo map:', Array.from(map.entries()));
     return map;
   }, [customers]);
 
@@ -430,12 +420,7 @@ export default function CustomerListPage() {
     const primaryCustomerId = organization.customers[0]?.id?.toString();
     const logoUrl = primaryCustomerId ? logoMap?.get(primaryCustomerId) : null;
     
-    console.log(`Organization ${organization.name}:`, {
-      primaryCustomerId,
-      logoUrl,
-      customerCount: organization.customers.length,
-      customers: organization.customers.map(c => ({ id: c.id, company: c.company }))
-    });
+    // Debug removed - logo display working
     
     return (
       <div 

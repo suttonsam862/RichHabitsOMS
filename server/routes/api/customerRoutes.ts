@@ -484,6 +484,7 @@ async function getAllCustomers(req: Request, res: Response) {
         phone: profile.phone || '',
         sport: profile.sport || '',
         organizationType: profile.organization_type || 'business',
+        company_logo_url: profile.company_logo_url || null,
         orders: 0,
         spent: '$0.00',
         lastOrder: null,
