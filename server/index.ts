@@ -352,6 +352,16 @@ import manufacturingRoutes, {
     // Create HTTP server
     const server = createServer(app);
 
+    // Handle Vite HMR ping requests to prevent fetch failures
+    app.get('/__vite_ping', (req, res) => {
+      res.status(200).json({ status: 'ok' });
+    });
+
+    // Handle only specific Vite ping failures, not all Vite module requests
+    app.get('/@vite/client-ping', (req, res) => {
+      res.status(200).json({ status: 'ok' });
+    });
+
     // Register health and auth routes first (no auth required for these)
     app.use('/api', healthRoutes);
     app.use('/api/auth', authRoutes);
