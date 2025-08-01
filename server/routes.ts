@@ -194,16 +194,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Extract meaningful company names from common email patterns
     const domain = email.split('@')[1] || '';
+    const localPart = email.split('@')[0] || '';
     
     // Known company domains
     if (domain.includes('rich-habits.com')) return 'Rich Habits';
     if (domain.includes('jefcoed.com')) return 'Jefferson County Board of Education';
+    if (domain.includes('spellmansdetail.com')) return 'Spellmans Detail';
+    
+    // For personal emails, try to infer from the local part
     if (domain.includes('gmail.com') || domain.includes('yahoo.com') || domain.includes('hotmail.com')) {
-      // For personal emails, try to infer from the local part
-      const localPart = email.split('@')[0];
       if (localPart.includes('ironclad')) return 'Ironclad Wrestling';
-      if (localPart.includes('wrestling')) return 'Wrestling Organization';
-      return 'Individual Customer';
+      if (localPart.includes('wrestling')) return 'Wrestling Organization'; 
+      if (localPart.includes('football')) return 'Football Organization';
+      if (localPart.includes('sport')) return 'Sports Organization';
+      
+      // Use first name as organization for individual customers
+      const firstName = localPart.split(/[._]/)[0];
+      return `${firstName.charAt(0).toUpperCase() + firstName.slice(1)} Organization`;
     }
     
     // Convert domain to company name
