@@ -1,0 +1,116 @@
+You are Replit Agent. The scaffolding for “Salesperson Management” is in place (migration stub, shared types, API client stubs, hooks, page & form skeletons, nav & route stubs). Your job now is to **fill in every TODO** with working code, wire up the feature end-to-end, and verify it works. Touch only the files listed below.
+
+---
+
+## 1. Database
+
+**File:** `scripts/migrations/20250801_add_salesperson_fields.sql`  
+- Ensure this file is correctly formatted.  
+- (Outside of code) run this migration against Supabase.
+
+---
+
+## 2. Shared Types
+
+**File:** `shared/types.ts`  
+- Confirm the `Salesperson` interface matches the DB columns.  
+- Add `salesperson_id?: string` to the `Customer` interface.
+
+---
+
+## 3. API Client
+
+**File:** `client/src/lib/salespersonApi.ts`  
+- Replace each `/* … */` with actual `fetch()` or `axios` calls to your Express endpoints (`/api/salespeople`, `/api/salespeople/:id`).  
+- Use `Content-Type: application/json`, `credentials: 'include'`.  
+- Return parsed JSON (`{ success, data, message }`).  
+- Throw an error on `!response.ok`.
+
+---
+
+## 4. React Query Hooks
+
+**File:** `client/src/hooks/useSalespeople.ts`  
+- Implement `useSalespeople()` using `useQuery(['salespeople'], getSalespeople)`.  
+- Implement `useSalesperson(id)` using `useQuery(['salespeople', id], () => getSalesperson(id))`.  
+- Implement mutations:  
+  - `useCreateSalesperson()` calls `createSalesperson`, invalidates `['salespeople']`.  
+  - `useUpdateSalesperson()` calls `updateSalesperson`, invalidates `['salespeople', id]`.  
+  - `useDeleteSalesperson()` calls `deleteSalesperson`, invalidates `['salespeople']`.  
+
+---
+
+## 5. Backend Routes
+
+**File:** `server/routes/api/salespersonRoutes.ts`  
+- Import `supabase` from `../../db`.  
+- For each endpoint, implement the CRUD logic:  
+  - `GET /` → `supabase.from('user_profiles').select('*').eq('role','salesperson')`  
+  - `POST /` → validate body, `supabase.from('user_profiles').insert({…data, role:'salesperson'})`  
+  - `GET /:id` → `select().eq('id', id).single()`  
+  - `PATCH /:id` → `update(data).eq('id', id)`  
+  - `DELETE /:id` → `delete().eq('id', id)` or soft-delete  
+- Wrap in `try/catch`, return `{ success: true, data }` or `{ success: false, message }`.
+
+**File:** `server/routes/api/customerRoutes.ts`  
+- In your `SELECT` for single customer and list, include `salesperson_id`.  
+- In `POST`/`PATCH`, accept `salesperson_id` and include it in the insert/update.
+
+---
+
+## 6. Frontend Pages
+
+**File:** `client/src/pages/admin/SalespersonManagement.tsx`  
+- Use `useSalespeople()` to load data.  
+- Render a table with columns: Profile Image, Name, Email, Commission Rate, Actions (Edit/Delete).  
+- “Add Salesperson” button opens `SalespersonForm` modal.  
+- On submit, call `useCreateSalesperson().mutateAsync`, then close modal and refetch.  
+- Edit and Delete actions likewise call the appropriate hooks.
+
+**File:** `client/src/pages/admin/CustomerList.tsx`  
+- Add a new `<th>Salesperson</th>`.  
+- In each row, display `customer.salesperson?.first_name + ' ' + customer.salesperson?.last_name`.
+
+**File:** `client/src/pages/admin/CustomerDetails.tsx`  
+- Fetch the full customer (including `salesperson_id`).  
+- Display “Salesperson: <ProfileImage> Name”.  
+- Add a dropdown (or searchable select) populated from `useSalespeople()` to reassign; on change, call `updateCustomer({ salesperson_id })`.
+
+---
+
+## 7. Form Component
+
+**File:** `client/src/components/forms/SalespersonForm.tsx`  
+- Build a form with React Hook Form or shadcn/ui Form: fields for first_name, last_name, email, commission_rate (number), profile_image (file), payroll_file (file).  
+- On file select, call `storageService.uploadFile('salesperson_profiles', \`${id}/…\`, file)` to get URL, update form state.  
+- On submit, call `onSubmit(formValues)` passed from parent.
+
+---
+
+## 8. Navigation & Routing
+
+**File:** `client/src/components/navigation/NavigationManager.tsx`  
+- Ensure `<Link to="/admin/salespeople">Salespeople</Link>` appears under Admin section.
+
+**File:** `client/src/components/Router.tsx`  
+- Add `<Route path="/admin/salespeople" element={<SalespersonManagement />} />` within admin routes.
+
+---
+
+## 9. File Upload Integration
+
+- In `SalespersonForm`, use your existing `uploadFile` method for both profile images and payroll files.  
+- Store returned URLs in `profile_image_url` and `payroll_file_url`.
+
+---
+
+## 10. Verification
+
+After implementing all TODOs, confirm:
+
+- **Salesperson CRUD** works end-to-end.  
+- **Customer assignment** displays and updates correctly.  
+- **File uploads** succeed and URLs render.  
+- **List and Details** pages show the data as expected.
+
+Return a summary of each file you modified and the main implementation you added.  
