@@ -443,23 +443,16 @@ export default function CustomerListPage() {
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">
-              {/* Large circular logo or icon */}
-              <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center overflow-hidden">
-                {logoUrl ? (
+              {/* Large circular logo - only show if logo exists */}
+              {logoUrl && (
+                <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center overflow-hidden">
                   <img 
                     src={logoUrl} 
                     alt={`${organization.name} logo`}
                     className="w-full h-full object-cover rounded-full"
-                    onError={(e) => {
-                      // Fallback to icon if logo fails to load
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      target.nextElementSibling?.classList.remove('hidden');
-                    }}
                   />
-                ) : null}
-                <IconComponent className={`w-6 h-6 text-white ${logoUrl ? 'hidden' : ''}`} />
-              </div>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-bold text-white truncate">
                   {organization.name}
