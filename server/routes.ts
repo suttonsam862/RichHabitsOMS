@@ -7,23 +7,8 @@ import { supabase } from './db';
 import { sendEmail, getCustomerInviteEmailTemplate } from './email';
 import adminRoutes from './routes/admin/admin';
 import { createCustomer } from './routes/api/customerRoutes';
-// import { uploadRouter } from './upload'; // Commented out - missing file
-// import { 
-//   getProductLibrary, 
-//   getProductCategories, 
-//   addProductToLibrary, 
-//   copyProductToOrder, 
-//   getProductPricingHistory 
-// } from './routes/api/productLibrary';
-// import { 
-//   getCatalogItems,
-//   createCatalogItem,
-//   updateCatalogItem,
-//   deleteCatalogItem,
-//   getCatalogItem,
-//   checkSkuExists
-// } from './routes/api/catalogRoutes';
-// import unifiedImageRoutes from './routes/api/unifiedImageRoutes'; // Commented out - missing file
+// Product Library and Unified Image Routes removed - not implemented
+// Use existing catalogRoutes for catalog operations
 import catalogOptionsRoutes from './routes/api/catalogOptionsRoutes';
 import fabricOptionsRoutes from './routes/api/fabricOptionsRoutes';
 import userManagementRoutes from './routes/api/userManagementRoutes';

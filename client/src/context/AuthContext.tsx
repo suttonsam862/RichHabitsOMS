@@ -171,10 +171,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
@@ -184,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Don't throw - logout should always succeed locally
         console.warn('Logout request failed:', error);
       });
-      
+
       clearTimeout(timeoutId);
     } catch (error) {
       console.warn('Logout request failed:', error);
@@ -202,15 +202,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Page access control function
   const hasPageAccess = useCallback((page: string): boolean => {
     if (!user) return false;
-    
+
     // Super admin has access to everything
     if (user.isSuperAdmin) return true;
-    
+
     // If user has custom visible pages array, use that
     if (user.visiblePages && user.visiblePages.length > 0) {
       return user.visiblePages.includes(page);
     }
-    
+
     // Default role-based access control
     switch (user.role) {
       case 'admin':
