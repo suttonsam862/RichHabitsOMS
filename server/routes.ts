@@ -29,6 +29,9 @@ import invitationRoutesRefactored from './routes/api/invitationRoutes';
 // Product Library routes
 import productLibraryRoutes from './routes/api/productLibrary';
 
+// Unified Upload routes
+import unifiedUploadRoutes from './routes/api/unifiedUploadRoutes';
+
 // Admin routes
 import adminRoutesRefactored from './routes/admin/admin';
 
@@ -221,8 +224,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register customer creation endpoint
   app.post('/api/customers', requireAuth, requireRole(['admin']), createCustomer);
 
-  // Register upload routes for logo files
-  // app.use('/api/upload', uploadRouter); // Commented out - uploadRouter not imported
+  // Register unified upload routes (consolidates all upload functionality)
+  app.use('/api/uploads', unifiedUploadRoutes);
 
   // Admin customers API endpoint with real data
   app.get('/api/admin/customers', async (req, res) => {

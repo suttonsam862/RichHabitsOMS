@@ -21,7 +21,7 @@ Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, s
 - **Backend**: Node.js with Express.js, written in TypeScript with ES modules.
 - **Database ORM**: Drizzle ORM for type-safe PostgreSQL interactions.
 - **Authentication**: Supabase Auth integrated with custom middleware and session management. Multi-role system (Admin, Salesperson, Designer, Manufacturer, Customer) with Row Level Security.
-- **File Handling**: Local file system with configurable cloud storage support (Supabase Storage). Comprehensive image management with drag-and-drop galleries, metadata tagging, and optimization (Sharp library). Entity-based folder structure for organization.
+- **File Handling**: Unified upload system consolidating all image uploads across catalog, customer, production, and ProductLibrary modules. Comprehensive image management with drag-and-drop galleries, metadata tagging, and optimization (Sharp library). Entity-based folder structure with centralized UnifiedUploadService and shared metadata architecture.
 - **Payment Processing**: Stripe integration for secure payment handling.
 - **Order Management**: Comprehensive order lifecycle (Draft → Design → Production → Completion) with detailed tracking, nested item management, and transaction support.
 - **Design Workflow**: Task assignment, file management, approval process, and status tracking for designs.
@@ -43,6 +43,7 @@ Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, s
 - **Customer Management**: Detailed customer profiles, photo upload, and associated data.
 - **Image Asset Traceability**: Comprehensive metadata tracking for all uploaded images.
 - **Product Library System**: Complete product metadata management with historical pricing data, designer-attributed mockup uploads, comprehensive filtering and analytics. Full API with role-based access control.
+- **Unified Upload Architecture**: Centralized upload service eliminating code duplication across 6+ upload systems. Supports 9 entity types, 13 image purposes, 6 processing profiles with comprehensive metadata tracking and batch operations.
 
 ### System Design Choices
 - **Architectural Patterns**: Microservices-oriented design with clear separation of frontend and backend concerns.
