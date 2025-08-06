@@ -1,7 +1,7 @@
 # ThreadCraft - Custom Clothing Order Management System
 
 ## Overview
-ThreadCraft is a comprehensive full-stack web application designed for managing custom clothing orders. It streamlines the entire process from client intake and design coordination to production tracking and final delivery. The system features role-based access control, integrated payment processing, and aims to provide an efficient solution for custom clothing businesses.
+ThreadCraft is a comprehensive full-stack web application designed for managing custom clothing orders. It streamlines the entire process from client intake and design coordination to production tracking and final delivery. The system features role-based access control, integrated payment processing, and comprehensive product library management with historical data tracking. The platform provides an efficient solution for custom clothing businesses with advanced metadata management and designer attribution systems.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -42,6 +42,7 @@ Design theme: Rich Habits blackout glassmorphism with neon blue/green accents, s
 - **User Management**: Comprehensive user profiles and role management.
 - **Customer Management**: Detailed customer profiles, photo upload, and associated data.
 - **Image Asset Traceability**: Comprehensive metadata tracking for all uploaded images.
+- **Product Library System**: Complete product metadata management with historical pricing data, designer-attributed mockup uploads, comprehensive filtering and analytics. Full API with role-based access control.
 
 ### System Design Choices
 - **Architectural Patterns**: Microservices-oriented design with clear separation of frontend and backend concerns.

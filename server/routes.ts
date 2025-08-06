@@ -2371,12 +2371,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use('/api/stats', statsRoutes);
   router.use('/api', manufacturingRoutes);
 
-  // API Routes
-  app.use('/api/auth', authRoutes);
-  app.use('/api/customers', customerRoutes);
-  app.use('/api/orders', orderRoutes);
-  app.use('/api/catalog', catalogRoutes);
-  app.use('/api/products/library', productLibraryRoutes);
+  // Product Library routes (moved to router above)
+  router.use('/api/products/library', productLibraryRoutes);
 
   // Admin routes (admin auth required)
   router.use('/api/admin', adminRoutesRefactored);
