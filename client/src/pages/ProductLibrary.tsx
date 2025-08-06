@@ -1,429 +1,284 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { 
-  Search, 
-  Plus, 
-  Copy, 
-  TrendingUp, 
-  Package, 
-  Clock, 
-  DollarSign,
-  History,
-  Filter
+  BookOpen, 
+  Images, 
+  ShoppingCart, 
+  Upload,
+  Package,
+  TrendingUp,
+  Users
 } from 'lucide-react';
 
-interface Product {
-  id: number;
-  product_name: string;
-  description: string;
-  category: string;
-  base_price: number;
-  material: string;
-  available_sizes: string[];
-  available_colors: string[];
-  supplier: string;
-  lead_time_days: number;
-  minimum_quantity: number;
-  tags: string[];
-  total_times_ordered: number;
-  last_ordered_date: string;
-  pricing_stats: {
-    min_price: number;
-    max_price: number;
-    avg_price: number;
-    total_orders: number;
-    last_price: number;
-  };
-}
+// Import the new components we created
+import { HistoricalProductsView } from '@/components/ProductLibrary/HistoricalProductsView';
+import { MockupGallery } from '@/components/ProductLibrary/MockupGallery';
+import { ProductOrderHistory } from '@/components/ProductLibrary/ProductOrderHistory';
+import { ProductMockupUploader } from '@/components/ProductLibrary/ProductMockupUploader';
 
-interface PricingHistory {
-  id: number;
-  unit_price: number;
-  quantity_ordered: number;
-  pricing_date: string;
-  notes: string;
-  orders?: {
-    order_number: string;
-    status: string;
-  };
-  customers?: {
-    first_name: string;
-    last_name: string;
-  };
+interface SelectedProduct {
+  id: string;
+  name: string;
+  category: string;
+  sku: string;
+  description: string;
 }
 
 export default function ProductLibrary() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showPricingHistory, setShowPricingHistory] = useState(false);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [selectedProduct, setSelectedProduct] = useState<SelectedProduct | null>(null);
+  const [activeTab, setActiveTab] = useState('historical');
 
-  // Fetch products
-  const { data: productsData, isLoading: loadingProducts } = useQuery({
-    queryKey: ['/api/products/library', { search: searchTerm, category: selectedCategory }],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedCategory) params.append('category', selectedCategory);
-      
-      const response = await apiRequest('GET', `/api/products/library?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch products');
-      return response.json();
-    },
-  });
+  // Handle product selection from the historical products view
+  const handleProductSelect = (product: any) => {
+    setSelectedProduct({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      sku: product.sku || 'N/A',
+      description: product.description || ''
+    });
+    
+    // Switch to mockups tab when a product is selected for detailed view
+    setActiveTab('mockups');
+  };
 
-  // Fetch categories
-  const { data: categoriesData } = useQuery({
-    queryKey: ['/api/products/categories'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/products/categories');
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      return response.json();
-    },
-  });
-
-  // Fetch pricing history for selected product
-  const { data: pricingData, isLoading: loadingPricing } = useQuery({
-    queryKey: ['/api/products/library', selectedProduct?.id, 'pricing-history'],
-    queryFn: async () => {
-      if (!selectedProduct) return null;
-      const response = await apiRequest('GET', `/api/products/library/${selectedProduct.id}/pricing-history`);
-      if (!response.ok) throw new Error('Failed to fetch pricing history');
-      return response.json();
-    },
-    enabled: !!selectedProduct && showPricingHistory,
-  });
-
-  // Copy product to order
-  const copyProductMutation = useMutation({
-    mutationFn: async ({ productId, quantity }: { productId: number; quantity: number }) => {
-      const response = await apiRequest('POST', `/api/products/library/${productId}/copy`, {
-        quantity,
-      });
-      if (!response.ok) throw new Error('Failed to copy product');
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: 'Product Copied!',
-        description: `${data.order_item.product_name} is ready to add to your order`,
-        variant: 'default',
-      });
-      // You could navigate to order creation page here
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Copy Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const products = productsData?.products || [];
-  const categories = categoriesData?.categories || [];
+  // Handle successful mockup upload
+  const handleMockupUploadSuccess = () => {
+    // Could show a toast notification or refresh data
+    console.log('Mockup uploaded successfully');
+  };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Product Library</h1>
-          <p className="text-muted-foreground">
-            Browse products, reference pricing, and copy items to new orders
-          </p>
+    <div className="container mx-auto p-6 max-w-7xl">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-500 bg-clip-text text-transparent">
+              Product Library
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Comprehensive product catalog with historical data, mockups, and analytics
+            </p>
+          </div>
+          
+          {selectedProduct && (
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Selected Product</div>
+              <div className="font-semibold">{selectedProduct.name}</div>
+              <Badge variant="outline" className="mt-1">
+                {selectedProduct.category}
+              </Badge>
+            </div>
+          )}
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
       </div>
 
-      {/* Search and Filters */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
-            Search & Filter
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products, descriptions, or tags..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+      {/* Quick Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-500 text-white rounded-lg">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Historical Products</div>
+                <div className="text-xl font-bold text-blue-700">Browse & Analyze</div>
+              </div>
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
-                {categories.map((category: string) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Products Grid */}
-      {loadingProducts ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-5/6"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product: Product) => (
-            <Card key={product.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{product.product_name}</CardTitle>
-                    <CardDescription>{product.description}</CardDescription>
-                  </div>
-                  <Badge variant="secondary">{product.category}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Pricing Information */}
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="flex items-center text-muted-foreground">
-                        <DollarSign className="mr-1 h-3 w-3" />
-                        Base Price
-                      </div>
-                      <div className="font-semibold">${product.base_price}</div>
-                    </div>
-                    <div>
-                      <div className="flex items-center text-muted-foreground">
-                        <TrendingUp className="mr-1 h-3 w-3" />
-                        Avg Price
-                      </div>
-                      <div className="font-semibold">${product.pricing_stats.avg_price.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="flex items-center text-muted-foreground">
-                        <Package className="mr-1 h-3 w-3" />
-                        Times Ordered
-                      </div>
-                      <div className="font-semibold">{product.total_times_ordered || 0}</div>
-                    </div>
-                    <div>
-                      <div className="flex items-center text-muted-foreground">
-                        <Clock className="mr-1 h-3 w-3" />
-                        Lead Time
-                      </div>
-                      <div className="font-semibold">{product.lead_time_days || 'N/A'} days</div>
-                    </div>
-                  </div>
-
-                  {/* Available Options */}
-                  <div className="space-y-2">
-                    {product.available_sizes && product.available_sizes.length > 0 && (
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Sizes:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {product.available_sizes.slice(0, 4).map((size) => (
-                            <Badge key={size} variant="outline" className="text-xs">
-                              {size}
-                            </Badge>
-                          ))}
-                          {product.available_sizes.length > 4 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{product.available_sizes.length - 4} more
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {product.available_colors && product.available_colors.length > 0 && (
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Colors:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {product.available_colors.slice(0, 3).map((color) => (
-                            <Badge key={color} variant="outline" className="text-xs">
-                              {color}
-                            </Badge>
-                          ))}
-                          {product.available_colors.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{product.available_colors.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      onClick={() => copyProductMutation.mutate({ productId: product.id, quantity: 1 })}
-                      disabled={copyProductMutation.isPending}
-                      className="flex-1"
-                    >
-                      <Copy className="mr-1 h-3 w-3" />
-                      Copy to Order
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setShowPricingHistory(true);
-                      }}
-                    >
-                      <History className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {products.length === 0 && !loadingProducts && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchTerm || selectedCategory
-                ? 'Try adjusting your search or filter criteria'
-                : 'Start building your product library by adding products'}
-            </p>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add First Product
-            </Button>
           </CardContent>
         </Card>
-      )}
 
-      {/* Pricing History Modal */}
-      <Dialog open={showPricingHistory} onOpenChange={setShowPricingHistory}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>
-              Pricing History: {selectedProduct?.product_name}
-            </DialogTitle>
-            <DialogDescription>
-              Historical pricing data to help with quotes and negotiations
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-96 overflow-y-auto">
-            {loadingPricing ? (
-              <div className="text-center py-8">Loading pricing history...</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pricingData?.pricing_history?.map((item: PricingHistory) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        {new Date(item.pricing_date).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        ${parseFloat(item.unit_price.toString()).toFixed(2)}
-                      </TableCell>
-                      <TableCell>{item.quantity_ordered}</TableCell>
-                      <TableCell>
-                        {item.orders?.order_number || 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        {item.customers 
-                          ? `${item.customers.first_name} ${item.customers.last_name}`
-                          : 'N/A'
-                        }
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {item.notes || '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPricingHistory(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-green-500 text-white rounded-lg">
+                <Images className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Mockup Gallery</div>
+                <div className="text-xl font-bold text-green-700">Visual Library</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-purple-500 text-white rounded-lg">
+                <Upload className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Upload Mockups</div>
+                <div className="text-xl font-bold text-purple-700">Add Content</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-orange-500 text-white rounded-lg">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Order Analytics</div>
+                <div className="text-xl font-bold text-orange-700">Performance Data</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
+          <TabsTrigger value="historical" className="flex items-center space-x-2">
+            <BookOpen className="h-4 w-4" />
+            <span>Historical Products</span>
+          </TabsTrigger>
+          
+          <TabsTrigger value="mockups" className="flex items-center space-x-2">
+            <Images className="h-4 w-4" />
+            <span>Mockup Gallery</span>
+          </TabsTrigger>
+          
+          <TabsTrigger value="upload" className="flex items-center space-x-2">
+            <Upload className="h-4 w-4" />
+            <span>Upload Mockups</span>
+          </TabsTrigger>
+          
+          <TabsTrigger value="orders" className="flex items-center space-x-2">
+            <ShoppingCart className="h-4 w-4" />
+            <span>Order History</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Historical Products Tab */}
+        <TabsContent value="historical" className="space-y-6">
+          <HistoricalProductsView 
+            onProductSelect={handleProductSelect}
+            className="min-h-[600px]"
+          />
+        </TabsContent>
+
+        {/* Mockup Gallery Tab */}
+        <TabsContent value="mockups" className="space-y-6">
+          {selectedProduct ? (
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">Viewing mockups for: {selectedProduct.name}</h3>
+                    <p className="text-sm text-gray-600">SKU: {selectedProduct.sku} | Category: {selectedProduct.category}</p>
+                  </div>
+                  <Badge variant="secondary">Product Selected</Badge>
+                </div>
+              </div>
+              
+              <MockupGallery 
+                productId={selectedProduct.id}
+                className="min-h-[600px]"
+              />
+            </div>
+          ) : (
+            <MockupGallery className="min-h-[600px]" />
+          )}
+        </TabsContent>
+
+        {/* Upload Mockups Tab */}
+        <TabsContent value="upload" className="space-y-6">
+          {selectedProduct ? (
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">Upload mockups for: {selectedProduct.name}</h3>
+                    <p className="text-sm text-gray-600">SKU: {selectedProduct.sku} | Category: {selectedProduct.category}</p>
+                  </div>
+                  <Badge variant="secondary">Ready for Upload</Badge>
+                </div>
+              </div>
+
+              <ProductMockupUploader 
+                productId={selectedProduct.id}
+                onUploadSuccess={handleMockupUploadSuccess}
+                maxFiles={10}
+                className="min-h-[500px]"
+              />
+            </div>
+          ) : (
+            <Card className="p-12 text-center">
+              <div className="space-y-4">
+                <Upload className="h-16 w-16 text-gray-400 mx-auto" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Select a Product First</h3>
+                  <p className="text-gray-500">
+                    Choose a product from the Historical Products tab to upload mockups
+                  </p>
+                </div>
+                <div className="pt-4">
+                  <button
+                    onClick={() => setActiveTab('historical')}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Browse Products
+                  </button>
+                </div>
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Order History Tab */}
+        <TabsContent value="orders" className="space-y-6">
+          {selectedProduct ? (
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-4 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">Order history for: {selectedProduct.name}</h3>
+                    <p className="text-sm text-gray-600">SKU: {selectedProduct.sku} | Category: {selectedProduct.category}</p>
+                  </div>
+                  <Badge variant="secondary">Analytics Available</Badge>
+                </div>
+              </div>
+
+              <ProductOrderHistory 
+                productId={selectedProduct.id}
+                className="min-h-[600px]"
+              />
+            </div>
+          ) : (
+            <Card className="p-12 text-center">
+              <div className="space-y-4">
+                <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Select a Product First</h3>
+                  <p className="text-gray-500">
+                    Choose a product from the Historical Products tab to view order analytics
+                  </p>
+                </div>
+                <div className="pt-4">
+                  <button
+                    onClick={() => setActiveTab('historical')}
+                    className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Browse Products
+                  </button>
+                </div>
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

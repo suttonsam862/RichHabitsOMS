@@ -1,223 +1,197 @@
 /**
- * FallbackImage Component
- * Displays default avatars or placeholders when images fail to load
+ * FALLBACK IMAGE COMPONENT
+ * Image component with fallback and error handling
  */
 
-import React, { useState } from 'react';
-import { User, Building2, Package, Image as ImageIcon, Camera } from 'lucide-react';
+import React, { useState, ImgHTMLAttributes } from 'react';
+import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export interface FallbackImageProps {
-  src?: string | null;
+interface ProductImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+  src: string;
   alt: string;
-  className?: string;
-  fallbackType?: 'user' | 'company' | 'product' | 'generic' | 'photo';
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  shape?: 'square' | 'circle';
-  showInitials?: boolean;
-  initials?: string;
+  fallbackSrc?: string;
+  showPlaceholder?: boolean;
 }
 
-const sizeClasses = {
-  sm: 'w-8 h-8',
-  md: 'w-16 h-16',
-  lg: 'w-20 h-20',
-  xl: 'w-32 h-32'
-};
-
-const iconSizes = {
-  sm: 'w-3 h-3',
-  md: 'w-6 h-6',
-  lg: 'w-8 h-8',
-  xl: 'w-12 h-12'
-};
-
-const textSizes = {
-  sm: 'text-xs',
-  md: 'text-sm',
-  lg: 'text-base',
-  xl: 'text-lg'
-};
-
-export function FallbackImage({
-  src,
-  alt,
+export function ProductImage({ 
+  src, 
+  alt, 
+  fallbackSrc,
+  showPlaceholder = true,
   className,
-  fallbackType = 'generic',
-  size = 'md',
-  shape = 'square',
-  showInitials = false,
-  initials
-}: FallbackImageProps) {
-  const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(!!src);
+  ...props 
+}: ProductImageProps) {
+  const [imageError, setImageError] = useState(false);
+  const [fallbackError, setFallbackError] = useState(false);
 
-  const handleImageLoad = () => {
-    setIsLoading(false);
-    setHasError(false);
-  };
-
-  const handleImageError = () => {
-    setIsLoading(false);
-    setHasError(true);
-  };
-
-  const getFallbackIcon = () => {
-    const iconClass = iconSizes[size];
-    
-    switch (fallbackType) {
-      case 'user':
-        return <User className={cn(iconClass, 'text-gray-400')} />;
-      case 'company':
-        return <Building2 className={cn(iconClass, 'text-gray-400')} />;
-      case 'product':
-        return <Package className={cn(iconClass, 'text-gray-400')} />;
-      case 'photo':
-        return <Camera className={cn(iconClass, 'text-gray-400')} />;
-      default:
-        return <ImageIcon className={cn(iconClass, 'text-gray-400')} />;
+  const handleError = () => {
+    if (!fallbackError && fallbackSrc) {
+      setImageError(true);
+    } else {
+      setImageError(true);
+      setFallbackError(true);
     }
   };
 
-  const baseClasses = cn(
-    sizeClasses[size],
-    shape === 'circle' ? 'rounded-full' : 'rounded-lg',
-    'flex items-center justify-center border border-gray-200 bg-gray-50',
-    className
-  );
+  const handleFallbackError = () => {
+    setFallbackError(true);
+  };
 
-  // Show fallback if no src, has error, or should show initials
-  const shouldShowFallback = !src || hasError || (showInitials && initials);
-
-  if (shouldShowFallback) {
-    return (
-      <div className={baseClasses}>
-        {showInitials && initials ? (
-          <span className={cn('font-medium text-gray-600', textSizes[size])}>
-            {initials.toUpperCase()}
-          </span>
-        ) : (
-          getFallbackIcon()
+  // Show placeholder if image failed to load and no fallback or fallback failed
+  if ((imageError && !fallbackSrc) || (imageError && fallbackError)) {
+    return showPlaceholder ? (
+      <div 
+        className={cn(
+          "flex items-center justify-center bg-gray-100 text-gray-400",
+          className
         )}
+        {...props}
+      >
+        <Package className="h-8 w-8" />
+      </div>
+    ) : null;
+  }
+
+  // Show fallback image if primary image failed but fallback is available
+  if (imageError && fallbackSrc && !fallbackError) {
+    return (
+      <img
+        src={fallbackSrc}
+        alt={alt}
+        className={className}
+        onError={handleFallbackError}
+        {...props}
+      />
+    );
+  }
+
+  // Show primary image
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={handleError}
+      {...props}
+    />
+  );
+}
+
+// UserAvatar component for user profile images
+interface UserAvatarProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+  src: string;
+  alt: string;
+  size?: 'sm' | 'md' | 'lg';
+  fallbackSrc?: string;
+}
+
+export function UserAvatar({ 
+  src, 
+  alt, 
+  size = 'md',
+  fallbackSrc,
+  className,
+  ...props 
+}: UserAvatarProps) {
+  const [imageError, setImageError] = useState(false);
+  
+  const sizeClasses = {
+    sm: 'w-8 h-8',
+    md: 'w-12 h-12',
+    lg: 'w-16 h-16'
+  };
+
+  const handleError = () => {
+    setImageError(true);
+  };
+
+  if (imageError && !fallbackSrc) {
+    return (
+      <div 
+        className={cn(
+          "flex items-center justify-center bg-gray-200 text-gray-500 rounded-full",
+          sizeClasses[size],
+          className
+        )}
+        {...props}
+      >
+        <span className="text-sm font-medium">
+          {alt.charAt(0).toUpperCase()}
+        </span>
       </div>
     );
   }
 
   return (
-    <div className={cn('relative', sizeClasses[size])}>
-      {isLoading && (
-        <div className={cn(baseClasses, 'absolute inset-0 animate-pulse')}>
-          {getFallbackIcon()}
-        </div>
+    <img
+      src={imageError && fallbackSrc ? fallbackSrc : src}
+      alt={alt}
+      className={cn(
+        "rounded-full object-cover",
+        sizeClasses[size],
+        className
       )}
-      <img
-        src={src}
-        alt={alt}
+      onError={handleError}
+      {...props}
+    />
+  );
+}
+
+// CompanyLogo component for company/organization images
+interface CompanyLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+  src: string;
+  alt: string;
+  size?: 'sm' | 'md' | 'lg';
+  fallbackSrc?: string;
+}
+
+export function CompanyLogo({ 
+  src, 
+  alt, 
+  size = 'md',
+  fallbackSrc,
+  className,
+  ...props 
+}: CompanyLogoProps) {
+  const [imageError, setImageError] = useState(false);
+  
+  const sizeClasses = {
+    sm: 'w-8 h-8',
+    md: 'w-12 h-12',
+    lg: 'w-16 h-16'
+  };
+
+  const handleError = () => {
+    setImageError(true);
+  };
+
+  if (imageError && !fallbackSrc) {
+    return (
+      <div 
         className={cn(
+          "flex items-center justify-center bg-gray-100 text-gray-400 rounded-lg",
           sizeClasses[size],
-          shape === 'circle' ? 'rounded-full' : 'rounded-lg',
-          'object-cover border border-gray-200',
-          isLoading ? 'opacity-0' : 'opacity-100',
           className
         )}
-        onLoad={handleImageLoad}
-        onError={handleImageError}
-      />
-    </div>
-  );
-}
+        {...props}
+      >
+        <Package className="h-4 w-4" />
+      </div>
+    );
+  }
 
-/**
- * Utility function to generate initials from name
- */
-export function getInitials(name?: string): string {
-  if (!name) return '';
-  
-  return name
-    .split(' ')
-    .map(part => part.charAt(0))
-    .join('')
-    .substring(0, 2);
-}
-
-/**
- * Avatar component specifically for user profiles
- */
-export function UserAvatar({
-  src,
-  name,
-  className,
-  size = 'md'
-}: {
-  src?: string | null;
-  name?: string;
-  className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-}) {
-  const initials = getInitials(name);
-  
   return (
-    <FallbackImage
-      src={src}
-      alt={name || 'User avatar'}
-      className={className}
-      fallbackType="user"
-      size={size}
-      shape="circle"
-      showInitials={!!initials}
-      initials={initials}
-    />
-  );
-}
-
-/**
- * Company logo component
- */
-export function CompanyLogo({
-  src,
-  name,
-  className,
-  size = 'md'
-}: {
-  src?: string | null;
-  name?: string;
-  className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-}) {
-  return (
-    <FallbackImage
-      src={src}
-      alt={name ? `${name} logo` : 'Company logo'}
-      className={className}
-      fallbackType="company"
-      size={size}
-      shape="square"
-    />
-  );
-}
-
-/**
- * Product image component
- */
-export function ProductImage({
-  src,
-  name,
-  className,
-  size = 'md'
-}: {
-  src?: string | null;
-  name?: string;
-  className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-}) {
-  return (
-    <FallbackImage
-      src={src}
-      alt={name ? `${name} image` : 'Product image'}
-      className={className}
-      fallbackType="product"
-      size={size}
-      shape="square"
+    <img
+      src={imageError && fallbackSrc ? fallbackSrc : src}
+      alt={alt}
+      className={cn(
+        "rounded-lg object-cover",
+        sizeClasses[size],
+        className
+      )}
+      onError={handleError}
+      {...props}
     />
   );
 }
