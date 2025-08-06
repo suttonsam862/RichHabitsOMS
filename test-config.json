@@ -1,0 +1,58 @@
+{
+  "productLibraryTests": {
+    "unit": {
+      "command": "jest",
+      "pattern": "__tests__/unit",
+      "description": "Unit tests for ProductLibrary components and hooks"
+    },
+    "api": {
+      "command": "jest",
+      "pattern": "__tests__/.*API.*",
+      "description": "API endpoint tests for ProductLibrary backend"
+    },
+    "e2e": {
+      "command": "playwright test",
+      "pattern": "tests/productLibrary.spec.ts",
+      "description": "End-to-end tests for ProductLibrary user flows"
+    },
+    "performance": {
+      "command": "k6 run",
+      "pattern": "tests/performance/productLibrary.js",
+      "description": "Performance and load tests for ProductLibrary"
+    }
+  },
+  "testDataIds": {
+    "historical-products-tab": "Tab navigation for historical products view",
+    "mockups-tab": "Tab navigation for mockup gallery",
+    "upload-tab": "Tab navigation for mockup upload",
+    "orders-tab": "Tab navigation for order history",
+    "product-card": "Individual product cards in grid view",
+    "product-search": "Search input for filtering products",
+    "category-filter": "Category dropdown filter",
+    "mockup-gallery": "Main mockup gallery container",
+    "upload-dialog": "Mockup upload modal dialog",
+    "analytics-dashboard": "Order analytics dashboard"
+  },
+  "featureFlags": {
+    "ENABLE_PRODUCT_LIBRARY": {
+      "description": "Master toggle for ProductLibrary features",
+      "defaultValue": false,
+      "rolloutStrategy": "gradual"
+    },
+    "ENABLE_HISTORICAL_PRODUCTS_VIEW": {
+      "description": "Enable historical products browsing with analytics",
+      "defaultValue": false,
+      "rolloutStrategy": "admin-first"
+    },
+    "ENABLE_ORDER_ANALYTICS_DASHBOARD": {
+      "description": "Enable complex order analytics and trends",
+      "defaultValue": false,
+      "rolloutStrategy": "performance-monitored"
+    },
+    "ENABLE_ADVANCED_PRODUCT_FILTERING": {
+      "description": "Enable advanced filtering with complex queries",
+      "defaultValue": false,
+      "rolloutStrategy": "database-load-monitored"
+    }
+  }
+}

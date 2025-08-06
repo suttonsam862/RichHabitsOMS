@@ -138,22 +138,22 @@ export default function ProductLibrary() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
-          <TabsTrigger value="historical" className="flex items-center space-x-2">
+          <TabsTrigger value="historical" className="flex items-center space-x-2" data-testid="historical-products-tab">
             <BookOpen className="h-4 w-4" />
             <span>Historical Products</span>
           </TabsTrigger>
           
-          <TabsTrigger value="mockups" className="flex items-center space-x-2">
+          <TabsTrigger value="mockups" className="flex items-center space-x-2" data-testid="mockups-tab">
             <Images className="h-4 w-4" />
             <span>Mockup Gallery</span>
           </TabsTrigger>
           
-          <TabsTrigger value="upload" className="flex items-center space-x-2">
+          <TabsTrigger value="upload" className="flex items-center space-x-2" data-testid="upload-tab">
             <Upload className="h-4 w-4" />
             <span>Upload Mockups</span>
           </TabsTrigger>
           
-          <TabsTrigger value="orders" className="flex items-center space-x-2">
+          <TabsTrigger value="orders" className="flex items-center space-x-2" data-testid="orders-tab">
             <ShoppingCart className="h-4 w-4" />
             <span>Order History</span>
           </TabsTrigger>
