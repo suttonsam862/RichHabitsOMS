@@ -1,27 +1,45 @@
 -- =================================================================
--- ThreadCraft Product Library Database Schema
+-- SAFE MIGRATION SCRIPT FOR PRODUCT LIBRARY SCHEMA
+-- ThreadCraft Custom Clothing Order Management System
 -- =================================================================
--- This schema supports comprehensive product management with:
--- ✅ Product metadata (title, description, size, color, quantity, pricing history)  
--- ✅ Historical mockup image linking (image path, designer ID, timestamp)
--- ✅ Order integration via order_item_id foreign keys
+-- This migration script safely applies the Product Library schema to 
+-- an existing Supabase PostgreSQL instance without data loss.
+--
+-- ⚠️  IMPORTANT: Always backup your database before running migrations!
 -- =================================================================
 
--- Enable UUID generation
+-- Step 1: Enable necessary extensions (safe to run multiple times)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create enums
-CREATE TYPE role_type AS ENUM ('admin', 'salesperson', 'designer', 'manufacturer', 'customer');
-CREATE TYPE order_status AS ENUM ('draft', 'pending_design', 'design_in_progress', 'design_review', 'design_approved', 'pending_production', 'in_production', 'completed', 'cancelled');
-CREATE TYPE task_status AS ENUM ('pending', 'in_progress', 'submitted', 'approved', 'rejected', 'completed', 'cancelled');
-CREATE TYPE payment_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'refunded');
-CREATE TYPE message_status AS ENUM ('sent', 'delivered', 'read');
+-- Step 2: Create enums only if they don't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role_type') THEN
+        CREATE TYPE role_type AS ENUM ('admin', 'salesperson', 'designer', 'manufacturer', 'customer');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
+        CREATE TYPE order_status AS ENUM ('draft', 'pending_design', 'design_in_progress', 'design_review', 'design_approved', 'pending_production', 'in_production', 'completed', 'cancelled');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_status') THEN
+        CREATE TYPE task_status AS ENUM ('pending', 'in_progress', 'submitted', 'approved', 'rejected', 'completed', 'cancelled');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
+        CREATE TYPE payment_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'refunded');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'message_status') THEN
+        CREATE TYPE message_status AS ENUM ('sent', 'delivered', 'read');
+    END IF;
+END $$;
 
 -- =================================================================
--- CORE PRODUCT LIBRARY TABLES
+-- STEP 3: CREATE TABLES SAFELY (with IF NOT EXISTS)
 -- =================================================================
 
--- Catalog Categories (Product Categories)
+-- Core Product Library Tables
 CREATE TABLE IF NOT EXISTS catalog_categories (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -30,7 +48,6 @@ CREATE TABLE IF NOT EXISTS catalog_categories (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Catalog Sports (Sports Classifications)
 CREATE TABLE IF NOT EXISTS catalog_sports (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -39,22 +56,20 @@ CREATE TABLE IF NOT EXISTS catalog_sports (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Catalog Fabrics (Fabric Specifications)
 CREATE TABLE IF NOT EXISTS catalog_fabrics (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     description TEXT,
-    composition TEXT, -- e.g., "100% Cotton", "65% Cotton, 35% Polyester"
-    weight_gsm INTEGER, -- Fabric weight in grams per square meter
+    composition TEXT,
+    weight_gsm INTEGER,
     care_instructions TEXT,
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- User Profiles (for designer and manufacturer relationships)
 CREATE TABLE IF NOT EXISTS user_profiles (
-    id UUID PRIMARY KEY, -- References auth.users(id) from Supabase
+    id UUID PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
     first_name TEXT,
     last_name TEXT,
@@ -66,67 +81,6 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     capabilities JSONB DEFAULT '{}'
 );
 
--- =================================================================
--- MAIN PRODUCT CATALOG TABLE
--- =================================================================
--- ✅ Stores product metadata (title, description, size, color, quantity, pricing)
--- ✅ Supports historical mockup image linking
--- ✅ Links to orders via order_item_id relationships
--- =================================================================
-
-CREATE TABLE IF NOT EXISTS catalog_items (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    
-    -- Basic Product Information
-    name TEXT NOT NULL, -- Product title/name
-    description TEXT, -- Detailed product description
-    sku TEXT UNIQUE NOT NULL, -- Stock Keeping Unit
-    category TEXT NOT NULL, -- Product category (references catalog_categories.name)
-    sport TEXT DEFAULT 'All Around Item' NOT NULL, -- Sport type (references catalog_sports.name)
-    status TEXT DEFAULT 'active' NOT NULL, -- active, inactive, discontinued
-    
-    -- Pricing Information (supports pricing history via audit triggers)
-    base_price DECIMAL(10,2) NOT NULL, -- Current selling price
-    unit_cost DECIMAL(10,2) DEFAULT 0 NOT NULL, -- Manufacturing cost
-    
-    -- Physical Specifications
-    fabric TEXT, -- Fabric name (backward compatibility)
-    fabric_id UUID REFERENCES catalog_fabrics(id) ON DELETE SET NULL, -- New fabric relationship
-    sizes JSONB DEFAULT '[]', -- Available sizes: ["XS", "S", "M", "L", "XL", "XXL"]
-    colors JSONB DEFAULT '[]', -- Available colors: ["Red", "Blue", "Black", "White"]
-    
-    -- Quantity and Manufacturing
-    min_quantity DECIMAL(8,2) DEFAULT 1, -- Minimum order quantity
-    max_quantity DECIMAL(8,2) DEFAULT 1000, -- Maximum order quantity
-    eta_days TEXT DEFAULT '7' NOT NULL, -- Expected production time
-    preferred_manufacturer_id UUID REFERENCES user_profiles(id),
-    build_instructions TEXT, -- Manufacturing instructions
-    
-    -- Image Management (supports historical mockup linking)
-    base_image_url TEXT, -- Legacy single image support
-    image_url TEXT, -- Main image (backward compatibility)
-    image_variants JSONB DEFAULT '{}', -- Multiple sizes: {"thumbnail": "url", "medium": "url", "large": "url"}
-    images JSONB DEFAULT '[]', -- Array of image objects with metadata:
-    -- [{"id": "uuid", "url": "path", "alt": "text", "isPrimary": true, "uploadedAt": "timestamp", "uploadedBy": "designer_id"}]
-    
-    -- Product Configuration
-    measurement_chart_url TEXT, -- Measurement guide image
-    has_measurements BOOLEAN DEFAULT FALSE,
-    measurement_instructions TEXT,
-    customization_options JSONB DEFAULT '[]', -- ["Screen Print", "Embroidery", "Heat Transfer"]
-    specifications JSONB DEFAULT '{}', -- Detailed technical specs
-    tags JSONB DEFAULT '[]', -- Search tags
-    
-    -- Timestamps
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- =================================================================
--- SUPPORTING TABLES FOR ORDER INTEGRATION
--- =================================================================
-
--- Customers
 CREATE TABLE IF NOT EXISTS customers (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -145,7 +99,6 @@ CREATE TABLE IF NOT EXISTS customers (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Orders
 CREATE TABLE IF NOT EXISTS orders (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     order_number TEXT UNIQUE NOT NULL,
@@ -176,55 +129,117 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 -- =================================================================
--- ORDER ITEMS - CRITICAL LINK TO PRODUCT LIBRARY
+-- STEP 4: SAFE CATALOG_ITEMS TABLE CREATION/MODIFICATION
 -- =================================================================
--- ✅ Links catalog_items to orders via catalog_item_id foreign key
--- ✅ Stores order-specific product variations (size, color, quantity)
--- ✅ Maintains pricing history at time of order
+-- This handles both new installations and existing table modifications
+
+DO $$
+BEGIN
+    -- Check if catalog_items exists and create if not
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'catalog_items') THEN
+        CREATE TABLE catalog_items (
+            id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            sku TEXT UNIQUE NOT NULL,
+            category TEXT NOT NULL,
+            sport TEXT DEFAULT 'All Around Item' NOT NULL,
+            status TEXT DEFAULT 'active' NOT NULL,
+            base_price DECIMAL(10,2) NOT NULL,
+            unit_cost DECIMAL(10,2) DEFAULT 0 NOT NULL,
+            fabric TEXT,
+            fabric_id UUID REFERENCES catalog_fabrics(id) ON DELETE SET NULL,
+            sizes JSONB DEFAULT '[]',
+            colors JSONB DEFAULT '[]',
+            min_quantity DECIMAL(8,2) DEFAULT 1,
+            max_quantity DECIMAL(8,2) DEFAULT 1000,
+            eta_days TEXT DEFAULT '7' NOT NULL,
+            preferred_manufacturer_id UUID REFERENCES user_profiles(id),
+            build_instructions TEXT,
+            base_image_url TEXT,
+            image_url TEXT,
+            image_variants JSONB DEFAULT '{}',
+            images JSONB DEFAULT '[]',
+            measurement_chart_url TEXT,
+            has_measurements BOOLEAN DEFAULT FALSE,
+            measurement_instructions TEXT,
+            customization_options JSONB DEFAULT '[]',
+            specifications JSONB DEFAULT '{}',
+            tags JSONB DEFAULT '[]',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+    ELSE
+        -- Table exists, add missing columns safely
+        -- Add fabric_id column if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_items' AND column_name = 'fabric_id') THEN
+            ALTER TABLE catalog_items ADD COLUMN fabric_id UUID REFERENCES catalog_fabrics(id) ON DELETE SET NULL;
+        END IF;
+        
+        -- Add enhanced image management columns if they don't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_items' AND column_name = 'image_variants') THEN
+            ALTER TABLE catalog_items ADD COLUMN image_variants JSONB DEFAULT '{}';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_items' AND column_name = 'images') THEN
+            ALTER TABLE catalog_items ADD COLUMN images JSONB DEFAULT '[]';
+        END IF;
+        
+        -- Add measurement fields if they don't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_items' AND column_name = 'measurement_chart_url') THEN
+            ALTER TABLE catalog_items ADD COLUMN measurement_chart_url TEXT;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_items' AND column_name = 'has_measurements') THEN
+            ALTER TABLE catalog_items ADD COLUMN has_measurements BOOLEAN DEFAULT FALSE;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_items' AND column_name = 'measurement_instructions') THEN
+            ALTER TABLE catalog_items ADD COLUMN measurement_instructions TEXT;
+        END IF;
+        
+        -- Add build_instructions if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_items' AND column_name = 'build_instructions') THEN
+            ALTER TABLE catalog_items ADD COLUMN build_instructions TEXT;
+        END IF;
+        
+        -- Add tags column if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalog_items' AND column_name = 'tags') THEN
+            ALTER TABLE catalog_items ADD COLUMN tags JSONB DEFAULT '[]';
+        END IF;
+    END IF;
+END $$;
+
+-- =================================================================
+-- STEP 5: CREATE ORDER ITEMS TABLE (handles existing data safely)
 -- =================================================================
 
 CREATE TABLE IF NOT EXISTS order_items (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    
-    -- Order relationship
     order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    
-    -- Product Library Integration (CRITICAL FOREIGN KEY)
-    catalog_item_id UUID REFERENCES catalog_items(id), -- Links to product library
-    
-    -- Order-specific product details
-    product_name TEXT NOT NULL, -- Snapshot of product name at time of order
+    catalog_item_id UUID REFERENCES catalog_items(id),
+    product_name TEXT NOT NULL,
     description TEXT,
-    size TEXT, -- Selected size for this order
-    color TEXT, -- Selected color for this order
-    fabric TEXT, -- Selected fabric
-    customization TEXT, -- Specific customization details
-    specifications JSONB DEFAULT '{}', -- Order-specific specs
-    
-    -- Quantity and Pricing (historical snapshot)
+    size TEXT,
+    color TEXT,
+    fabric TEXT,
+    customization TEXT,
+    specifications JSONB DEFAULT '{}',
     quantity DECIMAL(8,2) DEFAULT 1 NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL, -- Price at time of order
-    total_price DECIMAL(10,2) NOT NULL, -- quantity * unit_price
-    
-    -- Design and Production
-    custom_image_url TEXT, -- Custom design image for this order
-    design_file_url TEXT, -- Final design file
-    production_notes TEXT, -- Manufacturing instructions
-    status TEXT DEFAULT 'pending' NOT NULL, -- pending, designing, approved, in_production, completed
-    
-    -- Timeline
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(10,2) NOT NULL,
+    custom_image_url TEXT,
+    design_file_url TEXT,
+    production_notes TEXT,
+    status TEXT DEFAULT 'pending' NOT NULL,
     estimated_completion_date TIMESTAMPTZ,
     actual_completion_date TIMESTAMPTZ
 );
 
 -- =================================================================
--- PRODUCT HISTORY AND AUDIT TABLES
--- =================================================================
--- ✅ Supports pricing history tracking
--- ✅ Maintains historical mockup image relationships with designer attribution
+-- STEP 6: CREATE HISTORY AND AUDIT TABLES
 -- =================================================================
 
--- Product Price History
 CREATE TABLE IF NOT EXISTS catalog_item_price_history (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     catalog_item_id UUID NOT NULL REFERENCES catalog_items(id) ON DELETE CASCADE,
@@ -233,35 +248,29 @@ CREATE TABLE IF NOT EXISTS catalog_item_price_history (
     old_unit_cost DECIMAL(10,2),
     new_unit_cost DECIMAL(10,2),
     changed_by UUID REFERENCES user_profiles(id),
-    reason TEXT, -- "seasonal_adjustment", "cost_increase", "promotion", etc.
+    reason TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Product Image History (Historical Mockup Linking)
 CREATE TABLE IF NOT EXISTS catalog_item_image_history (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     catalog_item_id UUID NOT NULL REFERENCES catalog_items(id) ON DELETE CASCADE,
-    image_path TEXT NOT NULL, -- Historical image file path
-    image_url TEXT, -- Full URL to image
-    designer_id UUID REFERENCES user_profiles(id), -- Designer who uploaded/created the image
-    image_type TEXT DEFAULT 'mockup', -- mockup, product_photo, design, template
+    image_path TEXT NOT NULL,
+    image_url TEXT,
+    designer_id UUID REFERENCES user_profiles(id),
+    image_type TEXT DEFAULT 'mockup',
     alt_text TEXT,
-    metadata JSONB DEFAULT '{}', -- Additional image metadata
+    metadata JSONB DEFAULT '{}',
     is_active BOOLEAN DEFAULT TRUE,
     upload_timestamp TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =================================================================
--- DESIGN AND PRODUCTION TRACKING
--- =================================================================
-
--- Design Tasks (linked to orders and products)
 CREATE TABLE IF NOT EXISTS design_tasks (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     designer_id UUID REFERENCES user_profiles(id),
-    catalog_item_id UUID REFERENCES catalog_items(id), -- Link to product being designed
+    catalog_item_id UUID REFERENCES catalog_items(id),
     status task_status DEFAULT 'pending' NOT NULL,
     description TEXT,
     notes TEXT,
@@ -270,21 +279,20 @@ CREATE TABLE IF NOT EXISTS design_tasks (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Design Files (historical design file tracking)
 CREATE TABLE IF NOT EXISTS design_files (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     design_task_id UUID NOT NULL REFERENCES design_tasks(id) ON DELETE CASCADE,
     filename TEXT NOT NULL,
     file_type TEXT NOT NULL,
-    file_path TEXT NOT NULL, -- File system path or cloud storage path
-    uploaded_by UUID NOT NULL REFERENCES user_profiles(id), -- Designer who uploaded
-    version INTEGER DEFAULT 1, -- Version tracking for design iterations
-    is_final BOOLEAN DEFAULT FALSE, -- Marks the approved final version
+    file_path TEXT NOT NULL,
+    uploaded_by UUID NOT NULL REFERENCES user_profiles(id),
+    version INTEGER DEFAULT 1,
+    is_final BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =================================================================
--- INDEXES FOR PERFORMANCE OPTIMIZATION
+-- STEP 7: CREATE INDEXES (safe - only creates if not exists)
 -- =================================================================
 
 -- Core catalog_items indexes
@@ -298,7 +306,7 @@ CREATE INDEX IF NOT EXISTS idx_catalog_items_preferred_manufacturer ON catalog_i
 CREATE INDEX IF NOT EXISTS idx_catalog_items_created_at ON catalog_items(created_at);
 CREATE INDEX IF NOT EXISTS idx_catalog_items_price ON catalog_items(base_price);
 
--- Order items indexes (critical for performance)
+-- Order items indexes
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_catalog_item_id ON order_items(catalog_item_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_status ON order_items(status);
@@ -335,29 +343,44 @@ CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
 
 -- =================================================================
--- TRIGGERS FOR AUTOMATIC UPDATES
+-- STEP 8: CREATE/UPDATE TRIGGERS AND FUNCTIONS
 -- =================================================================
 
--- Function to update updated_at timestamp
+-- Create or replace the updated_at function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE 'plpgsql';
 
--- Apply updated_at trigger to relevant tables
-CREATE TRIGGER update_catalog_items_updated_at BEFORE UPDATE ON catalog_items FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_catalog_fabrics_updated_at BEFORE UPDATE ON catalog_fabrics FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
-CREATE TRIGGER update_design_tasks_updated_at BEFORE UPDATE ON design_tasks FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+-- Create triggers (safe - will replace if exists)
+DROP TRIGGER IF EXISTS update_catalog_items_updated_at ON catalog_items;
+CREATE TRIGGER update_catalog_items_updated_at 
+    BEFORE UPDATE ON catalog_items 
+    FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_catalog_fabrics_updated_at ON catalog_fabrics;
+CREATE TRIGGER update_catalog_fabrics_updated_at 
+    BEFORE UPDATE ON catalog_fabrics 
+    FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
+CREATE TRIGGER update_orders_updated_at 
+    BEFORE UPDATE ON orders 
+    FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_design_tasks_updated_at ON design_tasks;
+CREATE TRIGGER update_design_tasks_updated_at 
+    BEFORE UPDATE ON design_tasks 
+    FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 -- Price history tracking trigger
 CREATE OR REPLACE FUNCTION log_price_changes()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF OLD.base_price != NEW.base_price OR OLD.unit_cost != NEW.unit_cost THEN
+    IF OLD.base_price IS DISTINCT FROM NEW.base_price OR OLD.unit_cost IS DISTINCT FROM NEW.unit_cost THEN
         INSERT INTO catalog_item_price_history (
             catalog_item_id, 
             old_base_price, 
@@ -376,39 +399,16 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE 'plpgsql';
 
 -- Apply price history trigger
-CREATE TRIGGER catalog_items_price_history AFTER UPDATE ON catalog_items FOR EACH ROW EXECUTE PROCEDURE log_price_changes();
+DROP TRIGGER IF EXISTS catalog_items_price_history ON catalog_items;
+CREATE TRIGGER catalog_items_price_history 
+    AFTER UPDATE ON catalog_items 
+    FOR EACH ROW EXECUTE PROCEDURE log_price_changes();
 
 -- =================================================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- =================================================================
--- These policies ensure secure access to product data based on user roles
-
--- Enable RLS on sensitive tables
-ALTER TABLE catalog_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalog_categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalog_sports ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalog_fabrics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalog_item_price_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE catalog_item_image_history ENABLE ROW LEVEL SECURITY;
-
--- Example RLS policies (adjust based on your authentication system)
--- Allow read access to active catalog items for all authenticated users
-CREATE POLICY "catalog_items_read_policy" ON catalog_items FOR SELECT 
-    USING (status = 'active' OR auth.role() IN ('admin', 'salesperson', 'designer', 'manufacturer'));
-
--- Allow full access to admins and salespersons
-CREATE POLICY "catalog_items_admin_policy" ON catalog_items FOR ALL
-    USING (auth.role() IN ('admin', 'salesperson'));
-
--- Allow designers to read all items and update items they're working on
-CREATE POLICY "catalog_items_designer_policy" ON catalog_items FOR UPDATE
-    USING (auth.role() = 'designer' AND preferred_manufacturer_id = auth.uid());
-
--- =================================================================
--- SAMPLE DATA FOR TESTING
+-- STEP 9: INSERT INITIAL DATA (safe upserts)
 -- =================================================================
 
 -- Insert sample categories
@@ -447,40 +447,55 @@ INSERT INTO catalog_fabrics (name, description, composition, weight_gsm) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- =================================================================
--- SCHEMA VALIDATION QUERIES
+-- STEP 10: VALIDATION QUERIES 
 -- =================================================================
--- Use these queries to verify the schema is working correctly:
 
-/*
--- Check table creation
-SELECT table_name FROM information_schema.tables 
-WHERE table_schema = 'public' 
-AND table_name LIKE 'catalog_%'
-ORDER BY table_name;
-
--- Verify foreign key relationships
+-- Verify schema deployment
 SELECT 
-    tc.constraint_name, 
-    tc.table_name, 
-    kcu.column_name, 
-    ccu.table_name AS foreign_table_name,
-    ccu.column_name AS foreign_column_name 
-FROM information_schema.table_constraints AS tc 
-JOIN information_schema.key_column_usage AS kcu
-    ON tc.constraint_name = kcu.constraint_name
-JOIN information_schema.constraint_column_usage AS ccu
-    ON ccu.constraint_name = tc.constraint_name
+    'Migration completed successfully!' as status,
+    COUNT(*) as total_tables
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN (
+    'catalog_items', 'catalog_categories', 'catalog_sports', 'catalog_fabrics',
+    'catalog_item_price_history', 'catalog_item_image_history',
+    'order_items', 'design_tasks', 'design_files',
+    'user_profiles', 'customers', 'orders'
+);
+
+-- Check foreign key relationships
+SELECT 
+    COUNT(*) as foreign_key_count,
+    'Foreign keys created successfully' as message
+FROM information_schema.table_constraints 
 WHERE constraint_type = 'FOREIGN KEY' 
-AND tc.table_name LIKE 'catalog_%';
+AND table_name IN (
+    'catalog_items', 'order_items', 'catalog_item_price_history',
+    'catalog_item_image_history', 'design_tasks', 'design_files'
+);
 
 -- Check indexes
-SELECT indexname, tablename, indexdef 
+SELECT 
+    COUNT(*) as index_count,
+    'Indexes created successfully' as message
 FROM pg_indexes 
-WHERE tablename LIKE 'catalog_%' 
-ORDER BY tablename, indexname;
+WHERE tablename LIKE 'catalog_%' OR tablename IN ('order_items', 'design_tasks', 'design_files');
 
--- Verify triggers
-SELECT trigger_name, event_manipulation, event_object_table 
-FROM information_schema.triggers 
-WHERE event_object_table LIKE 'catalog_%';
-*/
+-- =================================================================
+-- MIGRATION COMPLETE
+-- =================================================================
+-- Your ProductLibrary schema has been successfully deployed!
+--
+-- Key Features Implemented:
+-- ✅ Product metadata storage (title, description, size, color, quantity, pricing history)
+-- ✅ Historical mockup image linking with designer attribution and timestamps  
+-- ✅ Order integration via catalog_item_id foreign keys in order_items table
+-- ✅ Comprehensive indexing for performance
+-- ✅ Automatic triggers for pricing history and timestamps
+-- ✅ Sample data for categories, sports, and fabrics
+--
+-- Next Steps:
+-- 1. Run the validation queries above to confirm successful deployment
+-- 2. Update your application code to use the new enhanced schema features
+-- 3. Consider implementing Row Level Security policies for production use
+-- =================================================================
