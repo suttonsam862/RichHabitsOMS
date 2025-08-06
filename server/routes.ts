@@ -26,6 +26,9 @@ import customerRoutesRefactored from './routes/api/customerRoutes';
 // import imageRoutesRefactored from './routes/api/imageRoutes'; // Commented out - missing file
 import invitationRoutesRefactored from './routes/api/invitationRoutes';
 
+// Product Library routes
+import productLibraryRoutes from './routes/api/productLibrary';
+
 // Admin routes
 import adminRoutesRefactored from './routes/admin/admin';
 
@@ -106,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all customers first
       const { data: customersData, error: customersError } = await supabaseAdmin.auth.admin.listUsers();
-      
+
       if (customersError) {
         console.error('Error fetching customers:', customersError);
         return res.status(500).json({
@@ -117,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Filter for customers and extract organization data
       const organizations = new Map();
-      
+
       (customersData.users || []).forEach((user: any) => {
         const metadata = user.user_metadata || {};
         if (metadata.role === 'customer') {
@@ -125,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const company = metadata.company || getCompanyFromEmail(user.email);
           const sport = metadata.sport || 'General';
           const orgType = metadata.organizationType || inferOrgType(company);
-          
+
           if (!organizations.has(company)) {
             organizations.set(company, {
               id: company.toLowerCase().replace(/[^a-z0-9]/g, '-'),
@@ -140,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               created_at: user.created_at
             });
           }
-          
+
           // Add this user as a contact
           const org = organizations.get(company);
           org.contacts.push({
@@ -176,28 +179,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper functions for organization processing
   function getCompanyFromEmail(email: string): string {
     if (!email) return 'Individual Customer';
-    
+
     // Extract meaningful company names from common email patterns
     const domain = email.split('@')[1] || '';
     const localPart = email.split('@')[0] || '';
-    
+
     // Known company domains
     if (domain.includes('rich-habits.com')) return 'Rich Habits';
     if (domain.includes('jefcoed.com')) return 'Jefferson County Board of Education';
     if (domain.includes('spellmansdetail.com')) return 'Spellmans Detail';
-    
+
     // For personal emails, try to infer from the local part
     if (domain.includes('gmail.com') || domain.includes('yahoo.com') || domain.includes('hotmail.com')) {
       if (localPart.includes('ironclad')) return 'Ironclad Wrestling';
-      if (localPart.includes('wrestling')) return 'Wrestling Organization'; 
+      if (localPart.includes('wrestling')) return 'Wrestling Organization';
       if (localPart.includes('football')) return 'Football Organization';
       if (localPart.includes('sport')) return 'Sports Organization';
-      
+
       // Use first name as organization for individual customers
       const firstName = localPart.split(/[._]/)[0];
       return `${firstName.charAt(0).toUpperCase() + firstName.slice(1)} Organization`;
     }
-    
+
     // Convert domain to company name
     return domain.split('.')[0]
       .split(/[-_]/)
@@ -243,9 +246,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (error) {
         console.error('Error fetching customers from Supabase Auth:', error);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Failed to retrieve customers: ' + error.message 
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to retrieve customers: ' + error.message
         });
       }
 
@@ -276,9 +279,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({ success: true, customers });
     } catch (err) {
       console.error('Error fetching customers:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Failed to retrieve customers' 
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve customers'
       });
     }
   });
@@ -427,10 +430,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       // Handle different field naming conventions from different forms
-      const { 
+      const {
         email, firstName, lastName, company, phone,
-        emailAddress, first_name, last_name, 
-        address, city, state, zip, country 
+        emailAddress, first_name, last_name,
+        address, city, state, zip, country
       } = req.body;
 
       // Determine if we should send an invitation email
@@ -465,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate a strong random password (will be reset by user during invitation flow)
-      const randomPassword = Math.random().toString(36).substring(2, 10) + 
+      const randomPassword = Math.random().toString(36).substring(2, 10) +
                            Math.random().toString(36).substring(2, 15);
 
       console.log('Creating customer in Supabase Auth:', customerEmail);
@@ -559,7 +562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Store the setup token in user metadata for verification
           await supabase.auth.admin.updateUserById((data.user as any).id, {
-            user_metadata: { 
+            user_metadata: {
               setup_token: setupToken,
               setup_expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
             }
@@ -604,12 +607,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return success with customer data and accurate email status
       return res.status(201).json({
         success: true,
-        message: inviteSent 
-          ? 'Customer created and setup email sent successfully!' 
-          : shouldSendInvite 
+        message: inviteSent
+          ? 'Customer created and setup email sent successfully!'
+          : shouldSendInvite
             ? 'Customer created but setup email failed to send (SendGrid API key needed)'
             : 'Customer created successfully',
-        customer: (createdProfile && Array.isArray(createdProfile) && createdProfile.length > 0) ? createdProfile[0] : { 
+        customer: (createdProfile && Array.isArray(createdProfile) && createdProfile.length > 0) ? createdProfile[0] : {
           id: (data.user as any).id,
           email: customerEmail,
           first_name: customerFirstName,
@@ -668,10 +671,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return success with customer data and appropriate invite information
       return res.status(201).json({
         success: true,
-        message: shouldSendInvite 
-          ? 'Customer created and invite will be sent' 
+        message: shouldSendInvite
+          ? 'Customer created and invite will be sent'
           : 'Customer created successfully',
-        customer: (createdProfile && Array.isArray(createdProfile) && createdProfile.length > 0) ? createdProfile[0] : { 
+        customer: (createdProfile && Array.isArray(createdProfile) && createdProfile.length > 0) ? createdProfile[0] : {
           id: (data.user as any)?.id || '',
           email: customerEmail,
           first_name: customerFirstName,
@@ -799,9 +802,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate required fields
       if (!email || !username || !role) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Missing required fields: email, username, and role are required' 
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: email, username, and role are required'
         });
       }
 
@@ -831,9 +834,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .single();
 
       if (existingUser) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'User with this email already exists' 
+        return res.status(400).json({
+          success: false,
+          message: 'User with this email already exists'
         });
       }
 
@@ -863,9 +866,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (authError) {
         console.error('Error creating user in Supabase Auth:', authError);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Failed to create user' 
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create user'
         });
       }
 
@@ -893,9 +896,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error creating user profile:', profileError);
         // Try to clean up the auth user if profile creation failed
         await supabase.auth.admin.deleteUser(authUser.user.id);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Failed to create user profile' 
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create user profile'
         });
       }
 
@@ -965,16 +968,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      return res.status(201).json({ 
-        success: true, 
+      return res.status(201).json({
+        success: true,
         message: shouldSendInvite ? 'User invited successfully' : 'User created successfully',
         user: profile
       });
     } catch (err) {
       console.error('Unexpected error creating user:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'An unexpected error occurred' 
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred'
       });
     }
   });
@@ -1006,9 +1009,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (authError) {
           console.error('Error updating user in Supabase Auth:', authError);
-          return res.status(500).json({ 
-            success: false, 
-            message: 'Failed to update user authentication data' 
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to update user authentication data'
           });
         }
       }
@@ -1022,9 +1025,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (passwordError) {
           console.error('Error updating user password:', passwordError);
-          return res.status(500).json({ 
-            success: false, 
-            message: 'Failed to update user password' 
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to update user password'
           });
         }
       }
@@ -1048,22 +1051,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (profileError) {
         console.error('Error updating user profile:', profileError);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Failed to update user profile' 
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to update user profile'
         });
       }
 
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         message: 'User updated successfully',
         user: profile
       });
     } catch (err) {
       console.error('Unexpected error updating user:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'An unexpected error occurred' 
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred'
       });
     }
   });
@@ -1086,9 +1089,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .single();
 
       if (!existingUser) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'User not found' 
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
         });
       }
 
@@ -1097,9 +1100,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (authError) {
         console.error('Error deleting user from Supabase Auth:', authError);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Failed to delete user authentication data' 
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to delete user authentication data'
         });
       }
 
@@ -1111,21 +1114,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (profileError) {
         console.error('Error deleting user profile:', profileError);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Failed to delete user profile' 
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to delete user profile'
         });
       }
 
-      return res.json({ 
-        success: true, 
-        message: 'User deleted successfully' 
+      return res.json({
+        success: true,
+        message: 'User deleted successfully'
       });
     } catch (err) {
       console.error('Unexpected error deleting user:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'An unexpected error occurred' 
+      return res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred'
       });
     }
   });
@@ -1180,8 +1183,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate total revenue
       const totalRevenue = revenueData?.reduce((sum: number, order: any) => {
-        const price = typeof order.total_price === 'string' 
-          ? parseFloat(order.total_price) 
+        const price = typeof order.total_price === 'string'
+          ? parseFloat(order.total_price)
           : order.total_price || 0;
         return sum + price;
       }, 0) || 0;
@@ -1342,8 +1345,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
+    res.json({
+      status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
     });
@@ -1444,7 +1447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark invitation as accepted
       await supabase
         .from('user_invitations')
-        .update({ 
+        .update({
           status: 'accepted',
           accepted_at: new Date().toISOString(),
           user_id: (data.user as any)?.id
@@ -1577,10 +1580,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import and use authentication routes
   const authRoutes = await import('./routes/api/authRoutes');
   app.use('/api/auth', authRoutes.default);
-  
+
   // Mount user management routes
   app.use('/api/user-management', userManagementRoutes);
-  
+
   // Register audit routes for order change tracking
   app.use('/api/audit', auditRoutes);
 
@@ -1594,9 +1597,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (error) {
         console.error('Error fetching customers from Supabase Auth:', error);
-        return res.status(500).json({ 
-          success: false, 
-          message: 'Failed to retrieve customers: ' + error.message 
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to retrieve customers: ' + error.message
         });
       }
 
@@ -1645,9 +1648,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(customers);
     } catch (err: any) {
       console.error('Error fetching customers:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Failed to retrieve customers: ' + (err.message || 'Unknown error') 
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve customers: ' + (err.message || 'Unknown error')
       });
     }
   });
@@ -1663,16 +1666,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (error) {
         console.error('Error fetching customer from Supabase Auth:', error);
-        return res.status(404).json({ 
-          success: false, 
-          message: 'Customer not found' 
+        return res.status(404).json({
+          success: false,
+          message: 'Customer not found'
         });
       }
 
       if (!data.user as any) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'Customer not found' 
+        return res.status(404).json({
+          success: false,
+          message: 'Customer not found'
         });
       }
 
@@ -1681,9 +1684,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if user is a customer
       if (metadata.role !== 'customer') {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Access denied - not a customer account' 
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied - not a customer account'
         });
       }
 
@@ -1881,12 +1884,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product Library Routes - Commented out until functions are imported
-  // app.get('/api/products/library', requireAuth, getProductLibrary);
-  // app.get('/api/products/categories', requireAuth, getProductCategories);
-  // app.post('/api/products/library', requireAuth, requireRole(['admin', 'salesperson']), addProductToLibrary);
-  // app.post('/api/products/library/:productId/copy', requireAuth, requireRole(['admin', 'salesperson']), copyProductToOrder);
-  // app.get('/api/products/library/:productId/pricing-history', requireAuth, getProductPricingHistory);
+  // Product Library Routes
+  app.use('/api/products/library', productLibraryRoutes);
 
   // Direct Account Creation Route - Replaces email invitation system
   app.post('/api/users/create-account', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
@@ -1993,7 +1992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
-    
+
     console.log('Authenticated user:', { id: user.id, email: user.email, role: user.role });
 
     // Check if user has admin privileges
@@ -2372,23 +2371,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use('/api/stats', statsRoutes);
   router.use('/api', manufacturingRoutes);
 
+  // API Routes
+  app.use('/api/auth', authRoutes);
+  app.use('/api/customers', customerRoutes);
+  app.use('/api/orders', orderRoutes);
+  app.use('/api/catalog', catalogRoutes);
+  app.use('/api/products/library', productLibraryRoutes);
 
   // Admin routes (admin auth required)
   router.use('/api/admin', adminRoutesRefactored);
 
   // API 404 handler - only for API routes
   router.use('/api/*', (req, res) => {
-    res.status(404).json({ 
-      success: false, 
-      message: `Route ${req.originalUrl} not found` 
+    res.status(404).json({
+      success: false,
+      message: `Route ${req.originalUrl} not found`
     });
   });
 
   // Error handler
   router.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Route error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Internal server error',
       ...(process.env.NODE_ENV === 'development' && { error: error.message })
     });

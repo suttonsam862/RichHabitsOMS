@@ -1,8 +1,44 @@
+
 /**
- * Product Library System - For salespeople to reference products and pricing
+ * Product Library System - Complete Backend Implementation
+ * Supports historical product tracking, mockups, and pricing data
  */
-import { Request, Response } from 'express';
+import { Request, Response, Router } from 'express';
 import { supabase } from '../../db';
+import { requireAuth, requireRole } from '../auth/auth';
+import multer from 'multer';
+import sharp from 'sharp';
+import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
+
+const router = Router();
+
+// Create Supabase admin client for file uploads
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed') as any, false);
+    }
+  }
+});
 
 // Get all products from library with optional filtering
 export async function getProductLibrary(req: Request, res: Response) {
@@ -12,7 +48,9 @@ export async function getProductLibrary(req: Request, res: Response) {
       search, 
       active_only = 'true',
       limit = '50',
-      offset = '0' 
+      offset = '0',
+      sort_by = 'total_times_ordered',
+      sort_order = 'desc'
     } = req.query;
 
     let query = supabase
@@ -20,14 +58,27 @@ export async function getProductLibrary(req: Request, res: Response) {
       .select(`
         *,
         product_pricing_history(
+          id,
           unit_price,
           quantity_ordered,
           pricing_date,
-          notes
+          notes,
+          orders(order_number, status),
+          customers(first_name, last_name)
+        ),
+        product_mockups(
+          id,
+          image_url,
+          thumbnail_url,
+          medium_url,
+          mockup_type,
+          view_angle,
+          is_primary,
+          display_order,
+          uploaded_by,
+          client_approved
         )
-      `)
-      .order('total_times_ordered', { ascending: false })
-      .order('last_ordered_date', { ascending: false, nullsFirst: false });
+      `);
 
     // Apply filters
     if (active_only === 'true') {
@@ -39,9 +90,22 @@ export async function getProductLibrary(req: Request, res: Response) {
     }
 
     if (search) {
-      query = query.or(`product_name.ilike.%${search}%, description.ilike.%${search}%, tags.cs.{${search}}`);
+      query = query.textSearch('search_vector', search, {
+        type: 'websearch',
+        config: 'english'
+      });
     }
 
+    // Apply sorting
+    const ascending = sort_order === 'asc';
+    query = query.order(sort_by as string, { ascending });
+    
+    // Add secondary sort for consistency
+    if (sort_by !== 'created_at') {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    // Apply pagination
     query = query.range(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string) - 1);
 
     const { data, error } = await query;
@@ -58,6 +122,7 @@ export async function getProductLibrary(req: Request, res: Response) {
     const productsWithStats = data?.map(product => {
       const pricing = Array.isArray(product.product_pricing_history) ? product.product_pricing_history : [];
       const prices = pricing.map((p: any) => parseFloat(p.unit_price));
+      const mockups = Array.isArray(product.product_mockups) ? product.product_mockups : [];
       
       return {
         ...product,
@@ -67,6 +132,12 @@ export async function getProductLibrary(req: Request, res: Response) {
           avg_price: prices.length > 0 ? prices.reduce((a: number, b: number) => a + b, 0) / prices.length : product.base_price,
           total_orders: pricing.length,
           last_price: pricing.length > 0 ? prices[0] : product.base_price
+        },
+        mockup_stats: {
+          total_mockups: mockups.length,
+          approved_mockups: mockups.filter((m: any) => m.client_approved).length,
+          primary_mockup: mockups.find((m: any) => m.is_primary),
+          latest_mockup: mockups.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
         }
       };
     });
@@ -74,7 +145,12 @@ export async function getProductLibrary(req: Request, res: Response) {
     res.json({
       success: true,
       products: productsWithStats,
-      total: data?.length || 0
+      total: data?.length || 0,
+      pagination: {
+        offset: parseInt(offset as string),
+        limit: parseInt(limit as string),
+        has_more: data && data.length === parseInt(limit as string)
+      }
     });
 
   } catch (error) {
@@ -103,12 +179,22 @@ export async function getProductCategories(req: Request, res: Response) {
       });
     }
 
-    // Get unique categories
-    const categories = [...new Set(data?.map(item => item.category))].filter(Boolean);
+    // Get unique categories with counts
+    const categoryCount: Record<string, number> = {};
+    data?.forEach(item => {
+      if (item.category) {
+        categoryCount[item.category] = (categoryCount[item.category] || 0) + 1;
+      }
+    });
+
+    const categories = Object.entries(categoryCount).map(([name, count]) => ({
+      name,
+      count
+    }));
 
     res.json({
       success: true,
-      categories
+      categories: categories.sort((a, b) => b.count - a.count)
     });
 
   } catch (error) {
@@ -145,6 +231,8 @@ export async function addProductToLibrary(req: Request, res: Response) {
       });
     }
 
+    const userEmail = (req as any).user?.email || 'unknown';
+
     const { data, error } = await supabase
       .from('product_library')
       .insert({
@@ -160,7 +248,7 @@ export async function addProductToLibrary(req: Request, res: Response) {
         lead_time_days: lead_time_days ? parseInt(lead_time_days) : null,
         minimum_quantity: parseInt(minimum_quantity),
         tags,
-        created_by: req.user?.email || 'unknown',
+        created_by: userEmail,
         is_active: true
       })
       .select()
@@ -212,7 +300,7 @@ export async function copyProductToOrder(req: Request, res: Response) {
     await supabase
       .from('product_library')
       .update({
-        total_times_ordered: (Number(product.total_times_ordered) || 0) + 1,
+        total_times_ordered: (Number(product.total_times_ordered) || 0) + parseInt(quantity),
         last_ordered_date: new Date().toISOString()
       })
       .eq('id', productId);
@@ -264,7 +352,7 @@ export async function getProductPricingHistory(req: Request, res: Response) {
       .from('product_pricing_history')
       .select(`
         *,
-        orders(order_number, status),
+        orders(order_number, status, created_at),
         customers(first_name, last_name)
       `)
       .eq('product_library_id', productId)
@@ -292,3 +380,243 @@ export async function getProductPricingHistory(req: Request, res: Response) {
     });
   }
 }
+
+// Upload mockup for a product
+export async function uploadProductMockup(req: Request, res: Response) {
+  try {
+    const { productId } = req.params;
+    const { 
+      mockup_type = 'product_render',
+      view_angle = 'front',
+      is_primary = false,
+      designer_notes = ''
+    } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    console.log(`Uploading mockup for product ${productId}`);
+
+    // Verify product exists
+    const { data: product, error: productError } = await supabase
+      .from('product_library')
+      .select('id, product_name')
+      .eq('id', productId)
+      .single();
+
+    if (productError || !product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Process image with Sharp for optimization
+    const optimizedBuffer = await sharp(req.file.buffer)
+      .resize(1200, 1200, { 
+        fit: 'inside', 
+        withoutEnlargement: true 
+      })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    // Create thumbnail
+    const thumbnailBuffer = await sharp(req.file.buffer)
+      .resize(300, 300, { 
+        fit: 'cover' 
+      })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+
+    // Create medium size
+    const mediumBuffer = await sharp(req.file.buffer)
+      .resize(600, 600, { 
+        fit: 'inside', 
+        withoutEnlargement: true 
+      })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    // Generate unique filenames
+    const timestamp = new Date().toISOString().split('T')[0];
+    const randomId = crypto.randomBytes(8).toString('hex');
+    const baseFileName = `${timestamp}_${randomId}`;
+    
+    const paths = {
+      original: `product_library/${productId}/mockups/${baseFileName}_original.jpg`,
+      large: `product_library/${productId}/mockups/${baseFileName}_large.jpg`,
+      medium: `product_library/${productId}/mockups/${baseFileName}_medium.jpg`,
+      thumbnail: `product_library/${productId}/mockups/${baseFileName}_thumb.jpg`
+    };
+
+    // Upload all variants to Supabase Storage
+    const uploads = await Promise.all([
+      supabaseAdmin.storage.from('uploads').upload(paths.original, req.file.buffer, {
+        contentType: req.file.mimetype,
+        cacheControl: '3600'
+      }),
+      supabaseAdmin.storage.from('uploads').upload(paths.large, optimizedBuffer, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600'
+      }),
+      supabaseAdmin.storage.from('uploads').upload(paths.medium, mediumBuffer, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600'
+      }),
+      supabaseAdmin.storage.from('uploads').upload(paths.thumbnail, thumbnailBuffer, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600'
+      })
+    ]);
+
+    // Check for upload errors
+    const uploadError = uploads.find(upload => upload.error);
+    if (uploadError) {
+      console.error('Supabase storage upload error:', uploadError.error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload mockup to storage'
+      });
+    }
+
+    // Get public URLs
+    const urls = {
+      original: supabaseAdmin.storage.from('uploads').getPublicUrl(paths.original).data.publicUrl,
+      image_url: supabaseAdmin.storage.from('uploads').getPublicUrl(paths.large).data.publicUrl,
+      medium_url: supabaseAdmin.storage.from('uploads').getPublicUrl(paths.medium).data.publicUrl,
+      thumbnail_url: supabaseAdmin.storage.from('uploads').getPublicUrl(paths.thumbnail).data.publicUrl
+    };
+
+    // If this is set as primary, unset other primary mockups
+    if (is_primary === true || is_primary === 'true') {
+      await supabase
+        .from('product_mockups')
+        .update({ is_primary: false })
+        .eq('product_library_id', productId);
+    }
+
+    // Get display order
+    const { count } = await supabase
+      .from('product_mockups')
+      .select('*', { count: 'exact', head: true })
+      .eq('product_library_id', productId);
+
+    // Insert mockup record
+    const { data: mockup, error: insertError } = await supabase
+      .from('product_mockups')
+      .insert({
+        product_library_id: productId,
+        image_url: urls.image_url,
+        thumbnail_url: urls.thumbnail_url,
+        medium_url: urls.medium_url,
+        original_url: urls.original,
+        mockup_type,
+        view_angle,
+        is_primary: is_primary === true || is_primary === 'true',
+        display_order: count || 0,
+        uploaded_by: (req as any).user?.email || 'unknown',
+        designer_notes
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Database insert error:', insertError);
+      
+      // Cleanup uploaded files
+      try {
+        await Promise.all([
+          supabaseAdmin.storage.from('uploads').remove([paths.original]),
+          supabaseAdmin.storage.from('uploads').remove([paths.large]),
+          supabaseAdmin.storage.from('uploads').remove([paths.medium]),
+          supabaseAdmin.storage.from('uploads').remove([paths.thumbnail])
+        ]);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup uploaded files:', cleanupError);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to save mockup record'
+      });
+    }
+
+    console.log(`Mockup uploaded successfully for product ${productId}`);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        mockup,
+        message: 'Mockup uploaded successfully'
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Unexpected error uploading mockup:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Unexpected error uploading mockup',
+      error: error.message
+    });
+  }
+}
+
+// Get mockups for a product
+export async function getProductMockups(req: Request, res: Response) {
+  try {
+    const { productId } = req.params;
+    const { mockup_type, approved_only } = req.query;
+
+    let query = supabase
+      .from('product_mockups')
+      .select('*')
+      .eq('product_library_id', productId)
+      .order('display_order')
+      .order('created_at', { ascending: false });
+
+    if (mockup_type) {
+      query = query.eq('mockup_type', mockup_type);
+    }
+
+    if (approved_only === 'true') {
+      query = query.eq('client_approved', true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching mockups:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch mockups'
+      });
+    }
+
+    res.json({
+      success: true,
+      mockups: data
+    });
+
+  } catch (error) {
+    console.error('Error in getProductMockups:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// Routes
+router.get('/', requireAuth, getProductLibrary);
+router.get('/categories', requireAuth, getProductCategories);
+router.post('/', requireAuth, requireRole(['admin', 'salesperson']), addProductToLibrary);
+router.post('/:productId/copy', requireAuth, requireRole(['admin', 'salesperson']), copyProductToOrder);
+router.get('/:productId/pricing-history', requireAuth, getProductPricingHistory);
+router.post('/:productId/mockups', requireAuth, requireRole(['admin', 'salesperson', 'designer']), upload.single('mockup'), uploadProductMockup);
+router.get('/:productId/mockups', requireAuth, getProductMockups);
+
+export default router;
