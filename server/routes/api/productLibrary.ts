@@ -826,6 +826,110 @@ export async function getProductMockups(req: Request, res: Response) {
 // GET /api/products/library - fetch all products with metadata (all authenticated users)
 router.get('/', requireAuth, getProductLibrary);
 
+// POST /api/products/library - create new product (admin and salesperson only)
+router.post('/', requireAuth, requireRole(['admin', 'salesperson']), async (req: Request, res: Response) => {
+  try {
+    const userEmail = (req as any).user?.email || 'unknown';
+    
+    const { data, error } = await supabase
+      .from('catalog_items')
+      .insert({
+        ...req.body,
+        created_by: userEmail,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating catalog item:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create catalog item'
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      data: data
+    });
+  } catch (error) {
+    console.error('Error in create catalog item:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// PATCH /api/products/library/:id - update product (admin and salesperson only)
+router.patch('/:id', requireAuth, requireRole(['admin', 'salesperson']), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('catalog_items')
+      .update({
+        ...req.body,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating catalog item:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update catalog item'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: data
+    });
+  } catch (error) {
+    console.error('Error in update catalog item:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// DELETE /api/products/library/:id - delete product (admin only)
+router.delete('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const { error } = await supabase
+      .from('catalog_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting catalog item:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete catalog item'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Catalog item deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error in delete catalog item:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // GET /api/products/library/categories - get product categories (all authenticated users)
 router.get('/categories', requireAuth, getProductCategories);
 

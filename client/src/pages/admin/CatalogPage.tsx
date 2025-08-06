@@ -897,7 +897,7 @@ export default function CatalogPage() {
           throw new Error('Authentication required. Please log in again.');
         }
 
-        const response = await fetch('/api/catalog', {
+        const response = await fetch('/api/products/library', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -1026,7 +1026,7 @@ export default function CatalogPage() {
 
       // Note: Image upload now handled separately via UnifiedImageUploader
 
-      const response = await fetch('/api/catalog', {
+      const response = await fetch('/api/products/library', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -1114,7 +1114,7 @@ export default function CatalogPage() {
 
       // Note: Image upload now handled separately via UnifiedImageUploader
 
-      const response = await fetch(`/api/catalog/${id}`, {
+      const response = await fetch(`/api/products/library/${id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -1165,7 +1165,7 @@ export default function CatalogPage() {
         throw new Error('Item ID is required for deletion');
       }
 
-      const response = await fetch(`/api/catalog/${id}`, {
+      const response = await fetch(`/api/products/library/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

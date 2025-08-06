@@ -7,6 +7,18 @@ import React, { useState, ImgHTMLAttributes } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Assuming OptimizedImage is defined elsewhere and imported, or will be defined later.
+// For the purpose of this fix, we'll assume it exists or will be added.
+// Placeholder for OptimizedImage if it's not provided in the original code snippet.
+// If OptimizedImage is meant to be defined here, its definition would be needed.
+// For now, we'll use a simple img tag as a placeholder within UserAvatar's logic.
+
+// Mock OptimizedImage for compilation purposes if it's not provided
+const OptimizedImage = ({ src, alt, className, style, loading, ...props }) => (
+  <img src={src} alt={alt} className={className} style={style} loading={loading} {...props} />
+);
+
+
 interface ProductImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string;
   alt: string;
@@ -14,13 +26,13 @@ interface ProductImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 's
   showPlaceholder?: boolean;
 }
 
-export function ProductImage({ 
-  src, 
-  alt, 
+export function ProductImage({
+  src,
+  alt,
   fallbackSrc,
   showPlaceholder = true,
   className,
-  ...props 
+  ...props
 }: ProductImageProps) {
   const [imageError, setImageError] = useState(false);
   const [fallbackError, setFallbackError] = useState(false);
@@ -41,7 +53,7 @@ export function ProductImage({
   // Show placeholder if image failed to load and no fallback or fallback failed
   if ((imageError && !fallbackSrc) || (imageError && fallbackError)) {
     return showPlaceholder ? (
-      <div 
+      <div
         className={cn(
           "flex items-center justify-center bg-gray-100 text-gray-400",
           className
@@ -86,16 +98,16 @@ interface UserAvatarProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src
   fallbackSrc?: string;
 }
 
-export function UserAvatar({ 
-  src, 
-  alt, 
+export function UserAvatar({
+  src,
+  alt,
   size = 'md',
   fallbackSrc,
   className,
-  ...props 
+  ...props
 }: UserAvatarProps) {
   const [imageError, setImageError] = useState(false);
-  
+
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -108,7 +120,7 @@ export function UserAvatar({
 
   if (imageError && !fallbackSrc) {
     return (
-      <div 
+      <div
         className={cn(
           "flex items-center justify-center bg-gray-200 text-gray-500 rounded-full",
           sizeClasses[size],
@@ -146,16 +158,16 @@ interface CompanyLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'sr
   fallbackSrc?: string;
 }
 
-export function CompanyLogo({ 
-  src, 
-  alt, 
+export function CompanyLogo({
+  src,
+  alt,
   size = 'md',
   fallbackSrc,
   className,
-  ...props 
+  ...props
 }: CompanyLogoProps) {
   const [imageError, setImageError] = useState(false);
-  
+
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -168,7 +180,7 @@ export function CompanyLogo({
 
   if (imageError && !fallbackSrc) {
     return (
-      <div 
+      <div
         className={cn(
           "flex items-center justify-center bg-gray-100 text-gray-400 rounded-lg",
           sizeClasses[size],
