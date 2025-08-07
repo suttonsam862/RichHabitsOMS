@@ -161,17 +161,30 @@ async function createCatalogItem(req: Request, res: Response) {
 async function getAllCatalogItems(req: Request, res: Response) {
   try {
     console.log('🔍 Fetching all catalog items from database...');
+    console.log('📡 Request headers:', {
+      authorization: req.headers.authorization ? 'Bearer [REDACTED]' : 'None',
+      'user-agent': req.headers['user-agent'],
+      'content-type': req.headers['content-type']
+    });
 
-    // Add authentication check
+    // Check for authentication - either header or session
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      console.log('❌ No authorization header provided');
+    const hasSession = req.user || req.session?.user;
+
+    if (!authHeader && !hasSession) {
+      console.log('❌ No authorization header or session provided');
       return res.status(401).json({
         success: false,
         message: 'Authentication required',
-        error: 'No authorization header'
+        error: 'No authorization header or valid session'
       });
     }
+
+    console.log('✅ Authentication validated:', {
+      hasAuthHeader: !!authHeader,
+      hasSession: !!hasSession,
+      userId: req.user?.id || req.session?.user?.id || 'unknown'
+    });
 
     const { data: catalogItems, error } = await supabaseAdmin
       .from('catalog_items')

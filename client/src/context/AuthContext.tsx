@@ -143,6 +143,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok && data.success && data.user) {
         setUser(data.user);
         setError(null);
+        // Store token in both localStorage and sessionStorage for redundancy
+        localStorage.setItem('authToken', data.session.token);
+        localStorage.setItem('token', data.session.token);
+        sessionStorage.setItem('authToken', data.session.token);
+        sessionStorage.setItem('token', data.session.token);
+
+        console.log('✅ Auth tokens stored successfully');
         return true;
       } else {
         const errorMsg = data.message || 'Login failed';

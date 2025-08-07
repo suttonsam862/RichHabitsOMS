@@ -920,14 +920,14 @@ export default function CatalogPage() {
         if (!response.ok) {
           const errorText = await response.text();
           console.error('❌ API Error Response:', errorText);
-          
+
           let errorData;
           try {
             errorData = JSON.parse(errorText);
           } catch {
             errorData = { message: errorText || `HTTP ${response.status}` };
           }
-          
+
           throw new Error(errorData.message || `Failed to fetch catalog (${response.status})`);
         }
 
@@ -946,7 +946,7 @@ export default function CatalogPage() {
 
       } catch (error) {
         console.error('❌ Catalog fetch error:', error);
-        
+
         // Provide more specific error information
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
           throw new Error('Network connection failed. Please check your internet connection.');
