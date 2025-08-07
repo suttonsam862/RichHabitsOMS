@@ -1,7 +1,13 @@
+/**
+ * FALLBACK IMAGE COMPONENT
+ * Image component with fallback and error handling
+ */
+
 import { useState, type ImgHTMLAttributes } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Product image component
 interface ProductImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string;
   alt: string;
@@ -20,6 +26,7 @@ export function ProductImage({ src, alt, fallbackSrc, className, ...props }: Pro
     setFallbackError(true);
   };
 
+  // Show package icon if both primary and fallback images failed or no fallback provided
   if (imageError && (!fallbackSrc || fallbackError)) {
     return (
       <div
@@ -34,6 +41,7 @@ export function ProductImage({ src, alt, fallbackSrc, className, ...props }: Pro
     );
   }
 
+  // Show fallback image if primary image failed but fallback is available
   if (imageError && fallbackSrc && !fallbackError) {
     return (
       <img
@@ -46,6 +54,7 @@ export function ProductImage({ src, alt, fallbackSrc, className, ...props }: Pro
     );
   }
 
+  // Show primary image
   return (
     <img
       src={src}
@@ -57,6 +66,7 @@ export function ProductImage({ src, alt, fallbackSrc, className, ...props }: Pro
   );
 }
 
+// UserAvatar component for user profile images
 interface UserAvatarProps {
   src?: string;
   alt?: string;
@@ -65,13 +75,13 @@ interface UserAvatarProps {
   className?: string;
 }
 
-export function UserAvatar({ 
+export const UserAvatar = ({ 
   src, 
   alt = "User", 
   fallbackText = "U", 
   size = 'md', 
   className = "" 
-}: UserAvatarProps) {
+}: UserAvatarProps) => {
   const sizeClasses = {
     sm: 'w-8 h-8 text-sm',
     md: 'w-10 h-10 text-base', 
@@ -96,8 +106,9 @@ export function UserAvatar({
       )}
     </div>
   );
-}
+};
 
+// CompanyLogo component for company/organization images
 interface CompanyLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string;
   alt: string;
