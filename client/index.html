@@ -1,75 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- Comprehensive Vite HMR disabling to prevent promise rejection spam -->
-    <script>
-      // CRITICAL: Disable Vite HMR before any modules load
-      window.__VITE_HMR_DISABLED__ = true;
-      
-      // Override console to suppress Vite dev server messages
-      const originalConsole = window.console;
-      window.console = {
-        ...originalConsole,
-        debug: function(...args) {
-          const msg = args.join(' ');
-          if (msg.includes('[vite]') || msg.includes('connecting') || msg.includes('server connection lost')) {
-            return; // Suppress Vite debug messages
-          }
-          originalConsole.debug.apply(originalConsole, args);
-        },
-        log: function(...args) {
-          const msg = args.join(' ');
-          if (msg.includes('[vite]') || msg.includes('Polling for restart')) {
-            return; // Suppress Vite log messages
-          }
-          originalConsole.log.apply(originalConsole, args);
-        }
-      };
-
-      // Override WebSocket completely to prevent HMR connections
-      window.WebSocket = class MockWebSocket {
-        constructor(url, protocols) {
-          // Immediately set to closed state
-          this.readyState = 3; // CLOSED
-          this.url = url;
-          // Call close event immediately to prevent hanging
-          setTimeout(() => {
-            if (this.onclose) this.onclose(new Event('close'));
-          }, 0);
-        }
-        
-        addEventListener() {}
-        removeEventListener() {}
-        send() {}
-        close() {}
-        
-        // WebSocket constants
-        static get CONNECTING() { return 0; }
-        static get OPEN() { return 1; }
-        static get CLOSING() { return 2; }
-        static get CLOSED() { return 3; }
-        
-        get CONNECTING() { return 0; }
-        get OPEN() { return 1; }
-        get CLOSING() { return 2; }
-        get CLOSED() { return 3; }
-      };
-
-      // Override fetch to immediately resolve Vite requests
-      const originalFetch = window.fetch;
-      window.fetch = function(input, init) {
-        const url = typeof input === 'string' ? input : input.url;
-        if (url.includes('__vite_ping') || url.includes('@vite') || url.includes(':5173') || url.includes('ping')) {
-          return Promise.resolve(new Response(JSON.stringify({status: 'connected', type: 'update'}), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          }));
-        }
-        return originalFetch.call(this, input, init);
-      };
-    </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ThreadCraft - Custom Clothing Order Management</title>
   </head>
   <body>
     <div id="root"></div>
