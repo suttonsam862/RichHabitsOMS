@@ -42,6 +42,7 @@ import Payments from '@/pages/Payments';
 import PaymentSuccess from '@/pages/PaymentSuccess';
 import PaymentCancel from '@/pages/PaymentCancel';
 import ProductDetail from '@/pages/ProductDetail';
+import ProductCreatePage from '@/pages/ProductCreatePage';
 import { NotFound } from '@/pages/not-found';
 
 // Component to require authentication
@@ -108,6 +109,7 @@ export function AppRouter() {
 
           {/* Product detail routes */}
           <Route path="products/:id" element={<ProductDetail />} />
+          <Route path="products/create" element={<ProductCreatePage />} />
 
           {/* Order routes */}
           <Route path="orders" element={<Orders />} />

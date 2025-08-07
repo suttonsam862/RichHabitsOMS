@@ -1051,9 +1051,207 @@ router.post('/:productId/mockups', requireAuth, requireRole(['admin', 'designer'
 router.get('/:productId/mockups', requireAuth, getProductMockups);
 
 // POST /api/products/library - add new product to library (admin and salesperson only)
-router.post('/', requireAuth, requireRole(['admin', 'salesperson']), addProductToLibrary);
+router.post('/', requireAuth, requireRole(['admin', 'salesperson']), createProduct);
+
+// PATCH /api/products/library/:id - update existing product (admin and salesperson only)
+router.patch('/:id', requireAuth, requireRole(['admin', 'salesperson']), updateProduct);
 
 // POST /api/products/library/:productId/copy - copy product to order (admin and salesperson only)
 router.post('/:productId/copy', requireAuth, requireRole(['admin', 'salesperson']), copyProductToOrder);
+
+// Create new product
+async function createProduct(req: any, res: any) {
+  try {
+    const user = req.user;
+
+    const {
+      name,
+      description,
+      category,
+      sport,
+      base_price,
+      unit_cost,
+      fabric,
+      sku,
+      status,
+      eta_days,
+      min_quantity,
+      max_quantity,
+      sizes,
+      colors,
+      tags,
+      build_instructions
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !category || !fabric || !base_price) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, category, fabric, and base_price are required'
+      });
+    }
+
+    // Generate SKU if not provided
+    const generateSKU = (name: string, category: string): string => {
+      const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6);
+      const cleanCategory = category.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3);
+      const timestamp = Date.now().toString().slice(-4);
+      const random = Math.floor(Math.random() * 99).toString().padStart(2, '0');
+      return `${cleanCategory || 'ITM'}-${cleanName || 'PROD'}-${timestamp}${random}`;
+    };
+
+    const finalSKU = sku || generateSKU(name, category);
+
+    // Insert the new product
+    const { data: newProduct, error } = await supabase
+      .from('catalog_items')
+      .insert({
+        name: name.trim(),
+        description: description?.trim() || '',
+        category: category.trim(),
+        sport: sport?.trim() || 'All Around Item',
+        base_price: parseFloat(base_price),
+        unit_cost: parseFloat(unit_cost || '0'),
+        fabric: fabric.trim(),
+        sku: finalSKU,
+        status: status || 'active',
+        eta_days: eta_days || '7',
+        min_quantity: parseFloat(min_quantity || '1'),
+        max_quantity: parseFloat(max_quantity || '1000'),
+        sizes: Array.isArray(sizes) ? sizes : [],
+        colors: Array.isArray(colors) ? colors : [],
+        tags: Array.isArray(tags) ? tags : [],
+        build_instructions: build_instructions?.trim() || '',
+        preferred_manufacturer_id: user.id, // Set creator as preferred manufacturer
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error creating product:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to create product'
+      });
+    }
+
+    console.log('✅ Product created successfully:', newProduct.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      data: newProduct
+    });
+
+  } catch (error: any) {
+    console.error('❌ Product creation error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create product'
+    });
+  }
+}
+
+// Update existing product
+async function updateProduct(req: any, res: any) {
+  try {
+    const user = req.user;
+
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product ID is required'
+      });
+    }
+
+    // Check if product exists
+    const { data: existingProduct, error: fetchError } = await supabase
+      .from('catalog_items')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingProduct) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    const {
+      name,
+      description,
+      category,
+      sport,
+      base_price,
+      unit_cost,
+      fabric,
+      sku,
+      status,
+      eta_days,
+      min_quantity,
+      max_quantity,
+      sizes,
+      colors,
+      tags,
+      build_instructions
+    } = req.body;
+
+    // Build update object with only provided fields
+    const updateData: any = {};
+    
+    if (name !== undefined) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description?.trim() || '';
+    if (category !== undefined) updateData.category = category.trim();
+    if (sport !== undefined) updateData.sport = sport?.trim() || 'All Around Item';
+    if (base_price !== undefined) updateData.base_price = parseFloat(base_price);
+    if (unit_cost !== undefined) updateData.unit_cost = parseFloat(unit_cost || '0');
+    if (fabric !== undefined) updateData.fabric = fabric.trim();
+    if (sku !== undefined) updateData.sku = sku.trim();
+    if (status !== undefined) updateData.status = status;
+    if (eta_days !== undefined) updateData.eta_days = eta_days;
+    if (min_quantity !== undefined) updateData.min_quantity = parseFloat(min_quantity || '1');
+    if (max_quantity !== undefined) updateData.max_quantity = parseFloat(max_quantity || '1000');
+    if (sizes !== undefined) updateData.sizes = Array.isArray(sizes) ? sizes : [];
+    if (colors !== undefined) updateData.colors = Array.isArray(colors) ? colors : [];
+    if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : [];
+    if (build_instructions !== undefined) updateData.build_instructions = build_instructions?.trim() || '';
+
+    // Always update the timestamp
+    updateData.updated_at = new Date().toISOString();
+
+    // Update the product
+    const { data: updatedProduct, error } = await supabase
+      .from('catalog_items')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error updating product:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to update product'
+      });
+    }
+
+    console.log('✅ Product updated successfully:', updatedProduct.id);
+
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      data: updatedProduct
+    });
+
+  } catch (error: any) {
+    console.error('❌ Product update error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update product'
+    });
+  }
+}
 
 export default router;

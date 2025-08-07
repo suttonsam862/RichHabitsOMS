@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
@@ -883,6 +884,7 @@ export default function CatalogPage() {
   });
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { syncCatalog } = useDataSync();
 
@@ -1807,7 +1809,7 @@ export default function CatalogPage() {
             Refresh
           </Button>
           <Button 
-            onClick={() => setIsAddingItem(true)}
+            onClick={() => navigate('/products/create')}
             className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -1866,7 +1868,7 @@ export default function CatalogPage() {
             </p>
             {!searchTerm && (
               <Button 
-                onClick={() => setIsAddingItem(true)}
+                onClick={() => navigate('/products/create')}
                 className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
               >
                 <Plus className="w-4 h-4 mr-2" />
