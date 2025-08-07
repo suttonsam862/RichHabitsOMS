@@ -2430,6 +2430,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes (admin auth required)
   router.use('/api/admin', adminRoutesRefactored);
 
+  // Ensure organizations route uses proper auth
+  app.use('/api/organizations', authenticateRequest);
+
+
   // API 404 handler - only for API routes
   router.use('/api/*', (req, res) => {
     res.status(404).json({

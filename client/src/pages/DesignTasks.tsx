@@ -92,7 +92,7 @@ export default function DesignTasks() {
   });
 
   // Filter tasks based on status
-  const filteredTasks = (designTasks as any[]).filter((task: any) => {
+  const filteredTasks = (Array.isArray(designTasks) ? designTasks : []).filter((task: any) => {
     if (activeTab === 'all') return true;
     return task.status === activeTab;
   });

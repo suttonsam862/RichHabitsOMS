@@ -92,6 +92,63 @@ async function getOrganizationDetails(req: Request, res: Response) {
   }
 }
 
+/**
+ * Get all organizations
+ */
+async function getAllOrganizations(req: Request, res: Response) {
+  try {
+    console.log('Fetching all organizations...');
+
+    // Fetch all unique organization names from the customers table
+    const { data: organizations, error } = await supabaseAdmin
+      .from('customers')
+      .select('company')
+      .not('company', 'is', null)
+      .neq('company', ''); // Ensure company is not null or empty
+
+    if (error) {
+      console.error('Error fetching organizations:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch organizations'
+      });
+    }
+
+    // Process the data to get unique organization names and format them
+    const uniqueOrganizations = organizations
+      .map(org => org.company)
+      .filter((value, index, self) => self.indexOf(value) === index) // Get unique values
+      .map(companyName => {
+        // Basic formatting: replace hyphens with spaces and capitalize words
+        const formattedName = companyName
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase());
+        // Generate a slug-like ID (e.g., "Example Org" -> "example-org")
+        const id = companyName.toLowerCase().replace(/\s+/g, '-');
+        return {
+          id: id,
+          name: formattedName,
+          // Add other relevant organization fields if available in the customers table,
+          // or if you have a separate organizations table.
+          // For now, we'll just use name and a generated ID.
+        };
+      });
+
+    res.json({
+      success: true,
+      data: uniqueOrganizations
+    });
+
+  } catch (error) {
+    console.error('Error in getAllOrganizations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+
 // Organization update validation schema
 const organizationUpdateSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
@@ -109,7 +166,7 @@ const organizationUpdateSchema = z.object({
  */
 async function updateOrganization(req: Request, res: Response) {
   const { organizationId } = req.params;
-  
+
   console.log(`🔄 Organization update requested for: ${organizationId}`);
   console.log('📊 Update data:', req.body);
 
@@ -376,7 +433,8 @@ async function deleteOrganization(req: Request, res: Response) {
 }
 
 // Configure routes
-router.get('/:organizationId', getOrganizationDetails);
+router.get('/', requireAuth, requireRole(['admin', 'user']), getAllOrganizations);
+router.get('/:id', getOrganizationDetails);
 router.patch('/:organizationId', requireAuth, requireRole(['admin']), updateOrganization);
 router.put('/:organizationId', requireAuth, requireRole(['admin']), updateOrganization); // Support both PATCH and PUT
 router.patch('/:organizationId/archive', requireAuth, requireRole(['admin']), archiveOrganization);
