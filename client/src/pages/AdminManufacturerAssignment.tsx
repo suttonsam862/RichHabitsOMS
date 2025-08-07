@@ -243,11 +243,14 @@ export default function ManufacturingManagement() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  const { data: productionTasks = [], isLoading: tasksLoading, refetch: refetchTasks } = useQuery({
+  const { data: productionTasksData = [], isLoading: tasksLoading, refetch: refetchTasks } = useQuery({
     queryKey: CACHE_KEYS.productionTasks,
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Ensure productionTasks is always an array
+  const productionTasks = Array.isArray(productionTasksData) ? productionTasksData : [];
 
   const { data: designTasks = [], isLoading: designTasksLoading } = useQuery({
     queryKey: CACHE_KEYS.designTasks,

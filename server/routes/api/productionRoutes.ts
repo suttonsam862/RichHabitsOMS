@@ -1,4 +1,3 @@
-
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../../middleware/unifiedAuth';
 import { supabase } from '../../db';
