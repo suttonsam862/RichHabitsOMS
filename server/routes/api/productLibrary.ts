@@ -380,6 +380,111 @@ export async function copyProductToOrder(req: Request, res: Response) {
   }
 }
 
+// GET /api/products/library/:id - get individual product details
+export async function getProductById(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product ID is required'
+      });
+    }
+
+    // Fetch product with all related data
+    const { data: product, error } = await supabase
+      .from('catalog_items')
+      .select(`
+        *,
+        user_profiles!catalog_items_preferred_manufacturer_id_fkey(
+          id,
+          username,
+          first_name,
+          last_name
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching product by ID:', error);
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({
+          success: false,
+          message: 'Product not found'
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch product details'
+      });
+    }
+
+    // Process existing product data (without separate history tables for now)
+    const currentPrice = parseFloat(String(product.base_price || '0'));
+    const currentUnitCost = parseFloat(String(product.unit_cost || '0'));
+    
+    // Parse existing image data from the product
+    const existingImages = Array.isArray(product.images) ? product.images : [];
+    const imageVariants = typeof product.imageVariants === 'object' && product.imageVariants ? product.imageVariants : {};
+    
+    // Enhanced product data with metadata
+    const productWithDetails = {
+      ...product,
+      metadata: {
+        sizes: Array.isArray(product.sizes) ? product.sizes : [],
+        colors: Array.isArray(product.colors) ? product.colors : [],
+        customization_options: Array.isArray(product.customizationOptions) ? product.customizationOptions : [],
+        specifications: typeof product.specifications === 'object' && product.specifications ? product.specifications : {},
+        tags: Array.isArray(product.tags) ? product.tags : []
+      },
+      pricing_stats: {
+        current_price: currentPrice,
+        min_price: currentPrice,
+        max_price: currentPrice,
+        avg_price: currentPrice,
+        price_changes: 0,
+        last_price_change: null
+      },
+      mockup_stats: {
+        total_mockups: existingImages.length,
+        mockup_types: [...new Set(existingImages.map((img: any) => img.type || 'product'))],
+        latest_mockup: existingImages.length > 0 ? {
+          image_url: existingImages[0].url || product.imageUrl || product.baseImageUrl,
+          image_type: existingImages[0].type || 'product',
+          alt_text: existingImages[0].alt || product.name,
+          upload_timestamp: existingImages[0].uploadedAt || product.createdAt
+        } : null,
+        has_primary_image: existingImages.some((img: any) => img.isPrimary) || !!product.imageUrl
+      },
+      pricing_history: [], // Will be populated by separate endpoint
+      mockups: existingImages.map((img: any) => ({
+        id: img.id || `img-${Date.now()}`,
+        image_url: img.url,
+        image_type: img.type || 'product',
+        alt_text: img.alt || product.name,
+        upload_timestamp: img.uploadedAt || product.createdAt,
+        metadata: img,
+        is_active: true
+      }))
+    };
+
+    res.json({
+      success: true,
+      data: productWithDetails,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error in getProductById:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
 // GET /api/products/library/:id/pricing-history - get historical pricing data
 export async function getProductPricingHistory(req: Request, res: Response) {
   try {
@@ -825,6 +930,9 @@ export async function getProductMockups(req: Request, res: Response) {
 // Enhanced Routes with proper role-based access control
 // GET /api/products/library - fetch all products with metadata (all authenticated users)
 router.get('/', requireAuth, getProductLibrary);
+
+// GET /api/products/library/:id - get individual product details (all authenticated users)
+router.get('/:id', requireAuth, getProductById);
 
 // POST /api/products/library - create new product (admin and salesperson only)
 router.post('/', requireAuth, requireRole(['admin', 'salesperson']), async (req: Request, res: Response) => {

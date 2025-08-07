@@ -41,6 +41,7 @@ import Messages from '@/pages/Messages';
 import Payments from '@/pages/Payments';
 import PaymentSuccess from '@/pages/PaymentSuccess';
 import PaymentCancel from '@/pages/PaymentCancel';
+import ProductDetail from '@/pages/ProductDetail';
 import { NotFound } from '@/pages/not-found';
 
 // Component to require authentication
@@ -104,6 +105,9 @@ export function AppRouter() {
           {/* Catalog management routes */}
           <Route path="catalog" element={<CatalogPage />} />
           <Route path="catalog/:id/edit" element={<CatalogItemEditPage />} />
+
+          {/* Product detail routes */}
+          <Route path="products/:id" element={<ProductDetail />} />
 
           {/* Order routes */}
           <Route path="orders" element={<Orders />} />
