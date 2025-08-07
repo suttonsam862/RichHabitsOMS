@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useSearch } from 'wouter';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,8 +43,8 @@ const setupSchema = z.object({
 type SetupFormValues = z.infer<typeof setupSchema>;
 
 export default function SetupPassword() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const [token, setToken] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<any | null>(null);
@@ -54,7 +54,7 @@ export default function SetupPassword() {
 
   // Parse token from URL
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
+    const searchParams = new URLSearchParams(search);
     const tokenParam = searchParams.get('token');
     setToken(tokenParam);
 
@@ -119,7 +119,7 @@ export default function SetupPassword() {
 
         // Redirect to login after 3 seconds
         setTimeout(() => {
-          navigate('/login');
+          setLocation('/login');
         }, 3000);
       } else {
         toast({

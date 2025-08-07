@@ -253,6 +253,22 @@
   .border-glass-border {
     border-color: var(--glass-border);
   }
+  
+  .glass-panel {
+    background: var(--glass-panel);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .neon-glow {
+    box-shadow: 0 0 20px rgba(0, 209, 255, 0.3), 0 0 40px rgba(0, 255, 159, 0.1);
+  }
+  
+  .rich-input {
+    @apply glass-panel border-glass-border text-foreground placeholder-muted-foreground;
+    @apply focus:border-primary focus:ring-1 focus:ring-primary;
+  }
 }
 
 /* Extra small screens (480px and below) for onboarding flow */

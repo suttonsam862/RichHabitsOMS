@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,9 +91,9 @@ const ORGANIZATION_TYPES = [
 ];
 
 export default function Register() {
-  const { user, isAuthenticated, loading } = useAuth();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
@@ -172,6 +172,7 @@ export default function Register() {
 
   // Process invitation token
   useEffect(() => {
+    const searchParams = new URLSearchParams(search);
     const inviteToken = searchParams.get('invite');
     if (inviteToken) {
       fetch(`/api/invitations/verify/${inviteToken}`)
@@ -203,14 +204,14 @@ export default function Register() {
           setInvitationError('Failed to verify invitation. Please check your connection and try again.');
         });
     }
-  }, [searchParams]);
+  }, [search]);
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && !loading && user) {
-      navigate(`/dashboard/${user.role}`);
+    if (!loading && user) {
+      setLocation("/dashboard");
     }
-  }, [isAuthenticated, loading, navigate, user]);
+  }, [loading, setLocation, user]);
 
   const updateFormData = (field: string, value: any) => {
     if (field.includes('.')) {
@@ -252,7 +253,7 @@ export default function Register() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: searchParams.get('invite'),
+          token: new URLSearchParams(search).get('invite'),
           stepData,
           stepNumber: currentStep,
         }),
@@ -338,7 +339,7 @@ export default function Register() {
       description: "Welcome to ThreadCraft. Your account is being set up.",
     });
     
-    navigate('/dashboard/customer');
+    setLocation('/dashboard');
   };
 
   const renderStepContent = () => {

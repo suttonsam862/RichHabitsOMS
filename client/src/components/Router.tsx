@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Router, Route, Switch, Redirect } from "wouter";
 import { useAuth } from '@/hooks/use-auth';
+import { Suspense } from 'react';
 
 // Auth components
 import Login from '@/pages/Login';
@@ -9,7 +9,6 @@ import SetupPassword from '@/pages/SetupPassword';
 
 // Layout components
 import { AppLayout } from '@/components/layout/AppLayout';
-import MainDashboardRouter from '@/components/auth/MainDashboardRouter';
 
 // Dashboard components
 import AdminDashboard from '@/pages/AdminDashboard';
@@ -47,117 +46,241 @@ import ProductDetail from '@/pages/ProductDetail';
 import ProductCreatePage from '@/pages/ProductCreatePage';
 import { NotFound } from '@/pages/not-found';
 
-// Navigation interceptor for handling route changes safely
-function NavigationInterceptor({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-  
-  useEffect(() => {
-    // Clear any stale data when navigating
-    if (!loading) {
-      // Refresh auth state on route change
-      console.log('Route changed to:', location.pathname);
-    }
-  }, [location.pathname, loading]);
-
-  return <>{children}</>;
+// Loading component
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+      <div className="flex flex-col items-center space-y-3">
+        <div className="relative">
+          <div className="animate-spin w-8 h-8 border-2 border-[#00d1ff] border-t-transparent rounded-full"></div>
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#00d1ff]/20 to-[#00ff9f]/20 blur-sm"></div>
+        </div>
+        <div className="text-white/60 text-xs font-medium">
+          Loading...
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Component to require authentication
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading, initialized } = useAuth();
 
-  // Fast loading state - only show while authentication is initializing
+  // Show loading state while authentication is initializing
   if (!initialized || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-        <div className="flex flex-col items-center space-y-3">
-          <div className="relative">
-            <div className="animate-spin w-8 h-8 border-2 border-[#00d1ff] border-t-transparent rounded-full"></div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#00d1ff]/20 to-[#00ff9f]/20 blur-sm"></div>
-          </div>
-          <div className="text-white/60 text-xs font-medium">
-            Authenticating...
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+
+  return <>{children}</>;
+}
+
+// Protected route wrapper with layout
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <RequireAuth>
+      <AppLayout>
+        {children}
+      </AppLayout>
+    </RequireAuth>
+  );
+}
+
+// Dashboard router based on user role
+function DashboardRouter() {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+
+  switch (user.role) {
+    case 'admin':
+      return <AdminDashboard />;
+    case 'salesperson':
+      return <SalespersonDashboard />;
+    case 'designer':
+      return <DesignerDashboard />;
+    case 'manufacturer':
+      return <ManufacturerDashboard />;
+    case 'customer':
+      return <CustomerDashboard />;
+    default:
+      return <CustomerDashboard />;
+  }
 }
 
 export function AppRouter() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/setup-password" element={<SetupPassword />} />
-        <Route path="/payment/success" element={<PaymentSuccess />} />
-        <Route path="/payment/cancel" element={<PaymentCancel />} />
-
-        {/* Protected routes */}
-        <Route path="/" element={<RequireAuth><NavigationInterceptor><AppLayout /></NavigationInterceptor></RequireAuth>}>
-          {/* Dashboard routing */}
-          <Route path="dashboard" element={<MainDashboardRouter />} />
-          <Route path="dashboard/admin" element={<AdminDashboard />} />
-          <Route path="dashboard/salesperson" element={<SalespersonDashboard />} />
-          <Route path="dashboard/designer" element={<DesignerDashboard />} />
-          <Route path="dashboard/manufacturer" element={<ManufacturerDashboard />} />
-          <Route path="dashboard/customer" element={<CustomerDashboard />} />
+    <Router>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Switch>
+          {/* Public routes */}
+          <Route path="/login" component={Login} />
+          <Route path="/register" component={Register} />
+          <Route path="/setup-password" component={SetupPassword} />
+          
+          {/* Protected routes */}
+          <Route path="/dashboard">
+            <ProtectedRoute>
+              <DashboardRouter />
+            </ProtectedRoute>
+          </Route>
 
           {/* Admin routes */}
-          <Route path="admin/customers" element={<CustomerListPage />} />
-          <Route path="admin/customers/:id/edit" element={<CustomerEditPage />} />
+          <Route path="/customers">
+            <ProtectedRoute>
+              <CustomerListPage />
+            </ProtectedRoute>
+          </Route>
           
-          {/* Salesperson Management route */}
-          <Route path="admin/salespeople" element={<SalesManagementPage />} />
-          
-          {/* Analytics route */}
-          <Route path="admin/analytics" element={<AnalyticsPage />} />
-          
-          {/* User Management routes */}
-          <Route path="admin/user-management" element={<UserManagementPage />} />
-          <Route path="admin/settings" element={<SettingsPage />} />
-          
-          {/* Manufacturing and assignment routes */}
-          <Route path="manufacturer-assignment" element={<AdminManufacturerAssignment />} />
+          <Route path="/customers/:id">
+            <ProtectedRoute>
+              <CustomerEditPage />
+            </ProtectedRoute>
+          </Route>
 
-          {/* Customer management routes */}
-          <Route path="customers" element={<CustomerListPage />} />
-          <Route path="customers/:id/edit" element={<CustomerEditPage />} />
+          <Route path="/catalog">
+            <ProtectedRoute>
+              <CatalogPage />
+            </ProtectedRoute>
+          </Route>
 
-          {/* Catalog management routes */}
-          <Route path="catalog" element={<CatalogPage />} />
-          <Route path="catalog/:id/edit" element={<CatalogItemEditPage />} />
+          <Route path="/catalog/:id">
+            <ProtectedRoute>
+              <CatalogItemEditPage />
+            </ProtectedRoute>
+          </Route>
 
-          {/* Product detail routes */}
-          <Route path="products/:id" element={<ProductDetail />} />
-          <Route path="products/create" element={<ProductCreatePage />} />
+          <Route path="/admin/user-permissions">
+            <ProtectedRoute>
+              <UserPermissionsPage />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/admin/user-management">
+            <ProtectedRoute>
+              <UserManagementPage />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/admin/settings">
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/admin/sales-management">
+            <ProtectedRoute>
+              <SalesManagementPage />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/admin/analytics">
+            <ProtectedRoute>
+              <AnalyticsPage />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/admin/manufacturer-assignment">
+            <ProtectedRoute>
+              <AdminManufacturerAssignment />
+            </ProtectedRoute>
+          </Route>
 
           {/* Order routes */}
-          <Route path="orders" element={<Orders />} />
-          <Route path="orders/create" element={<OrderCreatePage />} />
-          <Route path="orders/edit/:id" element={<OrderEditPage />} />
-          <Route path="orders/enhanced" element={<EnhancedOrderManagement />} />
+          <Route path="/orders">
+            <ProtectedRoute>
+              <Orders />
+            </ProtectedRoute>
+          </Route>
 
-          {/* Design and production routes */}
-          <Route path="design-tasks" element={<DesignTasks />} />
-          <Route path="production" element={<Production />} />
+          <Route path="/orders/create">
+            <ProtectedRoute>
+              <OrderCreatePage />
+            </ProtectedRoute>
+          </Route>
 
-          {/* Other routes */}
-          <Route path="messages" element={<Messages />} />
-          <Route path="payments" element={<Payments />} />
+          <Route path="/orders/:id">
+            <ProtectedRoute>
+              <OrderEditPage />
+            </ProtectedRoute>
+          </Route>
 
-          {/* Default redirect */}
-          <Route index element={<Navigate to="/dashboard" replace />} />
-        </Route>
+          <Route path="/orders/enhanced-management">
+            <ProtectedRoute>
+              <EnhancedOrderManagement />
+            </ProtectedRoute>
+          </Route>
 
-        {/* 404 fallback */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Other protected routes */}
+          <Route path="/design-tasks">
+            <ProtectedRoute>
+              <DesignTasks />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/production">
+            <ProtectedRoute>
+              <Production />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/manufacturing">
+            <ProtectedRoute>
+              <Production />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/messages">
+            <ProtectedRoute>
+              <Messages />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/payments">
+            <ProtectedRoute>
+              <Payments />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/payment-success">
+            <ProtectedRoute>
+              <PaymentSuccess />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/payment-cancel">
+            <ProtectedRoute>
+              <PaymentCancel />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/products/:id">
+            <ProtectedRoute>
+              <ProductDetail />
+            </ProtectedRoute>
+          </Route>
+
+          <Route path="/products/create">
+            <ProtectedRoute>
+              <ProductCreatePage />
+            </ProtectedRoute>
+          </Route>
+
+          {/* Root redirect */}
+          <Route path="/">
+            <Redirect to="/dashboard" />
+          </Route>
+
+          {/* 404 fallback */}
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    </Router>
   );
 }

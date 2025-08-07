@@ -89,9 +89,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }: SidebarProps) {
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const [location] = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  const role = user?.role || 'customer';
 
   // Set if user is admin for role switching demo
   useEffect(() => {
@@ -204,14 +206,14 @@ export function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }: Sideba
               <div className={cn("h-10 w-10 rounded-full flex items-center justify-center", roleColor)}>
                 {user.firstName && user.lastName 
                   ? `${user.firstName[0]}${user.lastName[0]}`
-                  : user.username.substring(0, 2).toUpperCase()}
+                  : (user.username || user.email).substring(0, 2).toUpperCase()}
               </div>
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-white">
                 {user.firstName && user.lastName 
                   ? `${user.firstName} ${user.lastName}`
-                  : user.username}
+                  : user.username || user.email}
               </p>
               <p className="text-xs text-gray-400 capitalize">{role}</p>
             </div>

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { AuthForm } from "@/components/auth/AuthForm";
 
@@ -7,16 +7,16 @@ import { AuthForm } from "@/components/auth/AuthForm";
  * Rich Habits login page with blackout glassmorphism theme
  */
 export default function Login() {
-  const { user, isAuthenticated, loading } = useAuth();
-  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
   
   // Redirect if already authenticated - simplified logic
   useEffect(() => {
-    if (isAuthenticated && !loading && user) {
+    if (!loading && user) {
       console.log("Already authenticated as:", user.role);
-      navigate("/dashboard", { replace: true });
+      setLocation("/dashboard");
     }
-  }, [isAuthenticated, loading, navigate, user]);
+  }, [loading, setLocation, user]);
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -47,7 +47,7 @@ export default function Login() {
         
         {/* Authentication form with glassmorphism */}
         <div className="rich-card p-8">
-          <AuthForm type="login" />
+          <AuthForm />
         </div>
         
         {/* Rich Habits footer branding */}

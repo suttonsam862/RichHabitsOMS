@@ -1,41 +1,10 @@
-
-import React, { useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { Header } from '@/components/dashboard/Header';
-import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 
-export function AppLayout() {
+export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  
-  // Use navigation guard for safe routing
-  const { safeNavigate } = useNavigationGuard({
-    requireAuth: true,
-    onNavigationBlocked: () => {
-      console.warn('Navigation blocked due to authentication');
-    }
-  });
-
-  // Handle authentication state changes
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/login', { replace: true });
-    }
-  }, [user, loading, navigate]);
-
-  // Prevent navigation loops
-  useEffect(() => {
-    const preventLoop = () => {
-      if (location.pathname === '/login' && user) {
-        safeNavigate('/dashboard');
-      }
-    };
-    
-    preventLoop();
-  }, [location.pathname, user, safeNavigate]);
 
   if (loading) {
     return (
@@ -54,16 +23,16 @@ export function AppLayout() {
   }
 
   if (!user) {
-    return null; // Let the navigation effect handle redirect
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header />
-        <main className="flex-1 overflow-auto">
-          <Outlet />
+        <main className="flex-1 overflow-auto p-6">
+          {children}
         </main>
       </div>
     </div>
