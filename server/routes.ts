@@ -227,6 +227,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register unified upload routes (consolidates all upload functionality)
   app.use('/api/uploads', unifiedUploadRoutes);
 
+  // Register catalog routes with proper authentication
+  app.use('/api/catalog-items', authenticateRequest, catalogRoutesRefactored);
+  app.use('/api/catalog', authenticateRequest, catalogRoutesRefactored);
+
   // Admin customers API endpoint with real data
   app.get('/api/admin/customers', async (req, res) => {
     try {

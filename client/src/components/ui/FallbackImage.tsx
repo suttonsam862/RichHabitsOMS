@@ -7,16 +7,7 @@ import React, { useState, ImgHTMLAttributes } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Assuming OptimizedImage is defined elsewhere and imported, or will be defined later.
-// For the purpose of this fix, we'll assume it exists or will be added.
-// Placeholder for OptimizedImage if it's not provided in the original code snippet.
-// If OptimizedImage is meant to be defined here, its definition would be needed.
-// For now, we'll use a simple img tag as a placeholder within UserAvatar's logic.
-
-// Mock OptimizedImage for compilation purposes if it's not provided
-const OptimizedImage = ({ src, alt, className, style, loading, ...props }) => (
-  <img src={src} alt={alt} className={className} style={style} loading={loading} {...props} />
-);
+import OptimizedImage from '@/components/OptimizedImage';
 
 
 interface ProductImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
@@ -91,19 +82,21 @@ export function ProductImage({
 }
 
 // UserAvatar component for user profile images
-export const UserAvatar: React.FC<{
+interface UserAvatarProps {
   src?: string;
   alt?: string;
   fallbackText?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-}> = ({ 
+}
+
+export function UserAvatar({ 
   src, 
   alt = "User", 
   fallbackText = "U", 
   size = 'md', 
   className = "" 
-}) => {
+}: UserAvatarProps) {
   const sizeClasses = {
     sm: 'w-8 h-8 text-sm',
     md: 'w-10 h-10 text-base', 
@@ -128,7 +121,7 @@ export const UserAvatar: React.FC<{
       )}
     </div>
   );
-};
+}
 
 // CompanyLogo component for company/organization images
 interface CompanyLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
