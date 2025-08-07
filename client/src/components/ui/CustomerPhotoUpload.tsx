@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Upload, X, User, Camera, AlertCircle } from 'lucide-react';
-import { UserAvatar } from '@/components/ui/FallbackImage';
+import { UserAvatar } from '@/components/ui/UserAvatarComponent';
 import { useToast } from '@/hooks/use-toast';
 import { validateFile } from '@/utils/fileValidation';
 import { compressImage, shouldCompress, formatFileSize } from '@/utils/imageCompression';
