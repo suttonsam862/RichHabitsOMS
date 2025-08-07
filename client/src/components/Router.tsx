@@ -27,6 +27,8 @@ import UserPermissionsPage from '@/pages/admin/UserPermissionsPage';
 import UserManagementPage from '@/pages/admin/UserManagementPage';
 import SettingsPage from '@/pages/admin/SettingsPage';
 import SalesManagementPage from '@/pages/admin/SalesManagementPage';
+import AnalyticsPage from '@/pages/admin/AnalyticsPage';
+import AdminManufacturerAssignment from '@/pages/AdminManufacturerAssignment';
 
 // Order pages
 import Orders from '@/pages/Orders';
@@ -93,11 +95,19 @@ export function AppRouter() {
           {/* Admin routes */}
           <Route path="admin/customers" element={<CustomerListPage />} />
           <Route path="admin/customers/:id/edit" element={<CustomerEditPage />} />
+          
           {/* Salesperson Management route */}
           <Route path="admin/salespeople" element={<SalesManagementPage />} />
+          
+          {/* Analytics route */}
+          <Route path="admin/analytics" element={<AnalyticsPage />} />
+          
           {/* User Management routes */}
           <Route path="admin/user-management" element={<UserManagementPage />} />
           <Route path="admin/settings" element={<SettingsPage />} />
+          
+          {/* Manufacturing and assignment routes */}
+          <Route path="manufacturer-assignment" element={<AdminManufacturerAssignment />} />
 
           {/* Customer management routes */}
           <Route path="customers" element={<CustomerListPage />} />

@@ -76,10 +76,9 @@ export default function Production() {
   });
 
   // Filter tasks based on status
-  const filteredTasks = (productionTasks as any[]).filter((task: any) => {
-    if (!task.order) return false;
+  const filteredTasks = (Array.isArray(productionTasks) ? productionTasks : []).filter((task: any) => {
     if (activeTab === 'all') return true;
-    return task.order.status === activeTab;
+    return task.status === activeTab;
   });
 
   // Handle status update
