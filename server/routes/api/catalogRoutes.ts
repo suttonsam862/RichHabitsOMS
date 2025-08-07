@@ -160,7 +160,18 @@ async function createCatalogItem(req: Request, res: Response) {
  */
 async function getAllCatalogItems(req: Request, res: Response) {
   try {
-    console.log('Fetching all catalog items from database...');
+    console.log('🔍 Fetching all catalog items from database...');
+
+    // Add authentication check
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      console.log('❌ No authorization header provided');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+        error: 'No authorization header'
+      });
+    }
 
     const { data: catalogItems, error } = await supabaseAdmin
       .from('catalog_items')
@@ -168,11 +179,12 @@ async function getAllCatalogItems(req: Request, res: Response) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching catalog items:', error);
-      return res.status(400).json({
+      console.error('❌ Database error fetching catalog items:', error);
+      return res.status(500).json({
         success: false,
-        message: 'Failed to fetch catalog items',
-        error: error.message
+        message: 'Database error fetching catalog items',
+        error: error.message,
+        details: error.details || 'No additional details available'
       });
     }
 

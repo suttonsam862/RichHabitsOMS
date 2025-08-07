@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
@@ -884,7 +883,6 @@ export default function CatalogPage() {
   });
 
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { syncCatalog } = useDataSync();
 
@@ -896,8 +894,11 @@ export default function CatalogPage() {
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
 
         if (!token) {
+          console.log('❌ No auth token found');
           throw new Error('Authentication required. Please log in again.');
         }
+
+        console.log('🔍 Fetching catalog from /api/catalog-items...');
 
         const response = await fetch('/api/catalog-items', {
           method: 'GET',
@@ -907,28 +908,40 @@ export default function CatalogPage() {
           }
         });
 
+        console.log('📡 Catalog API Response Status:', response.status);
+
         if (response.status === 401) {
-          // Clear invalid token and redirect to login
+          console.log('❌ Authentication failed - clearing tokens');
           localStorage.removeItem('authToken');
           localStorage.removeItem('token');
           throw new Error('Session expired. Please log in again.');
         }
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          const errorText = await response.text();
+          console.error('❌ API Error Response:', errorText);
+          
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { message: errorText || `HTTP ${response.status}` };
+          }
+          
           throw new Error(errorData.message || `Failed to fetch catalog (${response.status})`);
         }
 
         const result = await response.json();
+        console.log('📦 Catalog API Result:', result);
 
         if (!result.success) {
-          throw new Error(result.message || 'Failed to fetch catalog items');
+          throw new Error(result.message || result.error || 'Failed to fetch catalog items');
         }
 
         // Ensure we always return an array
         const items = Array.isArray(result.data) ? result.data : [];
 
-        console.log(`✅ Catalog loaded: ${items.length} items`);
+        console.log(`✅ Catalog loaded successfully: ${items.length} items`);
         return items;
 
       } catch (error) {
@@ -1809,7 +1822,7 @@ export default function CatalogPage() {
             Refresh
           </Button>
           <Button 
-            onClick={() => navigate('/products/create')}
+            onClick={() => setIsAddingItem(true)}
             className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -1868,7 +1881,7 @@ export default function CatalogPage() {
             </p>
             {!searchTerm && (
               <Button 
-                onClick={() => navigate('/products/create')}
+                onClick={() => setIsAddingItem(true)}
                 className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
               >
                 <Plus className="w-4 h-4 mr-2" />
