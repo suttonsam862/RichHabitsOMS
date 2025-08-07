@@ -4,7 +4,7 @@
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, getCustomerInviteEmailTemplate } from '../../email';
-import { requireAuth, requireRole } from '../auth/auth';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 import { customerTransformers } from '../../utils/schemaTransformers';
 import { validateRequiredFields, validateCustomerData } from '../../utils/validation';
 import crypto from 'crypto';
@@ -987,7 +987,7 @@ async function uploadCustomerLogo(req: Request, res: Response) {
         .from('uploads')
         .upload(fileName, req.file.buffer, {
           contentType: req.file.mimetype,
-          upsert: true // Replace existing logo
+          upsert: true // Allow overwriting existing files
         });
 
       if (error) {

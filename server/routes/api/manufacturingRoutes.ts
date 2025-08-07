@@ -2,7 +2,7 @@
  * Manufacturing management routes - Phase 6 of Database Synchronization Checklist
  */
 import { Request, Response, Router } from 'express';
-import { requireAuth, requireRole } from '../auth/auth.js';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 import { supabase } from '../../db';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
@@ -39,7 +39,7 @@ export async function getManufacturingStats(req: Request, res: Response) {
       .select('status')
       .not('status', 'is', null)
       .limit(100);
-    
+
     const safeOrdersByStatus = ordersByStatus || [];
 
     // Get production orders (ready for manufacturing)
@@ -86,7 +86,7 @@ export async function getManufacturingStats(req: Request, res: Response) {
       .eq('status', 'completed')
       .gte('updated_at', thirtyDaysAgo.toISOString())
       .limit(100);
-    
+
     const safeRecentCompletedOrders = recentCompletedOrders || [];
 
     let avgCompletionTime = 0;
@@ -170,7 +170,7 @@ export async function getDesignTasks(req: Request, res: Response) {
     ];
 
     console.log('📋 Returning mock design tasks for development');
-    
+
     res.json({
       success: true,
       data: mockDesignTasks,
@@ -446,7 +446,7 @@ export async function updateManufacturer(req: Request, res: Response) {
 
     // Use Supabase Admin Auth to update user metadata
     const updateData: any = {};
-    
+
     // Update basic profile fields
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
@@ -606,7 +606,7 @@ export async function createManufacturer(req: Request, res: Response) {
     // For development: create mock manufacturer response due to database constraints
     if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'production') {
       console.log('✅ Creating mock manufacturer for development:', email);
-      
+
       // Create mock manufacturer with proper structure
       const mockManufacturer = {
         id: crypto.randomUUID(),

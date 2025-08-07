@@ -1,4 +1,5 @@
 import { Request, Response, Router } from 'express';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 
 const router = Router();
 
@@ -73,7 +74,7 @@ function getSports(req: Request, res: Response) {
 }
 
 // Configure routes
-router.get('/categories', getCategories);
-router.get('/sports', getSports);
+router.get('/categories', requireAuth, getCategories);
+router.get('/sports', requireAuth, getSports);
 
 export default router;

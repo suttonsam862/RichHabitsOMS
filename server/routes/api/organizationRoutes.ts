@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { requireAuth, requireRole } from '../auth/auth';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 import { guaranteedDatabaseUpdate, DatabaseUpdateConfig } from '../../utils/databaseUpdateTemplate';
 import { z } from 'zod';
 

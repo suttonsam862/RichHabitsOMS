@@ -1,7 +1,6 @@
-
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { requireAuth, requireRole } from '../auth/auth';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 
 const router = Router();
 
@@ -112,7 +111,7 @@ async function createSalesperson(req: Request, res: Response) {
       const count = await supabaseAdmin
         .from('salespeople')
         .select('id', { count: 'exact' });
-      
+
       salespersonData.employee_id = `SP${String(count.count! + 1).padStart(4, '0')}`;
     }
 

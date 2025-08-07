@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { supabase } from '../../db';
-import { requireAuth } from '../auth/auth';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 
 const router = Router();
 
@@ -56,8 +56,8 @@ async function getOrderStats(req: Request, res: Response) {
 
     // Calculate total revenue
     const totalRevenue = revenueData?.reduce((sum: number, order: any) => {
-      const price = typeof order.total_price === 'string' 
-        ? parseFloat(order.total_price) 
+      const price = typeof order.total_price === 'string'
+        ? parseFloat(order.total_price)
         : order.total_price || 0;
       return sum + price;
     }, 0) || 0;
@@ -106,7 +106,7 @@ async function getCustomerStats(req: Request, res: Response) {
     // Get new customers this month
     const currentMonth = new Date();
     const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    
+
     const { data: newCustomersData, error: newCustomersError } = await supabase
       .from('customers')
       .select('id', { count: 'exact' })

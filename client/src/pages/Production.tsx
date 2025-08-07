@@ -75,9 +75,20 @@ export default function Production() {
     },
   });
 
-  // Handle API response structure: {success: true, data: [...]} or direct array
-  const tasksArray = productionTasks?.data || productionTasks || [];
-  const filteredTasks = (Array.isArray(tasksArray) ? tasksArray : []).filter((task: any) => {
+  // Handle ALL possible API response structures safely
+  let tasksArray: any[] = [];
+  
+  if (productionTasks) {
+    if (Array.isArray(productionTasks)) {
+      tasksArray = productionTasks;
+    } else if (productionTasks.data && Array.isArray(productionTasks.data)) {
+      tasksArray = productionTasks.data;
+    } else if (productionTasks.success && productionTasks.data && Array.isArray(productionTasks.data)) {
+      tasksArray = productionTasks.data;
+    }
+  }
+  
+  const filteredTasks = tasksArray.filter((task: any) => {
     if (activeTab === 'all') return true;
     return task.status === activeTab;
   });

@@ -17,7 +17,7 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import bodyParser from 'body-parser';
-import { unifiedAuth, requireAuth, requireRole } from './middleware/unifiedAuth';
+import { globalAuth, requireAuth, requireRole, requireAdmin } from './middleware/globalAuth';
 
 // API routes
 import catalogRoutesRefactored from './routes/api/catalogRoutes';
@@ -133,8 +133,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // }));
 
-  // Apply unified authentication to all routes
-  app.use(unifiedAuth);
+  // Apply GLOBAL auth middleware to ALL routes for consistency
+  app.use(globalAuth);
 
   // Quick admin user creation endpoint (for testing) - NO AUTH REQUIRED
   app.post('/create-admin', async (req, res) => {
@@ -686,8 +686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: (data.user as any).id,
           email: customerEmail,
           first_name: customerFirstName,
-          last_name: customerLastName,
-          role: 'customer'
+          last_name: customerLastName
         },
         inviteUrl,
         inviteSent

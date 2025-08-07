@@ -1,9 +1,8 @@
-
 import express from 'express';
 import { supabase } from '../../supabase.js';
 import crypto from 'crypto';
 
-import { requireAuth, requireRole } from '../auth/auth.js';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 
 const router = express.Router();
 
@@ -30,7 +29,7 @@ router.post('/create', requireAuth, requireRole(['admin']), async (req, res) => 
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
     if (authError || !user) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
@@ -441,7 +440,7 @@ router.get('/admin/list', requireAuth, requireRole(['admin']), async (req, res) 
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
     if (authError || !user) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }

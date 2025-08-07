@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { requireAuth, requireRole } from '../auth/auth';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import fs from 'fs';
@@ -32,16 +32,16 @@ async function createCatalogItem(req: Request, res: Response) {
     // Comprehensive input validation and sanitization
     const validateAndSanitize = (data: any) => {
       const errors: string[] = [];
-      
+
       // Required field validation
       if (!data.name?.trim()) {
         errors.push('Product name is required and cannot be empty');
       }
-      
+
       if (data.basePrice === undefined && data.base_price === undefined) {
         errors.push('Base price is required');
       }
-      
+
       // Sanitize and validate fields
       const sanitized = {
         name: data.name?.trim() || '',
@@ -52,7 +52,7 @@ async function createCatalogItem(req: Request, res: Response) {
         status: ['active', 'inactive'].includes(data.status) ? data.status : 'active',
         sku: (data.sku || '').trim()
       };
-      
+
       // Price validation
       const basePrice = parseFloat(data.base_price || data.basePrice);
       if (isNaN(basePrice)) {
@@ -60,25 +60,25 @@ async function createCatalogItem(req: Request, res: Response) {
       } else if (basePrice < 0) {
         errors.push('Base price cannot be negative');
       }
-      
+
       const unitCost = parseFloat(data.unit_cost || data.unitCost || 0);
       if (isNaN(unitCost) || unitCost < 0) {
         errors.push('Unit cost must be a valid positive number or zero');
       }
-      
+
       // Length validations
       if (sanitized.name.length > 255) {
         errors.push('Product name cannot exceed 255 characters');
       }
-      
+
       if (sanitized.description.length > 2000) {
         errors.push('Description cannot exceed 2000 characters');
       }
-      
+
       if (sanitized.sku && sanitized.sku.length > 100) {
         errors.push('SKU cannot exceed 100 characters');
       }
-      
+
       return {
         isValid: errors.length === 0,
         errors,
@@ -89,9 +89,9 @@ async function createCatalogItem(req: Request, res: Response) {
         }
       };
     };
-    
+
     const validation = validateAndSanitize(req.body);
-    
+
     if (!validation.isValid) {
       return res.status(400).json({
         success: false,
@@ -99,7 +99,7 @@ async function createCatalogItem(req: Request, res: Response) {
         errors: validation.errors
       });
     }
-    
+
     const { name, description, category, sport, fabric_id, status, sku, base_price, unit_cost } = validation.data;
 
     console.log('Creating catalog item:', name);
@@ -206,7 +206,7 @@ async function getAllCatalogItems(req: Request, res: Response) {
     // If no items exist, create some sample data
     if (!catalogItems || catalogItems.length === 0) {
       console.log('No catalog items found, creating sample data...');
-      
+
       const sampleItems = [
         {
           id: randomUUID(),
