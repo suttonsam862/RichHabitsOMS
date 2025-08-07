@@ -84,6 +84,9 @@ export function ProductImage({
 // UserAvatar component has been moved to its own file: UserAvatar.tsx
 // Use: import { UserAvatar } from '@/components/ui/UserAvatar';
 
+// Re-export UserAvatar for backward compatibility during transition
+export { UserAvatar } from './UserAvatar';
+
 // CompanyLogo component for company/organization images
 interface CompanyLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string;
