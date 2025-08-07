@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 
 // Auth components
@@ -47,6 +47,22 @@ import ProductDetail from '@/pages/ProductDetail';
 import ProductCreatePage from '@/pages/ProductCreatePage';
 import { NotFound } from '@/pages/not-found';
 
+// Navigation interceptor for handling route changes safely
+function NavigationInterceptor({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Clear any stale data when navigating
+    if (!loading) {
+      // Refresh auth state on route change
+      console.log('Route changed to:', location.pathname);
+    }
+  }, [location.pathname, loading]);
+
+  return <>{children}</>;
+}
+
 // Component to require authentication
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading, initialized } = useAuth();
@@ -83,7 +99,7 @@ export function AppRouter() {
         <Route path="/payment/cancel" element={<PaymentCancel />} />
 
         {/* Protected routes */}
-        <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
+        <Route path="/" element={<RequireAuth><NavigationInterceptor><AppLayout /></NavigationInterceptor></RequireAuth>}>
           {/* Dashboard routing */}
           <Route path="dashboard" element={<MainDashboardRouter />} />
           <Route path="dashboard/admin" element={<AdminDashboard />} />

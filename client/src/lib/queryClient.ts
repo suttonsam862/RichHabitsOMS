@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { API_BASE_URL } from "./config";
+import { navigationManager } from './navigationManager';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -262,13 +263,19 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Re
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1, // Single retry for network errors
-      retryDelay: 300, // Fast retry for startup
-      staleTime: 2 * 60 * 1000, // 2 minutes - balance between performance and freshness
-      gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
-      refetchOnWindowFocus: false, // Prevent unnecessary refetches
-      refetchOnMount: false, // Speed up component mounting
-      throwOnError: false, // Prevent startup crashes
+      staleTime: 1000 * 60 * 5,
+      retry: (failureCount, error: any) => {
+        // Handle navigation errors specifically
+        if (error && error.message && error.message.includes('AbortError')) {
+          console.warn('Navigation-related AbortError caught in query retry:', error.message);
+          return false; // Do not retry on navigation-related abort errors
+        }
+        // Default retry logic
+        return failureCount < 1;
+      },
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      throwOnError: false,
     },
     mutations: {
       retry: false,
@@ -276,3 +283,23 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Set up navigation manager
+navigationManager.setQueryClient(queryClient);
+
+// Global error handler setup
+export const globalErrorHandler = (error: any, componentStack: string) => {
+  console.error('Global Error:', {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+    componentStack: componentStack,
+    timestamp: new Date().toISOString()
+  });
+
+  // Specific handling for navigation-related errors if needed
+  if (error && error.message && (error.message.includes('AbortError') || error.message.includes('Network error'))) {
+    console.warn('Navigation or network issue detected:', error.message);
+    // Potentially redirect to an error page or show a user-friendly message
+    // navigationManager.navigate('/error'); // Example: redirect on critical errors
+  }
+};

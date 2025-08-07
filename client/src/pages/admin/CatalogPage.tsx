@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,11 +31,11 @@ import { queryKeys } from '@/lib/queryKeys';
 import { useDataSync } from '@/hooks/useDataSync';
 import { getQueryFn } from '@/lib/queryClient';
 import { UnifiedImageUploader } from '@/components/ui/UnifiedImageUploader';
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
   ImageIcon,
   Loader2,
   RefreshCw,
@@ -58,6 +58,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Separator } from "@/components/ui/separator";
 import { SizesInput } from "@/components/SizesInput";
 import { ProductGrid, type ProductGridItem } from '@/components/ProductGrid';
+import { SafeBackButton } from '@/components/navigation/SafeBackButton';
 
 interface CatalogItem {
   id: string;
@@ -203,7 +204,7 @@ function CategorizedCatalogView({ items, onEditItem, onDeleteItem, isDeleting }:
               <ScrollArea className="w-full">
                 <TabsList className="glass-surface inline-flex h-10 items-center justify-center rounded-md bg-rich-black/40 p-1 text-muted-foreground">
                   {allCategories.map(category => (
-                    <TabsTrigger 
+                    <TabsTrigger
                       key={category}
                       value={category}
                       className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-neon-blue data-[state=active]:text-rich-black data-[state=active]:shadow-sm"
@@ -417,8 +418,8 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
     if (!imageUrl) {
       return (
         <div className={`
-          ${viewMode === 'compact' ? 'w-24 h-24' : 'w-full h-48'} 
-          bg-gradient-to-br from-rich-black/20 to-glass-border/20 
+          ${viewMode === 'compact' ? 'w-24 h-24' : 'w-full h-48'}
+          bg-gradient-to-br from-rich-black/20 to-glass-border/20
           flex items-center justify-center rounded-md
         `}>
           <ImageIcon className={`${viewMode === 'compact' ? 'w-8 h-8' : 'w-12 h-12'} text-muted-foreground`} />
@@ -427,7 +428,7 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
     }
 
     return (
-      <div 
+      <div
         className={`${viewMode === 'compact' ? 'w-24 h-24 flex-shrink-0' : 'w-full h-48'} relative overflow-hidden rounded-md group cursor-pointer`}
         onClick={onView}
       >
@@ -470,10 +471,10 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
                 <Button size="sm" variant="outline" onClick={onEdit} className="h-8 w-8 p-0">
                   <Edit className="w-3 h-3" />
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={onDelete} 
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onDelete}
                   disabled={isDeleting}
                   className="h-8 w-8 p-0 hover:bg-red-500/10"
                 >
@@ -539,10 +540,10 @@ function CatalogItemCard({ item, viewMode, onEdit, onDelete, onView, isDeleting 
             <Button size="sm" variant="outline" onClick={onEdit} className="glass-button">
               <Edit className="w-4 h-4" />
             </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={onDelete} 
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onDelete}
               disabled={isDeleting}
               className="glass-button hover:bg-red-500/10"
             >
@@ -576,8 +577,8 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
 
   // Prioritize primary image from images array, then fallback to variants/imageUrl
   const primaryImage = item.images?.find(img => img.isPrimary);
-  const currentImageUrl = imageVariants[selectedImageVariant as keyof typeof imageVariants] || 
-                          primaryImage?.url || 
+  const currentImageUrl = imageVariants[selectedImageVariant as keyof typeof imageVariants] ||
+                          primaryImage?.url ||
                           item.imageUrl;
 
   return (
@@ -639,7 +640,7 @@ function CatalogItemDetailModal({ item, isOpen, onClose, onEdit, onDelete, isDel
                 <Label className="text-sm font-medium">Image Variants</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {availableVariants.map(([variant, url]) => (
-                    <Card 
+                    <Card
                       key={variant}
                       className={`rich-card cursor-pointer transition-all duration-200 ${
                         selectedImageVariant === variant ? 'ring-2 ring-neon-blue' : ''
@@ -1351,7 +1352,7 @@ export default function CatalogPage() {
 
     if (!formData.category?.trim()) {
       toast({
-        title: "Validation Error", 
+        title: "Validation Error",
         description: "Category is required",
         variant: "destructive",
       });
@@ -1362,7 +1363,7 @@ export default function CatalogPage() {
     if (!formData.sport?.trim()) {
       toast({
         title: "Validation Error",
-        description: "Sport selection is required", 
+        description: "Sport selection is required",
         variant: "destructive",
       });
       setCurrentStep(0); // Go back to basic info step
@@ -1711,11 +1712,9 @@ export default function CatalogPage() {
   if (catalogError) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Product Catalog</h1>
-            <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
-          </div>
+        <div className="flex items-center space-x-4 mb-4">
+          <SafeBackButton fallbackPath="/dashboard" />
+          <h1 className="text-2xl font-bold">Catalog Management</h1>
         </div>
 
         <Card className="rich-card">
@@ -1739,11 +1738,9 @@ export default function CatalogPage() {
   if (catalogItems === null || catalogItems === undefined) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Product Catalog</h1>
-            <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
-          </div>
+        <div className="flex items-center space-x-4 mb-4">
+          <SafeBackButton fallbackPath="/dashboard" />
+          <h1 className="text-2xl font-bold">Catalog Management</h1>
         </div>
 
         <Card className="rich-card">
@@ -1767,15 +1764,9 @@ export default function CatalogPage() {
     return (
       <div className="space-y-6">
         {/* Header Skeleton */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Product Catalog</h1>
-            <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
-          </div>
-          <div className="flex space-x-2">
-            <div className="w-20 h-10 bg-glass-border/20 animate-pulse rounded-md"></div>
-            <div className="w-24 h-10 bg-glass-border/20 animate-pulse rounded-md"></div>
-          </div>
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="w-10 h-10 rounded-full bg-glass-border/20 animate-pulse"></div>
+          <div className="w-64 h-10 bg-glass-border/20 animate-pulse rounded-md"></div>
         </div>
 
         {/* Search Skeleton */}
@@ -1830,14 +1821,18 @@ export default function CatalogPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center space-x-4 mb-4">
+        <SafeBackButton fallbackPath="/dashboard" />
+        <h1 className="text-2xl font-bold">Catalog Management</h1>
+      </div>
+
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Product Catalog</h1>
           <p className="text-muted-foreground">Manage your product inventory and catalog items</p>
         </div>
         <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => {
               console.log("Manually refreshing catalog...");
               refetch();
@@ -1852,7 +1847,7 @@ export default function CatalogPage() {
             )}
             Refresh
           </Button>
-          <Button 
+          <Button
             onClick={() => setIsAddingItem(true)}
             className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
           >
@@ -1926,8 +1921,8 @@ export default function CatalogPage() {
       {/* Catalog Display */}
       {!catalogError && (
         catalogViewMode === 'traditional' ? (
-          <CategorizedCatalogView 
-            items={filteredItems} 
+          <CategorizedCatalogView
+            items={filteredItems}
             onEditItem={startEditing}
             onDeleteItem={(itemId) => deleteItemMutation.mutate(itemId)}
             isDeleting={deleteItemMutation.isPending}
@@ -1956,7 +1951,7 @@ export default function CatalogPage() {
               {searchTerm ? 'No items match your search criteria.' : 'Get started by adding your first catalog item.'}
             </p>
             {!searchTerm && (
-              <Button 
+              <Button
                 onClick={() => setIsAddingItem(true)}
                 className="bg-neon-blue hover:bg-neon-blue/80 text-rich-black font-semibold"
               >
