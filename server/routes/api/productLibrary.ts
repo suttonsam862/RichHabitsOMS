@@ -16,8 +16,48 @@ import multer from 'multer';
 import sharp from 'sharp';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import { insertCatalogItemSchema, type CatalogItem, type InsertCatalogItem } from '../../../shared/schema';
 
 const router = Router();
+
+// Validation schemas
+const createProductSchema = insertCatalogItemSchema.extend({
+  name: z.string().min(1, 'Product name is required').max(255, 'Product name too long'),
+  category: z.string().min(1, 'Category is required').max(100, 'Category too long'),
+  sport: z.string().min(1, 'Sport is required').max(100, 'Sport too long'),
+  basePrice: z.string().min(1, 'Base price is required').refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num >= 0;
+  }, 'Base price must be a valid positive number'),
+  unitCost: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const num = parseFloat(val);
+    return !isNaN(num) && num >= 0;
+  }, 'Unit cost must be a valid positive number'),
+  sku: z.string().min(1, 'SKU is required').max(100, 'SKU too long'),
+  etaDays: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const num = parseInt(val);
+    return !isNaN(num) && num > 0;
+  }, 'ETA days must be a valid positive number'),
+  minQuantity: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const num = parseFloat(val);
+    return !isNaN(num) && num >= 0;
+  }, 'Min quantity must be a valid positive number'),
+  maxQuantity: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const num = parseFloat(val);
+    return !isNaN(num) && num >= 0;
+  }, 'Max quantity must be a valid positive number')
+});
+
+const updateProductSchema = createProductSchema.partial();
+
+const productIdSchema = z.object({
+  id: z.string().uuid('Invalid product ID format')
+});
 
 // Create Supabase admin client for file uploads
 const supabaseAdmin = createClient(
@@ -244,70 +284,352 @@ export async function getProductCategories(req: Request, res: Response) {
   }
 }
 
-// Add new product to library
-export async function addProductToLibrary(req: Request, res: Response) {
+// POST /api/products/library - Create new product
+export async function createProduct(req: Request, res: Response) {
   try {
-    const {
-      product_name,
-      description,
-      category,
-      base_price,
-      material,
-      available_sizes = [],
-      available_colors = [],
-      supplier,
-      supplier_sku,
-      lead_time_days,
-      minimum_quantity = 1,
-      tags = []
-    } = req.body;
-
-    if (!product_name || !base_price) {
+    // Validate request body
+    const validation = createProductSchema.safeParse(req.body);
+    if (!validation.success) {
       return res.status(400).json({
         success: false,
-        message: 'Product name and base price are required'
+        message: 'Validation failed',
+        errors: validation.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }))
       });
     }
 
-    const userEmail = (req as any).user?.email || 'unknown';
+    const validatedData = validation.data;
+    const user = (req as any).user;
+
+    // Check if user has permission to create products (admin, salesperson)
+    const userRole = user?.user_metadata?.role || user?.app_metadata?.role;
+    if (!['admin', 'salesperson'].includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Insufficient permissions to create products'
+      });
+    }
+
+    // Prepare data for insertion
+    const insertData: Partial<InsertCatalogItem> = {
+      name: validatedData.name,
+      description: validatedData.description || '',
+      category: validatedData.category,
+      sport: validatedData.sport,
+      basePrice: validatedData.basePrice,
+      unitCost: validatedData.unitCost || '0',
+      sku: validatedData.sku,
+      status: validatedData.status || 'active',
+      etaDays: validatedData.etaDays || '7',
+      minQuantity: validatedData.minQuantity || '1',
+      maxQuantity: validatedData.maxQuantity || '1000',
+      fabric: validatedData.fabric || '',
+      fabricId: validatedData.fabricId || null,
+      preferredManufacturerId: validatedData.preferredManufacturerId || null,
+      sizes: validatedData.sizes || [],
+      colors: validatedData.colors || [],
+      customizationOptions: validatedData.customizationOptions || [],
+      tags: validatedData.tags || [],
+      specifications: validatedData.specifications || {},
+      buildInstructions: validatedData.buildInstructions || '',
+      measurementInstructions: validatedData.measurementInstructions || '',
+      hasMeasurements: validatedData.hasMeasurements || false
+    };
 
     const { data, error } = await supabase
-      .from('product_library')
-      .insert({
-        product_name,
-        description,
-        category,
-        base_price: parseFloat(base_price),
-        material,
-        available_sizes,
-        available_colors,
-        supplier,
-        supplier_sku,
-        lead_time_days: lead_time_days ? parseInt(lead_time_days) : null,
-        minimum_quantity: parseInt(minimum_quantity),
-        tags,
-        created_by: userEmail,
-        is_active: true
-      })
-      .select()
+      .from('catalog_items')
+      .insert(insertData)
+      .select(`
+        *,
+        user_profiles!catalog_items_preferred_manufacturer_id_fkey(
+          id,
+          username,
+          first_name,
+          last_name
+        )
+      `)
       .single();
 
     if (error) {
-      console.error('Error adding product to library:', error);
+      console.error('Error creating product:', error);
+      
+      // Handle specific database errors
+      if (error.code === '23505') { // Unique constraint violation
+        return res.status(409).json({
+          success: false,
+          message: 'Product with this SKU already exists'
+        });
+      }
+      
       return res.status(500).json({
         success: false,
-        message: 'Failed to add product to library'
+        message: 'Failed to create product',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
 
     res.status(201).json({
       success: true,
-      message: 'Product added to library successfully',
-      product: data
+      message: 'Product created successfully',
+      data: data,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Error in addProductToLibrary:', error);
+    console.error('Error in createProduct:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// PUT /api/products/library/:id - Update existing product
+export async function updateProduct(req: Request, res: Response) {
+  try {
+    // Validate product ID
+    const idValidation = productIdSchema.safeParse(req.params);
+    if (!idValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
+
+    const { id } = idValidation.data;
+
+    // Validate request body
+    const validation = updateProductSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validation.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }))
+      });
+    }
+
+    const validatedData = validation.data;
+    const user = (req as any).user;
+
+    // Check if user has permission to update products (admin, salesperson)
+    const userRole = user?.user_metadata?.role || user?.app_metadata?.role;
+    if (!['admin', 'salesperson'].includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Insufficient permissions to update products'
+      });
+    }
+
+    // Check if product exists
+    const { data: existingProduct, error: fetchError } = await supabase
+      .from('catalog_items')
+      .select('id, name, sku')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingProduct) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Prepare update data (only include fields that were provided)
+    const updateData: Partial<InsertCatalogItem> = {};
+    
+    if (validatedData.name !== undefined) updateData.name = validatedData.name;
+    if (validatedData.description !== undefined) updateData.description = validatedData.description;
+    if (validatedData.category !== undefined) updateData.category = validatedData.category;
+    if (validatedData.sport !== undefined) updateData.sport = validatedData.sport;
+    if (validatedData.basePrice !== undefined) updateData.basePrice = validatedData.basePrice;
+    if (validatedData.unitCost !== undefined) updateData.unitCost = validatedData.unitCost;
+    if (validatedData.sku !== undefined) updateData.sku = validatedData.sku;
+    if (validatedData.status !== undefined) updateData.status = validatedData.status;
+    if (validatedData.etaDays !== undefined) updateData.etaDays = validatedData.etaDays;
+    if (validatedData.minQuantity !== undefined) updateData.minQuantity = validatedData.minQuantity;
+    if (validatedData.maxQuantity !== undefined) updateData.maxQuantity = validatedData.maxQuantity;
+    if (validatedData.fabric !== undefined) updateData.fabric = validatedData.fabric;
+    if (validatedData.fabricId !== undefined) updateData.fabricId = validatedData.fabricId;
+    if (validatedData.preferredManufacturerId !== undefined) updateData.preferredManufacturerId = validatedData.preferredManufacturerId;
+    if (validatedData.sizes !== undefined) updateData.sizes = validatedData.sizes;
+    if (validatedData.colors !== undefined) updateData.colors = validatedData.colors;
+    if (validatedData.customizationOptions !== undefined) updateData.customizationOptions = validatedData.customizationOptions;
+    if (validatedData.tags !== undefined) updateData.tags = validatedData.tags;
+    if (validatedData.specifications !== undefined) updateData.specifications = validatedData.specifications;
+    if (validatedData.buildInstructions !== undefined) updateData.buildInstructions = validatedData.buildInstructions;
+    if (validatedData.measurementInstructions !== undefined) updateData.measurementInstructions = validatedData.measurementInstructions;
+    if (validatedData.hasMeasurements !== undefined) updateData.hasMeasurements = validatedData.hasMeasurements;
+
+    // Always update timestamp
+    updateData.updatedAt = new Date();
+
+    const { data, error } = await supabase
+      .from('catalog_items')
+      .update(updateData)
+      .eq('id', id)
+      .select(`
+        *,
+        user_profiles!catalog_items_preferred_manufacturer_id_fkey(
+          id,
+          username,
+          first_name,
+          last_name
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error updating product:', error);
+      
+      // Handle specific database errors
+      if (error.code === '23505') { // Unique constraint violation
+        return res.status(409).json({
+          success: false,
+          message: 'Product with this SKU already exists'
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update product',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      data: data,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error in updateProduct:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+// DELETE /api/products/library/:id - Delete product
+export async function deleteProduct(req: Request, res: Response) {
+  try {
+    // Validate product ID
+    const idValidation = productIdSchema.safeParse(req.params);
+    if (!idValidation.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
+
+    const { id } = idValidation.data;
+    const user = (req as any).user;
+
+    // Check if user has permission to delete products (admin only)
+    const userRole = user?.user_metadata?.role || user?.app_metadata?.role;
+    if (!['admin'].includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Insufficient permissions to delete products. Admin access required.'
+      });
+    }
+
+    // Check if product exists and get reference info
+    const { data: existingProduct, error: fetchError } = await supabase
+      .from('catalog_items')
+      .select('id, name, sku, status')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingProduct) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Check if product is being used in orders (soft delete instead of hard delete)
+    const { data: orderItems, error: orderCheckError } = await supabase
+      .from('order_items')
+      .select('id')
+      .eq('catalog_item_id', id)
+      .limit(1);
+
+    if (orderCheckError) {
+      console.error('Error checking product usage:', orderCheckError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to verify product deletion safety'
+      });
+    }
+
+    // If product is used in orders, perform soft delete by setting status to 'discontinued'
+    if (orderItems && orderItems.length > 0) {
+      const { data, error } = await supabase
+        .from('catalog_items')
+        .update({ 
+          status: 'discontinued',
+          updatedAt: new Date()
+        })
+        .eq('id', id)
+        .select('id, name, sku, status')
+        .single();
+
+      if (error) {
+        console.error('Error soft deleting product:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to discontinue product'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Product discontinued successfully (soft delete due to existing orders)',
+        data: data,
+        deleted: false,
+        discontinued: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Perform hard delete if no orders reference this product
+    const { error: deleteError } = await supabase
+      .from('catalog_items')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Error deleting product:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete product',
+        error: process.env.NODE_ENV === 'development' ? deleteError.message : undefined
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Product deleted successfully',
+      data: {
+        id: existingProduct.id,
+        name: existingProduct.name,
+        sku: existingProduct.sku
+      },
+      deleted: true,
+      discontinued: false,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error in deleteProduct:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -1027,334 +1349,25 @@ export async function deleteProductMockup(req: Request, res: Response) {
   }
 }
 
-// Enhanced Routes with proper role-based access control
-// GET /api/products/library - fetch all products with metadata (all authenticated users)
+// ============================================================================= 
+// ROUTE REGISTRATION WITH PROPER ROLE-BASED ACCESS CONTROL
+// =============================================================================
+
+// Main CRUD endpoints
 router.get('/', requireAuth, getProductLibrary);
-
-// GET /api/products/library/:id - get individual product details (all authenticated users)
-router.get('/:id', requireAuth, getProductById);
-
-// POST /api/products/library - create new product (admin and salesperson only)
-router.post('/', requireAuth, requireRole(['admin', 'salesperson']), async (req: Request, res: Response) => {
-  try {
-    const userEmail = (req as any).user?.email || 'unknown';
-    
-    const { data, error } = await supabase
-      .from('catalog_items')
-      .insert({
-        ...req.body,
-        created_by: userEmail,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating catalog item:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create catalog item'
-      });
-    }
-
-    res.status(201).json({
-      success: true,
-      data: data
-    });
-  } catch (error) {
-    console.error('Error in create catalog item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// PATCH /api/products/library/:id - update product (admin and salesperson only)
-router.patch('/:id', requireAuth, requireRole(['admin', 'salesperson']), async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    const { data, error } = await supabase
-      .from('catalog_items')
-      .update({
-        ...req.body,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating catalog item:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to update catalog item'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: data
-    });
-  } catch (error) {
-    console.error('Error in update catalog item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// DELETE /api/products/library/:id - delete product (admin only)
-router.delete('/:id', requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    const { error } = await supabase
-      .from('catalog_items')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting catalog item:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to delete catalog item'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Catalog item deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error in delete catalog item:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// GET /api/products/library/categories - get product categories (all authenticated users)
 router.get('/categories', requireAuth, getProductCategories);
-
-// GET /api/products/library/:id/pricing-history - get historical pricing data (restricted access)
-router.get('/:productId/pricing-history', requireAuth, requireRole(['admin', 'salesperson', 'designer']), getProductPricingHistory);
-
-// POST /api/products/library/:id/mockups - upload mockup for a product (designers and admins only)
-router.post('/:productId/mockups', requireAuth, requireRole(['admin', 'designer']), upload.single('mockup'), uploadProductMockup);
-
-// GET /api/products/library/:id/mockups - fetch mockups for a product (all authenticated users)  
-router.get('/:productId/mockups', requireAuth, getProductMockups);
-
-// DELETE /api/products/library/:productId/mockups/:mockupId - delete a specific mockup (admin, salesperson, designer only)
-router.delete('/:productId/mockups/:mockupId', requireAuth, requireRole(['admin', 'salesperson', 'designer']), deleteProductMockup);
-
-// POST /api/products/library - add new product to library (admin and salesperson only)
 router.post('/', requireAuth, requireRole(['admin', 'salesperson']), createProduct);
+router.put('/:id', requireAuth, requireRole(['admin', 'salesperson']), updateProduct);
+router.delete('/:id', requireAuth, requireRole(['admin']), deleteProduct);
 
-// PATCH /api/products/library/:id - update existing product (admin and salesperson only)
-router.patch('/:id', requireAuth, requireRole(['admin', 'salesperson']), updateProduct);
+// Product-specific operations
+router.get('/:id', requireAuth, getProductById);
+router.post('/:productId/copy', requireAuth, copyProductToOrder);
+router.get('/:productId/pricing-history', requireAuth, getProductPricingHistory);
 
-// POST /api/products/library/:productId/copy - copy product to order (admin and salesperson only)
-router.post('/:productId/copy', requireAuth, requireRole(['admin', 'salesperson']), copyProductToOrder);
-
-// Create new product
-async function createProduct(req: any, res: any) {
-  try {
-    const user = req.user;
-
-    const {
-      name,
-      description,
-      category,
-      sport,
-      base_price,
-      unit_cost,
-      fabric,
-      sku,
-      status,
-      eta_days,
-      min_quantity,
-      max_quantity,
-      sizes,
-      colors,
-      tags,
-      build_instructions
-    } = req.body;
-
-    // Validate required fields
-    if (!name || !category || !fabric || !base_price) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: name, category, fabric, and base_price are required'
-      });
-    }
-
-    // Generate SKU if not provided
-    const generateSKU = (name: string, category: string): string => {
-      const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6);
-      const cleanCategory = category.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3);
-      const timestamp = Date.now().toString().slice(-4);
-      const random = Math.floor(Math.random() * 99).toString().padStart(2, '0');
-      return `${cleanCategory || 'ITM'}-${cleanName || 'PROD'}-${timestamp}${random}`;
-    };
-
-    const finalSKU = sku || generateSKU(name, category);
-
-    // Insert the new product
-    const { data: newProduct, error } = await supabase
-      .from('catalog_items')
-      .insert({
-        name: name.trim(),
-        description: description?.trim() || '',
-        category: category.trim(),
-        sport: sport?.trim() || 'All Around Item',
-        base_price: parseFloat(base_price),
-        unit_cost: parseFloat(unit_cost || '0'),
-        fabric: fabric.trim(),
-        sku: finalSKU,
-        status: status || 'active',
-        eta_days: eta_days || '7',
-        min_quantity: parseFloat(min_quantity || '1'),
-        max_quantity: parseFloat(max_quantity || '1000'),
-        sizes: Array.isArray(sizes) ? sizes : [],
-        colors: Array.isArray(colors) ? colors : [],
-        tags: Array.isArray(tags) ? tags : [],
-        build_instructions: build_instructions?.trim() || '',
-        preferred_manufacturer_id: user.id, // Set creator as preferred manufacturer
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ Error creating product:', error);
-      return res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to create product'
-      });
-    }
-
-    console.log('✅ Product created successfully:', newProduct.id);
-
-    res.status(201).json({
-      success: true,
-      message: 'Product created successfully',
-      data: newProduct
-    });
-
-  } catch (error: any) {
-    console.error('❌ Product creation error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create product'
-    });
-  }
-}
-
-// Update existing product
-async function updateProduct(req: any, res: any) {
-  try {
-    const user = req.user;
-
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Product ID is required'
-      });
-    }
-
-    // Check if product exists
-    const { data: existingProduct, error: fetchError } = await supabase
-      .from('catalog_items')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !existingProduct) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    const {
-      name,
-      description,
-      category,
-      sport,
-      base_price,
-      unit_cost,
-      fabric,
-      sku,
-      status,
-      eta_days,
-      min_quantity,
-      max_quantity,
-      sizes,
-      colors,
-      tags,
-      build_instructions
-    } = req.body;
-
-    // Build update object with only provided fields
-    const updateData: any = {};
-    
-    if (name !== undefined) updateData.name = name.trim();
-    if (description !== undefined) updateData.description = description?.trim() || '';
-    if (category !== undefined) updateData.category = category.trim();
-    if (sport !== undefined) updateData.sport = sport?.trim() || 'All Around Item';
-    if (base_price !== undefined) updateData.base_price = parseFloat(base_price);
-    if (unit_cost !== undefined) updateData.unit_cost = parseFloat(unit_cost || '0');
-    if (fabric !== undefined) updateData.fabric = fabric.trim();
-    if (sku !== undefined) updateData.sku = sku.trim();
-    if (status !== undefined) updateData.status = status;
-    if (eta_days !== undefined) updateData.eta_days = eta_days;
-    if (min_quantity !== undefined) updateData.min_quantity = parseFloat(min_quantity || '1');
-    if (max_quantity !== undefined) updateData.max_quantity = parseFloat(max_quantity || '1000');
-    if (sizes !== undefined) updateData.sizes = Array.isArray(sizes) ? sizes : [];
-    if (colors !== undefined) updateData.colors = Array.isArray(colors) ? colors : [];
-    if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : [];
-    if (build_instructions !== undefined) updateData.build_instructions = build_instructions?.trim() || '';
-
-    // Always update the timestamp
-    updateData.updated_at = new Date().toISOString();
-
-    // Update the product
-    const { data: updatedProduct, error } = await supabase
-      .from('catalog_items')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ Error updating product:', error);
-      return res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to update product'
-      });
-    }
-
-    console.log('✅ Product updated successfully:', updatedProduct.id);
-
-    res.json({
-      success: true,
-      message: 'Product updated successfully',
-      data: updatedProduct
-    });
-
-  } catch (error: any) {
-    console.error('❌ Product update error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update product'
-    });
-  }
-}
+// Mockup management
+router.post('/:productId/mockups', requireAuth, requireRole(['admin', 'designer', 'salesperson']), upload.single('mockup'), uploadProductMockup);
+router.get('/:productId/mockups', requireAuth, getProductMockups);
+router.delete('/:productId/mockups/:mockupId', requireAuth, requireRole(['admin', 'designer', 'salesperson']), deleteProductMockup);
 
 export default router;
