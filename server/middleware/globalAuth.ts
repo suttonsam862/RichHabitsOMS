@@ -24,7 +24,23 @@ export const globalAuth = async (req: Request, res: Response, next: NextFunction
     let user: any = null;
     const now = Date.now();
 
-    // Check for Authorization header (primary method)
+    // FIRST: Check for session-based authentication (primary method after login)
+    if (req.session?.user && req.session?.authenticated) {
+      user = req.session.user;
+      req.user = user;
+      
+      // Update global auth state from session
+      globalAuthState = {
+        isAuthenticated: true,
+        user,
+        lastValidated: now,
+        validationInterval: 5 * 60 * 1000
+      };
+      
+      return next(); // Early return for valid session
+    }
+
+    // SECOND: Check for Authorization header (for API calls)
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);

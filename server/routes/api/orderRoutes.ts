@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth, requireRole } from '../../middleware/unifiedAuth';
+import { requireAuth, requireRole } from '../../middleware/globalAuth';
 import orderController from '../../controllers/orderController';
 import { OrderAuditLogger } from '../../services/auditLogger.js';
 import { AUDIT_ACTIONS } from '../../models/orderAuditLog.js';
