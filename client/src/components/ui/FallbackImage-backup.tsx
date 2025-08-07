@@ -7,28 +7,41 @@ import { useState, type ImgHTMLAttributes } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Product image component
+
 interface ProductImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string;
   alt: string;
   fallbackSrc?: string;
+  showPlaceholder?: boolean;
 }
 
-export function ProductImage({ src, alt, fallbackSrc, className, ...props }: ProductImageProps) {
+export function ProductImage({
+  src,
+  alt,
+  fallbackSrc,
+  showPlaceholder = true,
+  className,
+  ...props
+}: ProductImageProps) {
   const [imageError, setImageError] = useState(false);
   const [fallbackError, setFallbackError] = useState(false);
 
   const handleError = () => {
-    setImageError(true);
+    if (!fallbackError && fallbackSrc) {
+      setImageError(true);
+    } else {
+      setImageError(true);
+      setFallbackError(true);
+    }
   };
 
   const handleFallbackError = () => {
     setFallbackError(true);
   };
 
-  // Show package icon if both primary and fallback images failed or no fallback provided
-  if (imageError && (!fallbackSrc || fallbackError)) {
-    return (
+  // Show placeholder if image failed to load and no fallback or fallback failed
+  if ((imageError && !fallbackSrc) || (imageError && fallbackError)) {
+    return showPlaceholder ? (
       <div
         className={cn(
           "flex items-center justify-center bg-gray-100 text-gray-400",
@@ -38,7 +51,7 @@ export function ProductImage({ src, alt, fallbackSrc, className, ...props }: Pro
       >
         <Package className="h-8 w-8" />
       </div>
-    );
+    ) : null;
   }
 
   // Show fallback image if primary image failed but fallback is available
@@ -140,7 +153,7 @@ export function CompanyLogo({
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-gray-100 text-gray-400 rounded",
+          "flex items-center justify-center bg-gray-100 text-gray-400 rounded-lg",
           sizeClasses[size],
           className
         )}
@@ -153,9 +166,13 @@ export function CompanyLogo({
 
   return (
     <img
-      src={imageError ? fallbackSrc : src}
+      src={imageError && fallbackSrc ? fallbackSrc : src}
       alt={alt}
-      className={cn("object-cover rounded", sizeClasses[size], className)}
+      className={cn(
+        "rounded-lg object-cover",
+        sizeClasses[size],
+        className
+      )}
       onError={handleError}
       {...props}
     />
