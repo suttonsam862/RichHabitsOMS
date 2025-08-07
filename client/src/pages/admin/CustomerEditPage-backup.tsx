@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, Upload, X, User, AlertTriangle } from "lucide-react";
-import { UserAvatar } from '@/components/ui/FallbackImage';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useToast } from "@/hooks/use-toast";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useFormNavigationBlock } from "@/hooks/useFormNavigationBlock";
