@@ -195,8 +195,9 @@ export function CustomerPhotoUpload({
           {/* Current photo display */}
           <div className="flex items-center space-x-4">
             <UserAvatar
-              src={currentPhotoUrl || previewUrl}
-              name={customerName}
+              src={currentPhotoUrl || previewUrl || undefined}
+              alt={customerName}
+              fallbackText={customerName.charAt(0)}
               className="h-16 w-16"
             />
             <div>
