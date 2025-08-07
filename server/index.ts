@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
 
 async function main() {
   const app = express();
-  const port = process.env.PORT || 5000;
+  const port = parseInt(process.env.PORT || '5000', 10);
 
   // Apply CORS middleware
   app.use(cors({
