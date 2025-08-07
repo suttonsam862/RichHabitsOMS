@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,11 +22,13 @@ import {
   Building,
   Clock,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  Plus
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { MockupGallery } from '@/components/MockupGallery';
+import { UploadMockupModal } from '@/components/UploadMockupModal';
 
 interface ProductDetailData {
   id: string;
@@ -93,6 +95,7 @@ interface ProductDetailData {
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Redirect if not authenticated
   if (!user) {
@@ -659,12 +662,36 @@ export default function ProductDetail() {
 
       {/* MockupGallery Section */}
       <div className="mt-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Product Mockups</h2>
+            <p className="text-gray-600">View and manage mockup images for this product</p>
+          </div>
+          {(user?.role === 'admin' || user?.role === 'designer' || user?.role === 'salesperson') && (
+            <Button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Mockup
+            </Button>
+          )}
+        </div>
+
         <MockupGallery 
           productId={productData.id} 
           productName={productData.name} 
           className="max-w-full"
         />
       </div>
+
+      {/* Upload Mockup Modal */}
+      <UploadMockupModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        productId={productData.id}
+        productName={productData.name}
+      />
     </div>
   );
 }
