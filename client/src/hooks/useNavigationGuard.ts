@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -22,12 +21,18 @@ export const useNavigationGuard = (options: NavigationGuardOptions = {}) => {
 
   // Safe navigation function that handles auth state
   const safeNavigate = useCallback((path: string, options?: { replace?: boolean }) => {
-    if (requireAuth && !user && !loading) {
-      navigate('/login', { replace: true });
-      return;
+    try {
+      if (requireAuth && !user && !loading) {
+        navigate('/login', { replace: true });
+        return;
+      }
+      
+      navigate(path, options);
+    } catch (error) {
+      console.warn('Navigation error caught:', error);
+      // Fallback to basic navigation
+      window.location.href = path;
     }
-    
-    navigate(path, options);
   }, [navigate, user, loading, requireAuth]);
 
   // Handle browser back button

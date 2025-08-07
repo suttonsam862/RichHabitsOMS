@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -19,22 +19,25 @@ export const SafeBackButton: React.FC<SafeBackButtonProps> = ({
   size = 'default'
 }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
 
   const handleBack = () => {
-    // Check if we can safely go back
-    if (window.history.length > 1) {
+    try {
       // Ensure user is still authenticated
       if (!user) {
         navigate('/login', { replace: true });
         return;
       }
       
-      // Safe back navigation
-      window.history.back();
-    } else {
-      // No history, navigate to fallback
+      // Simple back navigation without complex history checks
+      if (document.referrer && document.referrer.includes(window.location.hostname)) {
+        window.history.back();
+      } else {
+        navigate(fallbackPath, { replace: true });
+      }
+    } catch (error) {
+      console.warn('Back navigation error:', error);
+      // Fallback navigation
       navigate(fallbackPath, { replace: true });
     }
   };

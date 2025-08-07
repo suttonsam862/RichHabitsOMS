@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { Header } from '@/components/dashboard/Header';
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export function AppLayout() {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Handle authentication state changes
+  useEffect(() => {
+    if (!loading && !user && location.pathname !== '/login') {
+      navigate('/login', { replace: true });
+    }
+  }, [user, loading, navigate, location.pathname]);
 
   if (loading) {
     return (
@@ -23,16 +33,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return null;
+    return null; // Let the navigation effect handle redirect
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex">
+    <div className="min-h-screen bg-gray-100 flex">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header />
-        <main className="flex-1 overflow-auto p-6">
-          {children}
+        <main className="flex-1 overflow-auto">
+          <Outlet />
         </main>
       </div>
     </div>
