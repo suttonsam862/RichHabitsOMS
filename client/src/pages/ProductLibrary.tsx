@@ -17,6 +17,7 @@ import { HistoricalProductsView } from '@/components/ProductLibrary/HistoricalPr
 import { MockupGallery } from '@/components/ProductLibrary/MockupGallery';
 import { ProductOrderHistory } from '@/components/ProductLibrary/ProductOrderHistory';
 import { ProductMockupUploader } from '@/components/ProductLibrary/ProductMockupUploader';
+import { ProductGrid, type ProductGridItem } from '@/components/ProductGrid';
 
 interface SelectedProduct {
   id: string;
@@ -137,10 +138,14 @@ export default function ProductLibrary() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
           <TabsTrigger value="historical" className="flex items-center space-x-2" data-testid="historical-products-tab">
             <BookOpen className="h-4 w-4" />
             <span>Historical Products</span>
+          </TabsTrigger>
+          <TabsTrigger value="product-grid" className="flex items-center space-x-2">
+            <Package className="h-4 w-4" />
+            <span>Product Grid</span>
           </TabsTrigger>
           
           <TabsTrigger value="mockups" className="flex items-center space-x-2" data-testid="mockups-tab">
@@ -165,6 +170,30 @@ export default function ProductLibrary() {
             onProductSelect={handleProductSelect}
             className="min-h-[600px]"
           />
+        </TabsContent>
+
+        {/* Product Grid Tab */}
+        <TabsContent value="product-grid" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Package className="h-5 w-5" />
+                <span>Product Grid View</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProductGrid
+                products={[]}
+                isLoading={false}
+                showFilters={true}
+                basePath="/products"
+                searchPlaceholder="Search product library..."
+                emptyStateTitle="No products in library"
+                emptyStateDescription="Products from your catalog and order history will appear here."
+                className="mt-4"
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Mockup Gallery Tab */}

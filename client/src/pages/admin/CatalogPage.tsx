@@ -57,6 +57,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Separator } from "@/components/ui/separator";
 import { SizesInput } from "@/components/SizesInput";
+import { ProductGrid, type ProductGridItem } from '@/components/ProductGrid';
 
 interface CatalogItem {
   id: string;
@@ -863,6 +864,7 @@ export default function CatalogPage() {
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
+  const [catalogViewMode, setCatalogViewMode] = useState<'traditional' | 'grid'>('traditional');
   const [formData, setFormData] = useState<CatalogFormData>({
     name: '',
     category: '',
@@ -1413,6 +1415,35 @@ export default function CatalogPage() {
     item.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Convert catalog items to ProductGrid format
+  const productGridItems: ProductGridItem[] = catalogItems.map((item: CatalogItem) => ({
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    sport: item.sport,
+    sku: item.sku,
+    status: item.status,
+    base_price: item.basePrice,
+    unit_cost: item.unitCost,
+    fabric: item.fabric,
+    created_at: item.created_at || new Date().toISOString(),
+    updated_at: item.updated_at,
+    image_url: item.imageUrl,
+    primary_image: item.images?.find(img => img.isPrimary)?.url,
+    metadata: {
+      sizes: item.sizes,
+      colors: item.colors,
+      tags: [...(item.customizationOptions || []), item.fabric].filter(Boolean),
+      specifications: {
+        etaDays: item.etaDays,
+        minQuantity: item.minQuantity,
+        maxQuantity: item.maxQuantity,
+        buildInstructions: item.buildInstructions
+      }
+    }
+  }));
+
   // Handle next step in onboarding
   const handleNextStep = () => {
     if (currentStep < ONBOARDING_STEPS.length - 1) {
@@ -1860,14 +1891,59 @@ export default function CatalogPage() {
         </Card>
       )}
 
-      {/* Categorized Catalog Display */}
+      {/* View Mode Toggle */}
+      {!catalogError && filteredItems.length > 0 && (
+        <Card className="rich-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">View Mode:</span>
+                <Button
+                  size="sm"
+                  variant={catalogViewMode === 'traditional' ? 'default' : 'outline'}
+                  onClick={() => setCatalogViewMode('traditional')}
+                  className="glass-button"
+                >
+                  Traditional
+                </Button>
+                <Button
+                  size="sm"
+                  variant={catalogViewMode === 'grid' ? 'default' : 'outline'}
+                  onClick={() => setCatalogViewMode('grid')}
+                  className="glass-button"
+                >
+                  Product Grid
+                </Button>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Catalog Display */}
       {!catalogError && (
-        <CategorizedCatalogView 
-          items={filteredItems} 
-          onEditItem={startEditing}
-          onDeleteItem={(itemId) => deleteItemMutation.mutate(itemId)}
-          isDeleting={deleteItemMutation.isPending}
-        />
+        catalogViewMode === 'traditional' ? (
+          <CategorizedCatalogView 
+            items={filteredItems} 
+            onEditItem={startEditing}
+            onDeleteItem={(itemId) => deleteItemMutation.mutate(itemId)}
+            isDeleting={deleteItemMutation.isPending}
+          />
+        ) : (
+          <ProductGrid
+            products={productGridItems}
+            isLoading={isLoading}
+            showFilters={false}
+            basePath="/catalog"
+            searchPlaceholder="Search catalog items..."
+            emptyStateTitle="No catalog items found"
+            emptyStateDescription={searchTerm ? 'No items match your search criteria.' : 'Get started by adding your first catalog item.'}
+            className="mt-6"
+          />
+        )
       )}
 
       {/* Empty State */}
