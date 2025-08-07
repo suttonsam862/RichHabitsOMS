@@ -3,11 +3,9 @@
  * Image component with fallback and error handling
  */
 
-import React, { useState, ImgHTMLAttributes } from 'react';
+import { useState, type ImgHTMLAttributes } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-import OptimizedImage from '@/components/OptimizedImage';
 
 
 interface ProductImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
