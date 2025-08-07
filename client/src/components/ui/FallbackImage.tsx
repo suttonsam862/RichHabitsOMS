@@ -2,6 +2,8 @@ import { useState, type ImgHTMLAttributes } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Force browser cache invalidation - timestamp: 1754543600000
+
 interface ProductImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string;
   alt: string;
