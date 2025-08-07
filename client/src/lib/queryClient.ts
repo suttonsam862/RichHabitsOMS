@@ -1,4 +1,4 @@
-import { QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { API_BASE_URL } from "./config";
 
 async function throwIfResNotOk(res: Response) {

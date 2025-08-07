@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useSalespeople, useCreateSalesperson, useUpdateSalesperson, useDeleteSalesperson } from '@/hooks/useSalespeople';
 import { Salesperson } from '@/lib/salespersonApi';
 import { useToast } from '@/hooks/use-toast';
