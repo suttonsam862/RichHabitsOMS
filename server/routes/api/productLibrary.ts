@@ -927,6 +927,106 @@ export async function getProductMockups(req: Request, res: Response) {
   }
 }
 
+// DELETE /api/products/library/:productId/mockups/:mockupId - delete a specific mockup
+export async function deleteProductMockup(req: Request, res: Response) {
+  try {
+    const { productId, mockupId } = req.params;
+    const user = (req as any).user;
+
+    // Validate that the product exists first
+    const { data: product, error: productError } = await supabase
+      .from('catalog_items')
+      .select('id, name')
+      .eq('id', productId)
+      .single();
+
+    if (productError || !product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+        error_code: 'PRODUCT_NOT_FOUND'
+      });
+    }
+
+    // Get the mockup to delete (including file path for cleanup)
+    const { data: mockup, error: mockupError } = await supabase
+      .from('catalog_item_image_history')
+      .select('*')
+      .eq('id', mockupId)
+      .eq('catalog_item_id', productId)
+      .single();
+
+    if (mockupError || !mockup) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mockup not found',
+        error_code: 'MOCKUP_NOT_FOUND'
+      });
+    }
+
+    // Check permissions - admin can delete any mockup, others can only delete their own
+    if (user.role !== 'admin' && mockup.designer_id !== user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete your own mockups',
+        error_code: 'INSUFFICIENT_PERMISSIONS'
+      });
+    }
+
+    // Delete the image from Supabase storage if it exists
+    if (mockup.image_path) {
+      try {
+        const { error: storageError } = await supabaseAdmin.storage
+          .from('catalog-images')
+          .remove([mockup.image_path]);
+        
+        if (storageError) {
+          console.warn('Failed to delete image from storage:', storageError);
+          // Continue with database deletion even if storage deletion fails
+        }
+      } catch (storageError) {
+        console.warn('Error deleting from storage:', storageError);
+        // Continue with database deletion
+      }
+    }
+
+    // Delete the mockup record from database
+    const { error: deleteError } = await supabase
+      .from('catalog_item_image_history')
+      .delete()
+      .eq('id', mockupId)
+      .eq('catalog_item_id', productId);
+
+    if (deleteError) {
+      console.error('Error deleting mockup:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete mockup',
+        error: deleteError.message
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Mockup deleted successfully',
+      data: {
+        deleted_mockup_id: mockupId,
+        product_id: productId,
+        product_name: product.name
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error in deleteProductMockup:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
 // Enhanced Routes with proper role-based access control
 // GET /api/products/library - fetch all products with metadata (all authenticated users)
 router.get('/', requireAuth, getProductLibrary);
@@ -1049,6 +1149,9 @@ router.post('/:productId/mockups', requireAuth, requireRole(['admin', 'designer'
 
 // GET /api/products/library/:id/mockups - fetch mockups for a product (all authenticated users)  
 router.get('/:productId/mockups', requireAuth, getProductMockups);
+
+// DELETE /api/products/library/:productId/mockups/:mockupId - delete a specific mockup (admin, salesperson, designer only)
+router.delete('/:productId/mockups/:mockupId', requireAuth, requireRole(['admin', 'salesperson', 'designer']), deleteProductMockup);
 
 // POST /api/products/library - add new product to library (admin and salesperson only)
 router.post('/', requireAuth, requireRole(['admin', 'salesperson']), createProduct);

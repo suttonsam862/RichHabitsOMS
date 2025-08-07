@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
+import { MockupGallery } from '@/components/MockupGallery';
 
 interface ProductDetailData {
   id: string;
@@ -654,6 +655,15 @@ export default function ProductDetail() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* MockupGallery Section */}
+      <div className="mt-8">
+        <MockupGallery 
+          productId={productData.id} 
+          productName={productData.name} 
+          className="max-w-full"
+        />
       </div>
     </div>
   );
