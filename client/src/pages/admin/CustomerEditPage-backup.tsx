@@ -828,7 +828,8 @@ export default function CustomerEditPage() {
                   <div className="flex-shrink-0">
                     <UserAvatar
                       src={customer.profile_image_url || customer.photo_url}
-                      name={`${customer.firstName} ${customer.lastName}`}
+                      fallbackText={`${customer.firstName?.charAt(0) || ''}${customer.lastName?.charAt(0) || ''}`}
+                      alt={`${customer.firstName} ${customer.lastName}`}
                       size="lg"
                     />
                   </div>

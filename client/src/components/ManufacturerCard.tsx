@@ -122,8 +122,8 @@ export default function ManufacturerCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <CompanyLogo
-                src={logo?.url}
-                name={manufacturer.company}
+                src={logo?.url || ""}
+                alt={manufacturer.company || "Company Logo"}
                 size="sm"
               />
               <div>
@@ -168,8 +168,8 @@ export default function ManufacturerCard({
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <CompanyLogo
-              src={logo?.url}
-              name={manufacturer.company}
+              src={logo?.url || ""}
+              alt={manufacturer.company || "Company Logo"}
               size="md"
             />
             <div>

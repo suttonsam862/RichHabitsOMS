@@ -179,7 +179,7 @@ export default function CustomerEditPage() {
 
   // Block navigation during form submission
   useFormNavigationBlock({
-    when: validation.hasUnsavedChanges || isSaving,
+    when: validation.hasChanges || isSaving,
     message: "Your form is being saved. Please wait for the process to complete before leaving."
   });
 
@@ -844,7 +844,8 @@ export default function CustomerEditPage() {
                   <div className="flex-shrink-0">
                     <UserAvatar
                       src={customer.profile_image_url || customer.photo_url}
-                      name={`${customer.firstName} ${customer.lastName}`}
+                      fallbackText={`${customer.firstName?.charAt(0) || ''}${customer.lastName?.charAt(0) || ''}`}
+                      alt={`${customer.firstName} ${customer.lastName}`}
                       size="lg"
                     />
                   </div>
