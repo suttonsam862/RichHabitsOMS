@@ -2,8 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CompanyLogo } from '@/components/ui/FallbackImage';
-import { UserAvatar } from '@/components/ui/UserAvatar';
+import { CompanyLogo, UserAvatar } from '@/components/ui/FallbackImage';
 import { 
   Building2, 
   Phone, 
