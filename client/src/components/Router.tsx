@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Router, Route, Switch, Redirect, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 
 // Auth components
@@ -80,82 +80,179 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  return user ? <>{children}</> : <Redirect to="/login" />;
+}
+
+// Protected route wrapper that includes layout
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <RequireAuth>
+      <AppLayout>
+        {children}
+      </AppLayout>
+    </RequireAuth>
+  );
+}
+
+// Dashboard router with role-based routing
+function DashboardRouter() {
+  return <MainDashboardRouter />;
 }
 
 export function AppRouter() {
   return (
-    <BrowserRouter>
+    <Router>
       <NavigationInterceptor>
-        <Routes>
+        <Switch>
           {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/setup-password" element={<SetupPassword />} />
-          <Route path="/payment/success" element={<PaymentSuccess />} />
-          <Route path="/payment/cancel" element={<PaymentCancel />} />
+          <Route path="/login"><Login /></Route>
+          <Route path="/register"><Register /></Route>
+          <Route path="/setup-password"><SetupPassword /></Route>
+          <Route path="/payment/success"><PaymentSuccess /></Route>
+          <Route path="/payment/cancel"><PaymentCancel /></Route>
 
-          {/* Protected routes */}
-          <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
-            {/* Dashboard routing */}
-            <Route path="dashboard" element={<MainDashboardRouter />} />
-            <Route path="dashboard/admin" element={<AdminDashboard />} />
-            <Route path="dashboard/salesperson" element={<SalespersonDashboard />} />
-            <Route path="dashboard/designer" element={<DesignerDashboard />} />
-            <Route path="dashboard/manufacturer" element={<ManufacturerDashboard />} />
-            <Route path="dashboard/customer" element={<CustomerDashboard />} />
+          {/* Protected routes - Dashboard */}
+          <Route path="/dashboard/:rest*">
+            <ProtectedRoute>
+              <DashboardRouter />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/dashboard">
+            <ProtectedRoute>
+              <DashboardRouter />
+            </ProtectedRoute>
+          </Route>
 
-            {/* Admin routes */}
-            <Route path="admin/customers" element={<CustomerListPage />} />
-            <Route path="admin/customers/:id/edit" element={<CustomerEditPage />} />
-            
-            {/* Salesperson Management route */}
-            <Route path="admin/salespeople" element={<SalesManagementPage />} />
-            
-            {/* Analytics route */}
-            <Route path="admin/analytics" element={<AnalyticsPage />} />
-            
-            {/* User Management routes */}
-            <Route path="admin/user-management" element={<UserManagementPage />} />
-            <Route path="admin/settings" element={<SettingsPage />} />
-            
-            {/* Manufacturing and assignment routes */}
-            <Route path="manufacturer-assignment" element={<AdminManufacturerAssignment />} />
+          {/* Protected routes - Admin */}
+          <Route path="/admin/customers/:id/edit">
+            <ProtectedRoute>
+              <CustomerEditPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/customers">
+            <ProtectedRoute>
+              <CustomerListPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/salespeople">
+            <ProtectedRoute>
+              <SalesManagementPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/analytics">
+            <ProtectedRoute>
+              <AnalyticsPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/user-management">
+            <ProtectedRoute>
+              <UserManagementPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/admin/settings">
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          </Route>
 
-            {/* Customer management routes */}
-            <Route path="customers" element={<CustomerListPage />} />
-            <Route path="customers/:id/edit" element={<CustomerEditPage />} />
+          {/* Protected routes - Manufacturing */}
+          <Route path="/manufacturer-assignment">
+            <ProtectedRoute>
+              <AdminManufacturerAssignment />
+            </ProtectedRoute>
+          </Route>
 
-            {/* Catalog management routes */}
-            <Route path="catalog" element={<CatalogPage />} />
-            <Route path="catalog/:id/edit" element={<CatalogItemEditPage />} />
+          {/* Protected routes - Customers */}
+          <Route path="/customers/:id/edit">
+            <ProtectedRoute>
+              <CustomerEditPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/customers">
+            <ProtectedRoute>
+              <CustomerListPage />
+            </ProtectedRoute>
+          </Route>
 
-            {/* Product detail routes */}
-            <Route path="products/:id" element={<ProductDetail />} />
-            <Route path="products/create" element={<ProductCreatePage />} />
+          {/* Protected routes - Catalog */}
+          <Route path="/catalog/:id/edit">
+            <ProtectedRoute>
+              <CatalogItemEditPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/catalog">
+            <ProtectedRoute>
+              <CatalogPage />
+            </ProtectedRoute>
+          </Route>
 
-            {/* Order routes */}
-            <Route path="orders" element={<Orders />} />
-            <Route path="orders/create" element={<OrderCreatePage />} />
-            <Route path="orders/edit/:id" element={<OrderEditPage />} />
-            <Route path="orders/enhanced" element={<EnhancedOrderManagement />} />
+          {/* Protected routes - Products */}
+          <Route path="/products/create">
+            <ProtectedRoute>
+              <ProductCreatePage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/products/:id">
+            <ProtectedRoute>
+              <ProductDetail />
+            </ProtectedRoute>
+          </Route>
 
-            {/* Design and production routes */}
-            <Route path="design-tasks" element={<DesignTasks />} />
-            <Route path="production" element={<Production />} />
+          {/* Protected routes - Orders */}
+          <Route path="/orders/create">
+            <ProtectedRoute>
+              <OrderCreatePage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/orders/edit/:id">
+            <ProtectedRoute>
+              <OrderEditPage />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/orders/enhanced">
+            <ProtectedRoute>
+              <EnhancedOrderManagement />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/orders">
+            <ProtectedRoute>
+              <Orders />
+            </ProtectedRoute>
+          </Route>
 
-            {/* Other routes */}
-            <Route path="messages" element={<Messages />} />
-            <Route path="payments" element={<Payments />} />
+          {/* Protected routes - Design and Production */}
+          <Route path="/design-tasks">
+            <ProtectedRoute>
+              <DesignTasks />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/production">
+            <ProtectedRoute>
+              <Production />
+            </ProtectedRoute>
+          </Route>
 
-            {/* Default redirect */}
-            <Route index element={<Navigate to="/dashboard" replace />} />
+          {/* Protected routes - Other */}
+          <Route path="/messages">
+            <ProtectedRoute>
+              <Messages />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/payments">
+            <ProtectedRoute>
+              <Payments />
+            </ProtectedRoute>
+          </Route>
+
+          {/* Root redirect */}
+          <Route path="/">
+            <Redirect to="/dashboard" />
           </Route>
 
           {/* 404 fallback */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+          <Route><NotFound /></Route>
+        </Switch>
       </NavigationInterceptor>
-    </BrowserRouter>
+    </Router>
   );
 }
