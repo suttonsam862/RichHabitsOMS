@@ -65,6 +65,48 @@ const supabaseAdmin = createClient(
   }
 );
 
+// Session-based authentication middleware
+const sessionBasedAuth = async (req: Request, res: Response, next: NextFunction) => {
+  if (req.session && req.session.user) {
+    // User is already authenticated via session
+    req.user = req.session.user;
+    return next();
+  }
+
+  // If not in session, attempt to authenticate via token (e.g., from initial login)
+  // This part might need adjustment based on how initial token auth is handled
+  // For now, assuming session is primary after initial auth
+  if (req.headers.authorization) {
+    const token = req.headers.authorization.split(' ')[1];
+    if (token) {
+      try {
+        const { data, error } = await supabase.auth.getUser(token);
+        if (error) {
+          console.error('Auth token validation error:', error.message);
+          return res.status(401).json({ message: 'Invalid or expired token' });
+        }
+        if (data?.user) {
+          req.user = {
+            id: data.user.id,
+            email: data.user.email!,
+            role: data.user.user_metadata?.role || 'user', // Default role
+            // Add other necessary user properties
+          };
+          // Optionally, create a session for this user
+          req.session!.user = req.user;
+          return next();
+        }
+      } catch (e) {
+        console.error('Error during token authentication:', e);
+        return res.status(500).json({ message: 'Authentication error' });
+      }
+    }
+  }
+
+  // If no session and no valid token, deny access
+  res.status(401).json({ message: 'Unauthorized: No active session or valid token' });
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure session middleware on main app (needed for auth routes)
   app.use(session({
@@ -2360,7 +2402,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use(bodyParser.json({ limit: '10mb' }));
   router.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Session is now configured on main app
+  // Apply session-based authentication
+  router.use(sessionBasedAuth);
+  // Apply authentication middleware to all routes
+  router.use(authenticateRequest);
 
   // Health check (no auth required)
   router.use('/health', healthRoutesRefactored);

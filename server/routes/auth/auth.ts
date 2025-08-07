@@ -40,71 +40,48 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
       return next();
     }
 
-    // Simplified rate limiting - only for excessive requests
-    if (req.path === '/api/auth/me') {
-      const clientIP = req.ip || 'unknown';
-      const now = Date.now();
-      const rateLimitKey = `${clientIP}:auth`;
-
-      const rateLimit = AUTH_RATE_LIMIT.get(rateLimitKey);
-      if (rateLimit && now - rateLimit.timestamp < 10000) { // 10 second window
-        if (rateLimit.count >= 50) { // Much higher limit
-          return res.status(429).json({
-            success: false,
-            message: 'Too many requests'
-          });
+    // OPTIMIZED: Trust valid sessions completely, no token re-validation needed
+    if (req.session?.user && req.session?.expires) {
+      const sessionExpiry = new Date(req.session.expires);
+      
+      // If session is still valid, trust it completely
+      if (sessionExpiry > new Date()) {
+        req.user = req.session.user;
+        
+        // Auto-extend session if it's more than halfway to expiry
+        const now = new Date();
+        const sessionDuration = sessionExpiry.getTime() - (sessionExpiry.getTime() - (7 * 24 * 60 * 60 * 1000));
+        const halfwayPoint = sessionExpiry.getTime() - (sessionDuration / 2);
+        
+        if (now.getTime() > halfwayPoint) {
+          const newExpiry = new Date();
+          newExpiry.setTime(newExpiry.getTime() + (7 * 24 * 60 * 60 * 1000));
+          req.session.expires = newExpiry.toISOString();
+          req.session.touch();
         }
-        rateLimit.count++;
+        
+        return next();
       } else {
-        AUTH_RATE_LIMIT.set(rateLimitKey, { count: 1, timestamp: now });
+        // Clear expired session
+        console.log('Session expired for user:', req.session.user?.email);
+        req.session.destroy((err) => {
+          if (err) console.error('Session destruction error:', err);
+        });
       }
     }
 
+    // Only validate tokens for NEW sessions or when session is missing
     let token: string | null = null;
     let user: any = null;
 
-    // Check session first - be more permissive with session validation
-    if (req.session?.user && req.session?.token) {
-      try {
-        // Only check expiry if it exists, and be more lenient
-        const sessionExpiry = req.session.expires ? new Date(req.session.expires) : null;
-        if (!sessionExpiry || sessionExpiry > new Date()) {
-          user = req.session.user;
-          token = req.session.token;
-          
-          // Refresh session expiry on valid requests to keep user logged in
-          if (sessionExpiry) {
-            const newExpiry = new Date();
-            newExpiry.setTime(newExpiry.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days
-            req.session.expires = newExpiry.toISOString();
-          }
-        } else {
-          // Only clear expired sessions, but log less aggressively
-          console.log('Session expired for user:', req.session.user?.email);
-          delete req.session.user;
-          delete req.session.token;
-          delete req.session.expires;
-        }
-      } catch (error) {
-        console.warn('Session validation error, but keeping session:', error);
-        // Don't destroy session on validation errors - be more resilient
-        if (req.session?.user) {
-          user = req.session.user;
-          token = req.session.token || null;
-        }
-      }
+    // Check Authorization header for new authentication
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
     }
 
-    // If no valid session, check Authorization header
-    if (!user) {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith('Bearer ')) {
-        token = authHeader.substring(7);
-      }
-    }
-
-    // If we have a token, validate it
-    if (token && !user) {
+    // If we have a token, validate it and create session
+    if (token) {
       // Check cache first
       const cacheKey = `token:${token.substring(0, 20)}`;
       const cached = authCache.get(cacheKey);
@@ -112,7 +89,7 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
       if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
         user = cached.user;
       } else {
-        // Validate with Supabase
+        // Validate with Supabase (only for new tokens)
         const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
 
         if (supabaseUser && !error) {
@@ -128,6 +105,19 @@ export const authenticateRequest = async (req: Request, res: Response, next: Nex
 
           // Cache the result
           authCache.set(cacheKey, { user, timestamp: Date.now() });
+          
+          // Create a new session to avoid future token validations
+          if (req.session) {
+            const sessionExpiry = new Date();
+            sessionExpiry.setTime(sessionExpiry.getTime() + (7 * 24 * 60 * 60 * 1000));
+            
+            req.session.user = user;
+            req.session.token = token;
+            req.session.expires = sessionExpiry.toISOString();
+            req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000;
+            
+            console.log('✅ New session created for user:', user.email);
+          }
         }
       }
     }
@@ -227,8 +217,8 @@ export async function loginUser(req: Request, res: Response) {
       visiblePages: data.user.user_metadata?.visiblePages || [],
     };
 
-    // Store in session - ensure session exists
-    const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Store in session with longer expiry for better UX
+    const sessionExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     
     // Initialize session object if it doesn't exist
     if (!req.session) {
@@ -242,7 +232,11 @@ export async function loginUser(req: Request, res: Response) {
     req.session.user = user;
     req.session.token = data.session.access_token;
     req.session.expires = sessionExpiry.toISOString();
-    req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+    
+    // Mark session as authenticated to avoid re-validation
+    req.session.authenticated = true;
+    req.session.lastValidated = new Date().toISOString();
 
     // Clear any cached auth data for this user
     authCache.forEach((value, key) => {
