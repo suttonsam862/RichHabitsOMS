@@ -75,20 +75,10 @@ export default function Production() {
     },
   });
 
-  // Handle ALL possible API response structures safely
-  let tasksArray: any[] = [];
-  
-  if (productionTasks) {
-    if (Array.isArray(productionTasks)) {
-      tasksArray = productionTasks;
-    } else if (productionTasks.data && Array.isArray(productionTasks.data)) {
-      tasksArray = productionTasks.data;
-    } else if (productionTasks.success && productionTasks.data && Array.isArray(productionTasks.data)) {
-      tasksArray = productionTasks.data;
-    }
-  }
-  
-  const filteredTasks = tasksArray.filter((task: any) => {
+  // Handle API response structure: {success: true, data: [...]} or direct array
+  const tasksArray = productionTasks?.data || productionTasks || [];
+  const safeTasksArray = Array.isArray(tasksArray) ? tasksArray : [];
+  const filteredTasks = safeTasksArray.filter((task: any) => {
     if (activeTab === 'all') return true;
     return task.status === activeTab;
   });
@@ -159,7 +149,7 @@ export default function Production() {
                 <div className="flex justify-center items-center h-64">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : (!(productionTasks as any[]) || (productionTasks as any[])?.length === 0) ? (
+              ) : (safeTasksArray.length === 0) ? (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">No production tasks found</p>
                 </div>
@@ -177,7 +167,7 @@ export default function Production() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(productionTasks as any[])?.map((task: any) => (
+                      {safeTasksArray?.map((task: any) => (
                         <TableRow key={task.id}>
                           <TableCell className="font-medium">{task.order?.orderNumber}</TableCell>
                           <TableCell>{task.order?.customer?.company || 'N/A'}</TableCell>
@@ -251,12 +241,12 @@ export default function Production() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {(productionTasks as any[]).find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
+              {safeTasksArray.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
                 ? 'Start Production' 
                 : 'Complete Production'}
             </DialogTitle>
             <DialogDescription>
-              {(productionTasks as any[]).find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production'
+              {safeTasksArray.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production'
                 ? 'Update the status to indicate that production has started'
                 : 'Mark this order as completed production'}
             </DialogDescription>
@@ -283,7 +273,7 @@ export default function Production() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Updating...
                 </>
-              ) : (productionTasks as any[]).find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
+              ) : safeTasksArray.find((t: any) => t.orderId === selectedOrderId)?.order?.status === 'pending_production' 
                 ? 'Start Production' 
                 : 'Complete Production'}
             </Button>

@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
 
   // Process data for charts
   const monthlyData = dashboardData?.revenue?.monthlyRevenue || defaultMonthlyData;
-  
+
   // Create order status data from real data
   const orderStatusData = dashboardData?.stats?.ordersByStatus
     ? Object.entries(dashboardData.stats.ordersByStatus).map(([status, count]) => ({
@@ -65,14 +65,14 @@ export default function AnalyticsPage() {
         value: count || 0
       }))
     : [];
-    
+
   // Create empty order status data if none exists
-  const emptyOrderStatusData = orderStatusData.length === 0 
+  const emptyOrderStatusData = orderStatusData.length === 0
     ? [
         { name: "No Data Available", value: 1 }
-      ] 
+      ]
     : orderStatusData;
-  
+
   // Create item order data, or show empty state
   const inventoryData = dashboardData?.stats?.inventory || [];
   const topProducts = inventoryData.length > 0
@@ -352,12 +352,6 @@ export default function AnalyticsPage() {
           </Tabs>
         </>
       )}
-    </div>
-  );
-}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

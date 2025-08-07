@@ -134,9 +134,13 @@ async function getAllOrganizations(req: Request, res: Response) {
         };
       });
 
-    res.json({
+    // If no organizations exist, return empty array with proper structure
+    const orgData = uniqueOrganizations || [];
+
+    res.status(200).json({
       success: true,
-      data: uniqueOrganizations
+      data: orgData,
+      count: orgData.length
     });
 
   } catch (error) {
@@ -321,11 +325,11 @@ async function updateOrganization(req: Request, res: Response) {
         type,
         sport,
         updatedCustomers: updatedCustomers?.length || 0,
-        customersUpdated: updatedCustomers?.map(c => ({ 
-          id: c.id, 
+        customersUpdated: updatedCustomers?.map(c => ({
+          id: c.id,
           company: c.company,
           firstName: c.first_name,
-          lastName: c.last_name 
+          lastName: c.last_name
         }))
       }
     });
