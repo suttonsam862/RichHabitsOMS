@@ -17,7 +17,7 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import bodyParser from 'body-parser';
-import { authenticateRequest, requireAuth, requireRole } from './routes/auth/auth';
+import { unifiedAuth, requireAuth, requireRole } from './middleware/unifiedAuth';
 
 // API routes
 import catalogRoutesRefactored from './routes/api/catalogRoutes';
@@ -50,6 +50,9 @@ import statsRoutes from './routes/api/statsRoutes';
 // Audit routes for order change tracking
 import auditRoutes from './routes/api/auditRoutes';
 
+// Production routes
+import productionRoutes from './routes/api/productionRoutes';
+
 // Upload test routes
 // import uploadTestRoutes from './routes/api/uploadTestRoutes'; // Commented out - missing file
 
@@ -65,59 +68,77 @@ const supabaseAdmin = createClient(
   }
 );
 
-// Session-based authentication middleware
-const sessionBasedAuth = async (req: Request, res: Response, next: NextFunction) => {
-  if (req.session && req.session.user) {
-    // User is already authenticated via session
-    req.user = req.session.user;
-    return next();
-  }
+// User setup email API endpoint - ONLY sends emails, never creates users
+// Moved this outside registerRoutes to avoid issues with dependencies
+async function sendSetupEmailRoute(req: Request, res: Response) {
+  try {
+    const { email, firstName, lastName, role } = req.body;
 
-  // If not in session, attempt to authenticate via token (e.g., from initial login)
-  // This part might need adjustment based on how initial token auth is handled
-  // For now, assuming session is primary after initial auth
-  if (req.headers.authorization) {
-    const token = req.headers.authorization.split(' ')[1];
-    if (token) {
-      try {
-        const { data, error } = await supabase.auth.getUser(token);
-        if (error) {
-          console.error('Auth token validation error:', error.message);
-          return res.status(401).json({ message: 'Invalid or expired token' });
-        }
-        if (data?.user) {
-          req.user = {
-            id: data.user.id,
-            email: data.user.email!,
-            role: data.user.user_metadata?.role || 'user', // Default role
-            // Add other necessary user properties
-          };
-          // Optionally, create a session for this user
-          req.session!.user = req.user;
-          return next();
-        }
-      } catch (e) {
-        console.error('Error during token authentication:', e);
-        return res.status(500).json({ message: 'Authentication error' });
-      }
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
     }
-  }
 
-  // If no session and no valid token, deny access
-  res.status(401).json({ message: 'Unauthorized: No active session or valid token' });
-};
+    const setupToken = Buffer.from(JSON.stringify({
+      email,
+      firstName: firstName || '',
+      lastName: lastName || '',
+      role: role || 'customer',
+      expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
+      timestamp: Date.now()
+    })).toString('base64url');
+
+    const setupUrl = (process.env.REPLIT_DEV_DOMAIN || 'localhost:5000') + '/setup?token=' + setupToken;
+
+    try {
+      const emailTemplate = {
+        to: email,
+        subject: 'Complete Your Account Setup - ThreadCraft',
+        text: 'Hi ' + (firstName || 'there') + ',\n\nYou\'ve been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:\n' + setupUrl + '\n\nThis link will expire in 7 days.\n\nBest regards,\nThe ThreadCraft Team',
+        html: '<div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;"><h2 style="color: #333;">Complete Your Account Setup</h2><p>Hi ' + (firstName || 'there') + ',</p><p>You\'ve been invited to complete your account setup for ThreadCraft!</p><p>Please click the button below to access your dashboard:</p><div style="text-align: center; margin: 30px 0;"><a href="' + setupUrl + '" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Complete Setup</a></div><p style="color: #666; font-size: 14px;">If the button doesn\'t work, you can copy and paste this link into your browser:<br><a href="' + setupUrl + '">' + setupUrl + '</a></p><p style="color: #666; font-size: 14px;">This link will expire in 7 days.</p><hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;"><p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p></div>'
+      };
+
+      await sendEmail(emailTemplate);
+      console.log('Setup email sent to:', email);
+
+      return res.json({
+        success: true,
+        message: 'Setup email sent successfully! ' + (firstName || 'User') + ' will receive an email to complete their account setup.'
+      });
+    } catch (emailError) {
+      console.error('Error sending setup email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send setup email. Please check your email configuration.'
+      });
+    }
+  } catch (err: any) {
+    console.error('Error sending setup email:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'An unexpected error occurred'
+    });
+  }
+}
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configure session middleware on main app (needed for auth routes)
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-  }));
+  // Session middleware is no longer needed with unified authentication
+  // app.use(session({
+  //   secret: process.env.SESSION_SECRET || 'your-secret-key',
+  //   resave: false,
+  //   saveUninitialized: false,
+  //   cookie: {
+  //     secure: process.env.NODE_ENV === 'production',
+  //     maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  //   }
+  // }));
+
+  // Apply unified authentication to all routes
+  app.use(unifiedAuth);
 
   // Quick admin user creation endpoint (for testing) - NO AUTH REQUIRED
   app.post('/create-admin', async (req, res) => {
@@ -270,11 +291,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/uploads', unifiedUploadRoutes);
 
   // Register catalog routes with proper authentication
-  app.use('/api/catalog-items', authenticateRequest, catalogRoutesRefactored);
-  app.use('/api/catalog', authenticateRequest, catalogRoutesRefactored);
+  app.use('/api/catalog-items', catalogRoutesRefactored);
+  app.use('/api/catalog', catalogRoutesRefactored);
 
   // Admin customers API endpoint with real data
   app.get('/api/admin/customers', async (req, res) => {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'salesperson') {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+
     try {
       console.log('Fetching real customers from Supabase...');
 
@@ -1705,7 +1730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get individual customer details
-  app.get('/api/customers/:customerId', authenticateRequest, requireAuth, requireRole(['admin']), async (req, res) => {
+  app.get('/api/customers/:customerId', async (req, res) => { // Removed authenticateRequest, requireAuth, requireRole(['admin'])
     try {
       const { customerId } = req.params;
       console.log('Fetching customer details for ID:', customerId);
@@ -1774,7 +1799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update customer details
-  app.patch('/api/customers/:customerId', authenticateRequest, requireAuth, requireRole(['admin']), async (req, res) => {
+  app.patch('/api/customers/:customerId', async (req, res) => { // Removed authenticateRequest, requireAuth, requireRole(['admin'])
     try {
       const { customerId } = req.params;
       const { firstName, lastName, email, phone, company, address, city, state, zip, country, status } = req.body;
@@ -1877,61 +1902,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-
   // User setup email API endpoint - ONLY sends emails, never creates users
-  app.post('/api/users/invite', async (req, res) => {
-    try {
-      const { email, firstName, lastName, role } = req.body;
-
-      if (!email) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email is required'
-        });
-      }
-
-      // Simply send setup email - no user creation
-      const setupToken = Buffer.from(JSON.stringify({
-        email,
-        firstName: firstName || '',
-        lastName: lastName || '',
-        role: role || 'customer',
-        expires: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days
-        timestamp: Date.now()
-      })).toString('base64url');
-
-      const setupUrl = (process.env.REPLIT_DEV_DOMAIN || 'localhost:5000') + '/setup?token=' + setupToken;
-
-      try {
-        const emailTemplate = {
-          to: email,
-          subject: 'Complete Your Account Setup - ThreadCraft',
-          text: 'Hi ' + (firstName || 'there') + ',\n\nYou\'ve been invited to complete your account setup for ThreadCraft! Please click the link below to access your dashboard:\n' + setupUrl + '\n\nThis link will expire in 7 days.\n\nBest regards,\nThe ThreadCraft Team',
-          html: '<div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;"><h2 style="color: #333;">Complete Your Account Setup</h2><p>Hi ' + (firstName || 'there') + ',</p><p>You\'ve been invited to complete your account setup for ThreadCraft!</p><p>Please click the button below to access your dashboard:</p><div style="text-align: center; margin: 30px 0;"><a href="' + setupUrl + '" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Complete Setup</a></div><p style="color: #666; font-size: 14px;">If the button doesn\'t work, you can copy and paste this link into your browser:<br><a href="' + setupUrl + '">' + setupUrl + '</a></p><p style="color: #666; font-size: 14px;">This link will expire in 7 days.</p><hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;"><p style="color: #666; font-size: 12px;">Best regards,<br>The ThreadCraft Team</p></div>'
-        };
-
-        await sendEmail(emailTemplate);
-        console.log('Setup email sent to:', email);
-
-        return res.json({
-          success: true,
-          message: 'Setup email sent successfully! ' + (firstName || 'User') + ' will receive an email to complete their account setup.'
-        });
-      } catch (emailError) {
-        console.error('Error sending setup email:', emailError);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to send setup email. Please check your email configuration.'
-        });
-      }
-    } catch (err: any) {
-      console.error('Error sending setup email:', err);
-      return res.status(500).json({
-        success: false,
-        message: 'An unexpected error occurred'
-      });
-    }
-  });
+  app.post('/api/users/invite', sendSetupEmailRoute);
 
   // Product Library Routes
   app.use('/api/products/library', productLibraryRoutes);
@@ -2033,7 +2005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Comprehensive User Management API - Database Portal Viewer
-  app.get('/api/users', authenticateRequest, requireAuth, requireRole(['admin']), async (req: Request, res: Response) => {
+  app.get('/api/users', async (req: Request, res: Response) => { // Removed authenticateRequest, requireAuth, requireRole(['admin'])
     console.log('=== User Management API Debug ===');
     console.log('Authenticated user:', req.user?.email, 'Role:', req.user?.role);
 
@@ -2402,16 +2374,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use(bodyParser.json({ limit: '10mb' }));
   router.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Apply session-based authentication
-  router.use(sessionBasedAuth);
-  // Apply authentication middleware to all routes
-  router.use(authenticateRequest);
-
-  // Health check (no auth required)
-  router.use('/health', healthRoutesRefactored);
-
-  // Auth routes are handled directly in the main routes function
-
   // API routes (auth required)
   router.use('/api/catalog-options', catalogOptionsRoutesRefactored);
   router.use('/api/fabric-options', fabricOptionsRoutes);
@@ -2423,6 +2385,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use('/api/sales-management', salesManagementRoutes);
   router.use('/api/stats', statsRoutes);
   router.use('/api', manufacturingRoutes);
+  router.use('/api', workflowRoutes);
+  router.use('/api', salespersonRoutes);
+  router.use('/api', productionRoutes);
 
   // Product Library routes (moved to router above)
   router.use('/api/products/library', productLibraryRoutes);
@@ -2431,8 +2396,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use('/api/admin', adminRoutesRefactored);
 
   // Ensure organizations route uses proper auth
-  app.use('/api/organizations', authenticateRequest);
+  app.use('/api/organizations', requireAuth, async (req, res) => { // Added requireAuth
+    try {
+      console.log('Fetching organizations from customer data...');
 
+      // Get all customers first
+      const { data: customersData, error: customersError } = await supabaseAdmin.auth.admin.listUsers();
+
+      if (customersError) {
+        console.error('Error fetching customers:', customersError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to retrieve customer data'
+        });
+      }
+
+      // Filter for customers and extract organization data
+      const organizations = new Map();
+
+      (customersData.users || []).forEach((user: any) => {
+        const metadata = user.user_metadata || {};
+        if (metadata.role === 'customer') {
+          // Extract organization info from user metadata or email domain
+          const company = metadata.company || getCompanyFromEmail(user.email);
+          const sport = metadata.sport || 'General';
+          const orgType = metadata.organizationType || inferOrgType(company);
+
+          if (!organizations.has(company)) {
+            organizations.set(company, {
+              id: company.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+              name: company,
+              type: orgType,
+              sport: sport,
+              contacts: [],
+              totalOrders: 0,
+              totalSpent: '$0.00',
+              lastOrderDate: null,
+              status: 'active',
+              created_at: user.created_at
+            });
+          }
+
+          // Add this user as a contact
+          const org = organizations.get(company);
+          org.contacts.push({
+            id: user.id,
+            firstName: metadata.firstName || '',
+            lastName: metadata.lastName || '',
+            email: user.email,
+            phone: metadata.phone || '',
+            title: metadata.title || 'Contact',
+            isPrimary: org.contacts.length === 0, // First contact is primary
+            created_at: user.created_at
+          });
+        }
+      });
+
+      const organizationsArray = Array.from(organizations.values());
+      console.log(`Found ${organizationsArray.length} organizations`);
+
+      res.json({
+        success: true,
+        data: organizationsArray
+      });
+
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  });
 
   // API 404 handler - only for API routes
   router.use('/api/*', (req, res) => {

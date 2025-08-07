@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth, requireRole } from '../auth/auth';
+import { requireAuth, requireRole } from '../auth/auth'; // This line should be updated as per the instruction
 import orderController from '../../controllers/orderController';
 import { OrderAuditLogger } from '../../services/auditLogger.js';
 import { AUDIT_ACTIONS } from '../../models/orderAuditLog.js';
@@ -80,14 +80,14 @@ const patchOrderSchema = z.object({
   customerId: z.string().uuid().optional(),
   customer_id: z.string().uuid().optional(),
   status: z.enum([
-    'draft', 
-    'pending_design', 
-    'design_in_progress', 
-    'design_review', 
-    'design_approved', 
-    'pending_production', 
-    'in_production', 
-    'completed', 
+    'draft',
+    'pending_design',
+    'design_in_progress',
+    'design_review',
+    'design_approved',
+    'pending_production',
+    'in_production',
+    'completed',
     'cancelled'
   ]).optional(),
   priority: z.enum(['low', 'medium', 'high']).optional(),
@@ -136,7 +136,7 @@ async function validateCustomerExists(customerId: string): Promise<boolean> {
     .select('id')
     .eq('id', customerId)
     .single();
-  
+
   return !error && !!data;
 }
 
@@ -168,7 +168,7 @@ async function createOrder(req: Request, res: Response) {
     }
 
     const orderData = validationResult.data;
-    
+
     // Validate customer exists
     const customerExists = await validateCustomerExists(orderData.customer_id);
     if (!customerExists) {
@@ -273,7 +273,7 @@ async function createOrder(req: Request, res: Response) {
 
     if (itemsError) {
       console.error('❌ Order items creation failed:', itemsError);
-      
+
       // Rollback: Delete the created order
       await supabaseAdmin
         .from('orders')
@@ -325,7 +325,7 @@ router.post('/', requireAuth, requireRole(['admin', 'salesperson']), createOrder
 // POST /api/orders/create - Create new order with items (alternative endpoint)
 router.post('/create', requireAuth, requireRole(['admin', 'salesperson']), createOrder);
 
-// PATCH /api/orders/:id - Update order (excluding items) - using PATCH for partial updates
+// PATCH /api/orders/:id/basic - Update order (excluding items) - using PATCH for partial updates
 router.patch('/:id/basic', requireAuth, requireRole(['admin', 'salesperson']), orderController.updateOrder);
 
 // DELETE /api/orders/:id - Delete order and all items
@@ -386,7 +386,7 @@ async function patchOrder(req: Request, res: Response) {
 
     // Transform camelCase to snake_case for database
     const dbUpdateData: any = {};
-    
+
     // Handle field mappings with both camelCase and snake_case support
     const fieldMappings = {
       orderNumber: 'order_number',
@@ -411,10 +411,10 @@ async function patchOrder(req: Request, res: Response) {
         // Skip items for now - handle separately
         return;
       }
-      
+
       // Map camelCase to snake_case if needed
       const dbField = fieldMappings[key as keyof typeof fieldMappings] || key;
-      
+
       // Only include non-undefined values
       if (value !== undefined) {
         dbUpdateData[dbField] = value;
@@ -449,7 +449,7 @@ async function patchOrder(req: Request, res: Response) {
     let updatedItems = null;
     if (validatedData.items && Array.isArray(validatedData.items)) {
       console.log('🔄 Processing comprehensive items update (add/remove/update)...');
-      
+
       try {
         // First, get existing items
         const { data: existingItems } = await supabaseAdmin
@@ -459,7 +459,7 @@ async function patchOrder(req: Request, res: Response) {
 
         const existingItemIds = new Set(existingItems?.map(item => item.id) || []);
         const newItemIds = new Set(validatedData.items.filter(item => item.id).map(item => item.id));
-        
+
         const itemsToUpdate = [];
         const itemsToInsert = [];
         const itemsToDelete = [];

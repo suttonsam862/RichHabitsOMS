@@ -355,3 +355,42 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+export default function AnalyticsPage() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">Analytics</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Analytics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">Order performance metrics and trends.</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Customer Analytics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">Customer behavior and satisfaction metrics.</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Production Analytics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">Manufacturing efficiency and quality metrics.</p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

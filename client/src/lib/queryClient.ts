@@ -95,14 +95,14 @@ export async function apiRequest(
       console.error('Network connectivity issue:', networkError);
       throw networkError;
     }
-    
+
     // Handle AbortError gracefully
     if (error instanceof Error && error.name === 'AbortError') {
       const timeoutError = new Error(`Request timeout: ${fullUrl} took longer than 10 seconds`);
       console.error('Request timeout:', timeoutError);
       throw timeoutError;
     }
-    
+
     throw error;
   }
 }
@@ -199,7 +199,65 @@ export const setAuthToken = (token: string): void => {
   localStorage.removeItem('token'); // Remove legacy token
 };
 
-import { QueryClient } from '@tanstack/react-query';
+const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  // Get auth token from various sources with priority
+  const token = localStorage.getItem('authToken') ||
+                localStorage.getItem('token') ||
+                sessionStorage.getItem('authToken') ||
+                sessionStorage.getItem('token');
+
+  const headers = new Headers(options.headers);
+
+  // ALWAYS include authorization header if token exists
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  // Always include credentials for session auth
+  const requestOptions: RequestInit = {
+    credentials: 'include',
+    ...options,
+    headers,
+  };
+
+  // Log request for debugging
+  console.log('API Request:', {
+    method: options.method || 'GET',
+    url,
+    hasAuthHeader: !!token,
+    usesCookies: true,
+    hasBody: !!options.body,
+    timestamp: new Date().toISOString()
+  });
+
+  try {
+    const response = await fetch(url, requestOptions);
+
+    if (response.ok) {
+      console.log('API Response Success:', {
+        method: options.method || 'GET',
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('API Request Failed:', {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: await response.clone().text(),
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Network error:', error);
+    throw error;
+  }
+};
 
 export const queryClient = new QueryClient({
   defaultOptions: {

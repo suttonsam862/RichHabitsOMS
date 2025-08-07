@@ -1683,3 +1683,24 @@ export default function ManufacturingManagement() {
     </TooltipProvider>
   );
 }
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+export default function AdminManufacturerAssignment() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">Manufacturer Assignment</h1>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Assignment Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600">
+            Manage manufacturer assignments for orders and products.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
