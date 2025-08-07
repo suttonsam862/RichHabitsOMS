@@ -1,0 +1,148 @@
+
+# 🚨 URGENT: ThreadCraft Authentication & Database Repair Prompt
+
+## AGENT MISSION BRIEFING
+
+You are the ThreadCraft repair agent. The application is currently in a **CRITICAL STATE** with multiple system failures. Your immediate mission is to restore core functionality.
+
+## 🔥 CRITICAL ERRORS REQUIRING IMMEDIATE FIX
+
+### 1. SESSION MIDDLEWARE FAILURE
+**Error**: "Session middleware not initialized"
+**Impact**: ALL authenticated API endpoints returning 401 errors
+**Location**: `server/index.ts` - Missing session configuration
+
+**REQUIRED ACTION**: Add proper session middleware initialization:
+```typescript
+import session from 'express-session';
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'fallback-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000,
+    httpOnly: true
+  }
+}));
+```
+
+### 2. ORDER API AUTHENTICATION CHAIN BROKEN
+**Error**: `401: {"success":false,"message":"Authentication required"}`
+**Impact**: Orders page completely non-functional
+**Location**: `server/routes/api/orderRoutes.ts` line 267
+
+**REQUIRED ACTION**: Fix session authentication check:
+```typescript
+// CURRENT (BROKEN):
+if (!req.session?.user?.id) {
+  return res.status(401).json({ success: false, message: 'Authentication required' });
+}
+
+// SHOULD BE:
+const authResult = await requireAuth(req, res, () => {});
+if (!authResult) return; // Let middleware handle the response
+```
+
+### 3. PRODUCTION TASKS DATA STRUCTURE ERROR
+**Error**: `productionTasks.filter is not a function`
+**Impact**: Production page crashes immediately
+**Location**: `client/src/pages/Production.tsx` line 89
+
+**ALREADY FIXED**: ✅ Data handling improved, but API endpoint may need verification
+
+### 4. DATABASE CONNECTION AUTHENTICATION
+**Error**: Multiple 401s on authenticated endpoints
+**Impact**: Most admin functionality broken
+**Root Cause**: Session/database authentication mismatch
+
+## 🎯 REPAIR SEQUENCE (EXECUTE IN ORDER)
+
+### STEP 1: Fix Session Middleware (5 minutes)
+1. Open `server/index.ts`
+2. Add session middleware before routes
+3. Verify `SESSION_SECRET` environment variable
+4. Test with: `curl -c cookies.txt -X POST http://localhost:5000/api/auth/login`
+
+### STEP 2: Repair Order Authentication (10 minutes)
+1. Fix `server/routes/api/orderRoutes.ts` authentication logic
+2. Ensure middleware order is correct
+3. Test with: `curl -b cookies.txt http://localhost:5000/api/orders`
+
+### STEP 3: Validate Production API (5 minutes)
+1. Check `/api/production-tasks` endpoint exists and returns proper format
+2. Verify response structure: `{ success: true, data: [...] }`
+3. Test Production page loads without errors
+
+### STEP 4: Database Connection Verification (10 minutes)
+1. Verify Supabase connection in server logs
+2. Check RLS policies are not blocking authenticated users
+3. Test all major CRUD operations
+
+## 🧪 TESTING PROTOCOL
+
+### Authentication Test
+```bash
+# 1. Login (should work)
+curl -c cookies.txt -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"samsutton@rich-habits.com","password":"your-password"}'
+
+# 2. Access protected endpoint (should work after fixes)
+curl -b cookies.txt http://localhost:5000/api/orders
+```
+
+### Frontend Test
+1. Login to admin dashboard
+2. Navigate to Orders page → Should load data
+3. Navigate to Production page → Should display tasks
+4. Try creating a new customer → Should work
+5. Refresh page → Session should persist
+
+## 🎯 SUCCESS CRITERIA
+
+### Must Work After Repair:
+- ✅ User can login and stay logged in
+- ✅ Orders page loads order data
+- ✅ Production page displays production tasks
+- ✅ Customer management functions properly
+- ✅ Session persists across page reloads
+
+### Error Logs Should Show:
+- ✅ No "Session middleware not initialized" errors
+- ✅ No 401 authentication errors on valid sessions
+- ✅ No `productionTasks.filter is not a function` errors
+- ✅ Successful database connections
+
+## 🚨 CRITICAL FILES TO MODIFY
+
+1. **`server/index.ts`** - Add session middleware
+2. **`server/routes/api/orderRoutes.ts`** - Fix authentication logic
+3. **`server/routes/api/productionRoutes.ts`** - Verify endpoint exists
+4. **`server/middleware/globalAuth.ts`** - Ensure proper auth flow
+
+## 💡 DEBUGGING COMMANDS
+
+```bash
+# Check server logs for session errors
+grep -i "session" server/logs/*
+
+# Verify environment variables
+echo $SESSION_SECRET
+echo $SUPABASE_URL
+
+# Test API endpoints
+curl -I http://localhost:5000/api/health
+curl -I http://localhost:5000/api/production-tasks
+```
+
+## ⏰ ESTIMATED REPAIR TIME: 30 MINUTES
+
+This is a **CRITICAL PRIORITY** repair. The application is currently non-functional for most users. Execute the repair sequence immediately and report back with test results.
+
+---
+
+**Agent Status**: 🔴 CRITICAL REPAIR MODE
+**Last Updated**: August 7, 2025 05:22:05 UTC
+**Repair Priority**: MAXIMUM

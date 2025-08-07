@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import session from 'express-session';
 import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -17,6 +18,18 @@ async function main() {
   app.use(cors({
     origin: true,
     credentials: true,
+  }));
+
+  // Configure session middleware
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'threadcraft-fallback-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true
+    }
   }));
 
   // Parse JSON and urlencoded data

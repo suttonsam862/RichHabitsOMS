@@ -314,26 +314,7 @@ async function createOrder(req: Request, res: Response) {
  */
 
 // GET /api/orders - Get all orders with filtering and pagination
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    // Check authentication via session cookies
-    if (!req.session?.user?.id) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required' 
-      });
-    }
-    // Call the controller function if authenticated
-    orderController.getAllOrders(req, res);
-  } catch (error: any) {
-    console.error('💥 Error in GET /api/orders:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: error.message
-    });
-  }
-});
+router.get('/', requireAuth, orderController.getAllOrders);
 
 // GET /api/orders/:id - Get specific order by ID
 router.get('/:id', requireAuth, orderController.getOrderById);
