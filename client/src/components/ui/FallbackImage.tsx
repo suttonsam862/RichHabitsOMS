@@ -91,64 +91,44 @@ export function ProductImage({
 }
 
 // UserAvatar component for user profile images
-interface UserAvatarProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
-  src: string;
-  alt: string;
+export const UserAvatar: React.FC<{
+  src?: string;
+  alt?: string;
+  fallbackText?: string;
   size?: 'sm' | 'md' | 'lg';
-  fallbackSrc?: string;
-}
-
-export function UserAvatar({
-  src,
-  alt,
-  size = 'md',
-  fallbackSrc,
-  className,
-  ...props
-}: UserAvatarProps) {
-  const [imageError, setImageError] = useState(false);
-
+  className?: string;
+}> = ({ 
+  src, 
+  alt = "User", 
+  fallbackText = "U", 
+  size = 'md', 
+  className = "" 
+}) => {
   const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-12 h-12',
-    lg: 'w-16 h-16'
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-10 h-10 text-base', 
+    lg: 'w-12 h-12 text-lg'
   };
-
-  const handleError = () => {
-    setImageError(true);
-  };
-
-  if (imageError && !fallbackSrc) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-center bg-gray-200 text-gray-500 rounded-full",
-          sizeClasses[size],
-          className
-        )}
-        {...props}
-      >
-        <span className="text-sm font-medium">
-          {alt.charAt(0).toUpperCase()}
-        </span>
-      </div>
-    );
-  }
 
   return (
-    <img
-      src={imageError && fallbackSrc ? fallbackSrc : src}
-      alt={alt}
-      className={cn(
-        "rounded-full object-cover",
-        sizeClasses[size],
-        className
+    <div className={`rounded-full bg-gray-200 flex items-center justify-center ${sizeClasses[size]} ${className}`}>
+      {src ? (
+        <img 
+          src={src} 
+          alt={alt}
+          className="w-full h-full rounded-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      ) : (
+        <span className="font-medium text-gray-600">
+          {fallbackText.charAt(0).toUpperCase()}
+        </span>
       )}
-      onError={handleError}
-      {...props}
-    />
+    </div>
   );
-}
+};
 
 // CompanyLogo component for company/organization images
 interface CompanyLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {

@@ -2367,6 +2367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.use('/api/catalog-options', catalogOptionsRoutesRefactored);
   router.use('/api/fabric-options', fabricOptionsRoutes);
   router.use('/api/catalog', catalogRoutesRefactored);
+  router.use('/api/catalog-items', catalogRoutesRefactored); // Alias for compatibility
   router.use('/api/customers', customerRoutesRefactored);
   // router.use('/api/images', imageRoutesRefactored); // Commented out - missing import
   router.use('/api/invitations', invitationRoutesRefactored);

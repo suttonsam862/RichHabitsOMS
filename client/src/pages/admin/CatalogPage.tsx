@@ -897,7 +897,7 @@ export default function CatalogPage() {
           throw new Error('Authentication required. Please log in again.');
         }
 
-        const response = await fetch('/api/products/library', {
+        const response = await fetch('/api/catalog-items', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -931,7 +931,15 @@ export default function CatalogPage() {
 
       } catch (error) {
         console.error('❌ Catalog fetch error:', error);
-        throw error;
+        
+        // Provide more specific error information
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+          throw new Error('Network connection failed. Please check your internet connection.');
+        } else if (error instanceof Error) {
+          throw new Error(`Catalog loading failed: ${error.message}`);
+        } else {
+          throw new Error('An unexpected error occurred while loading the catalog');
+        }
       }
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -1026,7 +1034,7 @@ export default function CatalogPage() {
 
       // Note: Image upload now handled separately via UnifiedImageUploader
 
-      const response = await fetch('/api/products/library', {
+      const response = await fetch('/api/catalog-items', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -1114,7 +1122,7 @@ export default function CatalogPage() {
 
       // Note: Image upload now handled separately via UnifiedImageUploader
 
-      const response = await fetch(`/api/products/library/${id}`, {
+      const response = await fetch(`/api/catalog-items/${id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -1165,7 +1173,7 @@ export default function CatalogPage() {
         throw new Error('Item ID is required for deletion');
       }
 
-      const response = await fetch(`/api/products/library/${id}`, {
+      const response = await fetch(`/api/catalog-items/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
