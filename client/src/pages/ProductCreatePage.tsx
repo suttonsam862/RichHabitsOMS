@@ -1,14 +1,15 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { ProductForm } from '@/components/forms/ProductForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { CatalogItem } from '@/shared/schema';
+import { CatalogItem } from '@/types';
 
 export default function ProductCreatePage() {
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
+  const navigate = setLocation;
   const { user } = useAuth();
 
   // Check permissions - only allow admin and salesperson to create products

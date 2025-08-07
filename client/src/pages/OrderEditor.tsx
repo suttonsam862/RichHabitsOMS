@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -39,7 +39,8 @@ import { orderFormSchema, orderItemSchema, OrderFormValues, Customer, Order } fr
 
 export default function OrderEditor() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
+  const navigate = setLocation;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = !!id && id !== 'new';

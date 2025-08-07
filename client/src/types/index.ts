@@ -37,6 +37,26 @@ export interface Customer {
 }
 
 // Order type from API
+// Catalog Item type
+export interface CatalogItem {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  sport?: string;
+  price?: number;
+  images?: Array<{
+    id: string;
+    url: string;
+    fileName: string;
+  }>;
+  sizes?: string[];
+  colors?: string[];
+  fabrics?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Order {
   id: number;
   orderNumber: string;

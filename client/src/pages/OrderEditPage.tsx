@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useLocation } from 'wouter';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
@@ -154,7 +154,8 @@ interface Designer {
 
 export default function OrderEditPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
+  const navigate = setLocation;
   const { toast } = useToast();
   
   // Local state management

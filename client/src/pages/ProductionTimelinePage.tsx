@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { ArrowLeft, Package, User, Calendar, DollarSign } from 'lucide-react';
 
 export default function ProductionTimelinePage() {
   const { orderId } = useParams<{ orderId: string }>();
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
+  const navigate = setLocation;
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', orderId],

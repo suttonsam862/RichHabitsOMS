@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import {
   Card,
@@ -50,8 +50,10 @@ import { Order } from '@/types';
 import { AlertTriangle } from 'lucide-react';
 
 function OrdersContent() {
-  const navigate = useNavigate();
-  const { role } = useAuth();
+  const [location, setLocation] = useLocation();
+  const navigate = setLocation;
+  const { user } = useAuth();
+  const role = user?.role;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   

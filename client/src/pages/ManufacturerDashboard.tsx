@@ -1,9 +1,9 @@
 // This file is deprecated - use client/src/pages/dashboard/ManufacturerDashboard.tsx instead
 // Redirecting to the consolidated dashboard
-import { Navigate } from 'react-router-dom';
+import { Redirect } from 'wouter';
 
 function ManufacturerDashboard() {
-  return <Navigate to="/dashboard/manufacturer" replace />;
+  return <Redirect to="/dashboard/manufacturer" />;
 }
 
 export default ManufacturerDashboard;

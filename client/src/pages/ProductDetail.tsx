@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Redirect } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -99,12 +99,12 @@ export default function ProductDetail() {
 
   // Redirect if not authenticated
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Redirect to="/login" />;
   }
 
   // Redirect if no product ID
   if (!id) {
-    return <Navigate to="/catalog" replace />;
+    return <Redirect to="/catalog" />;
   }
 
   // Fetch product details

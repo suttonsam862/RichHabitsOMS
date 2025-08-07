@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -107,9 +107,12 @@ const PRINT_METHODS = [
 ];
 
 export function ComprehensiveOnboarding() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Extract search params from location
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  const navigate = setLocation;
   
   const [currentStep, setCurrentStep] = useState(1);
   const [invitation, setInvitation] = useState<any>(null);
