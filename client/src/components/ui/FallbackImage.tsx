@@ -75,13 +75,13 @@ interface UserAvatarProps {
   className?: string;
 }
 
-export function UserAvatar({ 
+export const UserAvatar = ({ 
   src, 
   alt = "User", 
   fallbackText = "U", 
   size = 'md', 
   className = "" 
-}: UserAvatarProps) {
+}: UserAvatarProps) => {
   const sizeClasses = {
     sm: 'w-8 h-8 text-sm',
     md: 'w-10 h-10 text-base', 
@@ -106,7 +106,7 @@ export function UserAvatar({
       )}
     </div>
   );
-}
+};
 
 // CompanyLogo component for company/organization images
 interface CompanyLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
