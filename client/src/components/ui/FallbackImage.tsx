@@ -88,6 +88,7 @@ interface UserAvatarProps {
   className?: string;
 }
 
+// Force cache refresh - timestamp: 1754543200000
 export function UserAvatar({ 
   src, 
   alt = "User", 
