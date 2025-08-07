@@ -30,10 +30,10 @@ router.get('/production-tasks', requireAuth, async (req: Request, res: Response)
       });
     }
 
-    // Ensure we return an array
+    // Ensure we return an array in consistent format
     const tasks = Array.isArray(productionTasks) ? productionTasks : [];
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: tasks
     });

@@ -23,7 +23,6 @@ import { unifiedAuth, requireAuth, requireRole } from './middleware/unifiedAuth'
 import catalogRoutesRefactored from './routes/api/catalogRoutes';
 import catalogOptionsRoutesRefactored from './routes/api/catalogOptionsRoutes';
 import customerRoutesRefactored from './routes/api/customerRoutes';
-// import imageRoutesRefactored from './routes/api/imageRoutes'; // Commented out - missing file
 import invitationRoutesRefactored from './routes/api/invitationRoutes';
 
 // Product Library routes
@@ -52,9 +51,6 @@ import auditRoutes from './routes/api/auditRoutes';
 
 // Production routes
 import productionRoutes from './routes/api/productionRoutes';
-
-// Upload test routes
-// import uploadTestRoutes from './routes/api/uploadTestRoutes'; // Commented out - missing file
 
 // Create Supabase admin client with service key for admin operations
 const supabaseAdmin = createClient(
@@ -2376,17 +2372,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // API routes (auth required)
   router.use('/api/catalog-options', catalogOptionsRoutesRefactored);
-  router.use('/api/fabric-options', fabricOptionsRoutes);
   router.use('/api/catalog', catalogRoutesRefactored);
   router.use('/api/catalog-items', catalogRoutesRefactored); // Alias for compatibility
   router.use('/api/customers', customerRoutesRefactored);
-  // router.use('/api/images', imageRoutesRefactored); // Commented out - missing import
   router.use('/api/invitations', invitationRoutesRefactored);
   router.use('/api/sales-management', salesManagementRoutes);
   router.use('/api/stats', statsRoutes);
   router.use('/api', manufacturingRoutes);
-  router.use('/api', workflowRoutes);
-  router.use('/api', salespersonRoutes);
   router.use('/api', productionRoutes);
 
   // Product Library routes (moved to router above)

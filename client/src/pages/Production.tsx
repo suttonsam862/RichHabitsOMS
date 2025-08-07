@@ -75,8 +75,9 @@ export default function Production() {
     },
   });
 
-  // Filter tasks based on status
-  const filteredTasks = (Array.isArray(productionTasks) ? productionTasks : []).filter((task: any) => {
+  // Handle API response structure: {success: true, data: [...]} or direct array
+  const tasksArray = productionTasks?.data || productionTasks || [];
+  const filteredTasks = (Array.isArray(tasksArray) ? tasksArray : []).filter((task: any) => {
     if (activeTab === 'all') return true;
     return task.status === activeTab;
   });
