@@ -139,7 +139,7 @@ export const getQueryFn: <T>(options: {
       const res = await fetch(fullUrl, {
         credentials: "include",
         headers,
-        signal: controller.signal,
+        signal: controller.controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -187,7 +187,10 @@ export const getQueryFn: <T>(options: {
 
 // Centralized token management
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('authToken') || 
+         localStorage.getItem('token') || 
+         sessionStorage.getItem('authToken') ||
+         sessionStorage.getItem('token');
 };
 
 export const clearAuthToken = (): void => {

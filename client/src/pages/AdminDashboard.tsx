@@ -1,8 +1,14 @@
-
-import { Navigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
+import React from 'react';
 
 function AdminDashboard() {
-  return <Navigate to="/dashboard/admin" replace />;
+  const [, setLocation] = useLocation();
+
+  React.useEffect(() => {
+    setLocation('/dashboard');
+  }, [setLocation]);
+
+  return null;
 }
 
 export default AdminDashboard;
